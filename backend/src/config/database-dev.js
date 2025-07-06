@@ -271,7 +271,6 @@ const pool = {
     } catch (error) {
       console.error('SQLite query error:', error);
       console.error('Original query:', text);
-      console.error('Converted query:', sqliteQuery);
       console.error('Parameters:', params);
       throw error;
     }

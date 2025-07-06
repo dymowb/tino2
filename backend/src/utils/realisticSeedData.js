@@ -169,14 +169,11 @@ const generatePhoneNumber = () => {
   return `+1${areaCode}${exchange}${number}`;
 };
 
-const generateEmail = (firstName, lastName, domain = 'example.com') => {
-  const variations = [
-    `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${domain}`,
-    `${firstName.toLowerCase()}${lastName.toLowerCase()}@${domain}`,
-    `${firstName.toLowerCase()}${randomNumber(1, 999)}@${domain}`,
-    `${firstName.charAt(0).toLowerCase()}${lastName.toLowerCase()}@${domain}`
-  ];
-  return randomChoice(variations);
+const generateEmail = (firstName, lastName, domain = 'example.com', index = null) => {
+  // Ensure uniqueness by using index when provided
+  const baseEmail = `${firstName.toLowerCase()}.${lastName.toLowerCase()}`;
+  const suffix = index !== null ? index : randomNumber(100, 9999);
+  return `${baseEmail}${suffix}@${domain}`;
 };
 
 const seedRealisticData = async () => {
@@ -204,7 +201,7 @@ const seedRealisticData = async () => {
       const firstName = randomChoice(firstNames);
       const lastName = randomChoice(lastNames);
       const userType = i < 100 ? 'provider' : 'customer';
-      const email = generateEmail(firstName, lastName, userType === 'provider' ? 'business.com' : 'gmail.com');
+      const email = generateEmail(firstName, lastName, userType === 'provider' ? 'business.com' : 'gmail.com', i);
       const phone = generatePhoneNumber();
       
       const createdAt = randomDate(new Date('2023-01-01'), new Date('2024-12-01'));
