@@ -23,8 +23,8 @@ router.post('/', auth, [
     const result = await pool.query(`
       INSERT INTO bookings (
         customer_id, provider_id, service_type, scheduled_date, 
-        address, description, estimated_duration, status, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', NOW())
+        address, description, estimated_duration, status, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', datetime('now'), datetime('now'))
       RETURNING *
     `, [req.user.userId, providerId, serviceType, scheduledDate, address, description, estimatedDuration]);
 
@@ -48,8 +48,8 @@ router.get('/', auth, async (req, res) => {
       SELECT 
         b.*,
         CASE 
-          WHEN b.customer_id = $1 THEN 
-            json_build_object(
+          WHEN b.customer_id = ? THEN 
+            JSON_OBJECT(
               'id', p.id,
               'business_name', p.business_name,
               'rating', p.rating,
@@ -57,7 +57,7 @@ router.get('/', auth, async (req, res) => {
               'phone', u_provider.phone
             )
           ELSE 
-            json_build_object(
+            JSON_OBJECT(
               'id', b.customer_id,
               'name', u_customer.first_name || ' ' || u_customer.last_name,
               'phone', u_customer.phone
@@ -67,19 +67,17 @@ router.get('/', auth, async (req, res) => {
       LEFT JOIN providers p ON b.provider_id = p.id
       LEFT JOIN users u_provider ON p.user_id = u_provider.id
       LEFT JOIN users u_customer ON b.customer_id = u_customer.id
-      WHERE (b.customer_id = $1 OR b.provider_id IN (SELECT id FROM providers WHERE user_id = $1))
+      WHERE (b.customer_id = ? OR b.provider_id IN (SELECT id FROM providers WHERE user_id = ?))
     `;
 
-    const params = [req.user.userId];
-    let paramCount = 2;
+    const params = [req.user.userId, req.user.userId, req.user.userId1];
 
     if (status) {
-      query += ` AND b.status = $${paramCount}`;
+      query += ` AND b.status = ?`;
       params.push(status);
-      paramCount++;
     }
 
-    query += ` ORDER BY b.created_at DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+    query += ` ORDER BY b.created_at DESC LIMIT ? OFFSET ?`;
     params.push(parseInt(limit), offset);
 
     const result = await pool.query(query, params);
@@ -110,13 +108,13 @@ router.put('/:id/status', auth, [
 
     const result = await pool.query(`
       UPDATE bookings 
-      SET status = $1, updated_at = NOW()
-      WHERE id = $2 AND (
-        customer_id = $3 OR 
-        provider_id IN (SELECT id FROM providers WHERE user_id = $3)
+      SET status = ?, updated_at = datetime('now')
+      WHERE id = ? AND (
+        customer_id = ? OR 
+        provider_id IN (SELECT id FROM providers WHERE user_id = ?)
       )
       RETURNING *
-    `, [status, id, req.user.userId]);
+    `, [status, id, req.user.userId, req.user.userId]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Booking not found or access denied' });

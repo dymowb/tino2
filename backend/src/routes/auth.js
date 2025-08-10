@@ -72,41 +72,73 @@ router.post('/login', [
   body('password').exists(),
 ], async (req, res) => {
   try {
+    // DEBUG POINT 1: Login attempt started
+    console.log('🔐 LOGIN ATTEMPT STARTED');
+    console.log('📧 Email:', req.body.email);
+    console.log('⏰ Timestamp:', new Date().toISOString());
+    debugger; // BREAKPOINT: Login flow starts here
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('❌ Validation errors:', errors.array());
       return res.status(400).json({ errors: errors.array() });
     }
 
     const { email, password } = req.body;
+    console.log('✅ Validation passed for email:', email);
 
+    // DEBUG POINT 2: Database query
+    console.log('🔍 SEARCHING FOR USER IN DATABASE');
+    debugger; // BREAKPOINT: About to query database
+    
     // Find user
     const result = await pool.query(
       'SELECT id, email, password, first_name, last_name, user_type, is_active FROM users WHERE email = $1',
       [email]
     );
 
+    console.log('📊 Query result:', result.rows.length, 'users found');
+    
     if (result.rows.length === 0) {
+      console.log('❌ USER NOT FOUND');
       return res.status(400).json({ error: 'Invalid credentials' });
     }
 
     const user = result.rows[0];
+    console.log('👤 User found:', { id: user.id, email: user.email, userType: user.user_type, isActive: user.is_active });
 
     if (!user.is_active) {
+      console.log('❌ ACCOUNT DEACTIVATED');
       return res.status(400).json({ error: 'Account is deactivated' });
     }
 
+    // DEBUG POINT 3: Password verification
+    console.log('🔑 VERIFYING PASSWORD');
+    debugger; // BREAKPOINT: About to verify password
+    
     // Check password
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log('🔐 Password match:', isMatch);
+    
     if (!isMatch) {
+      console.log('❌ INVALID PASSWORD');
       return res.status(400).json({ error: 'Invalid credentials' });
     }
 
+    // DEBUG POINT 4: Token generation
+    console.log('🎫 GENERATING JWT TOKEN');
+    debugger; // BREAKPOINT: About to generate token
+    
     // Generate JWT token
     const token = jwt.sign(
       { userId: user.id, email: user.email, userType: user.user_type },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRE }
     );
+
+    console.log('✅ LOGIN SUCCESSFUL');
+    console.log('🎫 Token generated (length):', token.length);
+    console.log('👤 User profile:', { id: user.id, email: user.email, userType: user.user_type });
 
     res.json({
       message: 'Login successful',
