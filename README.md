@@ -1,4 +1,4 @@
-# Domestic Service App
+# Tino 2
 
 A comprehensive platform connecting customers with qualified service providers for household services.
 
@@ -37,7 +37,7 @@ A comprehensive platform connecting customers with qualified service providers f
 1. Clone the repository
 ```bash
 git clone <repository-url>
-cd domestic-service-app
+cd tino-2
 ```
 
 2. Install backend dependencies

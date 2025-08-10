@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a full-stack domestic service application that connects customers with service providers for household services. The platform features GPS-based provider discovery, real-time messaging, booking management, quote systems, and payment processing.
+Tino 2 is a full-stack domestic service application that connects customers with service providers for household services. The platform features GPS-based provider discovery, real-time messaging, booking management, quote systems, and payment processing.
 
 ## Architecture
 
@@ -40,7 +40,7 @@ npm run lint                   # Run linting
 ### Database Setup
 ```bash
 # PostgreSQL setup (ensure PostgreSQL is running)
-createdb domestic_service_db
+createdb tino_2_db
 
 # Redis setup (ensure Redis is running)
 redis-server

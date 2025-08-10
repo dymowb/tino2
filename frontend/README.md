@@ -1,6 +1,6 @@
-# Getting Started with Create React App
+# Tino 2 Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Frontend application for Tino 2 domestic service platform, built with React and TypeScript.
 
 ## Available Scripts
 
