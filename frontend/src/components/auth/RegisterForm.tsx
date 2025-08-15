@@ -1,11 +1,26 @@
 import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import {
+  Container,
+  Paper,
+  TextField,
+  Button,
+  Typography,
+  Box,
+  Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Grid,
+  CircularProgress,
+  Chip,
+} from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
+import { motion } from 'framer-motion';
 
-interface RegisterFormProps {
-  onSwitchToLogin: () => void;
-}
-
-const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
+const RegisterForm: React.FC = () => {
+  const navigate = useNavigate();
   const { register } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
@@ -14,7 +29,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
     firstName: '',
     lastName: '',
     userType: 'customer' as 'customer' | 'provider',
-    phone: ''
+    phone: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -30,6 +45,12 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
       return;
     }
 
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters long');
+      setLoading(false);
+      return;
+    }
+
     try {
       await register({
         email: formData.email,
@@ -37,221 +58,213 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
         firstName: formData.firstName,
         lastName: formData.lastName,
         userType: formData.userType,
-        phone: formData.phone || undefined
+        phone: formData.phone || undefined,
       });
+      navigate('/');
     } catch (error: any) {
-      setError(error.message || 'Registration failed');
+      setError(error.response?.data?.error || error.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSelectChange = (e: any) => {
+    setFormData({
+      ...formData,
+      userType: e.target.value,
     });
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '0 auto', padding: '20px' }}>
-      <h2 style={{ textAlign: 'center', marginBottom: '30px', color: '#2c3e50' }}>
-        Create Your Account
-      </h2>
-
-      {error && (
-        <div style={{
-          backgroundColor: '#e74c3c',
-          color: 'white',
-          padding: '10px',
-          borderRadius: '4px',
-          marginBottom: '20px',
-          textAlign: 'center'
-        }}>
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-            Account Type:
-          </label>
-          <select
-            name="userType"
-            value={formData.userType}
-            onChange={handleChange}
-            style={{
-              width: '100%',
-              padding: '10px',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              fontSize: '16px'
-            }}
-          >
-            <option value="customer">Customer - Looking for services</option>
-            <option value="provider">Service Provider - Offering services</option>
-          </select>
-        </div>
-
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-          <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              First Name:
-            </label>
-            <input
-              type="text"
-              name="firstName"
-              value={formData.firstName}
-              onChange={handleChange}
-              required
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '16px'
-              }}
-            />
-          </div>
-          <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              Last Name:
-            </label>
-            <input
-              type="text"
-              name="lastName"
-              value={formData.lastName}
-              onChange={handleChange}
-              required
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '16px'
-              }}
-            />
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-            Email:
-          </label>
-          <input
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-            style={{
-              width: '100%',
-              padding: '10px',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              fontSize: '16px'
-            }}
-          />
-        </div>
-
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-            Phone (Optional):
-          </label>
-          <input
-            type="tel"
-            name="phone"
-            value={formData.phone}
-            onChange={handleChange}
-            style={{
-              width: '100%',
-              padding: '10px',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              fontSize: '16px'
-            }}
-          />
-        </div>
-
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-            Password:
-          </label>
-          <input
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            required
-            minLength={6}
-            style={{
-              width: '100%',
-              padding: '10px',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              fontSize: '16px'
-            }}
-          />
-        </div>
-
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-            Confirm Password:
-          </label>
-          <input
-            type="password"
-            name="confirmPassword"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            required
-            style={{
-              width: '100%',
-              padding: '10px',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              fontSize: '16px'
-            }}
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            width: '100%',
-            padding: '12px',
-            backgroundColor: '#27ae60',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            fontSize: '16px',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            opacity: loading ? 0.7 : 1
+    <Container maxWidth="sm" sx={{ mt: 4, mb: 4 }}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Paper
+          elevation={4}
+          sx={{
+            p: 4,
+            borderRadius: 3,
+            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
           }}
         >
-          {loading ? 'Creating Account...' : 'Create Account'}
-        </button>
-      </form>
+          <Box sx={{ textAlign: 'center', mb: 4 }}>
+            <Typography
+              variant="h4"
+              component="h1"
+              gutterBottom
+              sx={{
+                fontWeight: 'bold',
+                color: 'white',
+                textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
+              }}
+            >
+              🚀 Join Tino 2
+            </Typography>
+            <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.9)' }}>
+              Create your account to get started
+            </Typography>
+          </Box>
 
-      <div style={{ textAlign: 'center', marginTop: '20px' }}>
-        <p style={{ color: '#7f8c8d' }}>
-          Already have an account?{' '}
-          <button
-            onClick={onSwitchToLogin}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#3498db',
-              cursor: 'pointer',
-              textDecoration: 'underline'
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+            >
+              <Alert severity="error" sx={{ mb: 3 }}>
+                {error}
+              </Alert>
+            </motion.div>
+          )}
+
+          <Box
+            component="form"
+            onSubmit={handleSubmit}
+            sx={{
+              bgcolor: 'rgba(255,255,255,0.95)',
+              p: 3,
+              borderRadius: 2,
             }}
           >
-            Login here
-          </button>
-        </p>
-      </div>
-    </div>
+            <FormControl fullWidth margin="normal" sx={{ mb: 2 }}>
+              <InputLabel>Account Type</InputLabel>
+              <Select
+                name="userType"
+                value={formData.userType}
+                label="Account Type"
+                onChange={handleSelectChange}
+              >
+                <MenuItem value="customer">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    👤 <span>Customer - Looking for services</span>
+                  </Box>
+                </MenuItem>
+                <MenuItem value="provider">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    🔧 <span>Service Provider - Offering services</span>
+                  </Box>
+                </MenuItem>
+              </Select>
+            </FormControl>
+
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                fullWidth
+                label="First Name"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleChange}
+                required
+                margin="normal"
+              />
+              <TextField
+                fullWidth
+                label="Last Name"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                required
+                margin="normal"
+              />
+            </Box>
+
+            <TextField
+              fullWidth
+              label="Email Address"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              margin="normal"
+              required
+              autoComplete="email"
+              sx={{ mb: 2 }}
+            />
+
+            <TextField
+              fullWidth
+              label="Phone Number (Optional)"
+              name="phone"
+              type="tel"
+              value={formData.phone}
+              onChange={handleChange}
+              margin="normal"
+              sx={{ mb: 2 }}
+            />
+
+            <TextField
+              fullWidth
+              label="Password"
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={handleChange}
+              margin="normal"
+              required
+              helperText="Must be at least 8 characters"
+              sx={{ mb: 2 }}
+            />
+
+            <TextField
+              fullWidth
+              label="Confirm Password"
+              name="confirmPassword"
+              type="password"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              margin="normal"
+              required
+              sx={{ mb: 3 }}
+            />
+
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              size="large"
+              disabled={loading}
+              sx={{
+                py: 1.5,
+                mb: 3,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                fontSize: '1.1rem',
+                textTransform: 'none',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
+                },
+              }}
+            >
+              {loading ? <CircularProgress size={24} color="inherit" /> : 'Create Account'}
+            </Button>
+
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="body2" color="text.secondary">
+                Already have an account?{' '}
+                <Link
+                  to="/login"
+                  style={{
+                    color: '#1976d2',
+                    textDecoration: 'none',
+                    fontWeight: 600,
+                  }}
+                >
+                  Sign in here
+                </Link>
+              </Typography>
+            </Box>
+          </Box>
+        </Paper>
+      </motion.div>
+    </Container>
   );
 };
 

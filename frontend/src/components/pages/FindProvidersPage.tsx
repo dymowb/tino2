@@ -41,11 +41,11 @@ const FindProvidersPage: React.FC = () => {
         params.service_type = filters.serviceType;
       }
 
-      const response = await apiService.getNearbyProviders(params);
-      let filteredProviders = response.providers;
+      const response = await apiService.getProviders(params);
+      let filteredProviders = response.data || [];
 
       if (filters.minRating > 0) {
-        filteredProviders = filteredProviders.filter(p => p.rating >= filters.minRating);
+        filteredProviders = filteredProviders.filter((p: any) => p.rating >= filters.minRating);
       }
 
       setProviders(filteredProviders);
@@ -193,16 +193,16 @@ const FindProvidersPage: React.FC = () => {
                   <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '15px' }}>
                     <div style={{ flex: 1 }}>
                       <h3 style={{ color: '#2c3e50', marginBottom: '5px' }}>
-                        {provider.business_name}
+                        {provider.businessName}
                       </h3>
                       <div style={{ color: '#7f8c8d', marginBottom: '10px' }}>
-                        {provider.first_name} {provider.last_name}
+                        Provider Name
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
                         <span style={{ color: '#f39c12', marginRight: '5px' }}>⭐</span>
                         <span style={{ fontWeight: 'bold' }}>{provider.rating}</span>
                         <span style={{ color: '#7f8c8d', marginLeft: '5px' }}>
-                          ({provider.total_reviews} reviews)
+                          ({provider.totalReviews} reviews)
                         </span>
                       </div>
                     </div>
@@ -232,13 +232,13 @@ const FindProvidersPage: React.FC = () => {
                   <div style={{ marginBottom: '20px' }}>
                     <strong>Rate: </strong>
                     <span style={{ color: '#27ae60', fontWeight: 'bold' }}>
-                      ${provider.hourly_rate}/hour
+                      ${provider.pricing?.baseRate || 50}/hour
                     </span>
                   </div>
 
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <button
-                      onClick={() => requestQuote(provider.id)}
+                      onClick={() => requestQuote(parseInt(provider.id))}
                       style={{
                         flex: 1,
                         padding: '10px',
@@ -253,7 +253,7 @@ const FindProvidersPage: React.FC = () => {
                       Request Quote
                     </button>
                     <button
-                      onClick={() => bookNow(provider.id)}
+                      onClick={() => bookNow(parseInt(provider.id))}
                       style={{
                         flex: 1,
                         padding: '10px',

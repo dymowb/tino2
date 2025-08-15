@@ -1,72 +1,170 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from '@mui/material/styles';
+import { CssBaseline } from '@mui/material';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import theme from './theme/theme';
 import Navigation from './components/layout/Navigation';
 import HomePage from './components/pages/HomePage';
 import LoginForm from './components/auth/LoginForm';
 import RegisterForm from './components/auth/RegisterForm';
 import FindProvidersPage from './components/pages/FindProvidersPage';
 import MyBookingsPage from './components/pages/MyBookingsPage';
-import ProviderDashboardPage from './components/pages/ProviderDashboardPage';
-import QuoteManagementPage from './components/pages/QuoteManagementPage';
 import ProfilePage from './components/pages/ProfilePage';
+import ProviderDashboardPage from './components/pages/ProviderDashboardPage';
+import LoadingSpinner from './components/common/LoadingSpinner';
+import { Box } from '@mui/material';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+    },
+  },
+});
+
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  requireAuth?: boolean;
+  redirectTo?: string;
+}
+
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
+  children, 
+  requireAuth = true, 
+  redirectTo = '/login' 
+}) => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  if (requireAuth && !isAuthenticated) {
+    return <Navigate to={redirectTo} replace />;
+  }
+
+  if (!requireAuth && isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+};
 
 const AppContent: React.FC = () => {
   const { loading } = useAuth();
-  const [currentPage, setCurrentPage] = useState('home');
 
   if (loading) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        fontSize: '18px'
-      }}>
-        Loading...
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'home':
-        return <HomePage />;
-      case 'login':
-        return <LoginForm onSwitchToRegister={() => setCurrentPage('register')} />;
-      case 'register':
-        return <RegisterForm onSwitchToLogin={() => setCurrentPage('login')} />;
-      case 'providers':
-        return <FindProvidersPage />;
-      case 'bookings':
-        return <MyBookingsPage />;
-      case 'dashboard':
-        return <ProviderDashboardPage />;
-      case 'quotes':
-        return <QuoteManagementPage />;
-      case 'profile':
-        return <ProfilePage />;
-      default:
-        return <HomePage />;
-    }
-  };
-
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
-      <Navigation currentPage={currentPage} onNavigate={setCurrentPage} />
-      <main>
-        {renderPage()}
-      </main>
-    </div>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <Navigation />
+      <Box component="main" sx={{ flexGrow: 1 }}>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/" element={<HomePage />} />
+          <Route 
+            path="/login" 
+            element={
+              <ProtectedRoute requireAuth={false}>
+                <LoginForm />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/register" 
+            element={
+              <ProtectedRoute requireAuth={false}>
+                <RegisterForm />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Protected routes */}
+          <Route 
+            path="/providers" 
+            element={
+              <ProtectedRoute>
+                <FindProvidersPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/bookings" 
+            element={
+              <ProtectedRoute>
+                <MyBookingsPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/profile" 
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard" 
+            element={
+              <ProtectedRoute>
+                <ProviderDashboardPage />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Catch all route */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Box>
+    </Box>
   );
 };
 
-function App() {
+const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Router>
+          <AuthProvider>
+            <AppContent />
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  background: '#fff',
+                  color: '#333',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                  borderRadius: '8px',
+                },
+                success: {
+                  iconTheme: {
+                    primary: '#4CAF50',
+                    secondary: '#fff',
+                  },
+                },
+                error: {
+                  iconTheme: {
+                    primary: '#F44336',
+                    secondary: '#fff',
+                  },
+                },
+              }}
+            />
+          </AuthProvider>
+        </Router>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
-}
+};
 
 export default App;
