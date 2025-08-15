@@ -1,0 +1,12 @@
+{
+  "name": "docs",
+  "version": "1.0.0",
+  "description": "## Project Overview **Tino 2** is a full-stack domestic service marketplace platform that connects customers with qualified service providers for household services. Built with modern web technologies, it features GPS-based discovery, real-time messaging, booking management, and payment processing.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
