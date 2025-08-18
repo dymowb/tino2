@@ -15,13 +15,15 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       return;
     }
 
-    const isBlacklisted = await redisClient.exists(`blacklist:${token}`);
-    if (isBlacklisted) {
-      res.status(401).json({
-        success: false,
-        error: 'Token has been revoked',
-      });
-      return;
+    if (process.env.REDIS_ENABLED === 'true') {
+      const isBlacklisted = await redisClient.exists(`blacklist:${token}`);
+      if (isBlacklisted) {
+        res.status(401).json({
+          success: false,
+          error: 'Token has been revoked',
+        });
+        return;
+      }
     }
 
     const payload = jwtService.verifyToken(token);
@@ -71,7 +73,10 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
     const token = extractTokenFromRequest(req);
 
     if (token) {
-      const isBlacklisted = await redisClient.exists(`blacklist:${token}`);
+      let isBlacklisted = false;
+      if (process.env.REDIS_ENABLED === 'true') {
+        isBlacklisted = await redisClient.exists(`blacklist:${token}`);
+      }
       if (!isBlacklisted) {
         const payload = jwtService.verifyToken(token);
         if (payload) {
@@ -111,11 +116,13 @@ export const validateTokenOwnership = (req: Request, res: Response, next: NextFu
 
 export const revokeToken = async (token: string): Promise<void> => {
   try {
-    const payload = jwtService.decodeToken(token);
-    if (payload && payload.exp) {
-      const ttl = payload.exp - Math.floor(Date.now() / 1000);
-      if (ttl > 0) {
-        await redisClient.set(`blacklist:${token}`, '1', ttl);
+    if (process.env.REDIS_ENABLED === 'true') {
+      const payload = jwtService.decodeToken(token);
+      if (payload && payload.exp) {
+        const ttl = payload.exp - Math.floor(Date.now() / 1000);
+        if (ttl > 0) {
+          await redisClient.set(`blacklist:${token}`, '1', ttl);
+        }
       }
     }
   } catch (error) {
@@ -156,13 +163,15 @@ export const refreshTokenMiddleware = async (req: Request, res: Response, next: 
       return;
     }
 
-    const isBlacklisted = await redisClient.exists(`blacklist:${refreshToken}`);
-    if (isBlacklisted) {
-      res.status(401).json({
-        success: false,
-        error: 'Refresh token has been revoked',
-      });
-      return;
+    if (process.env.REDIS_ENABLED === 'true') {
+      const isBlacklisted = await redisClient.exists(`blacklist:${refreshToken}`);
+      if (isBlacklisted) {
+        res.status(401).json({
+          success: false,
+          error: 'Refresh token has been revoked',
+        });
+        return;
+      }
     }
 
     const payload = jwtService.verifyToken(refreshToken);

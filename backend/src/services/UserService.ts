@@ -56,6 +56,7 @@ export class UserService {
     try {
       const user = await this.userRepository.findOne({
         where: { email, isActive: true },
+        select: ['id', 'email', 'password', 'firstName', 'lastName', 'userType', 'phone', 'isActive', 'createdAt', 'updatedAt'],
       });
 
       if (!user) {
@@ -77,10 +78,12 @@ export class UserService {
 
       // Note: lastLogin field not available in BasicUser
 
-      await redisClient.setJson(`user:${user.id}:session`, {
-        userId: user.id,
-        lastActivity: new Date(),
-      }, 24 * 60 * 60); // 24 hours
+      if (process.env.REDIS_ENABLED === 'true') {
+        await redisClient.setJson(`user:${user.id}:session`, {
+          userId: user.id,
+          lastActivity: new Date(),
+        }, 24 * 60 * 60); // 24 hours
+      }
 
       logger.info(`User authenticated successfully: ${user.id}`);
 
@@ -176,7 +179,9 @@ export class UserService {
         password: hashedNewPassword,
       });
 
-      await redisClient.del(`user:${id}:session`);
+      if (process.env.REDIS_ENABLED === 'true') {
+        await redisClient.del(`user:${id}:session`);
+      }
 
       logger.info(`Password changed successfully for user: ${id}`);
     } catch (error) {
@@ -196,7 +201,9 @@ export class UserService {
         isActive: false,
       });
 
-      await redisClient.del(`user:${id}:session`);
+      if (process.env.REDIS_ENABLED === 'true') {
+        await redisClient.del(`user:${id}:session`);
+      }
 
       logger.info(`User deactivated successfully: ${id}`);
     } catch (error) {
@@ -241,10 +248,12 @@ export class UserService {
 
       const tokens = jwtService.generateTokens(tokenPayload);
 
-      await redisClient.setJson(`user:${user.id}:session`, {
-        userId: user.id,
-        lastActivity: new Date(),
-      }, 24 * 60 * 60);
+      if (process.env.REDIS_ENABLED === 'true') {
+        await redisClient.setJson(`user:${user.id}:session`, {
+          userId: user.id,
+          lastActivity: new Date(),
+        }, 24 * 60 * 60);
+      }
 
       logger.info(`Token refreshed successfully for user: ${userId}`);
       return tokens;
@@ -256,13 +265,15 @@ export class UserService {
 
   async logout(userId: string, token: string): Promise<void> {
     try {
-      await redisClient.del(`user:${userId}:session`);
-      
-      const payload = jwtService.decodeToken(token);
-      if (payload && payload.exp) {
-        const ttl = payload.exp - Math.floor(Date.now() / 1000);
-        if (ttl > 0) {
-          await redisClient.set(`blacklist:${token}`, '1', ttl);
+      if (process.env.REDIS_ENABLED === 'true') {
+        await redisClient.del(`user:${userId}:session`);
+        
+        const payload = jwtService.decodeToken(token);
+        if (payload && payload.exp) {
+          const ttl = payload.exp - Math.floor(Date.now() / 1000);
+          if (ttl > 0) {
+            await redisClient.set(`blacklist:${token}`, '1', ttl);
+          }
         }
       }
 

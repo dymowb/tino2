@@ -6,7 +6,7 @@ export const AppDataSource = new DataSource({
   database: './database.sqlite',
   synchronize: config.server.nodeEnv === 'development',
   logging: config.server.nodeEnv === 'development',
-  entities: ['dist/models/BasicUser.js'],
+  entities: [__dirname + '/../models/*.ts'],
   migrations: ['dist/migrations/**/*.js'],
   subscribers: ['dist/subscribers/**/*.js'],
 });
