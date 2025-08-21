@@ -128,9 +128,9 @@ export const validateApiKey = (req: Request, res: Response, next: NextFunction):
 export const sanitizeInput = (req: Request, _res: Response, next: NextFunction): void => {
   const sanitizeObject = (obj: any): any => {
     if (typeof obj !== 'object' || obj === null) return obj;
-    
+
     const sanitized: any = Array.isArray(obj) ? [] : {};
-    
+
     for (const [key, value] of Object.entries(obj)) {
       if (typeof value === 'string') {
         sanitized[key] = value.trim();
@@ -140,13 +140,13 @@ export const sanitizeInput = (req: Request, _res: Response, next: NextFunction):
         sanitized[key] = value;
       }
     }
-    
+
     return sanitized;
   };
 
   req.body = sanitizeObject(req.body);
   req.query = sanitizeObject(req.query);
-  
+
   next();
 };
 
@@ -164,17 +164,17 @@ export const logSuspiciousActivity = (req: Request, res: Response, next: NextFun
 
   const checkForSuspiciousContent = (obj: any): boolean => {
     if (typeof obj === 'string') {
-      return suspiciousPatterns.some(pattern => pattern.test(obj));
+      return suspiciousPatterns.some((pattern) => pattern.test(obj));
     }
-    
+
     if (typeof obj === 'object' && obj !== null) {
-      return Object.values(obj).some(value => checkForSuspiciousContent(value));
+      return Object.values(obj).some((value) => checkForSuspiciousContent(value));
     }
-    
+
     return false;
   };
 
-  const hasSuspiciousContent = 
+  const hasSuspiciousContent =
     checkForSuspiciousContent(req.body) ||
     checkForSuspiciousContent(req.query) ||
     checkForSuspiciousContent(req.params);

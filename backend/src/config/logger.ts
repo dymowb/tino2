@@ -15,10 +15,7 @@ const logger = winston.createLogger({
   format: logFormat,
   transports: [
     new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      ),
+      format: winston.format.combine(winston.format.colorize(), winston.format.simple()),
     }),
   ],
 });
@@ -28,20 +25,14 @@ if (config.server.nodeEnv === 'production') {
     new winston.transports.File({
       filename: config.logging.file.replace('app.log', 'error.log'),
       level: 'error',
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-      ),
+      format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
     })
   );
 
   logger.add(
     new winston.transports.File({
       filename: config.logging.file,
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-      ),
+      format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
     })
   );
 }

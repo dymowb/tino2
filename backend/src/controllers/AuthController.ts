@@ -53,7 +53,10 @@ export class AuthController {
     try {
       const { email, password } = req.body;
 
-      const { user, accessToken, refreshToken } = await userService.authenticateUser(email, password);
+      const { user, accessToken, refreshToken } = await userService.authenticateUser(
+        email,
+        password
+      );
 
       const response: ApiResponse = {
         success: true,

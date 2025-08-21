@@ -4,10 +4,10 @@ import { ApiResponse } from '@/types';
 
 export const handleValidationErrors = (req: Request, res: Response, next: NextFunction): void => {
   const errors = validationResult(req);
-  
+
   if (!errors.isEmpty()) {
     const formattedErrors: Record<string, string[]> = {};
-    
+
     errors.array().forEach((error) => {
       const field = error.type === 'field' ? error.path : 'general';
       if (!formattedErrors[field]) {
@@ -40,8 +40,10 @@ export const userValidation = {
     body('password')
       .isLength({ min: 8, max: 128 })
       .withMessage('Password must be between 8 and 128 characters')
-      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/)
-      .withMessage('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?])/)
+      .withMessage(
+        'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
+      ),
     body('firstName')
       .trim()
       .isLength({ min: 1, max: 50 })
@@ -56,7 +58,7 @@ export const userValidation = {
       .withMessage('Last name can only contain letters, spaces, hyphens, and apostrophes'),
     body('phone')
       .optional()
-      .matches(/^[\+]?[\d\s\-\(\)]{10,20}$/)
+      .matches(/^[+]?[\d\s\-()]{10,20}$/)
       .withMessage('Valid phone number is required'),
     body('userType')
       .isIn(['customer', 'provider'])
@@ -64,13 +66,8 @@ export const userValidation = {
   ],
 
   login: [
-    body('email')
-      .isEmail()
-      .withMessage('Valid email is required')
-      .normalizeEmail(),
-    body('password')
-      .isLength({ min: 1 })
-      .withMessage('Password is required'),
+    body('email').isEmail().withMessage('Valid email is required').normalizeEmail(),
+    body('password').isLength({ min: 1 }).withMessage('Password is required'),
   ],
 
   updateProfile: [
@@ -90,19 +87,19 @@ export const userValidation = {
       .withMessage('Last name can only contain letters, spaces, hyphens, and apostrophes'),
     body('phone')
       .optional()
-      .matches(/^[\+]?[\d\s\-\(\)]{10,20}$/)
+      .matches(/^[+]?[\d\s\-()]{10,20}$/)
       .withMessage('Valid phone number is required'),
   ],
 
   changePassword: [
-    body('currentPassword')
-      .isLength({ min: 1 })
-      .withMessage('Current password is required'),
+    body('currentPassword').isLength({ min: 1 }).withMessage('Current password is required'),
     body('newPassword')
       .isLength({ min: 8, max: 128 })
       .withMessage('New password must be between 8 and 128 characters')
-      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/)
-      .withMessage('New password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?])/)
+      .withMessage(
+        'New password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
+      ),
   ],
 };
 
@@ -116,12 +113,8 @@ export const providerValidation = {
       .trim()
       .isLength({ min: 10, max: 1000 })
       .withMessage('Description is required and must be between 10 and 1000 characters'),
-    body('services')
-      .isArray({ min: 1 })
-      .withMessage('At least one service is required'),
-    body('services.*')
-      .isString()
-      .withMessage('Each service must be a string'),
+    body('services').isArray({ min: 1 }).withMessage('At least one service is required'),
+    body('services.*').isString().withMessage('Each service must be a string'),
     body('location.latitude')
       .isFloat({ min: -90, max: 90 })
       .withMessage('Valid latitude is required'),
@@ -148,10 +141,7 @@ export const providerValidation = {
       .trim()
       .isLength({ min: 10, max: 1000 })
       .withMessage('Description must be between 10 and 1000 characters'),
-    body('services')
-      .optional()
-      .isArray({ min: 1 })
-      .withMessage('At least one service is required'),
+    body('services').optional().isArray({ min: 1 }).withMessage('At least one service is required'),
     body('serviceRadius')
       .optional()
       .isFloat({ min: 1, max: 100 })
@@ -200,10 +190,7 @@ export const bookingValidation = {
       .optional()
       .isIn(['pending', 'confirmed', 'in_progress', 'completed', 'cancelled'])
       .withMessage('Valid status is required'),
-    body('scheduledDate')
-      .optional()
-      .isISO8601()
-      .withMessage('Valid scheduled date is required'),
+    body('scheduledDate').optional().isISO8601().withMessage('Valid scheduled date is required'),
     body('estimatedDuration')
       .optional()
       .isInt({ min: 15, max: 480 })
@@ -241,9 +228,7 @@ export const quoteValidation = {
   ],
 
   submit: [
-    body('estimatedPrice')
-      .isFloat({ min: 0 })
-      .withMessage('Valid estimated price is required'),
+    body('estimatedPrice').isFloat({ min: 0 }).withMessage('Valid estimated price is required'),
     body('estimatedDuration')
       .isInt({ min: 15 })
       .withMessage('Estimated duration must be at least 15 minutes'),
@@ -267,9 +252,7 @@ export const quoteValidation = {
 
 export const messageValidation = {
   send: [
-    body('receiverId')
-      .isUUID()
-      .withMessage('Valid receiver ID is required'),
+    body('receiverId').isUUID().withMessage('Valid receiver ID is required'),
     body('message')
       .trim()
       .isLength({ min: 1, max: 1000 })
@@ -283,9 +266,7 @@ export const messageValidation = {
 
 export const reviewValidation = {
   create: [
-    body('rating')
-      .isFloat({ min: 1, max: 5 })
-      .withMessage('Rating must be between 1 and 5'),
+    body('rating').isFloat({ min: 1, max: 5 }).withMessage('Rating must be between 1 and 5'),
     body('comment')
       .optional()
       .trim()
@@ -295,28 +276,17 @@ export const reviewValidation = {
 };
 
 export const paginationValidation = [
-  query('page')
-    .optional()
-    .isInt({ min: 1 })
-    .withMessage('Page must be a positive integer')
-    .toInt(),
+  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer').toInt(),
   query('limit')
     .optional()
     .isInt({ min: 1, max: 100 })
     .withMessage('Limit must be between 1 and 100')
     .toInt(),
-  query('sortBy')
-    .optional()
-    .isString()
-    .withMessage('Sort by must be a string'),
+  query('sortBy').optional().isString().withMessage('Sort by must be a string'),
   query('sortOrder')
     .optional()
     .isIn(['asc', 'desc'])
     .withMessage('Sort order must be either asc or desc'),
 ];
 
-export const idParamValidation = [
-  param('id')
-    .isUUID()
-    .withMessage('Valid ID is required'),
-];
+export const idParamValidation = [param('id').isUUID().withMessage('Valid ID is required')];

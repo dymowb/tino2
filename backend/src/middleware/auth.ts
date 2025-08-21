@@ -3,7 +3,11 @@ import { jwtService } from '@/utils/jwt';
 import { redisClient } from '@/config/redis';
 import logger from '@/config/logger';
 
-export const authenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const authenticate = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const token = extractTokenFromRequest(req);
 
@@ -68,7 +72,11 @@ export const authorize = (allowedUserTypes: string[]) => {
   };
 };
 
-export const optionalAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const optionalAuth = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const token = extractTokenFromRequest(req);
 
@@ -94,7 +102,7 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
 
 export const validateTokenOwnership = (req: Request, res: Response, next: NextFunction): void => {
   const { userId } = req.params;
-  
+
   if (!req.user) {
     res.status(401).json({
       success: false,
@@ -133,7 +141,7 @@ export const revokeToken = async (token: string): Promise<void> => {
 
 export const extractTokenFromRequest = (req: Request): string | null => {
   const authHeader = req.headers.authorization;
-  
+
   if (authHeader && authHeader.startsWith('Bearer ')) {
     return authHeader.substring(7);
   }
@@ -151,7 +159,11 @@ export const extractTokenFromRequest = (req: Request): string | null => {
   return null;
 };
 
-export const refreshTokenMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const refreshTokenMiddleware = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const refreshToken = req.body.refreshToken || req.cookies?.refreshToken;
 

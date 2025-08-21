@@ -43,7 +43,10 @@ export class BasicUserService {
     }
   }
 
-  async authenticateUser(email: string, password: string): Promise<{
+  async authenticateUser(
+    email: string,
+    password: string
+  ): Promise<{
     user: BasicUser;
     accessToken: string;
     refreshToken: string;
@@ -51,7 +54,16 @@ export class BasicUserService {
     try {
       const user = await this.userRepository.findOne({
         where: { email },
-        select: ['id', 'email', 'password', 'firstName', 'lastName', 'phone', 'userType', 'isActive'],
+        select: [
+          'id',
+          'email',
+          'password',
+          'firstName',
+          'lastName',
+          'phone',
+          'userType',
+          'isActive',
+        ],
       });
 
       if (!user) {
@@ -74,7 +86,8 @@ export class BasicUserService {
       });
 
       // Remove password from user object
-      const { password: _, ...userWithoutPassword } = user;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password: _password, ...userWithoutPassword } = user;
 
       return {
         user: userWithoutPassword as BasicUser,

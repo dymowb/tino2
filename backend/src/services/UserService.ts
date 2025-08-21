@@ -48,7 +48,10 @@ export class UserService {
     }
   }
 
-  async authenticateUser(email: string, password: string): Promise<{
+  async authenticateUser(
+    email: string,
+    password: string
+  ): Promise<{
     user: BasicUser;
     accessToken: string;
     refreshToken: string;
@@ -56,7 +59,18 @@ export class UserService {
     try {
       const user = await this.userRepository.findOne({
         where: { email, isActive: true },
-        select: ['id', 'email', 'password', 'firstName', 'lastName', 'userType', 'phone', 'isActive', 'createdAt', 'updatedAt'],
+        select: [
+          'id',
+          'email',
+          'password',
+          'firstName',
+          'lastName',
+          'userType',
+          'phone',
+          'isActive',
+          'createdAt',
+          'updatedAt',
+        ],
       });
 
       if (!user) {
@@ -79,10 +93,14 @@ export class UserService {
       // Note: lastLogin field not available in BasicUser
 
       if (process.env.REDIS_ENABLED === 'true') {
-        await redisClient.setJson(`user:${user.id}:session`, {
-          userId: user.id,
-          lastActivity: new Date(),
-        }, 24 * 60 * 60); // 24 hours
+        await redisClient.setJson(
+          `user:${user.id}:session`,
+          {
+            userId: user.id,
+            lastActivity: new Date(),
+          },
+          24 * 60 * 60
+        ); // 24 hours
       }
 
       logger.info(`User authenticated successfully: ${user.id}`);
@@ -127,13 +145,7 @@ export class UserService {
         throw new Error('User not found');
       }
 
-      const allowedUpdates = [
-        'firstName',
-        'lastName',
-        'phone',
-        'profileImage',
-        'settings',
-      ];
+      const allowedUpdates = ['firstName', 'lastName', 'phone', 'profileImage', 'settings'];
 
       const sanitizedUpdates: any = {};
       Object.keys(updates).forEach((key) => {
@@ -164,10 +176,7 @@ export class UserService {
         throw new Error('User not found');
       }
 
-      const isCurrentPasswordValid = await passwordService.compare(
-        currentPassword,
-        user.password
-      );
+      const isCurrentPasswordValid = await passwordService.compare(currentPassword, user.password);
 
       if (!isCurrentPasswordValid) {
         throw new Error('Current password is incorrect');
@@ -249,10 +258,14 @@ export class UserService {
       const tokens = jwtService.generateTokens(tokenPayload);
 
       if (process.env.REDIS_ENABLED === 'true') {
-        await redisClient.setJson(`user:${user.id}:session`, {
-          userId: user.id,
-          lastActivity: new Date(),
-        }, 24 * 60 * 60);
+        await redisClient.setJson(
+          `user:${user.id}:session`,
+          {
+            userId: user.id,
+            lastActivity: new Date(),
+          },
+          24 * 60 * 60
+        );
       }
 
       logger.info(`Token refreshed successfully for user: ${userId}`);
@@ -267,7 +280,7 @@ export class UserService {
     try {
       if (process.env.REDIS_ENABLED === 'true') {
         await redisClient.del(`user:${userId}:session`);
-        
+
         const payload = jwtService.decodeToken(token);
         if (payload && payload.exp) {
           const ttl = payload.exp - Math.floor(Date.now() / 1000);

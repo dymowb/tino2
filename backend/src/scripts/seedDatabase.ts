@@ -7,13 +7,20 @@ import { passwordService } from '@/utils/password';
 import logger from '@/config/logger';
 
 const SERVICES = [
-  'House Cleaning', 'Plumbing', 'Electrical Work', 'Gardening', 'Handyman',
-  'Painting', 'Appliance Repair', 'Carpet Cleaning', 'Window Cleaning',
+  'House Cleaning',
+  'Plumbing',
+  'Electrical Work',
+  'Gardening',
+  'Handyman',
+  'Painting',
+  'Appliance Repair',
+  'Carpet Cleaning',
+  'Window Cleaning',
 ];
 
 const LOCATIONS = [
   { city: 'Los Angeles', state: 'CA', lat: 34.0522, lng: -118.2437 },
-  { city: 'New York', state: 'NY', lat: 40.7128, lng: -74.0060 },
+  { city: 'New York', state: 'NY', lat: 40.7128, lng: -74.006 },
   { city: 'Chicago', state: 'IL', lat: 41.8781, lng: -87.6298 },
 ];
 
@@ -56,7 +63,7 @@ class DatabaseSeeder {
 
   private async seedUsers(): Promise<void> {
     logger.info('Seeding users...');
-    
+
     const userRepository = AppDataSource.getRepository(User);
     const providerRepository = AppDataSource.getRepository(Provider);
     const hashedPassword = await passwordService.hash('Demo123!');
@@ -90,14 +97,14 @@ class DatabaseSeeder {
           privacy: { showProfile: true, showLocation: true },
         },
       });
-      
+
       const savedUser = await userRepository.save(user);
       this.users.push(savedUser);
 
       if (userData.userType === UserType.PROVIDER) {
         const location = getRandomItem(LOCATIONS);
         const services = getRandomItems(SERVICES, 3);
-        
+
         const provider = providerRepository.create({
           userId: savedUser.id,
           businessName: `${savedUser.firstName} ${savedUser.lastName} Services`,
@@ -150,10 +157,10 @@ async function runSeeder(): Promise<void> {
   try {
     await AppDataSource.initialize();
     await mongoClient.connect();
-    
+
     const seeder = new DatabaseSeeder();
     await seeder.seed();
-    
+
     logger.info('Database seeding completed! 🎉');
   } catch (error) {
     logger.error('Seeding failed:', error);

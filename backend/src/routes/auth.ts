@@ -22,23 +22,11 @@ router.post(
   authController.login.bind(authController)
 );
 
-router.post(
-  '/refresh',
-  refreshTokenMiddleware,
-  authController.refreshToken.bind(authController)
-);
+router.post('/refresh', refreshTokenMiddleware, authController.refreshToken.bind(authController));
 
-router.post(
-  '/logout',
-  authenticate,
-  authController.logout.bind(authController)
-);
+router.post('/logout', authenticate, authController.logout.bind(authController));
 
-router.get(
-  '/profile',
-  authenticate,
-  authController.getProfile.bind(authController)
-);
+router.get('/profile', authenticate, authController.getProfile.bind(authController));
 
 router.put(
   '/profile',

@@ -100,9 +100,7 @@ describe('Authentication', () => {
     };
 
     beforeEach(async () => {
-      await request(server)
-        .post('/api/v1/auth/register')
-        .send(testUser);
+      await request(server).post('/api/v1/auth/register').send(testUser);
     });
 
     it('should login with valid credentials', async () => {
@@ -157,9 +155,7 @@ describe('Authentication', () => {
         userType: UserType.CUSTOMER,
       };
 
-      const registerResponse = await request(server)
-        .post('/api/v1/auth/register')
-        .send(userData);
+      const registerResponse = await request(server).post('/api/v1/auth/register').send(userData);
 
       accessToken = registerResponse.body.data.accessToken;
     });
@@ -175,9 +171,7 @@ describe('Authentication', () => {
     });
 
     it('should not get profile without token', async () => {
-      const response = await request(server)
-        .get('/api/v1/auth/profile')
-        .expect(401);
+      const response = await request(server).get('/api/v1/auth/profile').expect(401);
 
       expect(response.body.success).toBe(false);
     });
