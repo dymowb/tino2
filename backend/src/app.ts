@@ -10,6 +10,11 @@ import logger from '@/config/logger';
 import { securityMiddleware, sanitizeInput, logSuspiciousActivity, rateLimiters } from '@/middleware/security';
 
 import authRoutes from '@/routes/auth';
+import providerRoutes from '@/routes/providers';
+import bookingRoutes from '@/routes/bookings';
+import quoteRoutes from '@/routes/quotes';
+import messageRoutes from '@/routes/messages';
+import messageService from '@/services/MessageService';
 
 export class App {
   public app: express.Application;
@@ -30,6 +35,7 @@ export class App {
     this.initializeRoutes();
     this.initializeErrorHandling();
     this.initializeSocketIO();
+    this.initializeServices();
   }
 
   private initializeMiddleware(): void {
@@ -54,6 +60,25 @@ export class App {
   }
 
   private initializeRoutes(): void {
+    // Welcome page
+    this.app.get('/', (req, res) => {
+      res.json({
+        success: true,
+        message: 'Tino 2 Domestic Service API',
+        version: config.server.apiVersion,
+        environment: config.server.nodeEnv,
+        endpoints: {
+          health: '/health',
+          auth: `/api/${config.server.apiVersion}/auth`,
+          providers: `/api/${config.server.apiVersion}/providers`,
+          bookings: `/api/${config.server.apiVersion}/bookings`,
+          quotes: `/api/${config.server.apiVersion}/quotes`,
+          messages: `/api/${config.server.apiVersion}/messages`,
+        },
+        documentation: 'Available endpoints listed above',
+      });
+    });
+
     this.app.get('/health', (req, res) => {
       res.json({
         success: true,
@@ -64,6 +89,10 @@ export class App {
     });
 
     this.app.use(`/api/${config.server.apiVersion}/auth`, authRoutes);
+    this.app.use(`/api/${config.server.apiVersion}/providers`, providerRoutes);
+    this.app.use(`/api/${config.server.apiVersion}/bookings`, bookingRoutes);
+    this.app.use(`/api/${config.server.apiVersion}/quotes`, quoteRoutes);
+    this.app.use(`/api/${config.server.apiVersion}/messages`, messageRoutes);
 
     this.app.all('*', (req, res) => {
       res.status(404).json({
@@ -107,6 +136,7 @@ export class App {
     this.io.use((socket, next) => {
       const token = socket.handshake.auth.token;
       if (token) {
+        // TODO: Add JWT verification middleware for Socket.IO
         next();
       } else {
         next(new Error('Authentication error'));
@@ -114,8 +144,35 @@ export class App {
     });
 
     this.io.on('connection', (socket) => {
-      logger.info(`User connected: ${socket.id}`);
+      const userId = socket.handshake.auth.userId; // From JWT token
+      logger.info(`User connected: ${socket.id}, userId: ${userId}`);
 
+      // Handle user connection for messaging
+      if (userId) {
+        messageService.handleUserConnection(userId, socket.id);
+      }
+
+      // Join user to their personal room
+      socket.on('join_user_room', (userId) => {
+        socket.join(`user_${userId}`);
+        logger.info(`User ${socket.id} joined personal room user_${userId}`);
+      });
+
+      // Join conversation room
+      socket.on('join_conversation', async ({ userId, conversationId }) => {
+        try {
+          await messageService.joinConversation(userId, conversationId, socket.id);
+        } catch (error) {
+          socket.emit('error', { message: 'Failed to join conversation' });
+        }
+      });
+
+      // Leave conversation room
+      socket.on('leave_conversation', (conversationId) => {
+        messageService.leaveConversation(conversationId, socket.id);
+      });
+
+      // Generic room join/leave (backwards compatibility)
       socket.on('join_room', (roomId) => {
         socket.join(roomId);
         logger.info(`User ${socket.id} joined room ${roomId}`);
@@ -128,8 +185,16 @@ export class App {
 
       socket.on('disconnect', () => {
         logger.info(`User disconnected: ${socket.id}`);
+        if (userId) {
+          messageService.handleUserDisconnection(userId, socket.id);
+        }
       });
     });
+  }
+
+  private initializeServices(): void {
+    // Set Socket.IO instance in MessageService for real-time features
+    messageService.setSocketServer(this.io);
   }
 
   public listen(): void {

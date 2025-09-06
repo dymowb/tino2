@@ -138,20 +138,28 @@ export class ProviderService {
         .where('provider.isActive = :isActive', { isActive: true })
         .andWhere('user.isActive = :userIsActive', { userIsActive: true });
 
-      // Filter by services
+      // Filter by services (SQLite compatible - simple JSON search)
       if (services && services.length > 0) {
-        queryBuilder = queryBuilder.andWhere(
-          'provider.services && :services',
-          { services }
+        const serviceCondition = services.map(() => 
+          `provider.services LIKE ?`
+        ).join(' OR ');
+        
+        queryBuilder = queryBuilder.andWhere(`(${serviceCondition})`, 
+          services.map(service => `%"${service}"%`)
         );
       }
 
-      // Filter by location and radius
+      // Filter by location and radius (simplified for SQLite)
       if (latitude && longitude) {
-        // Using Haversine formula for distance calculation (SQLite doesn't have spatial functions)
+        // Simple distance approximation for SQLite - not perfect but functional
+        const latDiff = 0.009 * radius; // roughly 1km = 0.009 degrees
+        const lngDiff = 0.009 * radius;
         queryBuilder = queryBuilder.andWhere(
-          `(6371 * acos(cos(radians(:latitude)) * cos(radians(JSON_EXTRACT(provider.location, '$.latitude'))) * cos(radians(JSON_EXTRACT(provider.location, '$.longitude')) - radians(:longitude)) + sin(radians(:latitude)) * sin(radians(JSON_EXTRACT(provider.location, '$.latitude'))))) <= :radius`,
-          { latitude, longitude, radius }
+          `JSON_EXTRACT(provider.location, '$.latitude') BETWEEN :minLat AND :maxLat`,
+          { minLat: latitude - latDiff, maxLat: latitude + latDiff }
+        ).andWhere(
+          `JSON_EXTRACT(provider.location, '$.longitude') BETWEEN :minLng AND :maxLng`,
+          { minLng: longitude - lngDiff, maxLng: longitude + lngDiff }
         );
       }
 
@@ -183,14 +191,9 @@ export class ProviderService {
           break;
         case 'distance':
         default:
-          if (latitude && longitude) {
-            queryBuilder = queryBuilder.orderBy(
-              `(6371 * acos(cos(radians(:latitude)) * cos(radians(JSON_EXTRACT(provider.location, '$.latitude'))) * cos(radians(JSON_EXTRACT(provider.location, '$.longitude')) - radians(:longitude)) + sin(radians(:latitude)) * sin(radians(JSON_EXTRACT(provider.location, '$.latitude')))))`,
-              'ASC'
-            );
-          } else {
-            queryBuilder = queryBuilder.orderBy('provider.rating', 'DESC');
-          }
+          // For SQLite, we'll sort by rating if location sorting is requested
+          // In a production app with PostreSQL, proper distance calculation would be used
+          queryBuilder = queryBuilder.orderBy('provider.rating', 'DESC');
           break;
       }
 

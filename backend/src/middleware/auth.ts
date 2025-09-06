@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { jwtService } from '@/utils/jwt';
 import { redisClient } from '@/config/redis';
 import logger from '@/config/logger';
+import { AuthenticatedRequest } from '@/types';
 
 export const authenticate = async (
   req: Request,
@@ -204,4 +205,76 @@ export const refreshTokenMiddleware = async (
       error: 'Invalid refresh token',
     });
   }
+};
+
+export const requireProviderRole = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): void => {
+  if (!req.user) {
+    res.status(401).json({
+      success: false,
+      error: 'Authentication required',
+    });
+    return;
+  }
+
+  if (req.user.userType !== 'provider') {
+    res.status(403).json({
+      success: false,
+      error: 'Provider access required',
+    });
+    return;
+  }
+
+  next();
+};
+
+export const requireCustomerRole = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): void => {
+  if (!req.user) {
+    res.status(401).json({
+      success: false,
+      error: 'Authentication required',
+    });
+    return;
+  }
+
+  if (req.user.userType !== 'customer') {
+    res.status(403).json({
+      success: false,
+      error: 'Customer access required',
+    });
+    return;
+  }
+
+  next();
+};
+
+export const requireAdminRole = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): void => {
+  if (!req.user) {
+    res.status(401).json({
+      success: false,
+      error: 'Authentication required',
+    });
+    return;
+  }
+
+  if (req.user.userType !== 'admin') {
+    res.status(403).json({
+      success: false,
+      error: 'Admin access required',
+    });
+    return;
+  }
+
+  next();
 };

@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   Index,
   OneToMany,
+  ManyToMany,
 } from 'typeorm';
 import { IsEmail, IsString, IsPhoneNumber, IsBoolean, IsEnum } from 'class-validator';
 import { Provider } from './Provider';
@@ -14,6 +15,8 @@ import { Quote } from './Quote';
 import { QuoteRequest } from './QuoteRequest';
 import { Review } from './Review';
 import { Payment } from './Payment';
+import { Message } from './Message';
+import { Conversation } from './Conversation';
 
 export enum UserType {
   CUSTOMER = 'customer',
@@ -113,4 +116,13 @@ export class User {
 
   @OneToMany(() => Payment, (payment) => payment.provider)
   providerPayments: Payment[];
+
+  @OneToMany(() => Message, (message) => message.sender)
+  sentMessages: Message[];
+
+  @OneToMany(() => Message, (message) => message.receiver)
+  receivedMessages: Message[];
+
+  @ManyToMany(() => Conversation, (conversation) => conversation.participants)
+  conversations: Conversation[];
 }
