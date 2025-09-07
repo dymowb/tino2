@@ -78,6 +78,11 @@ export class Payment {
   @Min(0)
   processingFee: number;
 
+  @Column({ type: 'numeric', precision: 10, scale: 2, default: 0 })
+  @IsNumber()
+  @Min(0)
+  providerAmount: number;
+
   @Column({ default: 'USD' })
   @IsString()
   currency: string;
@@ -95,6 +100,9 @@ export class Payment {
   @Column({ nullable: true })
   paypalTransactionId: string;
 
+  @Column({ nullable: true })
+  stripeRefundId: string;
+
   @Column({ type: 'varchar', enum: PaymentStatus, default: PaymentStatus.PENDING })
   @IsEnum(PaymentStatus)
   status: PaymentStatus;
@@ -110,6 +118,12 @@ export class Payment {
 
   @Column({ type: 'datetime', nullable: true })
   paidAt: Date;
+
+  @Column({ type: 'datetime', nullable: true })
+  completedAt: Date;
+
+  @Column({ type: 'datetime', nullable: true })
+  failedAt: Date;
 
   @Column({ type: 'datetime', nullable: true })
   refundedAt: Date;

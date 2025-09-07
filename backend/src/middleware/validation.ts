@@ -290,3 +290,53 @@ export const paginationValidation = [
 ];
 
 export const idParamValidation = [param('id').isUUID().withMessage('Valid ID is required')];
+
+export const paymentValidation = {
+  createIntent: [
+    body('bookingId').isUUID().withMessage('Valid booking ID is required'),
+    body('amount')
+      .isFloat({ min: 0.50, max: 999999.99 })
+      .withMessage('Payment amount must be between $0.50 and $999,999.99'),
+    body('currency')
+      .optional()
+      .isIn(['usd', 'eur', 'gbp', 'cad', 'aud'])
+      .withMessage('Supported currencies: USD, EUR, GBP, CAD, AUD'),
+    body('paymentMethod')
+      .optional()
+      .isIn(['credit_card', 'debit_card', 'bank_transfer', 'paypal', 'apple_pay', 'google_pay'])
+      .withMessage('Valid payment method is required'),
+  ],
+
+  confirmPayment: [
+    param('id').isUUID().withMessage('Valid payment ID is required'),
+  ],
+
+  refund: [
+    param('id').isUUID().withMessage('Valid payment ID is required'),
+    body('amount')
+      .optional()
+      .isFloat({ min: 0.01 })
+      .withMessage('Refund amount must be greater than 0'),
+    body('reason')
+      .optional()
+      .trim()
+      .isLength({ max: 500 })
+      .withMessage('Refund reason must be less than 500 characters'),
+  ],
+
+  getHistory: [
+    query('status')
+      .optional()
+      .isIn(['pending', 'processing', 'succeeded', 'failed', 'cancelled', 'refunded', 'partially_refunded'])
+      .withMessage('Valid payment status is required'),
+    query('startDate')
+      .optional()
+      .isISO8601()
+      .withMessage('Valid start date is required'),
+    query('endDate')
+      .optional()
+      .isISO8601()
+      .withMessage('Valid end date is required'),
+    ...paginationValidation,
+  ],
+};

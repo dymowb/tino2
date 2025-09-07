@@ -8,6 +8,8 @@ Tino 2 is a full-stack domestic service application that connects customers with
 
 ## Architecture
 
+- Detailed requirements in `REQUIREMENTS.md`
+
 - **Backend**: Node.js/Express.js API server with Socket.IO for real-time features
 - **Frontend**: React.js with TypeScript for web interface
 - **Mobile**: React Native/Flutter structure prepared for native apps

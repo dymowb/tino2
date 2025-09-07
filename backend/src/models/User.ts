@@ -21,6 +21,7 @@ import { Conversation } from './Conversation';
 export enum UserType {
   CUSTOMER = 'customer',
   PROVIDER = 'provider',
+  ADMIN = 'admin',
 }
 
 @Entity('users')

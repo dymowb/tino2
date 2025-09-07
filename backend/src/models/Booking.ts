@@ -125,6 +125,30 @@ export class Booking {
   @Column({ nullable: true })
   cancellationReason: string;
 
+  @Column({ default: false })
+  isDisputed: boolean;
+
+  @Column({ nullable: true })
+  disputeStatus: string;
+
+  @Column({ nullable: true })
+  disputeReason: string;
+
+  @Column({ type: 'datetime', nullable: true })
+  disputedAt: Date;
+
+  @Column({ nullable: true })
+  disputeResolution: string;
+
+  @Column({ type: 'datetime', nullable: true })
+  disputeResolvedAt: Date;
+
+  @Column({ nullable: true })
+  disputeResolvedBy: string;
+
+  @Column({ type: 'text', nullable: true })
+  adminNotes: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

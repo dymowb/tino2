@@ -1,0 +1,515 @@
+import { getRepository, Repository } from 'typeorm';
+import Stripe from 'stripe';
+import { Payment, PaymentStatus, PaymentMethod } from '@/models/Payment';
+import { Booking, BookingStatus } from '@/models/Booking';
+import { User } from '@/models/User';
+import logger from '@/config/logger';
+import config from '@/config/environment';
+
+export interface CreatePaymentIntentData {
+  bookingId: string;
+  customerId: string;
+  amount: number;
+  currency?: string;
+  paymentMethod?: PaymentMethod;
+}
+
+export interface PaymentIntentResult {
+  clientSecret: string;
+  paymentIntentId: string;
+  payment: Payment;
+}
+
+export interface RefundData {
+  paymentId: string;
+  amount?: number;
+  reason?: string;
+  requestedBy: string;
+}
+
+export interface PaymentSummary {
+  totalRevenue: number;
+  platformFees: number;
+  refundedAmount: number;
+  paymentCount: number;
+  averagePayment: number;
+}
+
+class PaymentService {
+  private stripe: Stripe;
+  private paymentRepository: Repository<Payment>;
+  private bookingRepository: Repository<Booking>;
+  private userRepository: Repository<User>;
+
+  constructor() {
+    // Initialize Stripe
+    this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+      apiVersion: '2024-10-28.acacia',
+    });
+  }
+
+  private initRepositories(): void {
+    this.paymentRepository = getRepository(Payment);
+    this.bookingRepository = getRepository(Booking);
+    this.userRepository = getRepository(User);
+  }
+
+  /**
+   * Create payment intent with escrow functionality (FR-057, FR-058, FR-059)
+   */
+  public async createPaymentIntent(data: CreatePaymentIntentData): Promise<PaymentIntentResult> {
+    this.initRepositories();
+
+    try {
+      // Validate booking exists and belongs to customer
+      const booking = await this.bookingRepository.findOne({
+        where: { id: data.bookingId, customerId: data.customerId },
+        relations: ['provider', 'customer']
+      });
+
+      if (!booking) {
+        throw new Error('Booking not found or unauthorized');
+      }
+
+      if (booking.status === BookingStatus.CANCELLED) {
+        throw new Error('Cannot create payment for cancelled booking');
+      }
+
+      // Check if payment already exists
+      const existingPayment = await this.paymentRepository.findOne({
+        where: { bookingId: data.bookingId }
+      });
+
+      if (existingPayment && existingPayment.status !== PaymentStatus.FAILED) {
+        throw new Error('Payment already exists for this booking');
+      }
+
+      // Calculate fees (FR-060)
+      const platformFeeRate = parseFloat(process.env.PLATFORM_FEE_RATE || '0.05');
+      const stripeFeeRate = parseFloat(process.env.STRIPE_FEE_RATE || '0.029');
+      const stripeFeeFixed = parseFloat(process.env.STRIPE_FEE_FIXED || '0.30');
+      
+      const platformFee = Math.round(data.amount * platformFeeRate * 100) / 100;
+      const stripeFee = Math.round((data.amount * stripeFeeRate + stripeFeeFixed) * 100) / 100;
+      const providerAmount = Math.round((data.amount - platformFee - stripeFee) * 100) / 100;
+
+      // Get or create Stripe customer
+      let stripeCustomerId = booking.customer.stripeCustomerId;
+      if (!stripeCustomerId) {
+        const customer = await this.stripe.customers.create({
+          email: booking.customer.email,
+          name: `${booking.customer.firstName} ${booking.customer.lastName}`,
+          metadata: {
+            userId: booking.customer.id
+          }
+        });
+        stripeCustomerId = customer.id;
+        
+        // Update user with Stripe customer ID
+        await this.userRepository.update(booking.customerId, {
+          stripeCustomerId
+        });
+      }
+
+      // Create payment intent with manual capture for escrow (FR-059, FR-061)
+      const paymentIntent = await this.stripe.paymentIntents.create({
+        amount: Math.round(data.amount * 100), // Convert to cents
+        currency: data.currency || 'usd',
+        customer: stripeCustomerId,
+        metadata: {
+          bookingId: data.bookingId,
+          customerId: data.customerId,
+          providerId: booking.providerId,
+          platformFee: platformFee.toString(),
+          stripeFee: stripeFee.toString(),
+          providerAmount: providerAmount.toString(),
+        },
+        capture_method: 'manual', // Hold funds until service completion
+        description: `Payment for ${booking.serviceType} booking`,
+        receipt_email: booking.customer.email,
+      });
+
+      // Create payment record
+      const payment = this.paymentRepository.create({
+        id: paymentIntent.id,
+        bookingId: data.bookingId,
+        customerId: data.customerId,
+        providerId: booking.providerId,
+        amount: data.amount,
+        currency: data.currency || 'usd',
+        platformFee,
+        processingFee: stripeFee,
+        providerAmount,
+        status: PaymentStatus.PENDING,
+        paymentMethod: data.paymentMethod || PaymentMethod.CREDIT_CARD,
+        stripePaymentIntentId: paymentIntent.id,
+        metadata: {
+          requiresCapture: true,
+          escrowHold: true,
+          stripeCustomerId
+        }
+      });
+
+      const savedPayment = await this.paymentRepository.save(payment);
+
+      logger.info(`Payment intent created: ${paymentIntent.id} for booking ${data.bookingId}`);
+
+      return {
+        clientSecret: paymentIntent.client_secret!,
+        paymentIntentId: paymentIntent.id,
+        payment: savedPayment
+      };
+    } catch (error) {
+      logger.error('Error creating payment intent:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Confirm and capture payment (release from escrow)
+   */
+  public async confirmPayment(paymentId: string, userId: string): Promise<Payment> {
+    this.initRepositories();
+
+    try {
+      const payment = await this.paymentRepository.findOne({
+        where: { id: paymentId },
+        relations: ['booking', 'customer', 'provider']
+      });
+
+      if (!payment) {
+        throw new Error('Payment not found');
+      }
+
+      // Authorization check
+      if (userId !== payment.customerId && userId !== payment.providerId) {
+        throw new Error('Unauthorized to confirm this payment');
+      }
+
+      if (payment.status === PaymentStatus.SUCCEEDED) {
+        throw new Error('Payment already confirmed');
+      }
+
+      // Capture the payment intent
+      const paymentIntent = await this.stripe.paymentIntents.capture(payment.stripePaymentIntentId);
+
+      if (paymentIntent.status === 'succeeded') {
+        payment.status = PaymentStatus.SUCCEEDED;
+        payment.completedAt = new Date();
+        payment.paidAt = new Date();
+        
+        // Update metadata with charge information
+        if (paymentIntent.charges?.data[0]) {
+          const charge = paymentIntent.charges.data[0];
+          payment.stripeChargeId = charge.id;
+          payment.metadata = {
+            ...payment.metadata,
+            last4: charge.payment_method_details?.card?.last4,
+            cardBrand: charge.payment_method_details?.card?.brand,
+            receipt_url: charge.receipt_url || undefined
+          };
+        }
+
+        await this.paymentRepository.save(payment);
+
+        // Update booking status to indicate payment is complete
+        await this.bookingRepository.update(payment.bookingId, {
+          status: BookingStatus.CONFIRMED
+        });
+
+        logger.info(`Payment confirmed and captured: ${paymentId}`);
+        return payment;
+      } else {
+        throw new Error(`Payment confirmation failed: ${paymentIntent.status}`);
+      }
+    } catch (error) {
+      logger.error('Error confirming payment:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Process refund (FR-063)
+   */
+  public async processRefund(data: RefundData): Promise<Payment> {
+    this.initRepositories();
+
+    try {
+      const payment = await this.paymentRepository.findOne({
+        where: { id: data.paymentId },
+        relations: ['booking', 'customer']
+      });
+
+      if (!payment) {
+        throw new Error('Payment not found');
+      }
+
+      if (payment.status !== PaymentStatus.SUCCEEDED) {
+        throw new Error('Can only refund succeeded payments');
+      }
+
+      if (payment.status === PaymentStatus.REFUNDED) {
+        throw new Error('Payment already refunded');
+      }
+
+      // Create refund via Stripe
+      const refundAmount = data.amount ? Math.round(data.amount * 100) : undefined;
+      const refund = await this.stripe.refunds.create({
+        payment_intent: payment.stripePaymentIntentId,
+        amount: refundAmount,
+        reason: (data.reason as any) || 'requested_by_customer',
+        metadata: {
+          paymentId: data.paymentId,
+          requestedBy: data.requestedBy
+        }
+      });
+
+      // Update payment record
+      payment.status = refundAmount && refundAmount < payment.amount * 100 
+        ? PaymentStatus.PARTIALLY_REFUNDED 
+        : PaymentStatus.REFUNDED;
+      payment.refundedAt = new Date();
+      payment.refundAmount = refund.amount / 100;
+      payment.stripeRefundId = refund.id;
+      payment.metadata = {
+        ...payment.metadata,
+        refund_reason: data.reason
+      };
+
+      await this.paymentRepository.save(payment);
+
+      // Update booking status if fully refunded
+      if (payment.status === PaymentStatus.REFUNDED) {
+        await this.bookingRepository.update(payment.bookingId, {
+          status: BookingStatus.CANCELLED
+        });
+      }
+
+      logger.info(`Payment refunded: ${data.paymentId}, refund ID: ${refund.id}`);
+      return payment;
+    } catch (error) {
+      logger.error('Error processing refund:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get payment history with filtering and pagination (FR-064)
+   */
+  public async getPaymentHistory(
+    userId: string,
+    userType: 'customer' | 'provider',
+    options: {
+      page?: number;
+      limit?: number;
+      status?: PaymentStatus;
+      startDate?: Date;
+      endDate?: Date;
+    } = {}
+  ) {
+    this.initRepositories();
+
+    const { page = 1, limit = 10, status, startDate, endDate } = options;
+
+    const queryBuilder = this.paymentRepository.createQueryBuilder('payment')
+      .leftJoinAndSelect('payment.booking', 'booking')
+      .leftJoinAndSelect('payment.customer', 'customer')
+      .leftJoinAndSelect('payment.provider', 'provider');
+
+    // Filter by user type
+    if (userType === 'customer') {
+      queryBuilder.where('payment.customerId = :userId', { userId });
+    } else {
+      queryBuilder.where('payment.providerId = :userId', { userId });
+    }
+
+    // Apply additional filters
+    if (status) {
+      queryBuilder.andWhere('payment.status = :status', { status });
+    }
+
+    if (startDate) {
+      queryBuilder.andWhere('payment.createdAt >= :startDate', { startDate });
+    }
+
+    if (endDate) {
+      queryBuilder.andWhere('payment.createdAt <= :endDate', { endDate });
+    }
+
+    // Apply pagination
+    queryBuilder
+      .orderBy('payment.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [payments, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      payments,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    };
+  }
+
+  /**
+   * Get payment analytics and summary (FR-064)
+   */
+  public async getPaymentSummary(
+    userId: string,
+    userType: 'customer' | 'provider' | 'admin',
+    dateRange?: { startDate: Date; endDate: Date }
+  ): Promise<PaymentSummary> {
+    this.initRepositories();
+
+    const queryBuilder = this.paymentRepository.createQueryBuilder('payment')
+      .where('payment.status = :status', { status: PaymentStatus.SUCCEEDED });
+
+    // Filter by user if not admin
+    if (userType !== 'admin') {
+      if (userType === 'customer') {
+        queryBuilder.andWhere('payment.customerId = :userId', { userId });
+      } else {
+        queryBuilder.andWhere('payment.providerId = :userId', { userId });
+      }
+    }
+
+    // Apply date range
+    if (dateRange) {
+      queryBuilder
+        .andWhere('payment.completedAt >= :startDate', { startDate: dateRange.startDate })
+        .andWhere('payment.completedAt <= :endDate', { endDate: dateRange.endDate });
+    }
+
+    const payments = await queryBuilder.getMany();
+
+    // Calculate refunded payments separately
+    const refundedPayments = await this.paymentRepository.find({
+      where: {
+        status: PaymentStatus.REFUNDED,
+        ...(userType === 'customer' ? { customerId: userId } : 
+           userType === 'provider' ? { providerId: userId } : {})
+      }
+    });
+
+    const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0);
+    const platformFees = payments.reduce((sum, p) => sum + p.platformFee, 0);
+    const refundedAmount = refundedPayments.reduce((sum, p) => sum + p.refundAmount, 0);
+    const paymentCount = payments.length;
+    const averagePayment = paymentCount > 0 ? totalRevenue / paymentCount : 0;
+
+    return {
+      totalRevenue,
+      platformFees,
+      refundedAmount,
+      paymentCount,
+      averagePayment
+    };
+  }
+
+  /**
+   * Handle Stripe webhook events (INT-003)
+   */
+  public async handleWebhookEvent(event: Stripe.Event): Promise<void> {
+    this.initRepositories();
+
+    try {
+      switch (event.type) {
+        case 'payment_intent.succeeded':
+          await this.handlePaymentSucceeded(event.data.object as Stripe.PaymentIntent);
+          break;
+        
+        case 'payment_intent.payment_failed':
+          await this.handlePaymentFailed(event.data.object as Stripe.PaymentIntent);
+          break;
+
+        case 'charge.dispute.created':
+          await this.handleDisputeCreated(event.data.object as Stripe.Dispute);
+          break;
+
+        default:
+          logger.info(`Unhandled webhook event type: ${event.type}`);
+      }
+    } catch (error) {
+      logger.error('Error handling webhook event:', error);
+      throw error;
+    }
+  }
+
+  private async handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent): Promise<void> {
+    await this.paymentRepository.update(
+      { stripePaymentIntentId: paymentIntent.id },
+      { 
+        status: PaymentStatus.SUCCEEDED, 
+        completedAt: new Date(),
+        paidAt: new Date()
+      }
+    );
+    logger.info(`Payment succeeded via webhook: ${paymentIntent.id}`);
+  }
+
+  private async handlePaymentFailed(paymentIntent: Stripe.PaymentIntent): Promise<void> {
+    await this.paymentRepository.update(
+      { stripePaymentIntentId: paymentIntent.id },
+      { 
+        status: PaymentStatus.FAILED, 
+        failedAt: new Date(),
+        metadata: {
+          failure_reason: paymentIntent.last_payment_error?.message
+        }
+      }
+    );
+    logger.warn(`Payment failed via webhook: ${paymentIntent.id}`);
+  }
+
+  private async handleDisputeCreated(dispute: Stripe.Dispute): Promise<void> {
+    const payment = await this.paymentRepository.findOne({
+      where: { stripeChargeId: dispute.charge as string }
+    });
+
+    if (payment) {
+      payment.metadata = {
+        ...payment.metadata,
+        dispute_id: dispute.id,
+        dispute_reason: dispute.reason,
+        dispute_status: dispute.status
+      };
+      await this.paymentRepository.save(payment);
+      logger.warn(`Dispute created for payment: ${payment.id}, dispute ID: ${dispute.id}`);
+    }
+  }
+
+  /**
+   * Validate payment data
+   */
+  public validatePaymentData(data: CreatePaymentIntentData): string[] {
+    const errors: string[] = [];
+
+    if (!data.bookingId) {
+      errors.push('Booking ID is required');
+    }
+
+    if (!data.customerId) {
+      errors.push('Customer ID is required');
+    }
+
+    if (!data.amount || data.amount <= 0) {
+      errors.push('Amount must be greater than 0');
+    }
+
+    if (data.amount > 999999.99) {
+      errors.push('Amount cannot exceed $999,999.99');
+    }
+
+    if (data.currency && !/^[A-Z]{3}$/.test(data.currency)) {
+      errors.push('Currency must be a valid 3-letter code');
+    }
+
+    return errors;
+  }
+}
+
+export default new PaymentService();

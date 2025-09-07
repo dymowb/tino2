@@ -136,6 +136,24 @@ export class Provider {
   @Min(0)
   averageResponseTime: number;
 
+  @Column({ type: 'datetime', nullable: true })
+  verifiedAt: Date;
+
+  @Column({ nullable: true })
+  verifiedBy: string;
+
+  @Column({ type: 'datetime', nullable: true })
+  rejectedAt: Date;
+
+  @Column({ nullable: true })
+  rejectedBy: string;
+
+  @Column({ type: 'text', nullable: true })
+  verificationNotes: string;
+
+  @Column({ type: 'text', nullable: true })
+  adminNotes: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

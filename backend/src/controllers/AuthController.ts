@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { userService } from '@/services/UserService';
 import { ApiResponse } from '@/types';
 import logger from '@/config/logger';
-import { UserType } from '@/models/BasicUser';
+import { UserType } from '@/models/User';
 
 export class AuthController {
   async register(req: Request, res: Response): Promise<void> {
