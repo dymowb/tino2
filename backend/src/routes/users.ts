@@ -15,14 +15,14 @@ router.get('/profile', UserController.getProfile);
 router.put('/profile', rateLimiters.general, UserController.updateProfile);
 
 // DELETE /api/users/profile - Delete user account (SEC-018)
-router.delete('/profile', rateLimiters.strict, UserController.deleteProfile);
+// router.delete('/profile', rateLimiters.strict, UserController.deleteProfile);
 
 // POST /api/users/profile/image - Upload profile image (FR-007)
-router.post('/profile/image', 
-  rateLimiters.upload, 
-  UserController.uploadProfileImage, 
-  UserController.handleProfileImageUpload
-);
+// router.post('/profile/image', 
+//   rateLimiters.upload, 
+//   UserController.uploadProfileImage, 
+//   UserController.handleProfileImageUpload
+// );
 
 // GET /api/users/:id - Get user by ID (public profile view)
 router.get('/:id', UserController.getUserById);

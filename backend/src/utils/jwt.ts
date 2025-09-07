@@ -31,6 +31,11 @@ export class JWTService {
     };
   }
 
+  // Backward compatibility method for tests
+  generateToken(payload: Omit<JwtPayload, 'iat' | 'exp'>): string {
+    return this.generateAccessToken(payload);
+  }
+
   verifyToken(token: string): JwtPayload | null {
     try {
       return jwt.verify(token, this.secret) as JwtPayload;

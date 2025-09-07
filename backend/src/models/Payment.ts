@@ -114,6 +114,13 @@ export class Payment {
     receipt_url?: string;
     failure_reason?: string;
     refund_reason?: string;
+    requiresCapture?: boolean;
+    escrowHold?: boolean;
+    stripeCustomerId?: string;
+    dispute_id?: string;
+    dispute_reason?: string;
+    dispute_status?: string;
+    [key: string]: any; // Allow additional properties
   };
 
   @Column({ type: 'datetime', nullable: true })

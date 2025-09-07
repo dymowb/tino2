@@ -6,7 +6,7 @@ export interface User {
   lastName: string;
   phone?: string;
   profileImage?: string;
-  userType: 'customer' | 'provider';
+  userType: 'customer' | 'provider' | 'admin';
   isVerified: boolean;
   isActive: boolean;
   createdAt: Date;
@@ -179,7 +179,7 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
 export interface JwtPayload {
   userId: string;
   email: string;
-  userType: 'customer' | 'provider';
+  userType: 'customer' | 'provider' | 'admin';
   iat?: number;
   exp?: number;
 }
@@ -505,5 +505,49 @@ export interface MessageSearchQuery {
   page?: number;
   limit?: number;
   sortBy?: 'created';
+  sortOrder?: 'asc' | 'desc';
+}
+
+// Review System Types
+export interface CreateReviewRequest {
+  bookingId: string;
+  rating: number;
+  comment?: string;
+  images?: string[];
+  criteria?: {
+    quality: number;
+    timeliness: number;
+    communication: number;
+    professionalism: number;
+    valueForMoney: number;
+  };
+}
+
+export interface UpdateReviewRequest {
+  rating?: number;
+  comment?: string;
+  images?: string[];
+  criteria?: {
+    quality: number;
+    timeliness: number;
+    communication: number;
+    professionalism: number;
+    valueForMoney: number;
+  };
+}
+
+export interface ReviewSearchQuery {
+  providerId?: string;
+  customerId?: string;
+  bookingId?: string;
+  minRating?: number;
+  maxRating?: number;
+  hasResponse?: boolean;
+  isFlagged?: boolean;
+  isVerified?: boolean;
+  searchTerm?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: 'createdAt' | 'rating' | 'updatedAt';
   sortOrder?: 'asc' | 'desc';
 }

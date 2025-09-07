@@ -47,6 +47,26 @@ export class BasicUser {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({ default: false })
+  isVerified: boolean;
+
+  @Column({ nullable: true })
+  profileImage?: string;
+
+  @Column({ type: 'json', nullable: true })
+  settings?: {
+    notifications?: {
+      email?: boolean;
+      sms?: boolean;
+      push?: boolean;
+    };
+    privacy?: {
+      profileVisible?: boolean;
+      locationSharing?: boolean;
+    };
+    [key: string]: any;
+  };
+
   @CreateDateColumn()
   createdAt: Date;
 
