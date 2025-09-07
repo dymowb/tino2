@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { body, param, query } from 'express-validator';
-import ReviewController from '../controllers/ReviewController';
+import reviewController from '../controllers/ReviewController';
 import { authenticateToken } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
 
@@ -145,28 +145,28 @@ router.get(
   providerIdValidation,
   reviewSearchValidation,
   validateRequest,
-  ReviewController.getProviderReviews
+  reviewController.getProviderReviews
 );
 
 router.get(
   '/search',
   reviewSearchValidation,
   validateRequest,
-  ReviewController.searchReviews
+  reviewController.searchReviews
 );
 
 router.get(
   '/:id',
   uuidParamValidation,
   validateRequest,
-  ReviewController.getReviewById
+  reviewController.getReviewById
 );
 
 router.get(
   '/analytics/:providerId',
   providerIdValidation,
   validateRequest,
-  ReviewController.getReviewAnalytics
+  reviewController.getReviewAnalytics
 );
 
 // Protected routes (authentication required)
@@ -177,28 +177,28 @@ router.post(
   '/',
   createReviewValidation,
   validateRequest,
-  ReviewController.createReview
+  reviewController.createReview
 );
 
 router.put(
   '/:id',
   updateReviewValidation,
   validateRequest,
-  ReviewController.updateReview
+  reviewController.updateReview
 );
 
 router.delete(
   '/:id',
   uuidParamValidation,
   validateRequest,
-  ReviewController.deleteReview
+  reviewController.deleteReview
 );
 
 router.get(
   '/customer/my',
   reviewSearchValidation,
   validateRequest,
-  ReviewController.getMyCustomerReviews
+  reviewController.getMyCustomerReviews
 );
 
 // Provider routes
@@ -206,14 +206,14 @@ router.post(
   '/:id/response',
   providerResponseValidation,
   validateRequest,
-  ReviewController.addProviderResponse
+  reviewController.addProviderResponse
 );
 
 router.get(
   '/provider/my',
   reviewSearchValidation,
   validateRequest,
-  ReviewController.getMyProviderReviews
+  reviewController.getMyProviderReviews
 );
 
 // General authenticated routes
@@ -221,7 +221,7 @@ router.post(
   '/:id/flag',
   flagReviewValidation,
   validateRequest,
-  ReviewController.flagReview
+  reviewController.flagReview
 );
 
 export default router;
