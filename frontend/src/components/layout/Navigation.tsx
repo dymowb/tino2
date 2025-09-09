@@ -29,8 +29,12 @@ import {
   Person as ProfileIcon,
   Business as BusinessIcon,
   ExitToApp as LogoutIcon,
+  Message as MessageIcon,
+  Payment as PaymentIcon,
+  RateReview as ReviewIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
+import NotificationBadge from '../notifications/NotificationBadge';
 
 const Navigation: React.FC = () => {
   const navigate = useNavigate();
@@ -65,9 +69,15 @@ const Navigation: React.FC = () => {
     ...(isAuthenticated && user?.userType === 'customer' ? [
       { label: 'Find Providers', path: '/providers', icon: <SearchIcon />, public: false },
       { label: 'My Bookings', path: '/bookings', icon: <BookingIcon />, public: false },
+      { label: 'Messages', path: '/messages', icon: <MessageIcon />, public: false },
+      { label: 'Payments', path: '/payments', icon: <PaymentIcon />, public: false },
+      { label: 'My Reviews', path: '/reviews', icon: <ReviewIcon />, public: false },
     ] : []),
     ...(isAuthenticated && user?.userType === 'provider' ? [
       { label: 'Dashboard', path: '/dashboard', icon: <DashboardIcon />, public: false },
+      { label: 'Messages', path: '/messages', icon: <MessageIcon />, public: false },
+      { label: 'Payments', path: '/payments', icon: <PaymentIcon />, public: false },
+      { label: 'My Reviews', path: '/reviews', icon: <ReviewIcon />, public: false },
     ] : []),
   ];
 
@@ -166,6 +176,7 @@ const Navigation: React.FC = () => {
           color={user.userType === 'customer' ? 'secondary' : 'primary'}
           sx={{ color: 'white', fontWeight: 'bold' }}
         />
+        <NotificationBadge />
         <IconButton onClick={handleUserMenuOpen} sx={{ p: 0 }}>
           <Avatar
             sx={{ 

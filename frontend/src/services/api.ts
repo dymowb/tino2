@@ -103,6 +103,81 @@ export interface Booking {
   updatedAt: string;
 }
 
+export interface QuoteRequest {
+  id: string;
+  customerId: string;
+  serviceType: string;
+  description: string;
+  location: {
+    latitude: number;
+    longitude: number;
+    address: string;
+    city: string;
+    state: string;
+    zipCode: string;
+  };
+  preferredDate?: string;
+  budget?: {
+    min: number;
+    max: number;
+    currency: string;
+  };
+  images?: string[];
+  urgency: 'low' | 'medium' | 'high' | 'urgent';
+  status: 'open' | 'closed' | 'cancelled';
+  requirements?: Array<{
+    category: string;
+    requirement: string;
+    mandatory: boolean;
+  }>;
+  availability?: Array<{
+    date: string;
+    timeSlots: Array<{
+      start: string;
+      end: string;
+    }>;
+  }>;
+  searchRadius: number;
+  expiresAt?: string;
+  quotesReceived: number;
+  closedAt?: string;
+  closureReason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Quote {
+  id: string;
+  requestId: string;
+  providerId: string;
+  customerId: string;
+  serviceType: string;
+  description: string;
+  estimatedPrice: number;
+  estimatedDuration: number;
+  validUntil: string;
+  status: 'pending' | 'accepted' | 'rejected' | 'expired' | 'withdrawn';
+  breakdown?: {
+    labor: number;
+    materials: number;
+    equipment: number;
+    other: number;
+    tax: number;
+  };
+  terms?: Array<{
+    item: string;
+    description: string;
+  }>;
+  notes?: string;
+  attachments?: string[];
+  acceptedAt?: string;
+  rejectedAt?: string;
+  rejectionReason?: string;
+  createdAt: string;
+  updatedAt: string;
+  provider?: Provider;
+}
+
 class ApiService {
   private api: AxiosInstance;
   private baseURL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api/v1';
@@ -288,13 +363,604 @@ class ApiService {
     return response.data.data!;
   }
 
+  async getBooking(id: string): Promise<Booking> {
+    const response = await this.api.get<ApiResponse<Booking>>(`/bookings/${id}`);
+    return response.data.data!;
+  }
+
   async cancelBooking(id: string, reason?: string): Promise<void> {
     await this.api.put(`/bookings/${id}/cancel`, { reason });
+  }
+
+  // Location and GPS methods
+  async geocodeAddress(address: string): Promise<any> {
+    const response = await this.api.post<ApiResponse<any>>('/locations/geocode', {
+      address,
+    });
+    return response.data.data;
+  }
+
+  async reverseGeocode(latitude: number, longitude: number): Promise<any> {
+    const response = await this.api.post<ApiResponse<any>>('/locations/reverse-geocode', {
+      latitude,
+      longitude,
+    });
+    return response.data.data;
+  }
+
+  async searchProvidersGPS(params: {
+    latitude: number;
+    longitude: number;
+    radius?: number;
+    serviceTypes?: string[];
+    sortBy?: 'distance' | 'rating' | 'price' | 'response_time';
+    minRating?: number;
+    maxPrice?: number;
+    hasInsurance?: boolean;
+    hasBackgroundCheck?: boolean;
+    isAvailable?: boolean;
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedResponse<Provider & { distance: number; duration: number }>> {
+    const response = await this.api.post<PaginatedResponse<Provider & { distance: number; duration: number }>>('/locations/search-providers', params);
+    return response.data;
+  }
+
+  async calculateDistance(
+    origin: { latitude: number; longitude: number },
+    destination: { latitude: number; longitude: number }
+  ): Promise<{ distance: number; duration: number; route?: any }> {
+    const response = await this.api.post<ApiResponse<any>>('/locations/distance', {
+      origin,
+      destination,
+    });
+    return response.data.data;
+  }
+
+  async searchNearbyPlaces(
+    latitude: number,
+    longitude: number,
+    radius: number,
+    type?: string
+  ): Promise<any[]> {
+    const response = await this.api.post<ApiResponse<any[]>>('/locations/nearby-search', {
+      latitude,
+      longitude,
+      radius,
+      type,
+    });
+    return response.data.data || [];
+  }
+
+  // Quote Request methods
+  async createQuoteRequest(requestData: {
+    serviceType: string;
+    description: string;
+    location: {
+      latitude: number;
+      longitude: number;
+      address: string;
+      city: string;
+      state: string;
+      zipCode: string;
+    };
+    preferredDate?: string;
+    budget?: {
+      min: number;
+      max: number;
+      currency: string;
+    };
+    images?: string[];
+    urgency: 'low' | 'medium' | 'high' | 'urgent';
+    requirements?: Array<{
+      category: string;
+      requirement: string;
+      mandatory: boolean;
+    }>;
+    availability?: Array<{
+      date: string;
+      timeSlots: Array<{
+        start: string;
+        end: string;
+      }>;
+    }>;
+    searchRadius?: number;
+    expiresAt?: string;
+  }): Promise<QuoteRequest> {
+    const response = await this.api.post<ApiResponse<{ quoteRequest: QuoteRequest }>>('/quotes/requests', requestData);
+    return response.data.data!.quoteRequest;
+  }
+
+  async getQuoteRequest(requestId: string): Promise<QuoteRequest> {
+    const response = await this.api.get<ApiResponse<{ quoteRequest: QuoteRequest }>>(`/quotes/requests/${requestId}`);
+    return response.data.data!.quoteRequest;
+  }
+
+  async updateQuoteRequest(requestId: string, updates: Partial<QuoteRequest>): Promise<QuoteRequest> {
+    const response = await this.api.put<ApiResponse<{ quoteRequest: QuoteRequest }>>(`/quotes/requests/${requestId}`, updates);
+    return response.data.data!.quoteRequest;
+  }
+
+  async closeQuoteRequest(requestId: string, reason?: string): Promise<QuoteRequest> {
+    const response = await this.api.put<ApiResponse<{ quoteRequest: QuoteRequest }>>(`/quotes/requests/${requestId}/close`, { reason });
+    return response.data.data!.quoteRequest;
+  }
+
+  async searchQuoteRequests(params?: {
+    page?: number;
+    limit?: number;
+    serviceType?: string;
+    status?: string;
+    urgency?: string;
+    minBudget?: number;
+    maxBudget?: number;
+    latitude?: number;
+    longitude?: number;
+    radius?: number;
+  }): Promise<PaginatedResponse<QuoteRequest>> {
+    const response = await this.api.get<PaginatedResponse<QuoteRequest>>('/quotes/requests', {
+      params,
+    });
+    return response.data;
+  }
+
+  // Quote methods  
+  async createQuote(quoteData: {
+    requestId: string;
+    serviceType: string;
+    description: string;
+    estimatedPrice: number;
+    estimatedDuration: number;
+    validUntil: string;
+    breakdown?: {
+      labor: number;
+      materials: number;
+      equipment: number;
+      other: number;
+      tax: number;
+    };
+    terms?: Array<{
+      item: string;
+      description: string;
+    }>;
+    notes?: string;
+    attachments?: string[];
+  }): Promise<Quote> {
+    const response = await this.api.post<ApiResponse<{ quote: Quote }>>('/quotes', quoteData);
+    return response.data.data!.quote;
+  }
+
+  async getQuote(quoteId: string): Promise<Quote> {
+    const response = await this.api.get<ApiResponse<{ quote: Quote }>>(`/quotes/${quoteId}`);
+    return response.data.data!.quote;
+  }
+
+  async updateQuote(quoteId: string, updates: Partial<Quote>): Promise<Quote> {
+    const response = await this.api.put<ApiResponse<{ quote: Quote }>>(`/quotes/${quoteId}`, updates);
+    return response.data.data!.quote;
+  }
+
+  async updateQuoteStatus(quoteId: string, status: 'accepted' | 'rejected' | 'withdrawn', reason?: string): Promise<Quote> {
+    const response = await this.api.put<ApiResponse<{ quote: Quote }>>(`/quotes/${quoteId}/status`, { status, reason });
+    return response.data.data!.quote;
+  }
+
+  async withdrawQuote(quoteId: string): Promise<Quote> {
+    const response = await this.api.put<ApiResponse<{ quote: Quote }>>(`/quotes/${quoteId}/withdraw`);
+    return response.data.data!.quote;
+  }
+
+  async getQuotesForRequest(requestId: string, params?: {
+    page?: number;
+    limit?: number;
+    sortBy?: 'price' | 'rating' | 'createdAt';
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<PaginatedResponse<Quote>> {
+    const response = await this.api.get<PaginatedResponse<Quote>>(`/quotes/requests/${requestId}/quotes`, {
+      params,
+    });
+    return response.data;
+  }
+
+  async searchQuotes(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    serviceType?: string;
+  }): Promise<PaginatedResponse<Quote>> {
+    const response = await this.api.get<PaginatedResponse<Quote>>('/quotes', {
+      params,
+    });
+    return response.data;
+  }
+
+  // Messaging methods
+  async getConversations(params?: {
+    type?: 'direct' | 'group' | 'support';
+    isActive?: boolean;
+    page?: number;
+    limit?: number;
+    sortBy?: 'lastMessage' | 'created' | 'title';
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<PaginatedResponse<any>> {
+    const response = await this.api.get<PaginatedResponse<any>>('/messages/conversations', {
+      params,
+    });
+    return response.data;
+  }
+
+  async createConversation(conversationData: {
+    participantIds: string[];
+    title?: string;
+    description?: string;
+    type?: 'direct' | 'group' | 'support';
+    metadata?: {
+      bookingId?: string;
+      quoteRequestId?: string;
+      serviceType?: string;
+    };
+  }): Promise<any> {
+    const response = await this.api.post<ApiResponse<any>>('/messages/conversations', conversationData);
+    return response.data.data!;
+  }
+
+  async getConversation(conversationId: string): Promise<any> {
+    const response = await this.api.get<ApiResponse<any>>(`/messages/conversations/${conversationId}`);
+    return response.data.data!;
+  }
+
+  async sendMessage(messageData: {
+    conversationId: string;
+    message: string;
+    messageType?: 'text' | 'image' | 'file';
+    attachments?: string[];
+    replyToMessageId?: string;
+  }): Promise<any> {
+    const response = await this.api.post<ApiResponse<any>>('/messages/messages', messageData);
+    return response.data.data!;
+  }
+
+  async getMessages(conversationId: string, params?: {
+    senderId?: string;
+    receiverId?: string;
+    messageType?: 'text' | 'image' | 'file';
+    isRead?: boolean;
+    page?: number;
+    limit?: number;
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<PaginatedResponse<any>> {
+    const response = await this.api.get<PaginatedResponse<any>>(`/messages/conversations/${conversationId}/messages`, {
+      params,
+    });
+    return response.data;
+  }
+
+  async markMessagesAsRead(conversationId: string): Promise<void> {
+    await this.api.patch(`/messages/conversations/${conversationId}/messages/read`);
+  }
+
+  async updateMessage(messageId: string, updates: {
+    message?: string;
+    attachments?: string[];
+  }): Promise<any> {
+    const response = await this.api.patch<ApiResponse<any>>(`/messages/messages/${messageId}`, updates);
+    return response.data.data!;
+  }
+
+  async deleteMessage(messageId: string): Promise<void> {
+    await this.api.delete(`/messages/messages/${messageId}`);
+  }
+
+  async getUnreadMessageCount(): Promise<{ count: number }> {
+    const response = await this.api.get<ApiResponse<{ count: number }>>('/messages/messages/unread/count');
+    return response.data.data!;
+  }
+
+  // Payment methods
+  async getPayments(params?: {
+    status?: string;
+    type?: string;
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<PaginatedResponse<any>> {
+    const response = await this.api.get<PaginatedResponse<any>>('/payments', {
+      params,
+    });
+    return response.data;
+  }
+
+  async getPayment(paymentId: string): Promise<any> {
+    const response = await this.api.get<ApiResponse<any>>(`/payments/${paymentId}`);
+    return response.data.data!;
+  }
+
+  async createPaymentIntent(paymentData: {
+    bookingId: string;
+    amount: number;
+    currency?: string;
+    description?: string;
+    metadata?: Record<string, any>;
+  }): Promise<any> {
+    const response = await this.api.post<ApiResponse<any>>('/payments/intent', paymentData);
+    return response.data.data!;
+  }
+
+  async confirmPayment(paymentId: string, paymentMethodId?: string): Promise<any> {
+    const response = await this.api.post<ApiResponse<any>>(`/payments/${paymentId}/confirm`, {
+      paymentMethodId,
+    });
+    return response.data.data!;
+  }
+
+  async refundPayment(paymentId: string, refundData: {
+    amount?: number;
+    reason?: string;
+    refundApplicationFee?: boolean;
+    reverseTransfer?: boolean;
+  }): Promise<any> {
+    const response = await this.api.post<ApiResponse<any>>(`/payments/${paymentId}/refund`, refundData);
+    return response.data.data!;
+  }
+
+  async getCustomerPayments(customerId: string, params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }): Promise<PaginatedResponse<any>> {
+    const response = await this.api.get<PaginatedResponse<any>>(`/payments/customer/${customerId}`, {
+      params,
+    });
+    return response.data;
+  }
+
+  async getProviderPayments(providerId: string, params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }): Promise<PaginatedResponse<any>> {
+    const response = await this.api.get<PaginatedResponse<any>>(`/payments/provider/${providerId}`, {
+      params,
+    });
+    return response.data;
   }
 
   // Health check
   async healthCheck(): Promise<any> {
     const response = await this.api.get('/health');
+    return response.data;
+  }
+
+  // Review methods
+  async getReviews(params?: {
+    providerId?: string;
+    customerId?: string;
+    bookingId?: string;
+    rating?: number;
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<PaginatedResponse<any>> {
+    const response = await this.api.get<PaginatedResponse<any>>('/reviews', {
+      params,
+    });
+    return response.data;
+  }
+
+  async getReview(reviewId: string): Promise<any> {
+    const response = await this.api.get<ApiResponse<any>>(`/reviews/${reviewId}`);
+    return response.data.data!;
+  }
+
+  async createReview(reviewData: {
+    bookingId: string;
+    providerId: string;
+    rating: number;
+    title: string;
+    comment: string;
+    criteria?: {
+      quality: number;
+      timeliness: number;
+      communication: number;
+      professionalism: number;
+      value: number;
+    };
+    photos?: string[];
+    isAnonymous?: boolean;
+  }): Promise<any> {
+    const response = await this.api.post<ApiResponse<any>>('/reviews', reviewData);
+    return response.data.data!;
+  }
+
+  async updateReview(reviewId: string, reviewData: {
+    rating?: number;
+    title?: string;
+    comment?: string;
+    criteria?: {
+      quality?: number;
+      timeliness?: number;
+      communication?: number;
+      professionalism?: number;
+      value?: number;
+    };
+    photos?: string[];
+    isAnonymous?: boolean;
+  }): Promise<any> {
+    const response = await this.api.put<ApiResponse<any>>(`/reviews/${reviewId}`, reviewData);
+    return response.data.data!;
+  }
+
+  async deleteReview(reviewId: string): Promise<void> {
+    await this.api.delete(`/reviews/${reviewId}`);
+  }
+
+  async addProviderResponse(reviewId: string, response: string): Promise<any> {
+    const responseData = await this.api.post<ApiResponse<any>>(`/reviews/${reviewId}/response`, { response });
+    return responseData.data.data!;
+  }
+
+  async getProviderReviews(providerId: string, params?: {
+    page?: number;
+    limit?: number;
+    rating?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<PaginatedResponse<any>> {
+    const response = await this.api.get<PaginatedResponse<any>>(`/reviews/provider/${providerId}`, {
+      params,
+    });
+    return response.data;
+  }
+
+  async getMyCustomerReviews(params?: {
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<PaginatedResponse<any>> {
+    const response = await this.api.get<PaginatedResponse<any>>('/reviews/customer/my', {
+      params,
+    });
+    return response.data;
+  }
+
+  async getMyProviderReviews(params?: {
+    page?: number;
+    limit?: number;
+    rating?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<PaginatedResponse<any>> {
+    const response = await this.api.get<PaginatedResponse<any>>('/reviews/provider/my', {
+      params,
+    });
+    return response.data;
+  }
+
+  async flagReview(reviewId: string, reason: string, details?: string): Promise<any> {
+    const response = await this.api.post<ApiResponse<any>>(`/reviews/${reviewId}/flag`, {
+      reason,
+      details,
+    });
+    return response.data.data!;
+  }
+
+  async getReviewAnalytics(providerId: string): Promise<any> {
+    const response = await this.api.get<ApiResponse<any>>(`/reviews/analytics/${providerId}`);
+    return response.data.data!;
+  }
+
+  async searchReviews(params?: {
+    query?: string;
+    providerId?: string;
+    rating?: number;
+    dateFrom?: string;
+    dateTo?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedResponse<any>> {
+    const response = await this.api.get<PaginatedResponse<any>>('/reviews/search', {
+      params,
+    });
+    return response.data;
+  }
+
+  // Provider Dashboard methods
+  async getProviderDashboardStats(period: string = 'month'): Promise<any> {
+    const response = await this.api.get(`/providers/my/dashboard-stats?period=${period}`);
+    return response.data;
+  }
+
+  async getProviderBookings(params: {
+    status?: string;
+    page?: number;
+    limit?: number;
+  } = {}): Promise<PaginatedResponse<any>> {
+    const searchParams = new URLSearchParams();
+    if (params.status) searchParams.append('status', params.status);
+    if (params.page) searchParams.append('page', params.page.toString());
+    if (params.limit) searchParams.append('limit', params.limit.toString());
+    
+    const response = await this.api.get(`/bookings/provider/my?${searchParams}`);
+    return response.data;
+  }
+
+  async getProviderProfile(providerId: string): Promise<Provider> {
+    const response = await this.api.get(`/providers/${providerId}`);
+    return response.data;
+  }
+
+  async updateProviderProfile(providerId: string, data: Partial<Provider>): Promise<Provider> {
+    const response = await this.api.put(`/providers/${providerId}`, data);
+    return response.data;
+  }
+
+  async getMyProviderReviews(params: {
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  } = {}): Promise<PaginatedResponse<any>> {
+    const searchParams = new URLSearchParams();
+    if (params.page) searchParams.append('page', params.page.toString());
+    if (params.limit) searchParams.append('limit', params.limit.toString());
+    if (params.sortBy) searchParams.append('sortBy', params.sortBy);
+    if (params.sortOrder) searchParams.append('sortOrder', params.sortOrder);
+    
+    const response = await this.api.get(`/reviews/provider/my?${searchParams}`);
+    return response.data;
+  }
+
+  async updateBookingStatus(bookingId: string, status: string): Promise<any> {
+    const response = await this.api.put(`/bookings/${bookingId}/status`, { status });
+    return response.data;
+  }
+
+  // Notification methods
+  async getUserNotifications(params: {
+    type?: string;
+    page?: number;
+    limit?: number;
+    unreadOnly?: boolean;
+  } = {}): Promise<PaginatedResponse<any>> {
+    const searchParams = new URLSearchParams();
+    if (params.type) searchParams.append('type', params.type);
+    if (params.page) searchParams.append('page', params.page.toString());
+    if (params.limit) searchParams.append('limit', params.limit.toString());
+    if (params.unreadOnly) searchParams.append('unreadOnly', 'true');
+    
+    const response = await this.api.get(`/notifications?${searchParams}`);
+    return response.data;
+  }
+
+  async getUnreadNotificationCount(): Promise<{ unreadCount: number }> {
+    const response = await this.api.get('/notifications/unread/count');
+    return response.data;
+  }
+
+  async markNotificationsRead(notificationIds: string[]): Promise<any> {
+    const response = await this.api.patch('/notifications/read', { notificationIds });
+    return response.data;
+  }
+
+  async deleteNotifications(notificationIds: string[]): Promise<any> {
+    const response = await this.api.delete('/notifications', { 
+      data: { notificationIds } 
+    });
+    return response.data;
+  }
+
+  async getNotificationPreferences(): Promise<any> {
+    const response = await this.api.get('/notifications/preferences');
+    return response.data;
+  }
+
+  async updateNotificationPreferences(preferences: any): Promise<any> {
+    const response = await this.api.put('/notifications/preferences', preferences);
     return response.data;
   }
 

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import AdminController from '@/controllers/AdminController';
+import adminController from '@/controllers/AdminController';
 import { authenticate, requireAdminRole } from '@/middleware/auth';
 import { rateLimiters } from '@/middleware/security';
 
@@ -10,33 +10,33 @@ router.use(authenticate);
 router.use(requireAdminRole);
 
 // GET /api/admin/dashboard - Admin dashboard overview (FR-076)
-router.get('/dashboard', rateLimiters.general, AdminController.getDashboard);
+router.get('/dashboard', rateLimiters.general, adminController.getDashboard);
 
 // GET /api/admin/users - Manage users (FR-074)
-router.get('/users', rateLimiters.general, AdminController.getUsers);
+router.get('/users', rateLimiters.general, adminController.getUsers);
 
 // PUT /api/admin/users/:id/status - Update user status (FR-074)
-router.put('/users/:id/status', rateLimiters.strict, AdminController.updateUserStatus);
+router.put('/users/:id/status', rateLimiters.strict, adminController.updateUserStatus);
 
 // GET /api/admin/providers/pending - Get pending provider verifications (FR-075)
-router.get('/providers/pending', rateLimiters.general, AdminController.getPendingProviders);
+router.get('/providers/pending', rateLimiters.general, adminController.getPendingProviders);
 
 // POST /api/admin/providers/:id/verify - Verify provider (FR-075)
-router.post('/providers/:id/verify', rateLimiters.strict, AdminController.verifyProvider);
+router.post('/providers/:id/verify', rateLimiters.strict, adminController.verifyProvider);
 
 // GET /api/admin/reviews/flagged - Get flagged reviews (FR-077, FR-081)
-router.get('/reviews/flagged', rateLimiters.general, AdminController.getFlaggedReviews);
+router.get('/reviews/flagged', rateLimiters.general, adminController.getFlaggedReviews);
 
 // PUT /api/admin/reviews/:id/moderate - Moderate review (FR-081)
-router.put('/reviews/:id/moderate', rateLimiters.strict, AdminController.moderateReview);
+router.put('/reviews/:id/moderate', rateLimiters.strict, adminController.moderateReview);
 
 // GET /api/admin/analytics - Platform analytics (FR-076)
-router.get('/analytics', rateLimiters.general, AdminController.getAnalytics);
+router.get('/analytics', rateLimiters.general, adminController.getAnalytics);
 
 // GET /api/admin/disputes - Handle disputes (FR-077)
-router.get('/disputes', rateLimiters.general, AdminController.getDisputes);
+router.get('/disputes', rateLimiters.general, adminController.getDisputes);
 
 // PUT /api/admin/disputes/:id/resolve - Resolve dispute (FR-077)
-router.put('/disputes/:id/resolve', rateLimiters.strict, AdminController.resolveDispute);
+router.put('/disputes/:id/resolve', rateLimiters.strict, adminController.resolveDispute);
 
 export default router;

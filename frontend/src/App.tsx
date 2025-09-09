@@ -14,6 +14,10 @@ import FindProvidersPage from './components/pages/FindProvidersPage';
 import MyBookingsPage from './components/pages/MyBookingsPage';
 import ProfilePage from './components/pages/ProfilePage';
 import ProviderDashboardPage from './components/pages/ProviderDashboardPage';
+import MessagingPage from './components/pages/MessagingPage';
+import PaymentsPage from './components/pages/PaymentsPage';
+import MyReviewsPage from './components/pages/MyReviewsPage';
+import NotificationsPage from './components/pages/NotificationsPage';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import { Box } from '@mui/material';
 
@@ -116,6 +120,38 @@ const AppContent: React.FC = () => {
             element={
               <ProtectedRoute>
                 <ProviderDashboardPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/messages" 
+            element={
+              <ProtectedRoute>
+                <MessagingPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/payments" 
+            element={
+              <ProtectedRoute>
+                <PaymentsPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/reviews" 
+            element={
+              <ProtectedRoute>
+                <MyReviewsPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/notifications" 
+            element={
+              <ProtectedRoute>
+                <NotificationsPage />
               </ProtectedRoute>
             } 
           />

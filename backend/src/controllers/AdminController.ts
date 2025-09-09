@@ -1,16 +1,16 @@
 import { Request, Response } from 'express';
-import { getRepository } from 'typeorm';
+import { getRepository, IsNull, Not } from 'typeorm';
 import { User, UserType } from '@/models/User';
 import { Provider } from '@/models/Provider';
-import { Booking } from '@/models/Booking';
+import { Booking, BookingStatus } from '@/models/Booking';
 import { Review } from '@/models/Review';
 import { Payment } from '@/models/Payment';
 import logger from '@/config/logger';
 import { AuthenticatedRequest } from '@/types';
 
-class AdminController {
+export class AdminController {
   // GET /api/admin/dashboard - Admin dashboard overview (FR-076)
-  public async getDashboard(req: AuthenticatedRequest, res: Response): Promise<void> {
+  getDashboard = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const userRepository = getRepository(User);
       const providerRepository = getRepository(Provider);
@@ -30,7 +30,7 @@ class AdminController {
         flaggedReviews
       ] = await Promise.all([
         userRepository.count({ where: { isActive: true } }),
-        providerRepository.count({ where: { isVerified: true } }),
+        providerRepository.count({ where: { verifiedAt: Not(IsNull()) } }),
         bookingRepository.count(),
         reviewRepository.count({ where: { isFlagged: false } }),
         paymentRepository
@@ -39,26 +39,21 @@ class AdminController {
           .where('payment.status = :status', { status: 'succeeded' })
           .getRawOne()
           .then(result => parseFloat(result.total) || 0),
-        providerRepository.count({ where: { isVerified: false } }),
-        bookingRepository.count({ where: { status: 'in_progress' } }),
+        providerRepository.count({ where: { verifiedAt: IsNull() } }),
+        bookingRepository.count({ where: { status: BookingStatus.IN_PROGRESS } }),
         reviewRepository.count({ where: { isFlagged: true } })
       ]);
 
       // Get recent activities
       const recentUsers = await userRepository.find({
         order: { createdAt: 'DESC' },
-        take: 5,
-        select: ['id', 'firstName', 'lastName', 'email', 'userType', 'createdAt']
+        take: 5
       });
 
       const recentBookings = await bookingRepository.find({
         relations: ['customer', 'provider'],
         order: { createdAt: 'DESC' },
-        take: 5,
-        select: {
-          customer: ['id', 'firstName', 'lastName'],
-          provider: ['id', 'businessName']
-        }
+        take: 5
       });
 
       res.json({
@@ -81,7 +76,7 @@ class AdminController {
         }
       });
 
-      logger.info(`Admin dashboard accessed by ${req.user.id}`);
+      logger.info(`Admin dashboard accessed by ${req.user?.userId}`);
     } catch (error) {
       logger.error('Error retrieving admin dashboard:', error);
       res.status(500).json({
@@ -92,7 +87,7 @@ class AdminController {
   }
 
   // GET /api/admin/users - Manage users (FR-074)
-  public async getUsers(req: AuthenticatedRequest, res: Response): Promise<void> {
+  getUsers = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { 
         page = 1, 
@@ -126,17 +121,7 @@ class AdminController {
         .orderBy('user.createdAt', 'DESC')
         .skip((Number(page) - 1) * Number(limit))
         .take(Number(limit))
-        .select([
-          'user.id',
-          'user.email',
-          'user.firstName',
-          'user.lastName',
-          'user.userType',
-          'user.isVerified',
-          'user.isActive',
-          'user.createdAt',
-          'user.lastLogin'
-        ]);
+;
 
       const [users, total] = await queryBuilder.getManyAndCount();
 
@@ -153,7 +138,7 @@ class AdminController {
         }
       });
 
-      logger.info(`Users list accessed by admin ${req.user.id}`);
+      logger.info(`Users list accessed by admin ${req.user?.userId}`);
     } catch (error) {
       logger.error('Error retrieving users:', error);
       res.status(500).json({
@@ -164,7 +149,7 @@ class AdminController {
   }
 
   // PUT /api/admin/users/:id/status - Update user status (FR-074)
-  public async updateUserStatus(req: AuthenticatedRequest, res: Response): Promise<void> {
+  updateUserStatus = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
       const { isActive, reason } = req.body;
@@ -190,7 +175,7 @@ class AdminController {
       });
 
       logger.info(
-        `User ${id} ${isActive ? 'activated' : 'deactivated'} by admin ${req.user.id}. Reason: ${reason || 'Not provided'}`
+        `User ${id} ${isActive ? 'activated' : 'deactivated'} by admin ${req.user?.userId}. Reason: ${reason || 'Not provided'}`
       );
     } catch (error) {
       logger.error('Error updating user status:', error);
@@ -202,25 +187,22 @@ class AdminController {
   }
 
   // GET /api/admin/providers/pending - Get pending provider verifications (FR-075)
-  public async getPendingProviders(req: AuthenticatedRequest, res: Response): Promise<void> {
+  getPendingProviders = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { page = 1, limit = 20 } = req.query;
 
       const providerRepository = getRepository(Provider);
 
       const providers = await providerRepository.find({
-        where: { isVerified: false },
+        where: { verifiedAt: IsNull() },
         relations: ['user'],
         order: { createdAt: 'ASC' }, // Oldest first
         skip: (Number(page) - 1) * Number(limit),
         take: Number(limit),
-        select: {
-          user: ['id', 'firstName', 'lastName', 'email', 'phone']
-        }
       });
 
       const total = await providerRepository.count({
-        where: { isVerified: false }
+        where: { verifiedAt: IsNull() }
       });
 
       res.json({
@@ -236,7 +218,7 @@ class AdminController {
         }
       });
 
-      logger.info(`Pending providers list accessed by admin ${req.user.id}`);
+      logger.info(`Pending providers list accessed by admin ${req.user?.userId}`);
     } catch (error) {
       logger.error('Error retrieving pending providers:', error);
       res.status(500).json({
@@ -247,7 +229,7 @@ class AdminController {
   }
 
   // POST /api/admin/providers/:id/verify - Verify provider (FR-075)
-  public async verifyProvider(req: AuthenticatedRequest, res: Response): Promise<void> {
+  verifyProvider = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
       const { 
@@ -272,9 +254,8 @@ class AdminController {
       }
 
       if (approved) {
-        provider.isVerified = true;
         provider.verifiedAt = new Date();
-        provider.verifiedBy = req.user.id;
+        provider.verifiedBy = req.user?.userId || '';
         
         if (isBackgroundChecked !== undefined) {
           provider.isBackgroundChecked = isBackgroundChecked;
@@ -283,10 +264,10 @@ class AdminController {
           provider.isInsured = isInsured;
         }
       } else {
-        provider.isVerified = false;
+        provider.verifiedAt = null;
         provider.verificationNotes = notes || 'Application rejected';
         provider.rejectedAt = new Date();
-        provider.rejectedBy = req.user.id;
+        provider.rejectedBy = req.user?.userId || '';
       }
 
       provider.adminNotes = notes;
@@ -299,7 +280,7 @@ class AdminController {
       });
 
       logger.info(
-        `Provider ${id} ${approved ? 'approved' : 'rejected'} by admin ${req.user.id}. Notes: ${notes || 'None'}`
+        `Provider ${id} ${approved ? 'approved' : 'rejected'} by admin ${req.user?.userId}. Notes: ${notes || 'None'}`
       );
     } catch (error) {
       logger.error('Error verifying provider:', error);
@@ -311,7 +292,7 @@ class AdminController {
   }
 
   // GET /api/admin/reviews/flagged - Get flagged reviews (FR-077, FR-081)
-  public async getFlaggedReviews(req: AuthenticatedRequest, res: Response): Promise<void> {
+  getFlaggedReviews = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { page = 1, limit = 20 } = req.query;
 
@@ -323,11 +304,6 @@ class AdminController {
         order: { createdAt: 'DESC' },
         skip: (Number(page) - 1) * Number(limit),
         take: Number(limit),
-        select: {
-          customer: ['id', 'firstName', 'lastName', 'email'],
-          provider: ['id', 'businessName', 'user'],
-          booking: ['id', 'serviceType', 'scheduledDate']
-        }
       });
 
       const total = await reviewRepository.count({
@@ -347,7 +323,7 @@ class AdminController {
         }
       });
 
-      logger.info(`Flagged reviews accessed by admin ${req.user.id}`);
+      logger.info(`Flagged reviews accessed by admin ${req.user?.userId}`);
     } catch (error) {
       logger.error('Error retrieving flagged reviews:', error);
       res.status(500).json({
@@ -358,7 +334,7 @@ class AdminController {
   }
 
   // PUT /api/admin/reviews/:id/moderate - Moderate review (FR-081)
-  public async moderateReview(req: AuthenticatedRequest, res: Response): Promise<void> {
+  moderateReview = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
       const { action, reason } = req.body; // action: 'approve', 'delete', 'keep_flagged'
@@ -396,7 +372,7 @@ class AdminController {
             success: true,
             message: 'Review deleted successfully'
           });
-          logger.info(`Review ${id} deleted by admin ${req.user.id}. Reason: ${reason || 'Not provided'}`);
+          logger.info(`Review ${id} deleted by admin ${req.user?.userId}. Reason: ${reason || 'Not provided'}`);
           return;
         case 'keep_flagged':
           review.flagReason = reason || 'Under review';
@@ -412,7 +388,7 @@ class AdminController {
       });
 
       logger.info(
-        `Review ${id} ${action} by admin ${req.user.id}. Reason: ${reason || 'Not provided'}`
+        `Review ${id} ${action} by admin ${req.user?.userId}. Reason: ${reason || 'Not provided'}`
       );
     } catch (error) {
       logger.error('Error moderating review:', error);
@@ -424,7 +400,7 @@ class AdminController {
   }
 
   // GET /api/admin/analytics - Platform analytics (FR-076)
-  public async getAnalytics(req: AuthenticatedRequest, res: Response): Promise<void> {
+  getAnalytics = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { period = '30d' } = req.query; // 30d, 90d, 1y
       
@@ -488,7 +464,7 @@ class AdminController {
         }
       });
 
-      logger.info(`Analytics accessed by admin ${req.user.id} for period ${period}`);
+      logger.info(`Analytics accessed by admin ${req.user?.userId} for period ${period}`);
     } catch (error) {
       logger.error('Error retrieving analytics:', error);
       res.status(500).json({
@@ -499,7 +475,7 @@ class AdminController {
   }
 
   // GET /api/admin/disputes - Handle disputes (FR-077)
-  public async getDisputes(req: AuthenticatedRequest, res: Response): Promise<void> {
+  getDisputes = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { page = 1, limit = 20, status } = req.query;
 
@@ -516,11 +492,6 @@ class AdminController {
         order: { disputedAt: 'DESC' },
         skip: (Number(page) - 1) * Number(limit),
         take: Number(limit),
-        select: {
-          customer: ['id', 'firstName', 'lastName', 'email'],
-          provider: ['id', 'businessName', 'user'],
-          payments: ['id', 'amount', 'status']
-        }
       });
 
       const total = await bookingRepository.count({ where: whereClause });
@@ -538,7 +509,7 @@ class AdminController {
         }
       });
 
-      logger.info(`Disputes accessed by admin ${req.user.id}`);
+      logger.info(`Disputes accessed by admin ${req.user?.userId}`);
     } catch (error) {
       logger.error('Error retrieving disputes:', error);
       res.status(500).json({
@@ -549,7 +520,7 @@ class AdminController {
   }
 
   // PUT /api/admin/disputes/:id/resolve - Resolve dispute (FR-077)
-  public async resolveDispute(req: AuthenticatedRequest, res: Response): Promise<void> {
+  resolveDispute = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
       const { resolution, refundAmount, notes } = req.body;
@@ -580,7 +551,7 @@ class AdminController {
       booking.disputeStatus = 'resolved';
       booking.disputeResolution = resolution;
       booking.disputeResolvedAt = new Date();
-      booking.disputeResolvedBy = req.user.id;
+      booking.disputeResolvedBy = req.user?.userId || '';
       booking.adminNotes = notes;
 
       // Handle refunds if needed
@@ -598,7 +569,7 @@ class AdminController {
       });
 
       logger.info(
-        `Dispute ${id} resolved by admin ${req.user.id}. Resolution: ${resolution}. Notes: ${notes || 'None'}`
+        `Dispute ${id} resolved by admin ${req.user?.userId}. Resolution: ${resolution}. Notes: ${notes || 'None'}`
       );
     } catch (error) {
       logger.error('Error resolving dispute:', error);

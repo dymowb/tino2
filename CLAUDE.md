@@ -104,10 +104,46 @@ Socket.IO handles:
 - Service portfolio images in `backend/uploads/portfolios/`
 - Review photos in `backend/uploads/reviews/`
 
+## Browser Automation (Browserbase MCP)
+
+The application includes Browserbase MCP integration for automated browser testing and web scraping capabilities:
+
+### Setup
+1. Sign up for a Browserbase account at https://browserbase.com
+2. Get your API key and project ID from the dashboard
+3. Add credentials to `.env`:
+   ```
+   BROWSERBASE_API_KEY=bb_live_vrmnWlqL665ASF4nar3sJPGn0xI
+   BROWSERBASE_PROJECT_ID=1306cde6-e21f-48e5-9b33-786fef649698
+   BROWSERBASE_SESSION_TIMEOUT=300000
+   BROWSERBASE_MAX_SESSIONS=10
+   ```
+
+### API Endpoints
+- `POST /api/v1/browser/sessions` - Create new browser session
+- `GET /api/v1/browser/sessions/:id` - Get session details
+- `DELETE /api/v1/browser/sessions/:id` - End browser session
+- `GET /api/v1/browser/sessions` - List all active sessions
+- `GET /api/v1/browser/stats` - Get session statistics
+- `POST /api/v1/browser/cleanup` - Clean up inactive sessions
+
+### Session Configuration
+```json
+{
+  "timeout": 300000,
+  "keepAlive": false,
+  "browserSettings": {
+    "viewport": { "width": 1920, "height": 1080 },
+    "userAgent": "custom-user-agent"
+  }
+}
+```
+
 ## Testing
 
 - Backend: Jest with Supertest for API testing
 - Frontend: React Testing Library
+- Browser automation: Browserbase MCP sessions
 - Test files located in respective `/tests` directories
 
 ## GPS Integration

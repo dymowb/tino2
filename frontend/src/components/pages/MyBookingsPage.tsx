@@ -1,97 +1,148 @@
 import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  Grid,
+  Chip,
+  Button,
+  CircularProgress,
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Paper,
+  Divider,
+  IconButton,
+  Tooltip,
+  Stack
+} from '@mui/material';
+import {
+  Schedule,
+  LocationOn,
+  Person,
+  Phone,
+  Email,
+  Payment,
+  Description,
+  Chat,
+  Star,
+  Cancel,
+  CheckCircle,
+  PlayArrow,
+  Done,
+  Edit,
+  Delete,
+  Refresh
+} from '@mui/icons-material';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
-
-interface Booking {
-  id: number;
-  service_type: string;
-  scheduled_date: string;
-  address: string;
-  description: string;
-  status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
-  payment_status: string;
-  other_party: {
-    id: number;
-    business_name?: string;
-    name: string;
-    phone: string;
-  };
-  estimated_duration: number;
-  created_at: string;
-}
+import { apiService, Booking } from '../../services/api';
 
 const MyBookingsPage: React.FC = () => {
-  const { user } = useAuth();
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>('');
-  const [filter, setFilter] = useState<string>('all');
+  const { user, isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
 
-  useEffect(() => {
-    loadBookings();
-  }, [filter]);
+  // Fetch bookings
+  const {
+    data: bookingsData,
+    isLoading,
+    error,
+    refetch
+  } = useQuery({
+    queryKey: ['bookings', filterStatus],
+    queryFn: () => apiService.getBookings({
+      ...(filterStatus !== 'all' && { status: filterStatus }),
+      limit: 50
+    }),
+    enabled: isAuthenticated,
+    staleTime: 30 * 1000, // 30 seconds
+  });
 
-  const loadBookings = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const token = localStorage.getItem('token');
-      const params = filter !== 'all' ? `?status=${filter}` : '';
-      const response = await fetch(`http://localhost:5000/api/bookings${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+  const bookings = bookingsData?.data || [];
+  const pagination = bookingsData?.pagination;
+
+  // Update booking status mutation
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ bookingId, updates }: { bookingId: string; updates: Partial<Booking> }) =>
+      apiService.updateBooking(bookingId, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      toast.success('Booking status updated successfully!');
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.error || 'Failed to update booking status');
+    },
+  });
+
+  // Cancel booking mutation
+  const cancelBookingMutation = useMutation({
+    mutationFn: ({ bookingId, reason }: { bookingId: string; reason?: string }) =>
+      apiService.cancelBooking(bookingId, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      toast.success('Booking cancelled successfully');
+      setShowCancelDialog(false);
+      setCancelReason('');
+      setSelectedBooking(null);
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.error || 'Failed to cancel booking');
+    },
+  });
+
+  const handleStatusUpdate = (bookingId: string, newStatus: Booking['status']) => {
+    updateStatusMutation.mutate({
+      bookingId,
+      updates: { status: newStatus }
+    });
+  };
+
+  const handleCancelBooking = () => {
+    if (selectedBooking) {
+      cancelBookingMutation.mutate({
+        bookingId: selectedBooking.id,
+        reason: cancelReason
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to load bookings');
-      }
-
-      const data = await response.json();
-      setBookings(data.bookings || []);
-    } catch (error: any) {
-      setError(error.message);
-    } finally {
-      setLoading(false);
     }
   };
 
-  const updateBookingStatus = async (bookingId: number, newStatus: string) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/bookings/${bookingId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update booking status');
-      }
-
-      // Reload bookings
-      loadBookings();
-    } catch (error: any) {
-      alert(`Error: ${error.message}`);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: Booking['status']) => {
     switch (status) {
-      case 'pending': return '#f39c12';
-      case 'confirmed': return '#3498db';
-      case 'in_progress': return '#9b59b6';
-      case 'completed': return '#27ae60';
-      case 'cancelled': return '#e74c3c';
-      default: return '#7f8c8d';
+      case 'pending': return 'warning';
+      case 'confirmed': return 'info';
+      case 'in_progress': return 'secondary';
+      case 'completed': return 'success';
+      case 'cancelled': return 'error';
+      default: return 'default';
+    }
+  };
+
+  const getStatusIcon = (status: Booking['status']) => {
+    switch (status) {
+      case 'pending': return <Schedule />;
+      case 'confirmed': return <CheckCircle />;
+      case 'in_progress': return <PlayArrow />;
+      case 'completed': return <Done />;
+      case 'cancelled': return <Cancel />;
+      default: return <Schedule />;
     }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -100,245 +151,329 @@ const MyBookingsPage: React.FC = () => {
     });
   };
 
-  const filteredBookings = bookings.filter(booking => 
-    filter === 'all' || booking.status === filter
-  );
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  };
+
+  const canUpdateStatus = (booking: Booking, newStatus: Booking['status']) => {
+    if (!user) return false;
+
+    const statusTransitions = {
+      'pending': user.userType === 'provider' ? ['confirmed', 'cancelled'] : ['cancelled'],
+      'confirmed': user.userType === 'provider' ? ['in_progress', 'cancelled'] : ['cancelled'],
+      'in_progress': user.userType === 'provider' ? ['completed'] : [],
+      'completed': [],
+      'cancelled': []
+    };
+
+    return statusTransitions[booking.status]?.includes(newStatus) || false;
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography variant="h6">Please log in to view your bookings</Typography>
+      </Box>
+    );
+  }
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1000px', margin: '0 auto' }}>
-      <h1 style={{ marginBottom: '30px', color: '#2c3e50' }}>My Bookings</h1>
+    <Box sx={{ p: 3, maxWidth: '1400px', mx: 'auto' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+          My Bookings
+        </Typography>
+        <Button
+          startIcon={<Refresh />}
+          onClick={() => refetch()}
+          variant="outlined"
+          disabled={isLoading}
+        >
+          Refresh
+        </Button>
+      </Box>
 
-      {/* Filters */}
-      <div style={{ 
-        backgroundColor: 'white',
-        padding: '20px',
-        borderRadius: '8px',
-        marginBottom: '30px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-      }}>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          {['all', 'pending', 'confirmed', 'in_progress', 'completed', 'cancelled'].map(status => (
-            <button
-              key={status}
-              onClick={() => setFilter(status)}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: filter === status ? '#3498db' : '#ecf0f1',
-                color: filter === status ? 'white' : '#2c3e50',
-                border: 'none',
-                borderRadius: '20px',
-                cursor: 'pointer',
-                textTransform: 'capitalize'
-              }}
-            >
-              {status === 'all' ? 'All Bookings' : status.replace('_', ' ')}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Status Filter */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <FormControl sx={{ minWidth: 200 }}>
+          <InputLabel>Filter by Status</InputLabel>
+          <Select
+            value={filterStatus}
+            label="Filter by Status"
+            onChange={(e) => setFilterStatus(e.target.value)}
+          >
+            <MenuItem value="all">All Bookings</MenuItem>
+            <MenuItem value="pending">Pending</MenuItem>
+            <MenuItem value="confirmed">Confirmed</MenuItem>
+            <MenuItem value="in_progress">In Progress</MenuItem>
+            <MenuItem value="completed">Completed</MenuItem>
+            <MenuItem value="cancelled">Cancelled</MenuItem>
+          </Select>
+        </FormControl>
+      </Paper>
 
-      {loading && (
-        <div style={{ textAlign: 'center', padding: '40px' }}>
-          <p>Loading bookings...</p>
-        </div>
+      {/* Loading State */}
+      {isLoading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+          <CircularProgress />
+        </Box>
       )}
 
+      {/* Error State */}
       {error && (
-        <div style={{ 
-          backgroundColor: '#e74c3c', 
-          color: 'white', 
-          padding: '15px', 
-          borderRadius: '4px', 
-          marginBottom: '20px' 
-        }}>
-          {error}
-        </div>
+        <Alert severity="error" sx={{ mb: 3 }}>
+          Failed to load bookings. Please try again.
+        </Alert>
       )}
 
-      {!loading && !error && (
+      {/* Results */}
+      {!isLoading && !error && (
         <>
-          <div style={{ marginBottom: '20px' }}>
-            <h3 style={{ color: '#34495e' }}>
-              {filteredBookings.length} Booking{filteredBookings.length !== 1 ? 's' : ''}
-              {filter !== 'all' && ` (${filter.replace('_', ' ')})`}
-            </h3>
-          </div>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h6">
+              {pagination?.total || 0} Booking{(pagination?.total || 0) !== 1 ? 's' : ''} Found
+              {filterStatus !== 'all' && ` (${filterStatus.replace('_', ' ')})`}
+            </Typography>
+          </Box>
 
-          {filteredBookings.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px' }}>
-              <p>No bookings found.</p>
+          {bookings.length === 0 ? (
+            <Paper sx={{ p: 4, textAlign: 'center' }}>
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+                No bookings found matching your criteria.
+              </Typography>
               {user?.userType === 'customer' && (
-                <p>Start by finding service providers and booking services!</p>
+                <Typography variant="body2" color="text.secondary">
+                  Start by finding service providers and booking services!
+                </Typography>
               )}
-            </div>
+            </Paper>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {filteredBookings.map((booking) => (
-                <div key={booking.id} style={{
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  padding: '20px',
-                  backgroundColor: 'white',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
-                    <div>
-                      <h3 style={{ color: '#2c3e50', marginBottom: '5px' }}>
-                        {booking.service_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                      </h3>
-                      <p style={{ color: '#7f8c8d', margin: '0' }}>
-                        Booking #{booking.id}
-                      </p>
-                    </div>
-                    <span style={{
-                      backgroundColor: getStatusColor(booking.status),
-                      color: 'white',
-                      padding: '4px 12px',
-                      borderRadius: '20px',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      textTransform: 'capitalize'
-                    }}>
-                      {booking.status.replace('_', ' ')}
-                    </span>
-                  </div>
+            <Grid container spacing={3}>
+              {bookings.map((booking) => (
+                <Grid item xs={12} key={booking.id}>
+                  <Card sx={{ height: '100%' }}>
+                    <CardContent>
+                      {/* Header */}
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                        <Box>
+                          <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
+                            {booking.serviceType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Booking #{booking.id}
+                          </Typography>
+                        </Box>
+                        <Chip
+                          icon={getStatusIcon(booking.status)}
+                          label={booking.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          color={getStatusColor(booking.status)}
+                          variant="filled"
+                        />
+                      </Box>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '15px' }}>
-                    <div>
-                      <strong>📅 Scheduled:</strong>
-                      <p style={{ margin: '5px 0' }}>{formatDate(booking.scheduled_date)}</p>
-                      
-                      <strong>📍 Address:</strong>
-                      <p style={{ margin: '5px 0' }}>{booking.address}</p>
-                      
-                      <strong>⏱️ Duration:</strong>
-                      <p style={{ margin: '5px 0' }}>{booking.estimated_duration} hours</p>
-                    </div>
-                    <div>
-                      <strong>👤 {user?.userType === 'customer' ? 'Provider' : 'Customer'}:</strong>
-                      <p style={{ margin: '5px 0' }}>
-                        {booking.other_party.business_name || booking.other_party.name}
-                      </p>
-                      <p style={{ margin: '5px 0', color: '#7f8c8d' }}>
-                        📞 {booking.other_party.phone}
-                      </p>
-                      
-                      <strong>💳 Payment:</strong>
-                      <p style={{ margin: '5px 0', textTransform: 'capitalize' }}>
-                        {booking.payment_status}
-                      </p>
-                    </div>
-                  </div>
+                      {/* Details Grid */}
+                      <Grid container spacing={2} sx={{ mb: 2 }}>
+                        <Grid item xs={12} md={6}>
+                          <Stack spacing={1}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Schedule fontSize="small" color="primary" />
+                              <Typography variant="body2">
+                                <strong>Scheduled:</strong> {formatDate(booking.scheduledDate)}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <LocationOn fontSize="small" color="primary" />
+                              <Typography variant="body2">
+                                <strong>Location:</strong> {booking.location.address}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Schedule fontSize="small" color="primary" />
+                              <Typography variant="body2">
+                                <strong>Duration:</strong> {booking.estimatedDuration} hours
+                              </Typography>
+                            </Box>
+                          </Stack>
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <Stack spacing={1}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Payment fontSize="small" color="primary" />
+                              <Typography variant="body2">
+                                <strong>Total:</strong> {formatCurrency(booking.totalAmount)}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Payment fontSize="small" color="primary" />
+                              <Typography variant="body2">
+                                <strong>Payment:</strong> {booking.paymentStatus.replace('_', ' ')}
+                              </Typography>
+                            </Box>
+                            <Typography variant="body2" color="text.secondary">
+                              Created: {formatDate(booking.createdAt)}
+                            </Typography>
+                          </Stack>
+                        </Grid>
+                      </Grid>
 
-                  {booking.description && (
-                    <div style={{ marginBottom: '15px' }}>
-                      <strong>📝 Description:</strong>
-                      <p style={{ margin: '5px 0', color: '#555' }}>{booking.description}</p>
-                    </div>
-                  )}
+                      {/* Description */}
+                      {booking.description && (
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="body2">
+                            <strong>Description:</strong> {booking.description}
+                          </Typography>
+                        </Box>
+                      )}
 
-                  {/* Action buttons */}
-                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                    {booking.status === 'pending' && user?.userType === 'provider' && (
-                      <>
-                        <button
-                          onClick={() => updateBookingStatus(booking.id, 'confirmed')}
-                          style={{
-                            padding: '8px 16px',
-                            backgroundColor: '#27ae60',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                          }}
+                      {/* Special Instructions */}
+                      {booking.specialInstructions && (
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="body2">
+                            <strong>Special Instructions:</strong> {booking.specialInstructions}
+                          </Typography>
+                        </Box>
+                      )}
+
+                      <Divider sx={{ my: 2 }} />
+
+                      {/* Action Buttons */}
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        {/* Provider Actions */}
+                        {booking.status === 'pending' && user?.userType === 'provider' && (
+                          <>
+                            <Button
+                              variant="contained"
+                              color="success"
+                              startIcon={<CheckCircle />}
+                              onClick={() => handleStatusUpdate(booking.id, 'confirmed')}
+                              disabled={updateStatusMutation.isPending}
+                            >
+                              Accept
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              color="error"
+                              startIcon={<Cancel />}
+                              onClick={() => {
+                                setSelectedBooking(booking);
+                                setShowCancelDialog(true);
+                              }}
+                              disabled={updateStatusMutation.isPending}
+                            >
+                              Decline
+                            </Button>
+                          </>
+                        )}
+
+                        {booking.status === 'confirmed' && user?.userType === 'provider' && (
+                          <Button
+                            variant="contained"
+                            color="secondary"
+                            startIcon={<PlayArrow />}
+                            onClick={() => handleStatusUpdate(booking.id, 'in_progress')}
+                            disabled={updateStatusMutation.isPending}
+                          >
+                            Start Service
+                          </Button>
+                        )}
+
+                        {booking.status === 'in_progress' && user?.userType === 'provider' && (
+                          <Button
+                            variant="contained"
+                            color="success"
+                            startIcon={<Done />}
+                            onClick={() => handleStatusUpdate(booking.id, 'completed')}
+                            disabled={updateStatusMutation.isPending}
+                          >
+                            Mark Complete
+                          </Button>
+                        )}
+
+                        {/* Customer Actions */}
+                        {booking.status === 'completed' && user?.userType === 'customer' && (
+                          <Button
+                            variant="outlined"
+                            color="primary"
+                            startIcon={<Star />}
+                            onClick={() => toast.info('Review system - Coming in Task 6!')}
+                          >
+                            Leave Review
+                          </Button>
+                        )}
+
+                        {/* Common Actions */}
+                        {(booking.status === 'pending' || booking.status === 'confirmed') && (
+                          <Button
+                            variant="outlined"
+                            color="error"
+                            startIcon={<Cancel />}
+                            onClick={() => {
+                              setSelectedBooking(booking);
+                              setShowCancelDialog(true);
+                            }}
+                            disabled={updateStatusMutation.isPending}
+                          >
+                            Cancel
+                          </Button>
+                        )}
+
+                        <Button
+                          variant="outlined"
+                          startIcon={<Chat />}
+                          onClick={() => toast.info('Messaging system - Coming in Task 4!')}
                         >
-                          Accept
-                        </button>
-                        <button
-                          onClick={() => updateBookingStatus(booking.id, 'cancelled')}
-                          style={{
-                            padding: '8px 16px',
-                            backgroundColor: '#e74c3c',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Decline
-                        </button>
-                      </>
-                    )}
-                    
-                    {booking.status === 'confirmed' && user?.userType === 'provider' && (
-                      <button
-                        onClick={() => updateBookingStatus(booking.id, 'in_progress')}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#9b59b6',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Start Service
-                      </button>
-                    )}
-                    
-                    {booking.status === 'in_progress' && user?.userType === 'provider' && (
-                      <button
-                        onClick={() => updateBookingStatus(booking.id, 'completed')}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#27ae60',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Mark Complete
-                      </button>
-                    )}
-
-                    {booking.status === 'completed' && user?.userType === 'customer' && (
-                      <button
-                        onClick={() => alert('Review system integration pending')}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#f39c12',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Leave Review
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => alert('Messaging system integration pending')}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#3498db',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Message
-                    </button>
-                  </div>
-                </div>
+                          Message
+                        </Button>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
               ))}
-            </div>
+            </Grid>
           )}
         </>
       )}
-    </div>
+
+      {/* Cancel Booking Dialog */}
+      <Dialog
+        open={showCancelDialog}
+        onClose={() => setShowCancelDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Cancel Booking</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Are you sure you want to cancel this booking?
+          </Typography>
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            label="Reason for cancellation (optional)"
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            variant="outlined"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowCancelDialog(false)}>
+            Keep Booking
+          </Button>
+          <Button
+            onClick={handleCancelBooking}
+            color="error"
+            variant="contained"
+            disabled={cancelBookingMutation.isPending}
+          >
+            {cancelBookingMutation.isPending ? 'Cancelling...' : 'Cancel Booking'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
 

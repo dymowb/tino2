@@ -23,6 +23,7 @@
     "db:reset": "ts-node src/scripts/resetDatabase.ts"
   },
   "dependencies": {
+    "@browserbasehq/mcp-server-browserbase": "^2.0.1",
     "@googlemaps/google-maps-services-js": "^3.4.2",
     "@sendgrid/mail": "^8.1.5",
     "@types/bcryptjs": "^2.4.6",

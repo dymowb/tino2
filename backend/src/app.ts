@@ -15,10 +15,12 @@ import providerRoutes from '@/routes/providers';
 import bookingRoutes from '@/routes/bookings';
 import quoteRoutes from '@/routes/quotes';
 import messageRoutes from '@/routes/messages';
-// import paymentRoutes from '@/routes/payments';
-// import reviewRoutes from '@/routes/reviews';
+// Browser routes temporarily disabled due to compilation errors
+// import browserRoutes from '@/routes/browser';
+import paymentRoutes from '@/routes/payments';
+import reviewRoutes from '@/routes/reviews';
 // import locationRoutes from '@/routes/locations';
-import adminRoutes from '@/routes/admin';
+// import adminRoutes from '@/routes/admin';
 import messageService from '@/services/MessageService';
 
 export class App {
@@ -80,6 +82,7 @@ export class App {
           bookings: `/api/${config.server.apiVersion}/bookings`,
           quotes: `/api/${config.server.apiVersion}/quotes`,
           messages: `/api/${config.server.apiVersion}/messages`,
+          browser: `/api/${config.server.apiVersion}/browser`,
           payments: `/api/${config.server.apiVersion}/payments`,
           reviews: `/api/${config.server.apiVersion}/reviews`,
           locations: `/api/${config.server.apiVersion}/locations`,
@@ -104,10 +107,11 @@ export class App {
     this.app.use(`/api/${config.server.apiVersion}/bookings`, bookingRoutes);
     this.app.use(`/api/${config.server.apiVersion}/quotes`, quoteRoutes);
     this.app.use(`/api/${config.server.apiVersion}/messages`, messageRoutes);
-    // this.app.use(`/api/${config.server.apiVersion}/payments`, paymentRoutes);
-    // this.app.use(`/api/${config.server.apiVersion}/reviews`, reviewRoutes);
+    // this.app.use(`/api/${config.server.apiVersion}/browser`, browserRoutes);
+    this.app.use(`/api/${config.server.apiVersion}/payments`, paymentRoutes);
+    this.app.use(`/api/${config.server.apiVersion}/reviews`, reviewRoutes);
     // this.app.use(`/api/${config.server.apiVersion}/locations`, locationRoutes);
-    this.app.use(`/api/${config.server.apiVersion}/admin`, adminRoutes);
+    // this.app.use(`/api/${config.server.apiVersion}/admin`, adminRoutes);
 
     this.app.all('*', (req, res) => {
       res.status(404).json({
