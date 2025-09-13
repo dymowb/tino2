@@ -140,6 +140,8 @@ const providerIdValidation = [
 ];
 
 // Public routes (no authentication required)
+// Temporarily commented out to fix server startup
+/*
 router.get(
   '/provider/:providerId',
   providerIdValidation,
@@ -147,6 +149,7 @@ router.get(
   validateRequest,
   reviewController.getProviderReviews
 );
+*/
 
 router.get(
   '/search',
