@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { body, param, query } from 'express-validator';
 import reviewController from '../controllers/ReviewController';
-import { authenticateToken } from '../middleware/auth';
-import { validateRequest } from '../middleware/validation';
+import { authenticate } from '../middleware/auth';
+import { handleValidationErrors } from '../middleware/validation';
 
 const router = Router();
 
@@ -146,7 +146,7 @@ router.get(
   '/provider/:providerId',
   providerIdValidation,
   reviewSearchValidation,
-  validateRequest,
+  handleValidationErrors,
   reviewController.getProviderReviews
 );
 */
@@ -154,53 +154,53 @@ router.get(
 router.get(
   '/search',
   reviewSearchValidation,
-  validateRequest,
+  handleValidationErrors,
   reviewController.searchReviews
 );
 
 router.get(
   '/:id',
   uuidParamValidation,
-  validateRequest,
+  handleValidationErrors,
   reviewController.getReviewById
 );
 
 router.get(
   '/analytics/:providerId',
   providerIdValidation,
-  validateRequest,
+  handleValidationErrors,
   reviewController.getReviewAnalytics
 );
 
 // Protected routes (authentication required)
-router.use(authenticateToken);
+router.use(authenticate);
 
 // Customer routes
 router.post(
   '/',
   createReviewValidation,
-  validateRequest,
+  handleValidationErrors,
   reviewController.createReview
 );
 
 router.put(
   '/:id',
   updateReviewValidation,
-  validateRequest,
+  handleValidationErrors,
   reviewController.updateReview
 );
 
 router.delete(
   '/:id',
   uuidParamValidation,
-  validateRequest,
+  handleValidationErrors,
   reviewController.deleteReview
 );
 
 router.get(
   '/customer/my',
   reviewSearchValidation,
-  validateRequest,
+  handleValidationErrors,
   reviewController.getMyCustomerReviews
 );
 
@@ -208,14 +208,14 @@ router.get(
 router.post(
   '/:id/response',
   providerResponseValidation,
-  validateRequest,
+  handleValidationErrors,
   reviewController.addProviderResponse
 );
 
 router.get(
   '/provider/my',
   reviewSearchValidation,
-  validateRequest,
+  handleValidationErrors,
   reviewController.getMyProviderReviews
 );
 
@@ -223,7 +223,7 @@ router.get(
 router.post(
   '/:id/flag',
   flagReviewValidation,
-  validateRequest,
+  handleValidationErrors,
   reviewController.flagReview
 );
 

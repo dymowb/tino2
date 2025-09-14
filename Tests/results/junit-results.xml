@@ -1,162 +1,212 @@
-<testsuites id="" name="" tests="8" failures="7" skipped="0" errors="0" time="14.778419999999999">
-<testsuite name="setup-validation.test.ts" timestamp="2025-09-12T03:16:25.799Z" hostname="chromium" tests="8" failures="7" skipped="0" time="0.903" errors="0">
-<testcase name="Phase 10.1: Test Environment Setup Validation › should validate backend server is running" classname="setup-validation.test.ts" time="0.36">
-<failure message="setup-validation.test.ts:6:7 should validate backend server is running" type="FAILURE">
-<![CDATA[  [chromium] › setup-validation.test.ts:6:7 › Phase 10.1: Test Environment Setup Validation › should validate backend server is running 
-
-    Error: apiRequestContext.get: connect ECONNREFUSED 127.0.0.1:3000
-    Call log:
-      - → GET http://localhost:3000/health
-        - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.7339.16 Safari/537.36
-        - accept: */*
-        - accept-encoding: gzip,deflate,br
-
-
-       5 |   
-       6 |   test('should validate backend server is running', async ({ request }) => {
-    >  7 |     const response = await request.get('http://localhost:3000/health');
-         |                                    ^
-       8 |     
-       9 |     expect(response.status()).toBe(200);
-      10 |     
-        at /home/jrdymdymo/domestic-service-app/Tests/test-suites/setup-validation.test.ts:7:36
-]]>
-</failure>
+<testsuites id="" name="" tests="49" failures="0" skipped="49" errors="0" time="1.7950969999999997">
+<testsuite name="functional/payment-processing/payment-lifecycle.test.ts" timestamp="2025-09-13T19:08:46.375Z" hostname="chromium" tests="7" failures="0" skipped="7" time="0" errors="0">
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer creates payment intent for booking with escrow system" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Phase 10.1: Test Environment Setup Validation › should validate frontend server is running" classname="setup-validation.test.ts" time="0.036">
-<failure message="setup-validation.test.ts:18:7 should validate frontend server is running" type="FAILURE">
-<![CDATA[  [chromium] › setup-validation.test.ts:18:7 › Phase 10.1: Test Environment Setup Validation › should validate frontend server is running 
-
-    Error: browserType.launch: 
-    ╔══════════════════════════════════════════════════════╗
-    ║ Host system is missing dependencies to run browsers. ║
-    ║ Please install them with the following command:      ║
-    ║                                                      ║
-    ║     sudo npx playwright install-deps                 ║
-    ║                                                      ║
-    ║ Alternatively, use apt:                              ║
-    ║     sudo apt-get install libnspr4\                   ║
-    ║         libnss3\                                     ║
-    ║         libasound2t64                                ║
-    ║                                                      ║
-    ║ <3 Playwright Team                                   ║
-    ╚══════════════════════════════════════════════════════╝
-]]>
-</failure>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer processes secure payment with Stripe Elements simulation" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Phase 10.1: Test Environment Setup Validation › should validate test directories exist" classname="setup-validation.test.ts" time="0.036">
-<failure message="setup-validation.test.ts:30:7 should validate test directories exist" type="FAILURE">
-<![CDATA[  [chromium] › setup-validation.test.ts:30:7 › Phase 10.1: Test Environment Setup Validation › should validate test directories exist 
-
-    Error: browserType.launch: 
-    ╔══════════════════════════════════════════════════════╗
-    ║ Host system is missing dependencies to run browsers. ║
-    ║ Please install them with the following command:      ║
-    ║                                                      ║
-    ║     sudo npx playwright install-deps                 ║
-    ║                                                      ║
-    ║ Alternatively, use apt:                              ║
-    ║     sudo apt-get install libnspr4\                   ║
-    ║         libnss3\                                     ║
-    ║         libasound2t64                                ║
-    ║                                                      ║
-    ║ <3 Playwright Team                                   ║
-    ╚══════════════════════════════════════════════════════╝
-]]>
-</failure>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Service completion triggers automatic payment capture from escrow" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Phase 10.1: Test Environment Setup Validation › should validate test configuration files exist" classname="setup-validation.test.ts" time="0.027">
-<failure message="setup-validation.test.ts:52:7 should validate test configuration files exist" type="FAILURE">
-<![CDATA[  [chromium] › setup-validation.test.ts:52:7 › Phase 10.1: Test Environment Setup Validation › should validate test configuration files exist 
-
-    Error: browserType.launch: 
-    ╔══════════════════════════════════════════════════════╗
-    ║ Host system is missing dependencies to run browsers. ║
-    ║ Please install them with the following command:      ║
-    ║                                                      ║
-    ║     sudo npx playwright install-deps                 ║
-    ║                                                      ║
-    ║ Alternatively, use apt:                              ║
-    ║     sudo apt-get install libnspr4\                   ║
-    ║         libnss3\                                     ║
-    ║         libasound2t64                                ║
-    ║                                                      ║
-    ║ <3 Playwright Team                                   ║
-    ╚══════════════════════════════════════════════════════╝
-]]>
-</failure>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer requests partial refund for service issues" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Phase 10.1: Test Environment Setup Validation › should validate frontend loads without console errors" classname="setup-validation.test.ts" time="0.065">
-<failure message="setup-validation.test.ts:74:7 should validate frontend loads without console errors" type="FAILURE">
-<![CDATA[  [chromium] › setup-validation.test.ts:74:7 › Phase 10.1: Test Environment Setup Validation › should validate frontend loads without console errors 
-
-    Error: browserType.launch: 
-    ╔══════════════════════════════════════════════════════╗
-    ║ Host system is missing dependencies to run browsers. ║
-    ║ Please install them with the following command:      ║
-    ║                                                      ║
-    ║     sudo npx playwright install-deps                 ║
-    ║                                                      ║
-    ║ Alternatively, use apt:                              ║
-    ║     sudo apt-get install libnspr4\                   ║
-    ║         libnss3\                                     ║
-    ║         libasound2t64                                ║
-    ║                                                      ║
-    ║ <3 Playwright Team                                   ║
-    ╚══════════════════════════════════════════════════════╝
-]]>
-</failure>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Provider views comprehensive payment history with analytics" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Phase 10.1: Test Environment Setup Validation › should validate API endpoints are accessible" classname="setup-validation.test.ts" time="0.23">
-<failure message="setup-validation.test.ts:99:7 should validate API endpoints are accessible" type="FAILURE">
-<![CDATA[  [chromium] › setup-validation.test.ts:99:7 › Phase 10.1: Test Environment Setup Validation › should validate API endpoints are accessible 
-
-    Error: apiRequestContext.fetch: connect ECONNREFUSED 127.0.0.1:3000
-    Call log:
-      - → POST http://localhost:3000/api/v1/auth/register
-        - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.7339.16 Safari/537.36
-        - accept: */*
-        - accept-encoding: gzip,deflate,br
-        - Content-Type: application/json
-
-
-      104 |
-      105 |     for (const endpoint of endpoints) {
-    > 106 |       const response = await request.fetch(`http://localhost:3000${endpoint.path}`, {
-          |                                      ^
-      107 |         method: endpoint.method,
-      108 |         headers: { 'Content-Type': 'application/json' }
-      109 |       });
-        at /home/jrdymdymo/domestic-service-app/Tests/test-suites/setup-validation.test.ts:106:38
-]]>
-</failure>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer manages payment methods and preferences" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Phase 10.1: Test Environment Setup Validation › should validate browsers are installed" classname="setup-validation.test.ts" time="0.094">
-<system-out>
-<![CDATA[✅ Browser chromium is available for testing
-]]>
-</system-out>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Admin processes payment disputes and platform fee analytics" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
 </testcase>
-<testcase name="Evidence Collection Validation › should take and save evidence screenshot" classname="setup-validation.test.ts" time="0.055">
-<failure message="setup-validation.test.ts:132:7 should take and save evidence screenshot" type="FAILURE">
-<![CDATA[  [chromium] › setup-validation.test.ts:132:7 › Evidence Collection Validation › should take and save evidence screenshot 
-
-    Error: browserType.launch: 
-    ╔══════════════════════════════════════════════════════╗
-    ║ Host system is missing dependencies to run browsers. ║
-    ║ Please install them with the following command:      ║
-    ║                                                      ║
-    ║     sudo npx playwright install-deps                 ║
-    ║                                                      ║
-    ║ Alternatively, use apt:                              ║
-    ║     sudo apt-get install libnspr4\                   ║
-    ║         libnss3\                                     ║
-    ║         libasound2t64                                ║
-    ║                                                      ║
-    ║ <3 Playwright Team                                   ║
-    ╚══════════════════════════════════════════════════════╝
-]]>
-</failure>
+</testsuite>
+<testsuite name="functional/payment-processing/payment-lifecycle.test.ts" timestamp="2025-09-13T19:08:46.375Z" hostname="firefox" tests="7" failures="0" skipped="7" time="0" errors="0">
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer creates payment intent for booking with escrow system" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer processes secure payment with Stripe Elements simulation" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Service completion triggers automatic payment capture from escrow" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer requests partial refund for service issues" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Provider views comprehensive payment history with analytics" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer manages payment methods and preferences" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Admin processes payment disputes and platform fee analytics" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="functional/payment-processing/payment-lifecycle.test.ts" timestamp="2025-09-13T19:08:46.375Z" hostname="webkit" tests="7" failures="0" skipped="7" time="0" errors="0">
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer creates payment intent for booking with escrow system" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer processes secure payment with Stripe Elements simulation" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Service completion triggers automatic payment capture from escrow" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer requests partial refund for service issues" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Provider views comprehensive payment history with analytics" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer manages payment methods and preferences" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Admin processes payment disputes and platform fee analytics" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="functional/payment-processing/payment-lifecycle.test.ts" timestamp="2025-09-13T19:08:46.375Z" hostname="Mobile Chrome" tests="7" failures="0" skipped="7" time="0" errors="0">
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer creates payment intent for booking with escrow system" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer processes secure payment with Stripe Elements simulation" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Service completion triggers automatic payment capture from escrow" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer requests partial refund for service issues" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Provider views comprehensive payment history with analytics" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer manages payment methods and preferences" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Admin processes payment disputes and platform fee analytics" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="functional/payment-processing/payment-lifecycle.test.ts" timestamp="2025-09-13T19:08:46.375Z" hostname="Mobile Safari" tests="7" failures="0" skipped="7" time="0" errors="0">
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer creates payment intent for booking with escrow system" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer processes secure payment with Stripe Elements simulation" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Service completion triggers automatic payment capture from escrow" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer requests partial refund for service issues" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Provider views comprehensive payment history with analytics" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer manages payment methods and preferences" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Admin processes payment disputes and platform fee analytics" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="functional/payment-processing/payment-lifecycle.test.ts" timestamp="2025-09-13T19:08:46.375Z" hostname="Microsoft Edge" tests="7" failures="0" skipped="7" time="0" errors="0">
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer creates payment intent for booking with escrow system" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer processes secure payment with Stripe Elements simulation" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Service completion triggers automatic payment capture from escrow" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer requests partial refund for service issues" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Provider views comprehensive payment history with analytics" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer manages payment methods and preferences" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Admin processes payment disputes and platform fee analytics" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="functional/payment-processing/payment-lifecycle.test.ts" timestamp="2025-09-13T19:08:46.375Z" hostname="Google Chrome" tests="7" failures="0" skipped="7" time="0" errors="0">
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer creates payment intent for booking with escrow system" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer processes secure payment with Stripe Elements simulation" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Service completion triggers automatic payment capture from escrow" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer requests partial refund for service issues" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Provider views comprehensive payment history with analytics" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Customer manages payment methods and preferences" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Phase 10.8: Payment Processing Journey Tests › Admin processes payment disputes and platform fee analytics" classname="functional/payment-processing/payment-lifecycle.test.ts" time="0">
+<skipped>
+</skipped>
 </testcase>
 </testsuite>
 </testsuites>

@@ -4,15 +4,13 @@
     "rootDir": "/home/jrdymdymo/domestic-service-app/Tests/test-suites",
     "forbidOnly": false,
     "fullyParallel": true,
-    "globalSetup": "/home/jrdymdymo/domestic-service-app/Tests/playwright-config/global-setup.ts",
-    "globalTeardown": "/home/jrdymdymo/domestic-service-app/Tests/playwright-config/global-teardown.ts",
+    "globalSetup": null,
+    "globalTeardown": null,
     "globalTimeout": 0,
     "grep": {},
     "grepInvert": null,
     "maxFailures": 0,
-    "metadata": {
-      "actualWorkers": 4
-    },
+    "metadata": {},
     "preserveOutput": "always",
     "reporter": [
       [
@@ -44,9 +42,7 @@
         "outputDir": "/home/jrdymdymo/domestic-service-app/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 4
-        },
+        "metadata": {},
         "id": "setup",
         "name": "setup",
         "testDir": "/home/jrdymdymo/domestic-service-app/Tests/test-suites",
@@ -60,9 +56,7 @@
         "outputDir": "/home/jrdymdymo/domestic-service-app/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 4
-        },
+        "metadata": {},
         "id": "chromium",
         "name": "chromium",
         "testDir": "/home/jrdymdymo/domestic-service-app/Tests/test-suites",
@@ -76,9 +70,7 @@
         "outputDir": "/home/jrdymdymo/domestic-service-app/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 4
-        },
+        "metadata": {},
         "id": "firefox",
         "name": "firefox",
         "testDir": "/home/jrdymdymo/domestic-service-app/Tests/test-suites",
@@ -92,9 +84,7 @@
         "outputDir": "/home/jrdymdymo/domestic-service-app/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 4
-        },
+        "metadata": {},
         "id": "webkit",
         "name": "webkit",
         "testDir": "/home/jrdymdymo/domestic-service-app/Tests/test-suites",
@@ -108,9 +98,7 @@
         "outputDir": "/home/jrdymdymo/domestic-service-app/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 4
-        },
+        "metadata": {},
         "id": "Mobile Chrome",
         "name": "Mobile Chrome",
         "testDir": "/home/jrdymdymo/domestic-service-app/Tests/test-suites",
@@ -124,9 +112,7 @@
         "outputDir": "/home/jrdymdymo/domestic-service-app/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 4
-        },
+        "metadata": {},
         "id": "Mobile Safari",
         "name": "Mobile Safari",
         "testDir": "/home/jrdymdymo/domestic-service-app/Tests/test-suites",
@@ -140,9 +126,7 @@
         "outputDir": "/home/jrdymdymo/domestic-service-app/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 4
-        },
+        "metadata": {},
         "id": "Microsoft Edge",
         "name": "Microsoft Edge",
         "testDir": "/home/jrdymdymo/domestic-service-app/Tests/test-suites",
@@ -156,9 +140,7 @@
         "outputDir": "/home/jrdymdymo/domestic-service-app/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 4
-        },
+        "metadata": {},
         "id": "Google Chrome",
         "name": "Google Chrome",
         "testDir": "/home/jrdymdymo/domestic-service-app/Tests/test-suites",
@@ -178,304 +160,20 @@
   },
   "suites": [
     {
-      "title": "setup-validation.test.ts",
-      "file": "setup-validation.test.ts",
+      "title": "functional/payment-processing/payment-lifecycle.test.ts",
+      "file": "functional/payment-processing/payment-lifecycle.test.ts",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
-          "title": "Phase 10.1: Test Environment Setup Validation",
-          "file": "setup-validation.test.ts",
+          "title": "Phase 10.8: Payment Processing Journey Tests",
+          "file": "functional/payment-processing/payment-lifecycle.test.ts",
           "line": 4,
           "column": 6,
           "specs": [
             {
-              "title": "should validate backend server is running",
-              "ok": false,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 360,
-                      "error": {
-                        "message": "Error: apiRequestContext.get: connect ECONNREFUSED 127.0.0.1:3000\nCall log:\n\u001b[2m  - → GET http://localhost:3000/health\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.7339.16 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n",
-                        "stack": "Error: apiRequestContext.get: connect ECONNREFUSED 127.0.0.1:3000\nCall log:\n\u001b[2m  - → GET http://localhost:3000/health\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.7339.16 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n\n    at /home/jrdymdymo/domestic-service-app/Tests/test-suites/setup-validation.test.ts:7:36",
-                        "location": {
-                          "file": "/home/jrdymdymo/domestic-service-app/Tests/test-suites/setup-validation.test.ts",
-                          "column": 36,
-                          "line": 7
-                        },
-                        "snippet": "   5 |   \n   6 |   test('should validate backend server is running', async ({ request }) => {\n>  7 |     const response = await request.get('http://localhost:3000/health');\n     |                                    ^\n   8 |     \n   9 |     expect(response.status()).toBe(200);\n  10 |     "
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/home/jrdymdymo/domestic-service-app/Tests/test-suites/setup-validation.test.ts",
-                            "column": 36,
-                            "line": 7
-                          },
-                          "message": "Error: apiRequestContext.get: connect ECONNREFUSED 127.0.0.1:3000\nCall log:\n\u001b[2m  - → GET http://localhost:3000/health\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.7339.16 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n\n\n   5 |   \n   6 |   test('should validate backend server is running', async ({ request }) => {\n>  7 |     const response = await request.get('http://localhost:3000/health');\n     |                                    ^\n   8 |     \n   9 |     expect(response.status()).toBe(200);\n  10 |     \n    at /home/jrdymdymo/domestic-service-app/Tests/test-suites/setup-validation.test.ts:7:36"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-09-12T03:16:31.153Z",
-                      "annotations": [],
-                      "attachments": [],
-                      "errorLocation": {
-                        "file": "/home/jrdymdymo/domestic-service-app/Tests/test-suites/setup-validation.test.ts",
-                        "column": 36,
-                        "line": 7
-                      }
-                    }
-                  ],
-                  "status": "unexpected"
-                }
-              ],
-              "id": "8b79f1bf50e352bd9bf5-b8058000713a4c25f1e2",
-              "file": "setup-validation.test.ts",
-              "line": 6,
-              "column": 7
-            },
-            {
-              "title": "should validate frontend server is running",
-              "ok": false,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "failed",
-                      "duration": 36,
-                      "error": {
-                        "message": "Error: browserType.launch: \n╔══════════════════════════════════════════════════════╗\n║ Host system is missing dependencies to run browsers. ║\n║ Please install them with the following command:      ║\n║                                                      ║\n║     sudo npx playwright install-deps                 ║\n║                                                      ║\n║ Alternatively, use apt:                              ║\n║     sudo apt-get install libnspr4\\                   ║\n║         libnss3\\                                     ║\n║         libasound2t64                                ║\n║                                                      ║\n║ <3 Playwright Team                                   ║\n╚══════════════════════════════════════════════════════╝",
-                        "stack": "Error: browserType.launch: \n╔══════════════════════════════════════════════════════╗\n║ Host system is missing dependencies to run browsers. ║\n║ Please install them with the following command:      ║\n║                                                      ║\n║     sudo npx playwright install-deps                 ║\n║                                                      ║\n║ Alternatively, use apt:                              ║\n║     sudo apt-get install libnspr4\\                   ║\n║         libnss3\\                                     ║\n║         libasound2t64                                ║\n║                                                      ║\n║ <3 Playwright Team                                   ║\n╚══════════════════════════════════════════════════════╝"
-                      },
-                      "errors": [
-                        {
-                          "message": "Error: browserType.launch: \n╔══════════════════════════════════════════════════════╗\n║ Host system is missing dependencies to run browsers. ║\n║ Please install them with the following command:      ║\n║                                                      ║\n║     sudo npx playwright install-deps                 ║\n║                                                      ║\n║ Alternatively, use apt:                              ║\n║     sudo apt-get install libnspr4\\                   ║\n║         libnss3\\                                     ║\n║         libasound2t64                                ║\n║                                                      ║\n║ <3 Playwright Team                                   ║\n╚══════════════════════════════════════════════════════╝"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-09-12T03:16:31.169Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "unexpected"
-                }
-              ],
-              "id": "8b79f1bf50e352bd9bf5-dfe0bfd56c55f53c13ee",
-              "file": "setup-validation.test.ts",
-              "line": 18,
-              "column": 7
-            },
-            {
-              "title": "should validate test directories exist",
-              "ok": false,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
-                      "status": "failed",
-                      "duration": 36,
-                      "error": {
-                        "message": "Error: browserType.launch: \n╔══════════════════════════════════════════════════════╗\n║ Host system is missing dependencies to run browsers. ║\n║ Please install them with the following command:      ║\n║                                                      ║\n║     sudo npx playwright install-deps                 ║\n║                                                      ║\n║ Alternatively, use apt:                              ║\n║     sudo apt-get install libnspr4\\                   ║\n║         libnss3\\                                     ║\n║         libasound2t64                                ║\n║                                                      ║\n║ <3 Playwright Team                                   ║\n╚══════════════════════════════════════════════════════╝",
-                        "stack": "Error: browserType.launch: \n╔══════════════════════════════════════════════════════╗\n║ Host system is missing dependencies to run browsers. ║\n║ Please install them with the following command:      ║\n║                                                      ║\n║     sudo npx playwright install-deps                 ║\n║                                                      ║\n║ Alternatively, use apt:                              ║\n║     sudo apt-get install libnspr4\\                   ║\n║         libnss3\\                                     ║\n║         libasound2t64                                ║\n║                                                      ║\n║ <3 Playwright Team                                   ║\n╚══════════════════════════════════════════════════════╝"
-                      },
-                      "errors": [
-                        {
-                          "message": "Error: browserType.launch: \n╔══════════════════════════════════════════════════════╗\n║ Host system is missing dependencies to run browsers. ║\n║ Please install them with the following command:      ║\n║                                                      ║\n║     sudo npx playwright install-deps                 ║\n║                                                      ║\n║ Alternatively, use apt:                              ║\n║     sudo apt-get install libnspr4\\                   ║\n║         libnss3\\                                     ║\n║         libasound2t64                                ║\n║                                                      ║\n║ <3 Playwright Team                                   ║\n╚══════════════════════════════════════════════════════╝"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-09-12T03:16:31.108Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "unexpected"
-                }
-              ],
-              "id": "8b79f1bf50e352bd9bf5-afc7c4923c466e73646f",
-              "file": "setup-validation.test.ts",
-              "line": 30,
-              "column": 7
-            },
-            {
-              "title": "should validate test configuration files exist",
-              "ok": false,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 3,
-                      "parallelIndex": 3,
-                      "status": "failed",
-                      "duration": 27,
-                      "error": {
-                        "message": "Error: browserType.launch: \n╔══════════════════════════════════════════════════════╗\n║ Host system is missing dependencies to run browsers. ║\n║ Please install them with the following command:      ║\n║                                                      ║\n║     sudo npx playwright install-deps                 ║\n║                                                      ║\n║ Alternatively, use apt:                              ║\n║     sudo apt-get install libnspr4\\                   ║\n║         libnss3\\                                     ║\n║         libasound2t64                                ║\n║                                                      ║\n║ <3 Playwright Team                                   ║\n╚══════════════════════════════════════════════════════╝",
-                        "stack": "Error: browserType.launch: \n╔══════════════════════════════════════════════════════╗\n║ Host system is missing dependencies to run browsers. ║\n║ Please install them with the following command:      ║\n║                                                      ║\n║     sudo npx playwright install-deps                 ║\n║                                                      ║\n║ Alternatively, use apt:                              ║\n║     sudo apt-get install libnspr4\\                   ║\n║         libnss3\\                                     ║\n║         libasound2t64                                ║\n║                                                      ║\n║ <3 Playwright Team                                   ║\n╚══════════════════════════════════════════════════════╝"
-                      },
-                      "errors": [
-                        {
-                          "message": "Error: browserType.launch: \n╔══════════════════════════════════════════════════════╗\n║ Host system is missing dependencies to run browsers. ║\n║ Please install them with the following command:      ║\n║                                                      ║\n║     sudo npx playwright install-deps                 ║\n║                                                      ║\n║ Alternatively, use apt:                              ║\n║     sudo apt-get install libnspr4\\                   ║\n║         libnss3\\                                     ║\n║         libasound2t64                                ║\n║                                                      ║\n║ <3 Playwright Team                                   ║\n╚══════════════════════════════════════════════════════╝"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-09-12T03:16:31.119Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "unexpected"
-                }
-              ],
-              "id": "8b79f1bf50e352bd9bf5-86bdab51ec71e47e2493",
-              "file": "setup-validation.test.ts",
-              "line": 52,
-              "column": 7
-            },
-            {
-              "title": "should validate frontend loads without console errors",
-              "ok": false,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 4,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 65,
-                      "error": {
-                        "message": "Error: browserType.launch: \n╔══════════════════════════════════════════════════════╗\n║ Host system is missing dependencies to run browsers. ║\n║ Please install them with the following command:      ║\n║                                                      ║\n║     sudo npx playwright install-deps                 ║\n║                                                      ║\n║ Alternatively, use apt:                              ║\n║     sudo apt-get install libnspr4\\                   ║\n║         libnss3\\                                     ║\n║         libasound2t64                                ║\n║                                                      ║\n║ <3 Playwright Team                                   ║\n╚══════════════════════════════════════════════════════╝",
-                        "stack": "Error: browserType.launch: \n╔══════════════════════════════════════════════════════╗\n║ Host system is missing dependencies to run browsers. ║\n║ Please install them with the following command:      ║\n║                                                      ║\n║     sudo npx playwright install-deps                 ║\n║                                                      ║\n║ Alternatively, use apt:                              ║\n║     sudo apt-get install libnspr4\\                   ║\n║         libnss3\\                                     ║\n║         libasound2t64                                ║\n║                                                      ║\n║ <3 Playwright Team                                   ║\n╚══════════════════════════════════════════════════════╝"
-                      },
-                      "errors": [
-                        {
-                          "message": "Error: browserType.launch: \n╔══════════════════════════════════════════════════════╗\n║ Host system is missing dependencies to run browsers. ║\n║ Please install them with the following command:      ║\n║                                                      ║\n║     sudo npx playwright install-deps                 ║\n║                                                      ║\n║ Alternatively, use apt:                              ║\n║     sudo apt-get install libnspr4\\                   ║\n║         libnss3\\                                     ║\n║         libasound2t64                                ║\n║                                                      ║\n║ <3 Playwright Team                                   ║\n╚══════════════════════════════════════════════════════╝"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-09-12T03:16:37.291Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "unexpected"
-                }
-              ],
-              "id": "8b79f1bf50e352bd9bf5-7271e122b919e247af65",
-              "file": "setup-validation.test.ts",
-              "line": 74,
-              "column": 7
-            },
-            {
-              "title": "should validate API endpoints are accessible",
-              "ok": false,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 6,
-                      "parallelIndex": 1,
-                      "status": "failed",
-                      "duration": 230,
-                      "error": {
-                        "message": "Error: apiRequestContext.fetch: connect ECONNREFUSED 127.0.0.1:3000\nCall log:\n\u001b[2m  - → POST http://localhost:3000/api/v1/auth/register\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.7339.16 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n\u001b[2m    - Content-Type: application/json\u001b[22m\n",
-                        "stack": "Error: apiRequestContext.fetch: connect ECONNREFUSED 127.0.0.1:3000\nCall log:\n\u001b[2m  - → POST http://localhost:3000/api/v1/auth/register\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.7339.16 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n\u001b[2m    - Content-Type: application/json\u001b[22m\n\n    at /home/jrdymdymo/domestic-service-app/Tests/test-suites/setup-validation.test.ts:106:38",
-                        "location": {
-                          "file": "/home/jrdymdymo/domestic-service-app/Tests/test-suites/setup-validation.test.ts",
-                          "column": 38,
-                          "line": 106
-                        },
-                        "snippet": "  104 |\n  105 |     for (const endpoint of endpoints) {\n> 106 |       const response = await request.fetch(`http://localhost:3000${endpoint.path}`, {\n      |                                      ^\n  107 |         method: endpoint.method,\n  108 |         headers: { 'Content-Type': 'application/json' }\n  109 |       });"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/home/jrdymdymo/domestic-service-app/Tests/test-suites/setup-validation.test.ts",
-                            "column": 38,
-                            "line": 106
-                          },
-                          "message": "Error: apiRequestContext.fetch: connect ECONNREFUSED 127.0.0.1:3000\nCall log:\n\u001b[2m  - → POST http://localhost:3000/api/v1/auth/register\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.7339.16 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n\u001b[2m    - Content-Type: application/json\u001b[22m\n\n\n  104 |\n  105 |     for (const endpoint of endpoints) {\n> 106 |       const response = await request.fetch(`http://localhost:3000${endpoint.path}`, {\n      |                                      ^\n  107 |         method: endpoint.method,\n  108 |         headers: { 'Content-Type': 'application/json' }\n  109 |       });\n    at /home/jrdymdymo/domestic-service-app/Tests/test-suites/setup-validation.test.ts:106:38"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-09-12T03:16:37.424Z",
-                      "annotations": [],
-                      "attachments": [],
-                      "errorLocation": {
-                        "file": "/home/jrdymdymo/domestic-service-app/Tests/test-suites/setup-validation.test.ts",
-                        "column": 38,
-                        "line": 106
-                      }
-                    }
-                  ],
-                  "status": "unexpected"
-                }
-              ],
-              "id": "8b79f1bf50e352bd9bf5-84d3a6f58299d04e0441",
-              "file": "setup-validation.test.ts",
-              "line": 99,
-              "column": 7
-            },
-            {
-              "title": "should validate browsers are installed",
+              "title": "Customer creates payment intent for booking with escrow system",
               "ok": true,
               "tags": [],
               "tests": [
@@ -485,44 +183,18 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 5,
-                      "parallelIndex": 3,
-                      "status": "passed",
-                      "duration": 94,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "✅ Browser chromium is available for testing\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-09-12T03:16:37.615Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
-              "id": "8b79f1bf50e352bd9bf5-af1a724969b3fa0de382",
-              "file": "setup-validation.test.ts",
-              "line": 123,
+              "id": "452e0b1bc6adeabe5c47-eb4c3a703d5ac6c3c7a1",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 38,
               "column": 7
-            }
-          ]
-        },
-        {
-          "title": "Evidence Collection Validation",
-          "file": "setup-validation.test.ts",
-          "line": 131,
-          "column": 6,
-          "specs": [
+            },
             {
-              "title": "should take and save evidence screenshot",
-              "ok": false,
+              "title": "Customer processes secure payment with Stripe Elements simulation",
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -531,35 +203,953 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 7,
-                      "parallelIndex": 2,
-                      "status": "failed",
-                      "duration": 55,
-                      "error": {
-                        "message": "Error: browserType.launch: \n╔══════════════════════════════════════════════════════╗\n║ Host system is missing dependencies to run browsers. ║\n║ Please install them with the following command:      ║\n║                                                      ║\n║     sudo npx playwright install-deps                 ║\n║                                                      ║\n║ Alternatively, use apt:                              ║\n║     sudo apt-get install libnspr4\\                   ║\n║         libnss3\\                                     ║\n║         libasound2t64                                ║\n║                                                      ║\n║ <3 Playwright Team                                   ║\n╚══════════════════════════════════════════════════════╝",
-                        "stack": "Error: browserType.launch: \n╔══════════════════════════════════════════════════════╗\n║ Host system is missing dependencies to run browsers. ║\n║ Please install them with the following command:      ║\n║                                                      ║\n║     sudo npx playwright install-deps                 ║\n║                                                      ║\n║ Alternatively, use apt:                              ║\n║     sudo apt-get install libnspr4\\                   ║\n║         libnss3\\                                     ║\n║         libasound2t64                                ║\n║                                                      ║\n║ <3 Playwright Team                                   ║\n╚══════════════════════════════════════════════════════╝"
-                      },
-                      "errors": [
-                        {
-                          "message": "Error: browserType.launch: \n╔══════════════════════════════════════════════════════╗\n║ Host system is missing dependencies to run browsers. ║\n║ Please install them with the following command:      ║\n║                                                      ║\n║     sudo npx playwright install-deps                 ║\n║                                                      ║\n║ Alternatively, use apt:                              ║\n║     sudo apt-get install libnspr4\\                   ║\n║         libnss3\\                                     ║\n║         libasound2t64                                ║\n║                                                      ║\n║ <3 Playwright Team                                   ║\n╚══════════════════════════════════════════════════════╝"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-09-12T03:16:37.487Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "unexpected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
-              "id": "8b79f1bf50e352bd9bf5-0eecde5f567131e7e43e",
-              "file": "setup-validation.test.ts",
-              "line": 132,
+              "id": "452e0b1bc6adeabe5c47-3bb88d73427cc6f3a8ac",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 95,
+              "column": 7
+            },
+            {
+              "title": "Service completion triggers automatic payment capture from escrow",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-5ad2e7cabb0aeb676ef3",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 160,
+              "column": 7
+            },
+            {
+              "title": "Customer requests partial refund for service issues",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-7870c28cfa535a4e2018",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 235,
+              "column": 7
+            },
+            {
+              "title": "Provider views comprehensive payment history with analytics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-a1bde91683bda5318d70",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 295,
+              "column": 7
+            },
+            {
+              "title": "Customer manages payment methods and preferences",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-5b3ccd18fa492e36fcfa",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 356,
+              "column": 7
+            },
+            {
+              "title": "Admin processes payment disputes and platform fee analytics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-5f09307bac156e83e9bf",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 454,
+              "column": 7
+            },
+            {
+              "title": "Customer creates payment intent for booking with escrow system",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-894e4751642cfdd36342",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 38,
+              "column": 7
+            },
+            {
+              "title": "Customer processes secure payment with Stripe Elements simulation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-a4d6a45f3456ead377c8",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 95,
+              "column": 7
+            },
+            {
+              "title": "Service completion triggers automatic payment capture from escrow",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-7aa026357b9cd9efa912",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 160,
+              "column": 7
+            },
+            {
+              "title": "Customer requests partial refund for service issues",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-3803899d7562552f4325",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 235,
+              "column": 7
+            },
+            {
+              "title": "Provider views comprehensive payment history with analytics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-c70d51767f4d2cbff284",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 295,
+              "column": 7
+            },
+            {
+              "title": "Customer manages payment methods and preferences",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-cf92f732130f129c92eb",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 356,
+              "column": 7
+            },
+            {
+              "title": "Admin processes payment disputes and platform fee analytics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-058624a9de919ba08d9e",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 454,
+              "column": 7
+            },
+            {
+              "title": "Customer creates payment intent for booking with escrow system",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-e3e7814d6602a910f37a",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 38,
+              "column": 7
+            },
+            {
+              "title": "Customer processes secure payment with Stripe Elements simulation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-616228a4dfd84e8965e3",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 95,
+              "column": 7
+            },
+            {
+              "title": "Service completion triggers automatic payment capture from escrow",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-ad1f0ed544b7685cb451",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 160,
+              "column": 7
+            },
+            {
+              "title": "Customer requests partial refund for service issues",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-fa6246e7677e038f3415",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 235,
+              "column": 7
+            },
+            {
+              "title": "Provider views comprehensive payment history with analytics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-f6589d791edbf3e6ac7f",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 295,
+              "column": 7
+            },
+            {
+              "title": "Customer manages payment methods and preferences",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-965b8c8e7c9ad0290a64",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 356,
+              "column": 7
+            },
+            {
+              "title": "Admin processes payment disputes and platform fee analytics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-5f2b3f8d626c72f03d70",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 454,
+              "column": 7
+            },
+            {
+              "title": "Customer creates payment intent for booking with escrow system",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-435bdb198b910e5c6fe8",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 38,
+              "column": 7
+            },
+            {
+              "title": "Customer processes secure payment with Stripe Elements simulation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-3df5fb109d1a542b7774",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 95,
+              "column": 7
+            },
+            {
+              "title": "Service completion triggers automatic payment capture from escrow",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-bdcc8b4ed001a6f2f7d1",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 160,
+              "column": 7
+            },
+            {
+              "title": "Customer requests partial refund for service issues",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-163291b8e23ea279b837",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 235,
+              "column": 7
+            },
+            {
+              "title": "Provider views comprehensive payment history with analytics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-20752e574bf186e8c272",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 295,
+              "column": 7
+            },
+            {
+              "title": "Customer manages payment methods and preferences",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-b4bd5fc44a2becdab1f9",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 356,
+              "column": 7
+            },
+            {
+              "title": "Admin processes payment disputes and platform fee analytics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-377dd16bf804912fd71a",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 454,
+              "column": 7
+            },
+            {
+              "title": "Customer creates payment intent for booking with escrow system",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-62c1e3ef0e0913eb5294",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 38,
+              "column": 7
+            },
+            {
+              "title": "Customer processes secure payment with Stripe Elements simulation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-d1e4b821baa95aef4485",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 95,
+              "column": 7
+            },
+            {
+              "title": "Service completion triggers automatic payment capture from escrow",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-a86541e00d81ee09a5da",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 160,
+              "column": 7
+            },
+            {
+              "title": "Customer requests partial refund for service issues",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-12300edc3976c6df53e0",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 235,
+              "column": 7
+            },
+            {
+              "title": "Provider views comprehensive payment history with analytics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-2c4ab2c50827a46cb2d0",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 295,
+              "column": 7
+            },
+            {
+              "title": "Customer manages payment methods and preferences",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-d55f7a971b43104517d9",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 356,
+              "column": 7
+            },
+            {
+              "title": "Admin processes payment disputes and platform fee analytics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-293399250916b1b45515",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 454,
+              "column": 7
+            },
+            {
+              "title": "Customer creates payment intent for booking with escrow system",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Microsoft Edge",
+                  "projectName": "Microsoft Edge",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-fe545080f987066395e3",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 38,
+              "column": 7
+            },
+            {
+              "title": "Customer processes secure payment with Stripe Elements simulation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Microsoft Edge",
+                  "projectName": "Microsoft Edge",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-9b76245ce38e1c2ab300",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 95,
+              "column": 7
+            },
+            {
+              "title": "Service completion triggers automatic payment capture from escrow",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Microsoft Edge",
+                  "projectName": "Microsoft Edge",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-d9699b94e102f84816ba",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 160,
+              "column": 7
+            },
+            {
+              "title": "Customer requests partial refund for service issues",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Microsoft Edge",
+                  "projectName": "Microsoft Edge",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-cd3b406f1fe744bea482",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 235,
+              "column": 7
+            },
+            {
+              "title": "Provider views comprehensive payment history with analytics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Microsoft Edge",
+                  "projectName": "Microsoft Edge",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-d87118c49d9811a47de8",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 295,
+              "column": 7
+            },
+            {
+              "title": "Customer manages payment methods and preferences",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Microsoft Edge",
+                  "projectName": "Microsoft Edge",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-02561b9ddf90175e85a5",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 356,
+              "column": 7
+            },
+            {
+              "title": "Admin processes payment disputes and platform fee analytics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Microsoft Edge",
+                  "projectName": "Microsoft Edge",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-3367fc70edf09d19640b",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 454,
+              "column": 7
+            },
+            {
+              "title": "Customer creates payment intent for booking with escrow system",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Google Chrome",
+                  "projectName": "Google Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-b1bed06fe6ef686e0fe2",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 38,
+              "column": 7
+            },
+            {
+              "title": "Customer processes secure payment with Stripe Elements simulation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Google Chrome",
+                  "projectName": "Google Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-30b1424faaf5fa8672ed",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 95,
+              "column": 7
+            },
+            {
+              "title": "Service completion triggers automatic payment capture from escrow",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Google Chrome",
+                  "projectName": "Google Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-a2b2a47258240cbca829",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 160,
+              "column": 7
+            },
+            {
+              "title": "Customer requests partial refund for service issues",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Google Chrome",
+                  "projectName": "Google Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-9e29719106aca64de646",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 235,
+              "column": 7
+            },
+            {
+              "title": "Provider views comprehensive payment history with analytics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Google Chrome",
+                  "projectName": "Google Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-ffda8dc1ded295f8ea3a",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 295,
+              "column": 7
+            },
+            {
+              "title": "Customer manages payment methods and preferences",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Google Chrome",
+                  "projectName": "Google Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-950bd821db93f2e212c2",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 356,
+              "column": 7
+            },
+            {
+              "title": "Admin processes payment disputes and platform fee analytics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Google Chrome",
+                  "projectName": "Google Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "452e0b1bc6adeabe5c47-f57f8896d57c02321381",
+              "file": "functional/payment-processing/payment-lifecycle.test.ts",
+              "line": 454,
               "column": 7
             }
           ]
@@ -569,11 +1159,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2025-09-12T03:16:23.588Z",
-    "duration": 14778.419999999998,
-    "expected": 1,
-    "skipped": 0,
-    "unexpected": 7,
+    "startTime": "2025-09-13T19:08:44.585Z",
+    "duration": 1795.0969999999998,
+    "expected": 0,
+    "skipped": 49,
+    "unexpected": 0,
     "flaky": 0
   }
 }
