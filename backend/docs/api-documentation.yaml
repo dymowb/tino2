@@ -1,0 +1,1629 @@
+openapi: 3.0.3
+info:
+  title: Tino 2 - Domestic Service Platform API
+  description: |
+    Comprehensive API documentation for the Tino 2 domestic service platform.
+
+    This platform connects customers with service providers for household services,
+    featuring GPS-based provider discovery, real-time messaging, booking management,
+    quote systems, and payment processing.
+
+    ## Authentication
+    Most endpoints require JWT authentication. Include the token in the Authorization header:
+    ```
+    Authorization: Bearer <your-jwt-token>
+    ```
+
+    ## Rate Limiting
+    API requests are rate limited to 100 requests per 15-minute window per user.
+
+    ## Error Handling
+    All errors follow a consistent format:
+    ```json
+    {
+      "success": false,
+      "message": "Error description",
+      "errors": ["Detailed error messages"],
+      "code": "ERROR_CODE"
+    }
+    ```
+
+    ## Real-time Features
+    Real-time messaging and notifications are handled via Socket.IO connections
+    to the same base URL with `/socket.io` path.
+
+    ## File Uploads
+    File uploads support images up to 10MB in size. Supported formats: JPG, PNG, GIF, WebP.
+
+  version: 1.0.0
+  contact:
+    name: Tino 2 API Support
+    email: api-support@tino2.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Development server
+  - url: https://api.tino2.com/api/v1
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Users
+    description: User profile management
+  - name: Providers
+    description: Service provider operations
+  - name: Bookings
+    description: Booking management and lifecycle
+  - name: Quotes
+    description: Quote requests and submissions
+  - name: Messages
+    description: Real-time messaging system
+  - name: Payments
+    description: Payment processing and transactions
+  - name: Reviews
+    description: Review and rating system
+  - name: Admin
+    description: Administrative operations
+  - name: Health
+    description: System health and monitoring
+
+paths:
+  # Authentication Endpoints
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a new user
+      description: Create a new user account (customer, provider, or admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, firstName, lastName, phone, userType]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "john.doe@example.com"
+                password:
+                  type: string
+                  minLength: 8
+                  example: "SecurePassword123!"
+                firstName:
+                  type: string
+                  example: "John"
+                lastName:
+                  type: string
+                  example: "Doe"
+                phone:
+                  type: string
+                  pattern: '^\+[1-9]\d{1,14}$'
+                  example: "+1234567890"
+                userType:
+                  type: string
+                  enum: [customer, provider, admin]
+                  example: "customer"
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "User registered successfully"
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Authenticate user
+      description: Login with email and password to receive JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "john.doe@example.com"
+                password:
+                  type: string
+                  example: "SecurePassword123!"
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Login successful"
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/profile:
+    get:
+      tags: [Authentication]
+      summary: Get current user profile
+      description: Retrieve the authenticated user's profile information
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # Provider Endpoints
+  /providers:
+    get:
+      tags: [Providers]
+      summary: Search providers
+      description: Search for service providers with filtering and location-based sorting
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: location
+          in: query
+          description: Search location (address, city, or coordinates)
+          schema:
+            type: string
+            example: "Seattle, WA"
+        - name: radius
+          in: query
+          description: Search radius in miles
+          schema:
+            type: number
+            minimum: 1
+            maximum: 50
+            default: 10
+            example: 15
+        - name: services
+          in: query
+          description: Comma-separated list of services
+          schema:
+            type: string
+            example: "house-cleaning,deep-cleaning"
+        - name: minRating
+          in: query
+          description: Minimum provider rating
+          schema:
+            type: number
+            minimum: 1
+            maximum: 5
+            example: 4.0
+        - name: maxHourlyRate
+          in: query
+          description: Maximum hourly rate
+          schema:
+            type: number
+            minimum: 0
+            example: 100
+        - name: availability
+          in: query
+          description: Check availability for specific date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+            example: "2025-09-20"
+        - name: verified
+          in: query
+          description: Filter by verification status
+          schema:
+            type: boolean
+            example: true
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 1
+        - name: limit
+          in: query
+          description: Number of results per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+            example: 20
+      responses:
+        '200':
+          description: Providers retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  providers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Provider'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+                  filters:
+                    type: object
+                    properties:
+                      location:
+                        type: string
+                      radius:
+                        type: number
+                      totalFound:
+                        type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Providers]
+      summary: Create provider profile
+      description: Create a new service provider profile (providers only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderCreate'
+      responses:
+        '201':
+          description: Provider profile created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Provider profile created successfully"
+                  provider:
+                    $ref: '#/components/schemas/Provider'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /providers/{id}:
+    get:
+      tags: [Providers]
+      summary: Get provider details
+      description: Retrieve detailed information about a specific provider
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Provider ID
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      responses:
+        '200':
+          description: Provider details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  provider:
+                    $ref: '#/components/schemas/Provider'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # Booking Endpoints
+  /bookings:
+    get:
+      tags: [Bookings]
+      summary: Get user bookings
+      description: Retrieve bookings for the authenticated user (customer or provider view)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          description: Filter by booking status
+          schema:
+            type: string
+            enum: [pending, confirmed, in_progress, completed, cancelled]
+            example: "confirmed"
+        - name: startDate
+          in: query
+          description: Filter bookings from this date
+          schema:
+            type: string
+            format: date
+            example: "2025-09-01"
+        - name: endDate
+          in: query
+          description: Filter bookings until this date
+          schema:
+            type: string
+            format: date
+            example: "2025-09-30"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Bookings retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  bookings:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Booking'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags: [Bookings]
+      summary: Create new booking
+      description: Create a new booking (customers only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingCreate'
+      responses:
+        '201':
+          description: Booking created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Booking created successfully"
+                  booking:
+                    $ref: '#/components/schemas/Booking'
+
+  # Quote Endpoints
+  /quotes/requests:
+    get:
+      tags: [Quotes]
+      summary: Get quote requests
+      description: Retrieve quote requests (customers see their own, providers see open requests)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, closed, expired]
+        - name: location
+          in: query
+          schema:
+            type: string
+        - name: radius
+          in: query
+          schema:
+            type: number
+        - name: services
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Quote requests retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  quoteRequests:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/QuoteRequest'
+
+    post:
+      tags: [Quotes]
+      summary: Create quote request
+      description: Create a new quote request (customers only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteRequestCreate'
+      responses:
+        '201':
+          description: Quote request created successfully
+
+  /quotes:
+    get:
+      tags: [Quotes]
+      summary: Get quotes
+      description: Retrieve quotes (providers see their submitted quotes, customers see quotes for their requests)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Quotes retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  quotes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Quote'
+
+    post:
+      tags: [Quotes]
+      summary: Submit quote
+      description: Submit a quote for a quote request (providers only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteCreate'
+      responses:
+        '201':
+          description: Quote submitted successfully
+
+  # Payment Endpoints
+  /payments/intent:
+    post:
+      tags: [Payments]
+      summary: Create payment intent
+      description: Create a Stripe payment intent for escrow processing
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bookingId, amount]
+              properties:
+                bookingId:
+                  type: string
+                  example: "507f1f77bcf86cd799439011"
+                amount:
+                  type: number
+                  minimum: 1
+                  example: 150.00
+                paymentMethodId:
+                  type: string
+                  example: "pm_1234567890"
+      responses:
+        '201':
+          description: Payment intent created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  paymentIntent:
+                    $ref: '#/components/schemas/PaymentIntent'
+
+  /payments:
+    get:
+      tags: [Payments]
+      summary: Get payment history
+      description: Retrieve payment history for the authenticated user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, succeeded, failed, refunded]
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Payment history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  payments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Payment'
+
+  # Review Endpoints
+  /reviews:
+    post:
+      tags: [Reviews]
+      summary: Create review
+      description: Create a review for a completed booking (customers only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreate'
+      responses:
+        '201':
+          description: Review created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  review:
+                    $ref: '#/components/schemas/Review'
+
+  /reviews/provider/{providerId}:
+    get:
+      tags: [Reviews]
+      summary: Get provider reviews
+      description: Retrieve all reviews for a specific provider
+      parameters:
+        - name: providerId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: rating
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Provider reviews retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  reviews:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Review'
+                  analytics:
+                    $ref: '#/components/schemas/ReviewAnalytics'
+
+  # Messaging Endpoints
+  /messages/conversations:
+    get:
+      tags: [Messages]
+      summary: Get user conversations
+      description: Retrieve all conversations for the authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Conversations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  conversations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Conversation'
+
+    post:
+      tags: [Messages]
+      summary: Create conversation
+      description: Create a new conversation between users
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [participantId]
+              properties:
+                participantId:
+                  type: string
+                  example: "507f1f77bcf86cd799439011"
+                type:
+                  type: string
+                  enum: [direct, group]
+                  default: direct
+      responses:
+        '201':
+          description: Conversation created successfully
+
+  /messages/messages:
+    post:
+      tags: [Messages]
+      summary: Send message
+      description: Send a message in a conversation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageCreate'
+      responses:
+        '201':
+          description: Message sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    $ref: '#/components/schemas/Message'
+
+  # Health Check Endpoint
+  /health:
+    get:
+      tags: [Health]
+      summary: System health check
+      description: Check the health status of the API and connected services
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Server is running"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                    example: "1.0.0"
+                  environment:
+                    type: string
+                    example: "production"
+                  services:
+                    type: object
+                    properties:
+                      database:
+                        type: string
+                        enum: [healthy, unhealthy]
+                      redis:
+                        type: string
+                        enum: [healthy, unhealthy]
+                      stripe:
+                        type: string
+                        enum: [healthy, unhealthy]
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Unauthorized - invalid or missing token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: Conflict - resource already exists
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "Error description"
+        errors:
+          type: array
+          items:
+            type: string
+        code:
+          type: string
+          example: "ERROR_CODE"
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        email:
+          type: string
+          format: email
+          example: "john.doe@example.com"
+        firstName:
+          type: string
+          example: "John"
+        lastName:
+          type: string
+          example: "Doe"
+        phone:
+          type: string
+          example: "+1234567890"
+        userType:
+          type: string
+          enum: [customer, provider, admin]
+          example: "customer"
+        isEmailVerified:
+          type: boolean
+          example: true
+        profilePicture:
+          type: string
+          nullable: true
+          example: "uploads/profiles/user123.jpg"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Provider:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        userId:
+          type: string
+          example: "507f1f77bcf86cd799439012"
+        businessName:
+          type: string
+          example: "Seattle Cleaning Professionals"
+        description:
+          type: string
+          example: "Professional house cleaning service with 10+ years of experience"
+        services:
+          type: array
+          items:
+            type: string
+          example: ["house-cleaning", "deep-cleaning", "office-cleaning"]
+        serviceAreas:
+          type: array
+          items:
+            type: string
+          example: ["Seattle", "Bellevue", "Redmond"]
+        hourlyRate:
+          type: number
+          example: 75
+        rating:
+          type: number
+          format: float
+          example: 4.8
+        reviewCount:
+          type: integer
+          example: 127
+        isVerified:
+          type: boolean
+          example: true
+        hasInsurance:
+          type: boolean
+          example: true
+        hasBackgroundCheck:
+          type: boolean
+          example: true
+        location:
+          $ref: '#/components/schemas/Location'
+        availability:
+          $ref: '#/components/schemas/Availability'
+        portfolio:
+          type: array
+          items:
+            type: string
+          example: ["uploads/portfolios/provider123_1.jpg"]
+
+    ProviderCreate:
+      type: object
+      required: [businessName, description, services, serviceAreas, hourlyRate, location]
+      properties:
+        businessName:
+          type: string
+          example: "Seattle Cleaning Professionals"
+        description:
+          type: string
+          example: "Professional house cleaning service"
+        services:
+          type: array
+          items:
+            type: string
+          example: ["house-cleaning", "deep-cleaning"]
+        serviceAreas:
+          type: array
+          items:
+            type: string
+          example: ["Seattle", "Bellevue"]
+        hourlyRate:
+          type: number
+          minimum: 1
+          example: 75
+        location:
+          $ref: '#/components/schemas/LocationCreate'
+        availability:
+          $ref: '#/components/schemas/Availability'
+
+    Location:
+      type: object
+      properties:
+        address:
+          type: string
+          example: "123 Main St, Seattle, WA 98101"
+        latitude:
+          type: number
+          format: float
+          example: 47.6062
+        longitude:
+          type: number
+          format: float
+          example: -122.3321
+        city:
+          type: string
+          example: "Seattle"
+        state:
+          type: string
+          example: "WA"
+        zipCode:
+          type: string
+          example: "98101"
+
+    LocationCreate:
+      type: object
+      required: [address]
+      properties:
+        address:
+          type: string
+          example: "123 Main St, Seattle, WA 98101"
+        latitude:
+          type: number
+          format: float
+          example: 47.6062
+        longitude:
+          type: number
+          format: float
+          example: -122.3321
+
+    Availability:
+      type: object
+      properties:
+        monday:
+          $ref: '#/components/schemas/DayAvailability'
+        tuesday:
+          $ref: '#/components/schemas/DayAvailability'
+        wednesday:
+          $ref: '#/components/schemas/DayAvailability'
+        thursday:
+          $ref: '#/components/schemas/DayAvailability'
+        friday:
+          $ref: '#/components/schemas/DayAvailability'
+        saturday:
+          $ref: '#/components/schemas/DayAvailability'
+        sunday:
+          $ref: '#/components/schemas/DayAvailability'
+
+    DayAvailability:
+      type: object
+      properties:
+        available:
+          type: boolean
+          example: true
+        start:
+          type: string
+          pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
+          example: "09:00"
+        end:
+          type: string
+          pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
+          example: "17:00"
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        customerId:
+          type: string
+          example: "507f1f77bcf86cd799439012"
+        providerId:
+          type: string
+          example: "507f1f77bcf86cd799439013"
+        serviceType:
+          type: string
+          example: "house-cleaning"
+        scheduledDate:
+          type: string
+          format: date-time
+          example: "2025-09-20T09:00:00Z"
+        estimatedDuration:
+          type: integer
+          example: 240
+        status:
+          type: string
+          enum: [pending, confirmed, in_progress, completed, cancelled]
+          example: "confirmed"
+        totalAmount:
+          type: number
+          example: 150.00
+        address:
+          type: string
+          example: "789 Service St, Seattle, WA 98102"
+        notes:
+          type: string
+          example: "Please use eco-friendly products"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    BookingCreate:
+      type: object
+      required: [providerId, serviceType, scheduledDate, address, totalAmount]
+      properties:
+        providerId:
+          type: string
+          example: "507f1f77bcf86cd799439013"
+        serviceType:
+          type: string
+          example: "house-cleaning"
+        scheduledDate:
+          type: string
+          format: date-time
+          example: "2025-09-20T09:00:00Z"
+        estimatedDuration:
+          type: integer
+          example: 240
+        address:
+          type: string
+          example: "789 Service St, Seattle, WA 98102"
+        totalAmount:
+          type: number
+          example: 150.00
+        notes:
+          type: string
+          example: "Please use eco-friendly products"
+
+    QuoteRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        customerId:
+          type: string
+          example: "507f1f77bcf86cd799439012"
+        serviceType:
+          type: string
+          example: "house-cleaning"
+        description:
+          type: string
+          example: "Deep cleaning for 3-bedroom house"
+        location:
+          $ref: '#/components/schemas/Location'
+        budgetRange:
+          type: object
+          properties:
+            min:
+              type: number
+              example: 200
+            max:
+              type: number
+              example: 400
+        preferredDate:
+          type: string
+          format: date
+          example: "2025-09-20"
+        urgency:
+          type: string
+          enum: [low, medium, high, urgent]
+          example: "medium"
+        status:
+          type: string
+          enum: [open, closed, expired]
+          example: "open"
+        specialRequirements:
+          type: string
+          example: "Pet-friendly cleaning products required"
+        quotesReceived:
+          type: integer
+          example: 3
+        createdAt:
+          type: string
+          format: date-time
+
+    QuoteRequestCreate:
+      type: object
+      required: [serviceType, description, location, budgetRange]
+      properties:
+        serviceType:
+          type: string
+          example: "house-cleaning"
+        description:
+          type: string
+          example: "Deep cleaning for 3-bedroom house"
+        location:
+          $ref: '#/components/schemas/LocationCreate'
+        budgetRange:
+          type: object
+          required: [min, max]
+          properties:
+            min:
+              type: number
+              example: 200
+            max:
+              type: number
+              example: 400
+        preferredDate:
+          type: string
+          format: date
+          example: "2025-09-20"
+        urgency:
+          type: string
+          enum: [low, medium, high, urgent]
+          default: medium
+        specialRequirements:
+          type: string
+          example: "Pet-friendly cleaning products required"
+
+    Quote:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        quoteRequestId:
+          type: string
+          example: "507f1f77bcf86cd799439012"
+        providerId:
+          type: string
+          example: "507f1f77bcf86cd799439013"
+        laborCost:
+          type: number
+          example: 250
+        materialCost:
+          type: number
+          example: 80
+        equipmentCost:
+          type: number
+          example: 20
+        totalAmount:
+          type: number
+          example: 350
+        estimatedDuration:
+          type: integer
+          example: 360
+        description:
+          type: string
+          example: "Professional deep cleaning with eco-friendly products"
+        terms:
+          type: string
+          example: "Payment due upon completion. 100% satisfaction guaranteed."
+        status:
+          type: string
+          enum: [pending, accepted, rejected, withdrawn]
+          example: "pending"
+        validUntil:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    QuoteCreate:
+      type: object
+      required: [quoteRequestId, totalAmount, estimatedDuration, description]
+      properties:
+        quoteRequestId:
+          type: string
+          example: "507f1f77bcf86cd799439012"
+        laborCost:
+          type: number
+          example: 250
+        materialCost:
+          type: number
+          example: 80
+        equipmentCost:
+          type: number
+          example: 20
+        totalAmount:
+          type: number
+          example: 350
+        estimatedDuration:
+          type: integer
+          example: 360
+        description:
+          type: string
+          example: "Professional deep cleaning with eco-friendly products"
+        terms:
+          type: string
+          example: "Payment due upon completion"
+        validUntil:
+          type: string
+          format: date-time
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        bookingId:
+          type: string
+          example: "507f1f77bcf86cd799439012"
+        customerId:
+          type: string
+          example: "507f1f77bcf86cd799439013"
+        providerId:
+          type: string
+          example: "507f1f77bcf86cd799439014"
+        amount:
+          type: number
+          example: 150.00
+        platformFee:
+          type: number
+          example: 22.50
+        providerAmount:
+          type: number
+          example: 127.50
+        status:
+          type: string
+          enum: [pending, requires_capture, succeeded, failed, refunded, partially_refunded]
+          example: "succeeded"
+        stripePaymentIntentId:
+          type: string
+          example: "pi_1234567890"
+        refundAmount:
+          type: number
+          nullable: true
+          example: null
+        createdAt:
+          type: string
+          format: date-time
+        processedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    PaymentIntent:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        stripePaymentIntentId:
+          type: string
+          example: "pi_1234567890"
+        clientSecret:
+          type: string
+          example: "pi_1234567890_secret_abcdef"
+        amount:
+          type: number
+          example: 150.00
+        status:
+          type: string
+          example: "requires_payment_method"
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        bookingId:
+          type: string
+          example: "507f1f77bcf86cd799439012"
+        customerId:
+          type: string
+          example: "507f1f77bcf86cd799439013"
+        providerId:
+          type: string
+          example: "507f1f77bcf86cd799439014"
+        rating:
+          type: number
+          format: float
+          minimum: 1
+          maximum: 5
+          example: 4.5
+        title:
+          type: string
+          example: "Excellent service!"
+        comment:
+          type: string
+          example: "Very professional and thorough cleaning. Highly recommend!"
+        criteria:
+          type: object
+          properties:
+            quality:
+              type: integer
+              minimum: 1
+              maximum: 5
+              example: 5
+            timeliness:
+              type: integer
+              minimum: 1
+              maximum: 5
+              example: 5
+            communication:
+              type: integer
+              minimum: 1
+              maximum: 5
+              example: 4
+            professionalism:
+              type: integer
+              minimum: 1
+              maximum: 5
+              example: 5
+            value:
+              type: integer
+              minimum: 1
+              maximum: 5
+              example: 4
+        photos:
+          type: array
+          items:
+            type: string
+          example: ["uploads/reviews/review123_1.jpg"]
+        isAnonymous:
+          type: boolean
+          example: false
+        providerResponse:
+          type: string
+          nullable: true
+          example: "Thank you for the wonderful review!"
+        createdAt:
+          type: string
+          format: date-time
+
+    ReviewCreate:
+      type: object
+      required: [bookingId, rating, title, comment, criteria]
+      properties:
+        bookingId:
+          type: string
+          example: "507f1f77bcf86cd799439012"
+        rating:
+          type: number
+          format: float
+          minimum: 1
+          maximum: 5
+          example: 4.5
+        title:
+          type: string
+          example: "Excellent service!"
+        comment:
+          type: string
+          example: "Very professional and thorough cleaning"
+        criteria:
+          type: object
+          required: [quality, timeliness, communication, professionalism, value]
+          properties:
+            quality:
+              type: integer
+              minimum: 1
+              maximum: 5
+            timeliness:
+              type: integer
+              minimum: 1
+              maximum: 5
+            communication:
+              type: integer
+              minimum: 1
+              maximum: 5
+            professionalism:
+              type: integer
+              minimum: 1
+              maximum: 5
+            value:
+              type: integer
+              minimum: 1
+              maximum: 5
+        isAnonymous:
+          type: boolean
+          default: false
+
+    ReviewAnalytics:
+      type: object
+      properties:
+        averageRating:
+          type: number
+          format: float
+          example: 4.7
+        totalReviews:
+          type: integer
+          example: 127
+        ratingDistribution:
+          type: object
+          properties:
+            5:
+              type: integer
+              example: 89
+            4:
+              type: integer
+              example: 28
+            3:
+              type: integer
+              example: 8
+            2:
+              type: integer
+              example: 2
+            1:
+              type: integer
+              example: 0
+        criteriaAverages:
+          type: object
+          properties:
+            quality:
+              type: number
+              format: float
+              example: 4.8
+            timeliness:
+              type: number
+              format: float
+              example: 4.6
+            communication:
+              type: number
+              format: float
+              example: 4.7
+            professionalism:
+              type: number
+              format: float
+              example: 4.9
+            value:
+              type: number
+              format: float
+              example: 4.5
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        participants:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        type:
+          type: string
+          enum: [direct, group]
+          example: "direct"
+        lastMessage:
+          $ref: '#/components/schemas/Message'
+        unreadCount:
+          type: integer
+          example: 2
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        conversationId:
+          type: string
+          example: "507f1f77bcf86cd799439012"
+        senderId:
+          type: string
+          example: "507f1f77bcf86cd799439013"
+        content:
+          type: string
+          example: "Hello! I have a question about the booking."
+        messageType:
+          type: string
+          enum: [text, image, file]
+          example: "text"
+        isRead:
+          type: boolean
+          example: true
+        readAt:
+          type: string
+          format: date-time
+          nullable: true
+        replyTo:
+          type: string
+          nullable: true
+          example: "507f1f77bcf86cd799439010"
+        attachments:
+          type: array
+          items:
+            type: string
+          example: []
+        createdAt:
+          type: string
+          format: date-time
+
+    MessageCreate:
+      type: object
+      required: [conversationId, content, messageType]
+      properties:
+        conversationId:
+          type: string
+          example: "507f1f77bcf86cd799439012"
+        content:
+          type: string
+          example: "Hello! I have a question about the booking."
+        messageType:
+          type: string
+          enum: [text, image, file]
+          default: text
+        replyTo:
+          type: string
+          nullable: true
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 150
+        pages:
+          type: integer
+          example: 8
+        hasNext:
+          type: boolean
+          example: true
+        hasPrev:
+          type: boolean
+          example: false
