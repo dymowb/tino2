@@ -18,7 +18,8 @@ import {
   Alert,
   Paper,
   Divider,
-  LinearProgress
+  LinearProgress,
+  MenuItem
 } from '@mui/material';
 import {
   Star,
@@ -85,7 +86,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
           Rating Overview
         </Typography>
         <Grid container spacing={3}>
-          <Grid item xs={12} md={4}>
+          <Grid xs={12} md={4}>
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="h2" color="primary" sx={{ fontWeight: 'bold' }}>
                 {analytics.averageRating?.toFixed(1) || '0.0'}
@@ -96,7 +97,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
               </Typography>
             </Box>
           </Grid>
-          <Grid item xs={12} md={8}>
+          <Grid xs={12} md={8}>
             {[5, 4, 3, 2, 1].map((star) => (
               <Box key={star} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <Typography variant="body2" sx={{ minWidth: '20px' }}>
@@ -183,14 +184,10 @@ const ReviewList: React.FC<ReviewListProps> = ({
               </Typography>
               <Grid container spacing={2}>
                 {Object.entries(review.criteria).map(([key, value]) => (
-                  <Grid item key={key} xs={6} sm={4} md={2}>
+                  <Grid key={key} xs={6} sm={4} md={2}>
                     <Box sx={{ textAlign: 'center' }}>
                       <Typography variant="caption" display="block" sx={{ mb: 0.5 }}>
-                        {key.charAt(0).toUpperCase() + key.slice(1)}
-                      </Typography>
-                      <Rating value={Number(value)} size="small" readOnly />
-                      <Typography variant="caption" color="text.secondary">
-                        ({value})
+                        {`${key.charAt(0).toUpperCase() + key.slice(1)}: ${Number(value)}/5`}
                       </Typography>
                     </Box>
                   </Grid>
@@ -207,7 +204,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
               </Typography>
               <Grid container spacing={1}>
                 {review.photos.map((photo: string, index: number) => (
-                  <Grid item key={index}>
+                  <Grid key={index}>
                     <Box
                       component="img"
                       src={photo}
@@ -274,7 +271,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
       {showFilters && (
         <Paper sx={{ p: 2, mb: 3 }}>
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={6}>
+            <Grid xs={12} md={6}>
               <TextField
                 fullWidth
                 placeholder="Search reviews..."
@@ -290,12 +287,12 @@ const ReviewList: React.FC<ReviewListProps> = ({
                 size="small"
               />
             </Grid>
-            <Grid item xs={6} md={3}>
+            <Grid xs={6} md={3}>
               <FormControl fullWidth size="small">
                 <InputLabel>Rating</InputLabel>
                 <Select
                   value={ratingFilter}
-                  onChange={(e) => setRatingFilter(e.target.value)}
+                  onChange={(e) => setRatingFilter(e.target.value as number | "")}
                   label="Rating"
                 >
                   <MenuItem value="">All Ratings</MenuItem>
@@ -307,7 +304,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={6} md={3}>
+            <Grid xs={6} md={3}>
               <FormControl fullWidth size="small">
                 <InputLabel>Sort By</InputLabel>
                 <Select
@@ -344,7 +341,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
             {/* Review Summary */}
             <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
               <Grid container spacing={2} alignItems="center">
-                <Grid item>
+                <Grid>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <TrendingUp color="success" />
                     <Typography variant="h6">
@@ -352,7 +349,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
                     </Typography>
                   </Box>
                 </Grid>
-                <Grid item>
+                <Grid>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Star sx={{ color: 'gold' }} />
                     <Typography variant="h6">

@@ -171,11 +171,7 @@ const ProviderResponseDialog: React.FC<ProviderResponseDialogProps> = ({
                 {Object.entries(review.criteria).map(([key, value]) => (
                   <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Typography variant="body2">
-                      {criteriaLabels[key as keyof typeof criteriaLabels]}:
-                    </Typography>
-                    <Rating value={Number(value)} size="small" readOnly />
-                    <Typography variant="body2" color="text.secondary">
-                      ({value})
+                      {`${criteriaLabels[key as keyof typeof criteriaLabels]}: ${Number(value)}/5`}
                     </Typography>
                   </Box>
                 ))}
