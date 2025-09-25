@@ -19,6 +19,7 @@ import messageRoutes from '@/routes/messages';
 // import browserRoutes from '@/routes/browser';
 import paymentRoutes from '@/routes/payments';
 import reviewRoutes from '@/routes/reviews';
+import notificationRoutes from '@/routes/notifications';
 // import locationRoutes from '@/routes/locations';
 // import adminRoutes from '@/routes/admin';
 import messageService from '@/services/MessageService';
@@ -107,6 +108,7 @@ export class App {
     this.app.use(`/api/${config.server.apiVersion}/bookings`, bookingRoutes);
     this.app.use(`/api/${config.server.apiVersion}/quotes`, quoteRoutes);
     this.app.use(`/api/${config.server.apiVersion}/messages`, messageRoutes);
+    this.app.use(`/api/${config.server.apiVersion}/notifications`, notificationRoutes);
     // this.app.use(`/api/${config.server.apiVersion}/browser`, browserRoutes);
     this.app.use(`/api/${config.server.apiVersion}/payments`, paymentRoutes);
     this.app.use(`/api/${config.server.apiVersion}/reviews`, reviewRoutes);
