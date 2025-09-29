@@ -2,12 +2,12 @@
 
 ## Overview
 
-This comprehensive testing plan focuses on validating the Tino 2 platform from a real user perspective using Playwright MCP server automation. The goal is to ensure all features work seamlessly for both service providers and customers through actual browser interactions.
+This comprehensive testing plan focuses on validating the Tino 2 platform from a real user perspective using Chrome DevTools MCP automation. The goal is to ensure all features work seamlessly for both service providers and customers through actual browser interactions.
 
 ## Testing Philosophy
 
 - **Real User Scenarios**: Test complete user journeys, not just individual components
-- **Browser Automation**: Use Playwright MCP to simulate actual user interactions
+- **Browser Automation**: Use Chrome DevTools MCP to simulate actual user interactions
 - **Cross-Platform Validation**: Test across desktop and mobile viewports
 - **Error Recovery**: Validate error handling and user feedback
 - **Performance Validation**: Ensure responsive interactions and loading times
@@ -18,13 +18,23 @@ This comprehensive testing plan focuses on validating the Tino 2 platform from a
 ### Prerequisites
 - Backend server running on localhost:3000
 - Frontend server running on localhost:3001
-- Playwright MCP server configured and operational
+- Chrome DevTools MCP server configured and operational
 - Test data seeded in database
 - Stripe test mode configured
 
+### Critical Testing Requirement: Data-Rich User Accounts
+**MANDATORY**: All UX tests MUST be performed with user accounts that contain substantial data:
+- **Minimum Requirements**: 20+ bookings, 20+ reviews, multiple payment transactions
+- **Why Required**: Empty accounts cannot reveal UI issues with data display, pagination, loading states, sorting, filtering, or interaction flows
+- **Test Approach**:
+  1. First test with empty account for basic functionality
+  2. **Then re-test with data-rich account for comprehensive validation**
+  3. Document data-specific UI behaviors and issues
+- **Future Tests**: ALWAYS include this requirement in test execution
+
 ### Browser Coverage
-- **Desktop**: Chrome, Firefox, Safari (latest versions)
-- **Mobile**: Chrome Mobile, Safari Mobile
+- **Primary**: Chrome (via Chrome DevTools MCP)
+- **Secondary**: Firefox, Safari (when specific browser testing needed)
 - **Viewports**: 1920x1080 (desktop), 375x667 (mobile), 768x1024 (tablet)
 
 ## Phase 1: Customer User Journey Testing
@@ -462,6 +472,58 @@ This comprehensive testing plan focuses on validating the Tino 2 platform from a
 - Simulate payment timeouts
 - Test refund failures
 - Check error message clarity
+
+## Chrome DevTools MCP Implementation
+
+### Core Testing Commands
+
+**Navigation**:
+```
+mcp__chrome-devtools__navigate_page("http://localhost:3001/login")
+mcp__chrome-devtools__take_snapshot()
+```
+
+**Interactions**:
+```
+mcp__chrome-devtools__click(ref="button_id")
+mcp__chrome-devtools__fill(ref="input_id", text="test@example.com")
+mcp__chrome-devtools__fill_form(fields=[...])
+```
+
+**Responsive Testing**:
+```
+mcp__chrome-devtools__resize_page(width=375, height=667)  # Mobile
+mcp__chrome-devtools__resize_page(width=768, height=1024)  # Tablet
+mcp__chrome-devtools__resize_page(width=1920, height=1080)  # Desktop
+```
+
+**Validation**:
+```
+mcp__chrome-devtools__take_screenshot(filename="test-result.png")
+mcp__chrome-devtools__wait_for(text="Success message")
+```
+
+### Implementation Pattern
+
+For each test scenario:
+1. **Setup**: Navigate to starting page and take snapshot
+2. **Action**: Perform user interactions (clicks, form fills)
+3. **Validation**: Verify expected outcomes and UI states
+4. **Evidence**: Capture screenshots and document results
+5. **Cleanup**: Reset state for next test
+
+### Error Handling Strategy
+
+```
+# Always validate page state before actions
+snapshot = mcp__chrome-devtools__take_snapshot()
+if "expected_element" in snapshot:
+    # Proceed with test
+    mcp__chrome-devtools__click(ref="element_ref")
+else:
+    # Log error and recover
+    mcp__chrome-devtools__take_screenshot(filename="error-state.png")
+```
 
 ## Test Execution Strategy
 
