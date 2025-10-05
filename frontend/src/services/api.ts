@@ -61,11 +61,13 @@ export interface Provider {
     state: string;
     zipCode: string;
     country: string;
-  };
+  } | string;
   serviceRadius: number;
   rating: number;
   totalReviews: number;
   portfolioImages: string[];
+  profileImage?: string;
+  profileCompletion?: number;
   isBackgroundChecked: boolean;
   isInsured: boolean;
   isActive: boolean;
@@ -83,6 +85,8 @@ export interface Booking {
   id: string;
   customerId: string;
   providerId: string;
+  provider: Provider;
+  customer: User;
   serviceType: string;
   description: string;
   location: {
@@ -401,8 +405,35 @@ class ApiService {
     isAvailable?: boolean;
     page?: number;
     limit?: number;
-  }): Promise<PaginatedResponse<Provider & { distance: number; duration: number }>> {
-    const response = await this.api.post<PaginatedResponse<Provider & { distance: number; duration: number }>>('/locations/search-providers', params);
+  }): Promise<ApiResponse<{
+    providers: (Provider & { distance: number; duration: number })[];
+    totalCount: number;
+    page: number;
+    totalPages: number;
+    searchParams: any;
+  }>> {
+    // TEMPORARY WORKAROUND: Use GET endpoint with query params instead of POST
+    const queryParams = new URLSearchParams();
+    queryParams.append('latitude', params.latitude.toString());
+    queryParams.append('longitude', params.longitude.toString());
+    if (params.radius) queryParams.append('radius', params.radius.toString());
+    if (params.serviceTypes?.[0]) queryParams.append('serviceType', params.serviceTypes[0]);
+    if (params.sortBy) queryParams.append('sortBy', params.sortBy);
+    if (params.minRating) queryParams.append('minRating', params.minRating.toString());
+    if (params.maxPrice) queryParams.append('maxRate', params.maxPrice.toString());
+    if (params.hasInsurance !== undefined) queryParams.append('isInsured', params.hasInsurance.toString());
+    if (params.hasBackgroundCheck !== undefined) queryParams.append('isBackgroundChecked', params.hasBackgroundCheck.toString());
+    if (params.isAvailable !== undefined) queryParams.append('isVerified', params.isAvailable.toString());
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+
+    const response = await this.api.get<ApiResponse<{
+      providers: (Provider & { distance: number; duration: number })[];
+      totalCount: number;
+      page: number;
+      totalPages: number;
+      searchParams: any;
+    }>>(`/locations/providers/search?${queryParams.toString()}`);
     return response.data;
   }
 
@@ -894,26 +925,16 @@ class ApiService {
     return response.data;
   }
 
+  async getMyProviderProfile(): Promise<ApiResponse<{provider: Provider}>> {
+    const response = await this.api.get(`/providers/my`);
+    return response.data;
+  }
+
   async updateProviderProfile(providerId: string, data: Partial<Provider>): Promise<Provider> {
     const response = await this.api.put(`/providers/${providerId}`, data);
     return response.data;
   }
 
-  async getMyProviderReviews(params: {
-    page?: number;
-    limit?: number;
-    sortBy?: string;
-    sortOrder?: 'asc' | 'desc';
-  } = {}): Promise<PaginatedResponse<any>> {
-    const searchParams = new URLSearchParams();
-    if (params.page) searchParams.append('page', params.page.toString());
-    if (params.limit) searchParams.append('limit', params.limit.toString());
-    if (params.sortBy) searchParams.append('sortBy', params.sortBy);
-    if (params.sortOrder) searchParams.append('sortOrder', params.sortOrder);
-    
-    const response = await this.api.get(`/reviews/provider/my?${searchParams}`);
-    return response.data;
-  }
 
   async updateBookingStatus(bookingId: string, status: string): Promise<any> {
     const response = await this.api.put(`/bookings/${bookingId}/status`, { status });

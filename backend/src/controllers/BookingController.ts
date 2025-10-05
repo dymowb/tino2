@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import bookingService from '@/services/BookingService';
+import providerService from '@/services/ProviderService';
 import logger from '@/config/logger';
 import { ApiResponse, AuthenticatedRequest } from '@/types';
 
@@ -290,9 +291,16 @@ export class BookingController {
 
       const result = await bookingService.searchBookings(query);
 
-      const response: ApiResponse = {
+      // Transform the response to match frontend's PaginatedResponse structure
+      const response = {
         success: true,
-        data: result,
+        data: result.bookings,
+        pagination: {
+          page: result.page,
+          limit: result.limit,
+          total: result.total,
+          pages: Math.ceil(result.total / result.limit)
+        }
       };
 
       res.status(200).json(response);
@@ -342,9 +350,16 @@ export class BookingController {
 
       const result = await bookingService.searchBookings(query);
 
-      const response: ApiResponse = {
+      // Transform the response to match frontend's PaginatedResponse structure
+      const response = {
         success: true,
-        data: result,
+        data: result.bookings,
+        pagination: {
+          page: result.page,
+          limit: result.limit,
+          total: result.total,
+          pages: Math.ceil(result.total / result.limit)
+        }
       };
 
       res.status(200).json(response);
@@ -395,9 +410,16 @@ export class BookingController {
 
       const result = await bookingService.searchBookings(query);
 
-      const response: ApiResponse = {
+      // Transform the response to match frontend's PaginatedResponse structure
+      const response = {
         success: true,
-        data: result,
+        data: result.bookings,
+        pagination: {
+          page: result.page,
+          limit: result.limit,
+          total: result.total,
+          pages: Math.ceil(result.total / result.limit)
+        }
       };
 
       res.status(200).json(response);
@@ -463,6 +485,70 @@ export class BookingController {
       };
 
       res.status(statusCode).json(response);
+    }
+  }
+
+  getMyProviderBookings = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      const { page = 1, limit = 50, status } = req.query;
+
+      if (!userId) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'User authentication required',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      // Get provider record using providerService
+      const provider = await providerService.getProviderByUserId(userId);
+
+      if (!provider) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Provider profile not found',
+        };
+        res.status(404).json(response);
+        return;
+      }
+
+      // Build query
+      const query: any = {
+        providerId: provider.id,
+        page: Number(page),
+        limit: Number(limit),
+      };
+
+      if (status) {
+        query.status = status as string;
+      }
+
+      const result = await bookingService.searchBookings(query);
+
+      // Transform the response to match frontend's PaginatedResponse structure
+      const response = {
+        success: true,
+        data: result.bookings,
+        pagination: {
+          page: result.page,
+          limit: result.limit,
+          total: result.total,
+          pages: Math.ceil(result.total / result.limit)
+        }
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      logger.error('Error in getMyProviderBookings:', error);
+
+      const response: ApiResponse = {
+        success: false,
+        message: 'Failed to fetch bookings',
+      };
+
+      res.status(500).json(response);
     }
   }
 }

@@ -30,7 +30,35 @@ router.get(
   providerController.searchProviders
 );
 
-// Get specific provider by ID (public endpoint)
+// Get authenticated provider's own profile (must be before /:providerId)
+router.get(
+  '/my',
+  authenticate,
+  requireProviderRole,
+  providerController.getMyProvider
+);
+
+// Get authenticated provider's profile (alternative path)
+router.get(
+  '/my/profile',
+  authenticate,
+  requireProviderRole,
+  providerController.getMyProvider
+);
+
+// Get authenticated provider's dashboard statistics
+router.get(
+  '/my/dashboard-stats',
+  authenticate,
+  requireProviderRole,
+  [
+    query('period').optional().isIn(['week', 'month', 'year']).withMessage('Period must be week, month, or year'),
+    handleValidationErrors,
+  ],
+  providerController.getDashboardStats
+);
+
+// Get specific provider by ID (public endpoint) - MUST BE AFTER /my routes
 router.get(
   '/:providerId',
   [
@@ -72,14 +100,6 @@ router.post(
     handleValidationErrors,
   ],
   providerController.createProvider
-);
-
-// Get authenticated provider's own profile
-router.get(
-  '/my/profile',
-  authenticate,
-  requireProviderRole,
-  providerController.getMyProvider
 );
 
 // Update provider profile (authenticated providers only)

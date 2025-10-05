@@ -1,10 +1,11 @@
 import { Request, Response } from 'express';
 import { ReviewService } from '../services/ReviewService';
-import { 
-  CreateReviewRequest, 
-  UpdateReviewRequest, 
+import providerService from '../services/ProviderService';
+import {
+  CreateReviewRequest,
+  UpdateReviewRequest,
   ReviewSearchQuery,
-  AuthenticatedRequest 
+  AuthenticatedRequest
 } from '../types';
 
 class ReviewController {
@@ -226,10 +227,21 @@ class ReviewController {
 
   getMyProviderReviews = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const providerId = req.user!.userId;
+      const userId = req.user!.userId;
       const query: ReviewSearchQuery = req.query as any;
 
-      const result = await this.reviewService.getProviderReviews(providerId, query);
+      // Get provider record using providerService
+      const provider = await providerService.getProviderByUserId(userId);
+
+      if (!provider) {
+        res.status(404).json({
+          success: false,
+          message: 'Provider profile not found'
+        });
+        return;
+      }
+
+      const result = await this.reviewService.getProviderReviews(provider.id, query);
 
       res.json(result);
     } catch (error) {

@@ -214,6 +214,7 @@ router.post(
 
 router.get(
   '/provider/my',
+  authenticate,
   reviewSearchValidation,
   handleValidationErrors,
   reviewController.getMyProviderReviews

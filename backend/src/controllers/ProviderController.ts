@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import providerService from '@/services/ProviderService';
+import bookingService from '@/services/BookingService';
+import reviewService from '@/services/ReviewService';
 import logger from '@/config/logger';
 import { ApiResponse, AuthenticatedRequest } from '@/types';
 
@@ -377,6 +379,79 @@ export class ProviderController {
       const response: ApiResponse = {
         success: false,
         message: 'Failed to deactivate provider profile',
+      };
+
+      res.status(500).json(response);
+    }
+  }
+
+  getDashboardStats = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+
+      if (!userId) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'User authentication required',
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      // Get provider record using providerService
+      const provider = await providerService.getProviderByUserId(userId);
+
+      if (!provider) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Provider profile not found',
+        };
+        res.status(404).json(response);
+        return;
+      }
+
+      // Get booking statistics using bookingService
+      const allBookingsQuery = { providerId: provider.id, limit: 1000 };
+      const pendingQuery = { providerId: provider.id, status: 'pending', limit: 1000 };
+      const completedQuery = { providerId: provider.id, status: 'completed', limit: 1000 };
+
+      const allBookingsResult = await bookingService.searchBookings(allBookingsQuery);
+      const pendingResult = await bookingService.searchBookings(pendingQuery);
+      const completedResult = await bookingService.searchBookings(completedQuery);
+
+      // Calculate total earnings
+      const totalEarnings = completedResult.bookings.reduce((sum: number, booking: any) =>
+        sum + (booking.totalPrice || 0), 0
+      );
+
+      // Get provider reviews to calculate average rating
+      const reviews = await reviewService.getProviderReviews(provider.id, { page: 1, limit: 1000 });
+      const avgRating = reviews.data && reviews.data.length > 0
+        ? reviews.data.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.data.length
+        : 0;
+
+      const stats = {
+        totalBookings: allBookingsResult.total,
+        pendingBookings: pendingResult.total,
+        completedBookings: completedResult.total,
+        totalEarnings,
+        averageRating: Math.round(avgRating * 10) / 10,
+        totalReviews: reviews.pagination?.total || 0,
+        responseRate: 95 // Placeholder
+      };
+
+      const response: ApiResponse = {
+        success: true,
+        data: stats,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      logger.error('Error in getDashboardStats:', error);
+
+      const response: ApiResponse = {
+        success: false,
+        message: 'Failed to fetch dashboard statistics',
       };
 
       res.status(500).json(response);

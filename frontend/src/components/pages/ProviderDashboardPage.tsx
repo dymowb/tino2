@@ -82,11 +82,13 @@ const ProviderDashboardPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('');
 
   // Fetch provider dashboard statistics
-  const { data: dashboardStats, isLoading: statsLoading, error: statsError } = useQuery({
+  const { data: dashboardStatsData, isLoading: statsLoading, error: statsError } = useQuery({
     queryKey: ['provider-dashboard-stats', selectedPeriod],
     queryFn: () => apiService.getProviderDashboardStats(selectedPeriod),
     enabled: user?.userType === 'provider'
   });
+
+  const dashboardStats = dashboardStatsData?.data;
 
   // Fetch provider bookings
   const { data: bookings, isLoading: bookingsLoading } = useQuery({
@@ -96,11 +98,13 @@ const ProviderDashboardPage: React.FC = () => {
   });
 
   // Fetch provider profile
-  const { data: providerProfile, isLoading: profileLoading } = useQuery({
-    queryKey: ['provider-profile', user?.id],
-    queryFn: () => apiService.getProviderProfile(user?.id || ''),
-    enabled: !!user?.id && user?.userType === 'provider'
+  const { data: providerProfileData, isLoading: profileLoading } = useQuery({
+    queryKey: ['my-provider-profile'],
+    queryFn: () => apiService.getMyProviderProfile(),
+    enabled: user?.userType === 'provider'
   });
+
+  const providerProfile = providerProfileData?.data?.provider;
 
   // Fetch recent reviews
   const { data: reviews } = useQuery({
@@ -223,7 +227,9 @@ const ProviderDashboardPage: React.FC = () => {
                       {booking.serviceType?.replace('_', ' ')}
                     </Typography>
                     <Typography variant="caption" color="textSecondary">
-                      {booking.location}
+                      {typeof booking.location === 'string'
+                        ? booking.location
+                        : `${booking.location?.city || ''}, ${booking.location?.state || ''}`.trim().replace(/^,\s*|,\s*$/g, '') || 'Location not available'}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -335,7 +341,7 @@ const ProviderDashboardPage: React.FC = () => {
           <Button
             variant="contained"
             startIcon={<Analytics />}
-            onClick={() => toast.info('Advanced analytics coming soon!')}
+            onClick={() => toast('Advanced analytics coming soon!')}
           >
             View Analytics
           </Button>
@@ -368,7 +374,7 @@ const ProviderDashboardPage: React.FC = () => {
 
       {/* Statistics Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={4} lg={2}>
+        <Grid xs={12} sm={6} md={4} lg={2}>
           {renderStatCard(
             'Total Bookings',
             dashboardStats?.totalBookings || 0,
@@ -377,7 +383,7 @@ const ProviderDashboardPage: React.FC = () => {
             `+${dashboardStats?.bookingGrowth || 0}% this ${selectedPeriod}`
           )}
         </Grid>
-        <Grid item xs={12} sm={6} md={4} lg={2}>
+        <Grid xs={12} sm={6} md={4} lg={2}>
           {renderStatCard(
             'Pending Requests',
             dashboardStats?.pendingBookings || 0,
@@ -386,7 +392,7 @@ const ProviderDashboardPage: React.FC = () => {
             'Requires attention'
           )}
         </Grid>
-        <Grid item xs={12} sm={6} md={4} lg={2}>
+        <Grid xs={12} sm={6} md={4} lg={2}>
           {renderStatCard(
             'Completed Jobs',
             dashboardStats?.completedBookings || 0,
@@ -395,7 +401,7 @@ const ProviderDashboardPage: React.FC = () => {
             `${dashboardStats?.completionRate || 0}% completion rate`
           )}
         </Grid>
-        <Grid item xs={12} sm={6} md={4} lg={2}>
+        <Grid xs={12} sm={6} md={4} lg={2}>
           {renderStatCard(
             'Total Earnings',
             `$${dashboardStats?.totalEarnings || 0}`,
@@ -404,7 +410,7 @@ const ProviderDashboardPage: React.FC = () => {
             `+${dashboardStats?.earningsGrowth || 0}% this ${selectedPeriod}`
           )}
         </Grid>
-        <Grid item xs={12} sm={6} md={4} lg={2}>
+        <Grid xs={12} sm={6} md={4} lg={2}>
           {renderStatCard(
             'Average Rating',
             `${dashboardStats?.averageRating || providerProfile?.rating || 0}`,
@@ -413,7 +419,7 @@ const ProviderDashboardPage: React.FC = () => {
             `Based on ${reviews?.pagination?.total || 0} reviews`
           )}
         </Grid>
-        <Grid item xs={12} sm={6} md={4} lg={2}>
+        <Grid xs={12} sm={6} md={4} lg={2}>
           {renderStatCard(
             'Response Rate',
             `${dashboardStats?.responseRate || 95}%`,
@@ -426,7 +432,7 @@ const ProviderDashboardPage: React.FC = () => {
 
       <Grid container spacing={3}>
         {/* Recent Bookings */}
-        <Grid item xs={12} lg={8}>
+        <Grid xs={12} lg={8}>
           <Card sx={{ height: 'fit-content' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
@@ -458,10 +464,10 @@ const ProviderDashboardPage: React.FC = () => {
         </Grid>
 
         {/* Provider Profile Summary & Quick Actions */}
-        <Grid item xs={12} lg={4}>
+        <Grid xs={12} lg={4}>
           <Grid container spacing={3}>
             {/* Profile Summary */}
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <Card>
                 <CardContent>
                   <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
@@ -496,7 +502,9 @@ const ProviderDashboardPage: React.FC = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <LocationOn sx={{ fontSize: 16, color: 'text.secondary' }} />
                       <Typography variant="body2" color="textSecondary">
-                        {providerProfile?.location || 'Location not set'}
+                        {typeof providerProfile?.location === 'string'
+                          ? providerProfile.location
+                          : providerProfile?.location?.address || 'Location not set'}
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -537,7 +545,7 @@ const ProviderDashboardPage: React.FC = () => {
             </Grid>
 
             {/* Recent Reviews */}
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <Card>
                 <CardContent>
                   <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>

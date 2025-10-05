@@ -118,6 +118,20 @@ router.get(
   bookingController.getCustomerBookings
 );
 
+// Get bookings for authenticated provider
+router.get(
+  '/provider/my',
+  authenticate,
+  [
+    query('page').optional().isInt({ min: 1 }).withMessage('Page must be positive integer'),
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+    query('status').optional().isIn(['pending', 'confirmed', 'in_progress', 'completed', 'cancelled']).withMessage('Invalid status'),
+    query('serviceType').optional().isString().withMessage('Service type must be a string'),
+    handleValidationErrors,
+  ],
+  bookingController.getMyProviderBookings
+);
+
 // Get bookings for a specific provider (providers can only see their own)
 router.get(
   '/provider/:providerId',
