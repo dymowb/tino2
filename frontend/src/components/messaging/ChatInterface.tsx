@@ -34,7 +34,7 @@ interface Message {
   messageType: 'text' | 'image' | 'file';
   attachments?: string[];
   replyToMessageId?: string;
-  timestamp: string;
+  createdAt: string;
   isRead: boolean;
   isEdited?: boolean;
   sender: {
@@ -375,7 +375,7 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
                     
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
                       <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                        {formatMessageTime(message.timestamp)}
+                        {formatMessageTime(message.createdAt)}
                         {message.isEdited && ' (edited)'}
                       </Typography>
                       

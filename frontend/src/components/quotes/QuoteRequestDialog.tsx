@@ -29,7 +29,7 @@ import {
   Description,
   Add,
   Close,
-  Priority
+  PriorityHigh
 } from '@mui/icons-material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -292,7 +292,7 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
                   value={formData.urgency}
                   label="Urgency Level"
                   onChange={(e) => setFormData({ ...formData, urgency: e.target.value as any })}
-                  startAdornment={<Priority sx={{ mr: 1 }} />}
+                  startAdornment={<PriorityHigh sx={{ mr: 1 }} />}
                 >
                   <MenuItem value="low">Low - Flexible timeline</MenuItem>
                   <MenuItem value="medium">Medium - Within a week</MenuItem>
@@ -427,15 +427,17 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
               <DateTimePicker
                 label="Preferred Start Date (Optional)"
                 value={formData.preferredDate}
-                onChange={(date) => setFormData({ ...formData, preferredDate: date })}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                    InputProps: {
+                onChange={(date) => setFormData({ ...formData, preferredDate: date as Date | null })}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    fullWidth
+                    InputProps={{
+                      ...params.InputProps,
                       startAdornment: <Schedule sx={{ mr: 1 }} />
-                    }
-                  }
-                }}
+                    }}
+                  />
+                )}
                 minDateTime={new Date()}
               />
             </Grid>
@@ -548,13 +550,14 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
               <DateTimePicker
                 label="Quote Request Expires"
                 value={formData.expiresAt}
-                onChange={(date) => setFormData({ ...formData, expiresAt: date })}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                    helperText: "When should this request close automatically?"
-                  }
-                }}
+                onChange={(date) => setFormData({ ...formData, expiresAt: date as Date | null })}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    fullWidth
+                    helperText="When should this request close automatically?"
+                  />
+                )}
                 minDateTime={addDays(new Date(), 1)}
               />
             </Grid>

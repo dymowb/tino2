@@ -417,13 +417,21 @@ class ApiService {
     queryParams.append('latitude', params.latitude.toString());
     queryParams.append('longitude', params.longitude.toString());
     if (params.radius) queryParams.append('radius', params.radius.toString());
-    if (params.serviceTypes?.[0]) queryParams.append('serviceType', params.serviceTypes[0]);
+
+    // Send service type if any are selected
+    if (params.serviceTypes && params.serviceTypes.length > 0) {
+      queryParams.append('serviceType', params.serviceTypes[0]);
+    }
+
     if (params.sortBy) queryParams.append('sortBy', params.sortBy);
-    if (params.minRating) queryParams.append('minRating', params.minRating.toString());
+    if (params.minRating && params.minRating > 0) queryParams.append('minRating', params.minRating.toString());
     if (params.maxPrice) queryParams.append('maxRate', params.maxPrice.toString());
-    if (params.hasInsurance !== undefined) queryParams.append('isInsured', params.hasInsurance.toString());
-    if (params.hasBackgroundCheck !== undefined) queryParams.append('isBackgroundChecked', params.hasBackgroundCheck.toString());
-    if (params.isAvailable !== undefined) queryParams.append('isVerified', params.isAvailable.toString());
+
+    // Only send boolean filters when they are TRUE (enabled)
+    if (params.hasInsurance === true) queryParams.append('isInsured', 'true');
+    if (params.hasBackgroundCheck === true) queryParams.append('isBackgroundChecked', 'true');
+    if (params.isAvailable === true) queryParams.append('isVerified', 'true');
+
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.limit) queryParams.append('limit', params.limit.toString());
 

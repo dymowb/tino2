@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getRepository } from 'typeorm';
+import { AppDataSource } from '@/config/database';
 import Stripe from 'stripe';
 import { Payment, PaymentStatus, PaymentMethod } from '@/models/Payment';
 import { Booking } from '@/models/Booking';
@@ -16,13 +16,13 @@ class PaymentController {
   // GET /api/payments - Get user payments (FR-064)
   public async getPayments(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const paymentRepository = getRepository(Payment);
+      const paymentRepository = AppDataSource.getRepository(Payment);
       const { page = 1, limit = 10 } = req.query;
 
       const payments = await paymentRepository.find({
         where: [
-          { customerId: req.user.id },
-          { providerId: req.user.id }
+          { customerId: req.user.userId },
+          { providerId: req.user.userId }
         ],
         relations: ['customer', 'provider', 'booking'],
         order: { createdAt: 'DESC' },
@@ -32,8 +32,8 @@ class PaymentController {
 
       const total = await paymentRepository.count({
         where: [
-          { customerId: req.user.id },
-          { providerId: req.user.id }
+          { customerId: req.user.userId },
+          { providerId: req.user.userId }
         ],
       });
 
@@ -50,7 +50,7 @@ class PaymentController {
         }
       });
 
-      logger.info(`Payments retrieved for user ${req.user.id}`);
+      logger.info(`Payments retrieved for user ${req.user.userId}`);
     } catch (error) {
       logger.error('Error retrieving payments:', error);
       res.status(500).json({
@@ -64,13 +64,13 @@ class PaymentController {
   public async getPaymentById(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const paymentRepository = getRepository(Payment);
+      const paymentRepository = AppDataSource.getRepository(Payment);
 
       const payment = await paymentRepository.findOne({
-        where: { 
+        where: {
           id,
           // Ensure user can only access their own payments
-          ...(req.user.userType === 'customer' ? { customerId: req.user.id } : { providerId: req.user.id })
+          ...(req.user.userType === 'customer' ? { customerId: req.user.userId } : { providerId: req.user.userId })
         },
         relations: ['customer', 'provider', 'booking'],
       });
@@ -88,7 +88,7 @@ class PaymentController {
         data: payment
       });
 
-      logger.info(`Payment ${id} retrieved by user ${req.user.id}`);
+      logger.info(`Payment ${id} retrieved by user ${req.user.userId}`);
     } catch (error) {
       logger.error('Error retrieving payment:', error);
       res.status(500).json({
@@ -106,7 +106,7 @@ class PaymentController {
       // Validate input using service
       const validationErrors = PaymentService.validatePaymentData({
         bookingId,
-        customerId: req.user.id,
+        customerId: req.user.userId,
         amount,
         currency,
         paymentMethod
@@ -124,7 +124,7 @@ class PaymentController {
       // Create payment intent using service
       const result = await PaymentService.createPaymentIntent({
         bookingId,
-        customerId: req.user.id,
+        customerId: req.user.userId,
         amount,
         currency,
         paymentMethod
@@ -160,7 +160,7 @@ class PaymentController {
       const { id } = req.params;
 
       // Confirm payment using service
-      const payment = await PaymentService.confirmPayment(id, req.user.id);
+      const payment = await PaymentService.confirmPayment(id, req.user.userId);
 
       res.json({
         success: true,
@@ -201,7 +201,7 @@ class PaymentController {
         paymentId: id,
         amount,
         reason,
-        requestedBy: req.user.id
+        requestedBy: req.user.userId
       });
 
       res.json({
@@ -247,7 +247,7 @@ class PaymentController {
       const { customerId } = req.params;
 
       // Only allow access to own payments or admin access
-      if (req.user.id !== customerId && req.user.userType !== 'admin') {
+      if (req.user.userId !== customerId && req.user.userType !== 'admin') {
         res.status(403).json({
           success: false,
           error: 'Unauthorized access'
@@ -255,7 +255,7 @@ class PaymentController {
         return;
       }
 
-      const paymentRepository = getRepository(Payment);
+      const paymentRepository = AppDataSource.getRepository(Payment);
       const payments = await paymentRepository.find({
         where: { customerId },
         relations: ['provider', 'booking'],
@@ -283,7 +283,7 @@ class PaymentController {
       const { providerId } = req.params;
 
       // Only allow access to own payments or admin access
-      if (req.user.id !== providerId && req.user.userType !== 'admin') {
+      if (req.user.userId !== providerId && req.user.userType !== 'admin') {
         res.status(403).json({
           success: false,
           error: 'Unauthorized access'
@@ -291,7 +291,7 @@ class PaymentController {
         return;
       }
 
-      const paymentRepository = getRepository(Payment);
+      const paymentRepository = AppDataSource.getRepository(Payment);
       const payments = await paymentRepository.find({
         where: { providerId },
         relations: ['customer', 'booking'],

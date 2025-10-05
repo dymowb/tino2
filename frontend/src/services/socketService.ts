@@ -8,8 +8,14 @@ interface MessageData {
   messageType: 'text' | 'image' | 'file';
   attachments?: string[];
   replyToMessageId?: string;
-  timestamp: string;
+  createdAt: string;
   isRead: boolean;
+  sender?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profileImage?: string;
+  };
 }
 
 interface ConversationData {
@@ -21,8 +27,14 @@ interface ConversationData {
     firstName: string;
     lastName: string;
     profileImage?: string;
+    userType: 'customer' | 'provider';
   }>;
-  lastMessage?: MessageData;
+  lastMessage?: {
+    id: string;
+    message: string;
+    createdAt: string;
+    senderId: string;
+  };
   unreadCount: number;
 }
 
@@ -89,7 +101,7 @@ class SocketService {
           senderId: '',
           message: '',
           messageType: 'text',
-          timestamp: '',
+          createdAt: '',
           isRead: false,
         });
       });

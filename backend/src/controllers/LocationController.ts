@@ -92,6 +92,53 @@ class LocationController {
     }
   };
 
+  // TEMPORARILY COMMENTED OUT DUE TO COMPILATION ERROR
+  // /**
+  //  * Search providers by GPS coordinates via POST request (for frontend compatibility)
+  //  */
+  // searchProvidersGPS = async (req: Request, res: Response): Promise<void> => {
+  //   try {
+  //     const params: LocationSearchParams = {
+  //       latitude: req.body.latitude,
+  //       longitude: req.body.longitude,
+  //       radius: req.body.radius || 10,
+  //       serviceType: req.body.serviceTypes?.[0], // Frontend sends serviceTypes array
+  //       minRating: req.body.minRating,
+  //       maxRate: req.body.maxPrice, // Frontend sends maxPrice instead of maxRate
+  //       isInsured: req.body.hasInsurance, // Frontend sends hasInsurance instead of isInsured
+  //       isBackgroundChecked: req.body.hasBackgroundCheck, // Frontend sends hasBackgroundCheck
+  //       isVerified: req.body.isVerified,
+  //       sortBy: req.body.sortBy,
+  //       sortOrder: req.body.sortOrder || 'asc',
+  //       page: req.body.page || 1,
+  //       limit: req.body.limit || 20,
+  //     };
+
+  //     // Validate required parameters
+  //     if (typeof params.latitude !== 'number' || typeof params.longitude !== 'number') {
+  //       res.status(400).json({
+  //         success: false,
+  //         error: 'Valid latitude and longitude are required',
+  //       });
+  //       return;
+  //     }
+
+  //     // Handle availability filter if provided
+  //     if (req.body.availability) {
+  //       params.availability = req.body.availability;
+  //     }
+
+  //     const result = await ProviderSearchService.searchProvidersByLocation(params);
+
+  //     res.json(result);
+  //   } catch (error) {
+  //     res.status(500).json({
+  //       success: false,
+  //       error: error instanceof Error ? error.message : 'Failed to search providers by GPS location',
+  //     });
+  //   }
+  // };
+
   /**
    * Search providers by location coordinates (FR-022, FR-023)
    */

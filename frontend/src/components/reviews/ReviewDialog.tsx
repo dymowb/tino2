@@ -279,7 +279,7 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
       <DialogContent sx={{ pt: 2 }}>
         <Grid container spacing={3}>
           {/* Booking Info */}
-          <Grid item xs={12}>
+          <Grid xs={12}>
             <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1, mb: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Avatar sx={{ bgcolor: 'primary.main' }}>
@@ -306,7 +306,7 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
           </Grid>
 
           {/* Overall Rating */}
-          <Grid item xs={12}>
+          <Grid xs={12}>
             <Box sx={{ textAlign: 'center', mb: 2 }}>
               <Typography variant="h6" sx={{ mb: 1 }}>
                 Overall Rating: {calculateOverallRating().toFixed(1)} stars
@@ -320,12 +320,12 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
             </Box>
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid xs={12}>
             <Divider />
           </Grid>
 
           {/* Detailed Criteria Ratings */}
-          <Grid item xs={12}>
+          <Grid xs={12}>
             <Typography variant="h6" sx={{ mb: 2 }}>
               Rate Your Experience
             </Typography>
@@ -352,7 +352,7 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
           </Grid>
 
           {/* Review Title */}
-          <Grid item xs={12}>
+          <Grid xs={12}>
             <TextField
               fullWidth
               label="Review Title"
@@ -366,7 +366,7 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
           </Grid>
 
           {/* Review Comment */}
-          <Grid item xs={12}>
+          <Grid xs={12}>
             <TextField
               fullWidth
               multiline
@@ -382,7 +382,7 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
           </Grid>
 
           {/* Photo Upload Placeholder */}
-          <Grid item xs={12}>
+          <Grid xs={12}>
             <Box sx={{ border: '2px dashed', borderColor: 'grey.300', borderRadius: 1, p: 3, textAlign: 'center' }}>
               <PhotoCamera sx={{ fontSize: 48, color: 'grey.400', mb: 1 }} />
               <Typography variant="body2" color="text.secondary">
@@ -395,7 +395,7 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
           </Grid>
 
           {/* Anonymous Option */}
-          <Grid item xs={12}>
+          <Grid xs={12}>
             <FormControlLabel
               control={
                 <Checkbox
@@ -411,7 +411,7 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
           </Grid>
 
           {/* Review Guidelines */}
-          <Grid item xs={12}>
+          <Grid xs={12}>
             <Alert severity="info" sx={{ mt: 2 }}>
               <Typography variant="body2">
                 <strong>Review Guidelines:</strong> Be honest, constructive, and respectful. 

@@ -71,8 +71,16 @@ const MyBookingsPage: React.FC = () => {
     staleTime: 30 * 1000, // 30 seconds
   });
 
-  const bookings = bookingsData?.data || [];
-  const pagination = bookingsData?.pagination;
+  // Ensure bookings is always an array
+  const bookings: Booking[] = React.useMemo(() => {
+    return (bookingsData?.data && Array.isArray(bookingsData.data)) ? bookingsData.data : [];
+  }, [bookingsData]);
+  const pagination = {
+    total: bookingsData?.pagination?.total || 0,
+    page: bookingsData?.pagination?.page || 1,
+    limit: bookingsData?.pagination?.limit || 20,
+    pages: bookingsData?.pagination?.pages || Math.ceil((bookingsData?.pagination?.total || 0) / (bookingsData?.pagination?.limit || 20))
+  };
 
   // Update booking status mutation
   const updateStatusMutation = useMutation({
@@ -161,7 +169,7 @@ const MyBookingsPage: React.FC = () => {
   const canUpdateStatus = (booking: Booking, newStatus: Booking['status']) => {
     if (!user) return false;
 
-    const statusTransitions = {
+    const statusTransitions: Record<Booking['status'], Booking['status'][]> = {
       'pending': user.userType === 'provider' ? ['confirmed', 'cancelled'] : ['cancelled'],
       'confirmed': user.userType === 'provider' ? ['in_progress', 'cancelled'] : ['cancelled'],
       'in_progress': user.userType === 'provider' ? ['completed'] : [],
@@ -398,7 +406,7 @@ const MyBookingsPage: React.FC = () => {
                             variant="outlined"
                             color="primary"
                             startIcon={<Star />}
-                            onClick={() => toast.info('Review system - Coming in Task 6!')}
+                            onClick={() => toast('Review system - Coming in Task 6!')}
                           >
                             Leave Review
                           </Button>
@@ -423,7 +431,7 @@ const MyBookingsPage: React.FC = () => {
                         <Button
                           variant="outlined"
                           startIcon={<Chat />}
-                          onClick={() => toast.info('Messaging system - Coming in Task 4!')}
+                          onClick={() => toast('Messaging system - Coming in Task 4!')}
                         >
                           Message
                         </Button>

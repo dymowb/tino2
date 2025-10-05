@@ -168,3 +168,6 @@ NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.
 NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
 No need to ask for authorization for POST or GET operations, just do them directly.
+- after each action part of an execution plan, update @SESSION_CONTEXT.md in a way you know exactly how to resume work in case the current session crashes. Make sure these updates happen after each STEP of the plan, not only after completing a major milestone
+- make sure database is populated with seed data before running UX tests.
+- always start backend on port 3000 and frontend on port 3001. Kill anything using these ports before starting them up

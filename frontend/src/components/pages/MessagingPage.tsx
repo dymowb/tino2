@@ -42,7 +42,7 @@ interface Conversation {
   lastMessage?: {
     id: string;
     message: string;
-    timestamp: string;
+    createdAt: string;
     senderId: string;
   };
   unreadCount: number;
@@ -291,7 +291,7 @@ const MessagingPage: React.FC = () => {
                             </Typography>
                             {conversation.lastMessage && (
                               <Typography variant="caption" color="text.secondary">
-                                {formatMessageTime(conversation.lastMessage.timestamp)}
+                                {formatMessageTime(conversation.lastMessage.createdAt)}
                               </Typography>
                             )}
                           </Box>

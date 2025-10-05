@@ -6,7 +6,6 @@ import {
   DialogActions,
   Button,
   TextField,
-  Grid,
   Typography,
   Box,
   FormControl,
@@ -18,6 +17,7 @@ import {
   Divider,
   CircularProgress
 } from '@mui/material';
+import Grid from '@mui/material/Unstable_Grid2';
 import {
   LocationOn,
   Schedule,
@@ -209,7 +209,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
         <LocalizationProvider dateAdapter={AdapterDateFns}>
           <Grid container spacing={3}>
             {/* Provider Info */}
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1, mb: 2 }}>
                 <Typography variant="h6" sx={{ mb: 1 }}>
                   {provider.businessName}
@@ -223,7 +223,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                   <LocationOn sx={{ fontSize: 'small' }} />
                   <Typography variant="body2">
-                    {provider.location.city}, {provider.location.state}
+                    {typeof provider.location === 'object' ? `${provider.location.city}, ${provider.location.state}` : provider.location}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -236,7 +236,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
             </Grid>
 
             {/* Service Details */}
-            <Grid item xs={12} md={6}>
+            <Grid xs={12} md={6}>
               <FormControl fullWidth error={!!errors.serviceType}>
                 <InputLabel>Service Type</InputLabel>
                 <Select
@@ -258,23 +258,24 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid xs={12} md={6}>
               <DateTimePicker
                 label="Scheduled Date & Time"
                 value={formData.scheduledDate}
-                onChange={(date) => setFormData({ ...formData, scheduledDate: date })}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                    error: !!errors.scheduledDate,
-                    helperText: errors.scheduledDate
-                  }
-                }}
+                onChange={(date) => setFormData({ ...formData, scheduledDate: date as Date | null })}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    fullWidth
+                    error={!!errors.scheduledDate}
+                    helperText={errors.scheduledDate}
+                  />
+                )}
                 minDateTime={new Date()}
               />
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid xs={12} md={6}>
               <TextField
                 fullWidth
                 type="number"
@@ -287,7 +288,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
               />
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid xs={12} md={6}>
               <Box sx={{ p: 2, bgcolor: 'primary.50', borderRadius: 1 }}>
                 <Typography variant="h6" color="primary">
                   Estimated Cost: ${calculateEstimatedCost().toFixed(2)}
@@ -299,7 +300,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
             </Grid>
 
             {/* Service Description */}
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <TextField
                 fullWidth
                 multiline
@@ -314,7 +315,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
             </Grid>
 
             {/* Special Instructions */}
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <TextField
                 fullWidth
                 multiline
@@ -327,13 +328,13 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
             </Grid>
 
             {/* Location */}
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <Typography variant="h6" sx={{ mb: 2 }}>
                 Service Location
               </Typography>
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <TextField
                 fullWidth
                 label="Street Address"
@@ -347,7 +348,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
               />
             </Grid>
 
-            <Grid item xs={12} md={4}>
+            <Grid xs={12} md={4}>
               <TextField
                 fullWidth
                 label="City"
@@ -361,7 +362,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
               />
             </Grid>
 
-            <Grid item xs={12} md={4}>
+            <Grid xs={12} md={4}>
               <TextField
                 fullWidth
                 label="State"
@@ -375,7 +376,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
               />
             </Grid>
 
-            <Grid item xs={12} md={4}>
+            <Grid xs={12} md={4}>
               <TextField
                 fullWidth
                 label="ZIP Code"
@@ -390,7 +391,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
             </Grid>
 
             {/* Booking Summary */}
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <Divider sx={{ my: 2 }} />
               <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
                 <Typography variant="h6" sx={{ mb: 1 }}>

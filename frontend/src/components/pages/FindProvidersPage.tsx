@@ -1,20 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Card, 
-  CardContent, 
-  Grid, 
-  TextField, 
-  FormControl, 
-  InputLabel, 
-  Select, 
-  MenuItem, 
-  Chip, 
-  Button, 
-  Rating, 
-  Slider, 
-  Switch, 
+import {
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip,
+  Button,
+  Rating,
+  Slider,
+  Switch,
   FormControlLabel,
   CircularProgress,
   Alert,
@@ -26,6 +25,7 @@ import {
   Stack,
   Badge
 } from '@mui/material';
+import Grid from '@mui/material/Unstable_Grid2';
 import { 
   LocationOn, 
   Phone, 
@@ -67,7 +67,7 @@ const FindProvidersPage: React.FC = () => {
   });
   
   const [addressSearch, setAddressSearch] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [showBookingDialog, setShowBookingDialog] = useState(false);
@@ -146,8 +146,11 @@ const FindProvidersPage: React.FC = () => {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  const providers = providersData?.data || [];
-  const pagination = providersData?.pagination;
+  // Ensure providers is always an array
+  const providers: ExtendedProvider[] = React.useMemo(() => {
+    return (providersData?.data?.providers && Array.isArray(providersData.data.providers)) ? providersData.data.providers : [];
+  }, [providersData]);
+  const pagination = providersData?.data;
 
   const handleServiceTypeChange = (serviceType: string, checked: boolean) => {
     setSearchParams(prev => ({
@@ -159,7 +162,7 @@ const FindProvidersPage: React.FC = () => {
   };
 
   const handleQuoteRequest = async (providerId: string) => {
-    toast.info('Quote system - Coming in Task 3!');
+    toast('Quote system - Coming in Task 3!');
   };
 
   const handleBookNow = (provider: ExtendedProvider) => {
@@ -204,7 +207,7 @@ const FindProvidersPage: React.FC = () => {
         </Typography>
         
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={6}>
+          <Grid xs={12} md={6}>
             <TextField
               fullWidth
               label="Search by address"
@@ -221,7 +224,7 @@ const FindProvidersPage: React.FC = () => {
             />
           </Grid>
           
-          <Grid item xs={12} md={3}>
+          <Grid xs={12} md={3}>
             <Button
               fullWidth
               variant="outlined"
@@ -233,7 +236,7 @@ const FindProvidersPage: React.FC = () => {
             </Button>
           </Grid>
           
-          <Grid item xs={12} md={3}>
+          <Grid xs={12} md={3}>
             <Button
               fullWidth
               variant="outlined"
@@ -256,7 +259,7 @@ const FindProvidersPage: React.FC = () => {
           
           <Grid container spacing={3}>
             {/* Service Types */}
-            <Grid item xs={12} md={6}>
+            <Grid xs={12} md={6}>
               <Typography variant="subtitle1" sx={{ mb: 1 }}>
                 Service Types
               </Typography>
@@ -274,7 +277,7 @@ const FindProvidersPage: React.FC = () => {
             </Grid>
 
             {/* Sort and Radius */}
-            <Grid item xs={12} md={6}>
+            <Grid xs={12} md={6}>
               <Stack spacing={2}>
                 <FormControl>
                   <InputLabel>Sort By</InputLabel>
@@ -312,7 +315,7 @@ const FindProvidersPage: React.FC = () => {
             </Grid>
 
             {/* Filters Row */}
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <Stack direction="row" spacing={2} flexWrap="wrap">
                 <Box>
                   <Typography variant="subtitle2" sx={{ mb: 1 }}>
@@ -387,7 +390,7 @@ const FindProvidersPage: React.FC = () => {
         <>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Typography variant="h6">
-              {pagination?.total || 0} Provider{(pagination?.total || 0) !== 1 ? 's' : ''} Found
+              {pagination?.totalCount || 0} Provider{(pagination?.totalCount || 0) !== 1 ? 's' : ''} Found
             </Typography>
             
             <Button onClick={() => refetch()} variant="outlined" startIcon={<Search />}>
@@ -404,7 +407,7 @@ const FindProvidersPage: React.FC = () => {
           ) : (
             <Grid container spacing={3}>
               {providers.map((provider: ExtendedProvider) => (
-                <Grid item xs={12} md={6} lg={4} key={provider.id}>
+                <Grid xs={12} md={6} lg={4} key={provider.id}>
                   <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                     <CardContent sx={{ flexGrow: 1 }}>
                       {/* Header with distance */}

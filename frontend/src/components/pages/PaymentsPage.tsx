@@ -113,7 +113,8 @@ const PaymentsPage: React.FC = () => {
 
   useEffect(() => {
     if (paymentsData?.data) {
-      setPayments(paymentsData.data);
+      const data = paymentsData.data as any;
+      setPayments(Array.isArray(data) ? data : (data.payments || []));
     }
   }, [paymentsData]);
 
@@ -217,7 +218,7 @@ const PaymentsPage: React.FC = () => {
 
     return (
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -232,7 +233,7 @@ const PaymentsPage: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -247,7 +248,7 @@ const PaymentsPage: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -264,7 +265,7 @@ const PaymentsPage: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>

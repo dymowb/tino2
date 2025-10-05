@@ -5,6 +5,8 @@ import { User, UserType } from '@/models/User';
 import { Provider } from '@/models/Provider';
 import { Booking, BookingStatus, PaymentStatus } from '@/models/Booking';
 import { Review } from '@/models/Review';
+import { Conversation, ConversationType } from '@/models/Conversation';
+import { Message, MessageType } from '@/models/Message';
 import { passwordService } from '@/utils/password';
 import logger from '@/config/logger';
 
@@ -77,6 +79,105 @@ const LAST_NAMES = [
   'Allen', 'King', 'Wright', 'Scott', 'Torres', 'Nguyen', 'Hill', 'Flores',
   'Green', 'Adams', 'Nelson', 'Baker', 'Hall', 'Rivera', 'Campbell', 'Mitchell'
 ];
+
+const MESSAGE_TEMPLATES = {
+  customerInitial: [
+    "Hi! I'm interested in your {service} service. Could you provide a quote?",
+    "Hello, I saw your profile and would like to schedule {service}. Are you available this week?",
+    "Good morning! I need {service} done. What's your availability and pricing?",
+    "Hi there! Could you help me with {service}? I'd like to discuss the details.",
+    "Hello! I'm looking for someone to do {service}. Can we discuss timing and cost?",
+    "Hi! I need {service} service urgently. Are you available tomorrow?",
+    "Good afternoon! Could you provide an estimate for {service}?",
+    "Hello! I found your profile and need {service}. What's your rate?",
+    "Hi! Could you help me with {service}? When would be a good time to discuss?",
+    "Good morning! I'm interested in booking {service}. What information do you need?"
+  ],
+  providerResponse: [
+    "Hello! I'd be happy to help with {service}. Could you tell me more about the scope of work?",
+    "Hi there! Thanks for reaching out. I'm available for {service}. What's your timeline?",
+    "Good to hear from you! I specialize in {service}. Could you share more details about your needs?",
+    "Hello! I can definitely help with {service}. What's the size of the area/project?",
+    "Hi! I'd love to work on your {service} project. When would you like to schedule it?",
+    "Thank you for contacting me! I have experience with {service}. What's your budget range?",
+    "Hello! I'm available for {service}. Could you send me some photos of the space?",
+    "Hi! {service} is one of my specialties. What date works best for you?",
+    "Good to meet you! I can provide {service}. Would you like to schedule a consultation?",
+    "Hello! I'd be happy to quote your {service} project. What are the specific requirements?"
+  ],
+  customerDetails: [
+    "The area is about 1200 sq ft. I'm flexible with timing, preferably weekends.",
+    "It's a 2-bedroom apartment. I can be available weekday evenings or weekends.",
+    "Medium-sized project, roughly 800 sq ft. I'd like it done within the next two weeks.",
+    "It's a standard 3-bedroom house. Budget is around $200-400. Is that reasonable?",
+    "Small to medium job, probably 2-3 hours of work. Morning times work best for me.",
+    "The space is about 1000 sq ft. I need it done before next Friday if possible.",
+    "It's a one-bedroom condo. I'm looking for quality work, budget is flexible.",
+    "Average sized home, 1500 sq ft. I can work around your schedule.",
+    "It's urgent - needed within 3 days. The area is approximately 600 sq ft.",
+    "Standard residential project. I'm available most days after 3 PM."
+  ],
+  providerQuote: [
+    "Based on your description, I can do this for $250. Includes all materials and cleanup.",
+    "For a job this size, my rate would be $180. I can start this weekend if that works.",
+    "I'd quote $320 for this project, which includes a 1-year warranty on the work.",
+    "My estimate is $150 for this. I'm available Tuesday or Wednesday this week.",
+    "I can do this for $275. That covers everything - materials, labor, and cleanup.",
+    "For your project, I'd charge $200. I can schedule it for next Monday.",
+    "My quote is $160. I use high-quality materials and guarantee satisfaction.",
+    "I'd estimate $290 for this job. Includes preparation, work, and final inspection.",
+    "For this size project, $220 seems fair. I can fit you in this Thursday.",
+    "My rate for this would be $195. I'm flexible on timing to work around your schedule."
+  ],
+  customerAcceptance: [
+    "That sounds perfect! When can we schedule it?",
+    "Great price! I'd like to book you. What's the next step?",
+    "Excellent! I accept your quote. How do we proceed?",
+    "That works for me! Can we set up a time?",
+    "Perfect! I'm ready to move forward. What do you need from me?",
+    "Sounds good! When is your earliest availability?",
+    "I'm happy with that quote. Let's schedule the work.",
+    "Great! I'd like to book this service. What's your process?",
+    "That's reasonable! Can we arrange a start date?",
+    "Wonderful! I accept. How soon can you begin?"
+  ],
+  scheduling: [
+    "I can start Monday at 9 AM. Does that work for you?",
+    "How about Wednesday morning? I typically start around 8:30 AM.",
+    "I have availability Friday afternoon. Would 2 PM be good?",
+    "This Thursday at 10 AM works for me. Is that convenient?",
+    "I can fit you in Tuesday morning. Shall we say 9:30 AM?",
+    "Monday works perfectly! 9 AM it is. I'll be there promptly.",
+    "Wednesday at 2 PM is perfect. I'll plan for about 3 hours of work.",
+    "Friday morning works great! I'll arrive at 9 AM with all the equipment.",
+    "Tuesday at 10 AM sounds good. I'll send you a confirmation text.",
+    "Thursday is perfect! I'll be there at 2 PM sharp. Looking forward to it!"
+  ],
+  workUpdates: [
+    "Just arrived and getting set up. Everything looks good!",
+    "About 50% complete. So far everything is going smoothly.",
+    "Work is progressing well. Should be finished within the estimated time.",
+    "Almost done! Just doing final touches. You'll love the results.",
+    "Completed! Everything looks great. Ready for your inspection.",
+    "Starting the prep work now. Weather conditions are perfect.",
+    "Taking a short break. Work is on schedule and looking excellent.",
+    "Halfway through! The quality is turning out even better than expected.",
+    "Just finished the main work. Now doing cleanup and final details.",
+    "All set! Work is complete and area is cleaned up. Please take a look!"
+  ],
+  completion: [
+    "Work is all done! Very pleased with how it turned out. Thank you!",
+    "Looks fantastic! Thank you for the excellent service.",
+    "Perfect! Exactly what I was hoping for. Will definitely recommend you.",
+    "Amazing work! So happy with the results. Worth every penny.",
+    "Excellent job! Thank you for being professional and thorough.",
+    "Wonderful! You exceeded my expectations. Will hire you again.",
+    "Thank you for the great work! The quality is outstanding.",
+    "Perfect! Thanks for completing it on time and on budget.",
+    "Fantastic results! I'm very satisfied with your service.",
+    "Excellent work! Thank you for your attention to detail."
+  ]
+};
 
 const REVIEW_TEMPLATES = {
   5: [
@@ -159,6 +260,7 @@ class DatabaseSeeder {
   private users: User[] = [];
   private providers: Provider[] = [];
   private bookings: Booking[] = [];
+  private conversations: Conversation[] = [];
 
   async seed(): Promise<void> {
     logger.info('Starting database seeding...');
@@ -167,6 +269,7 @@ class DatabaseSeeder {
       await this.clearDatabase();
       await this.seedUsers();
       await this.seedBookings();
+      await this.seedConversations();
       await this.seedReviews();
       logger.info('Database seeding completed successfully!');
     } catch (error) {
@@ -186,9 +289,13 @@ class DatabaseSeeder {
       const providerRepository = AppDataSource.getRepository(Provider);
       const bookingRepository = AppDataSource.getRepository(Booking);
       const reviewRepository = AppDataSource.getRepository(Review);
+      const messageRepository = AppDataSource.getRepository(Message);
+      const conversationRepository = AppDataSource.getRepository(Conversation);
 
-      // Clear all tables
+      // Clear all tables (order matters due to foreign keys)
       await reviewRepository.clear();
+      await messageRepository.clear();
+      await conversationRepository.clear();
       await bookingRepository.clear();
       await providerRepository.clear();
       await userRepository.clear();
@@ -549,6 +656,165 @@ class DatabaseSeeder {
     }
 
     logger.info(`Created ${reviewCount} diverse reviews (ratings 1-5 stars with realistic distribution)`);
+  }
+
+  private async seedConversations(): Promise<void> {
+    logger.info('Seeding conversations and messages for demo customer...');
+
+    const conversationRepository = AppDataSource.getRepository(Conversation);
+    const messageRepository = AppDataSource.getRepository(Message);
+
+    // Get demo customer
+    const demoCustomer = this.users.find(u => u.email === 'customer@demo.com');
+    if (!demoCustomer) {
+      logger.error('Demo customer not found');
+      return;
+    }
+
+    // Get providers to create conversations with (use first 25 providers)
+    const providersToMessage = this.providers.slice(0, 25);
+
+    // Create conversations - target 55+ total conversations for robust testing
+    let conversationCount = 0;
+
+    // Create conversations with each provider (25 conversations)
+    for (const provider of providersToMessage) {
+      const providerUser = this.users.find(u => u.id === provider.userId);
+      if (!providerUser) continue;
+
+      await this.createConversationWithMessages(
+        conversationRepository,
+        messageRepository,
+        demoCustomer,
+        providerUser,
+        provider.services[0] || 'general service'
+      );
+      conversationCount++;
+    }
+
+    // Create additional conversations for variety (30 more conversations)
+    for (let i = 0; i < 30; i++) {
+      const randomProvider = getRandomItem(this.providers);
+      const providerUser = this.users.find(u => u.id === randomProvider.userId);
+      if (!providerUser) continue;
+
+      const randomService = getRandomItem(randomProvider.services);
+      await this.createConversationWithMessages(
+        conversationRepository,
+        messageRepository,
+        demoCustomer,
+        providerUser,
+        randomService
+      );
+      conversationCount++;
+    }
+
+    logger.info(`Created ${conversationCount} conversations with realistic message histories`);
+  }
+
+  private async createConversationWithMessages(
+    conversationRepository: any,
+    messageRepository: any,
+    customer: User,
+    provider: User,
+    service: string
+  ): Promise<void> {
+    // Create conversation
+    const conversation = conversationRepository.create({
+      type: ConversationType.DIRECT,
+      title: `${service} Service Discussion`,
+      participants: [customer, provider],
+      isActive: true,
+      metadata: {
+        serviceType: service,
+        customerName: `${customer.firstName} ${customer.lastName}`,
+        providerName: `${provider.firstName} ${provider.lastName}`
+      }
+    });
+
+    const savedConversation = await conversationRepository.save(conversation);
+    this.conversations.push(savedConversation);
+
+    // Generate conversation flow with 3-12 messages
+    const messageCount = Math.floor(Math.random() * 10) + 3;
+    const messages: any[] = [];
+
+    // Message 1: Customer initiates
+    let messageContent = getRandomItem(MESSAGE_TEMPLATES.customerInitial).replace('{service}', service);
+    let message = messageRepository.create({
+      conversationId: savedConversation.id,
+      senderId: customer.id,
+      receiverId: provider.id,
+      message: messageContent,
+      messageType: MessageType.TEXT,
+      isRead: true,
+      isDelivered: true
+    });
+    messages.push(message);
+
+    // Message 2: Provider responds
+    messageContent = getRandomItem(MESSAGE_TEMPLATES.providerResponse).replace('{service}', service);
+    message = messageRepository.create({
+      conversationId: savedConversation.id,
+      senderId: provider.id,
+      receiverId: customer.id,
+      message: messageContent,
+      messageType: MessageType.TEXT,
+      isRead: true,
+      isDelivered: true
+    });
+    messages.push(message);
+
+    // Continue conversation based on message count
+    for (let i = 2; i < messageCount; i++) {
+      let sender, receiver, templates;
+
+      if (i % 2 === 0) { // Customer's turn (even numbers after first two)
+        sender = customer;
+        receiver = provider;
+        templates = this.getCustomerTemplates(i, messageCount);
+      } else { // Provider's turn (odd numbers after first two)
+        sender = provider;
+        receiver = customer;
+        templates = this.getProviderTemplates(i, messageCount);
+      }
+
+      messageContent = (getRandomItem(templates) as string).replace('{service}', service);
+
+      message = messageRepository.create({
+        conversationId: savedConversation.id,
+        senderId: sender.id,
+        receiverId: receiver.id,
+        message: messageContent,
+        messageType: MessageType.TEXT,
+        isRead: Math.random() > 0.2, // 80% read
+        isDelivered: true
+      });
+      messages.push(message);
+    }
+
+    // Save all messages
+    await messageRepository.save(messages);
+
+    // Update conversation with last message info
+    const lastMessage = messages[messages.length - 1];
+    savedConversation.lastMessageId = lastMessage.id;
+    savedConversation.lastMessageAt = new Date();
+    await conversationRepository.save(savedConversation);
+  }
+
+  private getCustomerTemplates(messageIndex: number, totalMessages: number): string[] {
+    if (messageIndex === 2) return MESSAGE_TEMPLATES.customerDetails;
+    if (messageIndex === 4) return MESSAGE_TEMPLATES.customerAcceptance;
+    if (messageIndex === totalMessages - 1 && Math.random() > 0.3) return MESSAGE_TEMPLATES.completion;
+    return [...MESSAGE_TEMPLATES.customerDetails, ...MESSAGE_TEMPLATES.customerAcceptance];
+  }
+
+  private getProviderTemplates(messageIndex: number, totalMessages: number): string[] {
+    if (messageIndex === 3) return MESSAGE_TEMPLATES.providerQuote;
+    if (messageIndex === 5) return MESSAGE_TEMPLATES.scheduling;
+    if (messageIndex > 5 && messageIndex < totalMessages - 1) return MESSAGE_TEMPLATES.workUpdates;
+    return [...MESSAGE_TEMPLATES.providerQuote, ...MESSAGE_TEMPLATES.scheduling];
   }
 }
 

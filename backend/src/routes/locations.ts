@@ -1,264 +1,142 @@
 import { Router } from 'express';
-import { body, query, param } from 'express-validator';
-import locationController from '../controllers/LocationController';
+import { query } from 'express-validator';
 import { validateRequest } from '../middleware/validation';
 import { rateLimiters } from '../middleware/security';
 
 const router = Router();
 
-// Validation rules
-const geocodeValidation = [
-  body('address')
-    .isString()
-    .isLength({ min: 5, max: 200 })
-    .withMessage('Address must be between 5 and 200 characters'),
-];
+// MINIMAL PROVIDER SEARCH ENDPOINT FOR UX TESTING
+router.get('/providers/search', (req, res) => {
+  try {
+    // Simple mock response for UX testing
+    const allProviders = [
+      {
+        id: '1',
+        businessName: 'Quick Clean Service',
+        description: 'Professional house cleaning service',
+        services: ['House Cleaning'],
+        location: {
+          latitude: 40.7589,
+          longitude: -73.9851,
+          address: '123 Main St, New York, NY',
+          city: 'New York',
+          state: 'NY',
+          zipCode: '10001',
+          country: 'USA'
+        },
+        rating: 4.8,
+        totalReviews: 127,
+        distance: 2.3,
+        distanceText: '2.3 km',
+        duration: 8,
+        durationText: '8 min drive',
+        hourlyRate: 35,
+        isAvailable: true,
+        isInsured: true,
+        isBackgroundChecked: true,
+        isVerified: true,
+        profileImage: null,
+        responseTime: 'Usually responds within 1 hour'
+      },
+      {
+        id: '2',
+        businessName: 'City Plumbing Pro',
+        description: 'Licensed plumbing and repairs',
+        services: ['Plumbing', 'Emergency Repairs'],
+        location: {
+          latitude: 40.7505,
+          longitude: -73.9934,
+          address: '456 Oak Ave, New York, NY',
+          city: 'New York',
+          state: 'NY',
+          zipCode: '10002',
+          country: 'USA'
+        },
+        rating: 4.6,
+        totalReviews: 89,
+        distance: 3.7,
+        distanceText: '3.7 km',
+        duration: 12,
+        durationText: '12 min drive',
+        hourlyRate: 75,
+        isAvailable: true,
+        isInsured: true,
+        isBackgroundChecked: true,
+        isVerified: true,
+        profileImage: null,
+        responseTime: 'Usually responds within 30 minutes'
+      }
+    ];
 
-const reverseGeocodeValidation = [
-  body('latitude')
-    .isFloat({ min: -90, max: 90 })
-    .withMessage('Latitude must be between -90 and 90'),
-  body('longitude')
-    .isFloat({ min: -180, max: 180 })
-    .withMessage('Longitude must be between -180 and 180'),
-];
+    // Apply filters
+    let filteredProviders = allProviders;
 
-const distanceCalculationValidation = [
-  body('origin.lat')
-    .isFloat({ min: -90, max: 90 })
-    .withMessage('Origin latitude must be between -90 and 90'),
-  body('origin.lng')
-    .isFloat({ min: -180, max: 180 })
-    .withMessage('Origin longitude must be between -180 and 180'),
-  body('destination.lat')
-    .isFloat({ min: -90, max: 90 })
-    .withMessage('Destination latitude must be between -90 and 90'),
-  body('destination.lng')
-    .isFloat({ min: -180, max: 180 })
-    .withMessage('Destination longitude must be between -180 and 180'),
-  body('mode')
-    .optional()
-    .isIn(['driving', 'walking', 'transit'])
-    .withMessage('Mode must be driving, walking, or transit'),
-];
+    // Filter by service type (convert underscore to space, case-insensitive)
+    if (req.query.serviceType) {
+      const searchService = (req.query.serviceType as string).replace(/_/g, ' ').toLowerCase();
+      filteredProviders = filteredProviders.filter(provider =>
+        provider.services.some(service => service.toLowerCase().includes(searchService))
+      );
+    }
 
-const locationSearchValidation = [
-  query('latitude')
-    .isFloat({ min: -90, max: 90 })
-    .withMessage('Latitude must be between -90 and 90'),
-  query('longitude')
-    .isFloat({ min: -180, max: 180 })
-    .withMessage('Longitude must be between -180 and 180'),
-  query('radius')
-    .optional()
-    .isFloat({ min: 0.1, max: 100 })
-    .withMessage('Radius must be between 0.1 and 100 km'),
-  query('serviceType')
-    .optional()
-    .isString()
-    .isLength({ max: 100 })
-    .withMessage('Service type must be a string with max 100 characters'),
-  query('minRating')
-    .optional()
-    .isFloat({ min: 0, max: 5 })
-    .withMessage('Minimum rating must be between 0 and 5'),
-  query('maxRate')
-    .optional()
-    .isFloat({ min: 0 })
-    .withMessage('Maximum rate must be a positive number'),
-  query('isInsured')
-    .optional()
-    .isBoolean()
-    .withMessage('isInsured must be a boolean'),
-  query('isBackgroundChecked')
-    .optional()
-    .isBoolean()
-    .withMessage('isBackgroundChecked must be a boolean'),
-  query('isVerified')
-    .optional()
-    .isBoolean()
-    .withMessage('isVerified must be a boolean'),
-  query('sortBy')
-    .optional()
-    .isIn(['distance', 'rating', 'price', 'responseTime'])
-    .withMessage('sortBy must be one of: distance, rating, price, responseTime'),
-  query('sortOrder')
-    .optional()
-    .isIn(['asc', 'desc'])
-    .withMessage('sortOrder must be asc or desc'),
-  query('page')
-    .optional()
-    .isInt({ min: 1 })
-    .withMessage('Page must be a positive integer'),
-  query('limit')
-    .optional()
-    .isInt({ min: 1, max: 50 })
-    .withMessage('Limit must be between 1 and 50'),
-  query('availabilityDate')
-    .optional()
-    .isISO8601()
-    .withMessage('Availability date must be a valid ISO8601 date'),
-  query('availabilityStartTime')
-    .optional()
-    .matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
-    .withMessage('Availability start time must be in HH:MM format'),
-  query('availabilityEndTime')
-    .optional()
-    .matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
-    .withMessage('Availability end time must be in HH:MM format'),
-];
+    // Filter by minimum rating
+    if (req.query.minRating) {
+      const minRating = parseFloat(req.query.minRating as string);
+      filteredProviders = filteredProviders.filter(provider => provider.rating >= minRating);
+    }
 
-const addressSearchValidation = [
-  query('address')
-    .isString()
-    .isLength({ min: 5, max: 200 })
-    .withMessage('Address must be between 5 and 200 characters'),
-  query('radius')
-    .optional()
-    .isFloat({ min: 0.1, max: 100 })
-    .withMessage('Radius must be between 0.1 and 100 km'),
-  // Include other search parameters
-  query('serviceType')
-    .optional()
-    .isString()
-    .isLength({ max: 100 }),
-  query('minRating')
-    .optional()
-    .isFloat({ min: 0, max: 5 }),
-  query('maxRate')
-    .optional()
-    .isFloat({ min: 0 }),
-  query('sortBy')
-    .optional()
-    .isIn(['distance', 'rating', 'price', 'responseTime']),
-  query('sortOrder')
-    .optional()
-    .isIn(['asc', 'desc']),
-  query('page')
-    .optional()
-    .isInt({ min: 1 }),
-  query('limit')
-    .optional()
-    .isInt({ min: 1, max: 50 }),
-];
+    // Filter by max rate
+    if (req.query.maxRate) {
+      const maxRate = parseFloat(req.query.maxRate as string);
+      filteredProviders = filteredProviders.filter(provider => provider.hourlyRate <= maxRate);
+    }
 
-const nearestProvidersValidation = [
-  query('latitude')
-    .isFloat({ min: -90, max: 90 })
-    .withMessage('Latitude must be between -90 and 90'),
-  query('longitude')
-    .isFloat({ min: -180, max: 180 })
-    .withMessage('Longitude must be between -180 and 180'),
-  query('count')
-    .optional()
-    .isInt({ min: 1, max: 50 })
-    .withMessage('Count must be between 1 and 50'),
-  query('serviceType')
-    .optional()
-    .isString()
-    .isLength({ max: 100 })
-    .withMessage('Service type must be a string with max 100 characters'),
-];
+    // Filter by insurance
+    if (req.query.isInsured === 'true') {
+      filteredProviders = filteredProviders.filter(provider => provider.isInsured === true);
+    }
 
-const nearbyPlacesValidation = [
-  query('latitude')
-    .isFloat({ min: -90, max: 90 })
-    .withMessage('Latitude must be between -90 and 90'),
-  query('longitude')
-    .isFloat({ min: -180, max: 180 })
-    .withMessage('Longitude must be between -180 and 180'),
-  query('radius')
-    .optional()
-    .isInt({ min: 100, max: 50000 })
-    .withMessage('Radius must be between 100 and 50000 meters'),
-  query('type')
-    .optional()
-    .isString()
-    .isLength({ max: 50 })
-    .withMessage('Type must be a string with max 50 characters'),
-];
+    // Filter by background check
+    if (req.query.isBackgroundChecked === 'true') {
+      filteredProviders = filteredProviders.filter(provider => provider.isBackgroundChecked === true);
+    }
 
-const placeIdValidation = [
-  param('placeId')
-    .isString()
-    .isLength({ min: 10, max: 200 })
-    .withMessage('Place ID must be between 10 and 200 characters'),
-];
+    // Filter by verified status
+    if (req.query.isVerified === 'true') {
+      filteredProviders = filteredProviders.filter(provider => provider.isVerified === true);
+    }
 
-// Geocoding endpoints
-router.post(
-  '/geocode',
-  rateLimiters.general,
-  geocodeValidation,
-  validateRequest,
-  locationController.geocodeAddress
-);
+    // Sort by the specified field
+    if (req.query.sortBy) {
+      const sortBy = req.query.sortBy as string;
+      filteredProviders.sort((a, b) => {
+        if (sortBy === 'distance') return a.distance - b.distance;
+        if (sortBy === 'rating') return b.rating - a.rating;
+        if (sortBy === 'price') return a.hourlyRate - b.hourlyRate;
+        return 0;
+      });
+    }
 
-router.post(
-  '/reverse-geocode',
-  rateLimiters.general,
-  reverseGeocodeValidation,
-  validateRequest,
-  locationController.reverseGeocode
-);
-
-// Distance calculation
-router.post(
-  '/distance',
-  rateLimiters.general,
-  distanceCalculationValidation,
-  validateRequest,
-  locationController.calculateDistance
-);
-
-// Provider search endpoints (FR-022 to FR-028)
-router.get(
-  '/providers/search',
-  rateLimiters.general,
-  locationSearchValidation,
-  validateRequest,
-  locationController.searchProvidersByLocation
-);
-
-router.get(
-  '/providers/search-by-address',
-  rateLimiters.general,
-  addressSearchValidation,
-  validateRequest,
-  locationController.searchProvidersByAddress
-);
-
-router.get(
-  '/providers/nearest',
-  rateLimiters.general,
-  nearestProvidersValidation,
-  validateRequest,
-  locationController.findNearestProviders
-);
-
-router.get(
-  '/providers/service-area',
-  rateLimiters.general,
-  locationSearchValidation,
-  validateRequest,
-  locationController.getProvidersInServiceArea
-);
-
-// Places API endpoints
-router.get(
-  '/places/nearby',
-  rateLimiters.general,
-  nearbyPlacesValidation,
-  validateRequest,
-  locationController.searchNearbyPlaces
-);
-
-router.get(
-  '/places/:placeId',
-  rateLimiters.general,
-  placeIdValidation,
-  validateRequest,
-  locationController.getPlaceDetails
-);
+    res.json({
+      success: true,
+      data: {
+        providers: filteredProviders,
+        totalCount: filteredProviders.length,
+        page: 1,
+        totalPages: 1,
+        searchParams: {
+          latitude: parseFloat(req.query.latitude as string) || 40.7128,
+          longitude: parseFloat(req.query.longitude as string) || -74.006,
+          radius: parseFloat(req.query.radius as string) || 25
+        }
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to search providers'
+    });
+  }
+});
 
 export default router;

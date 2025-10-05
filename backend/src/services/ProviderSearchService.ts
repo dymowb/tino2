@@ -102,8 +102,10 @@ export class ProviderSearchService {
 
       // Apply filters
       if (params.serviceType) {
-        query = query.andWhere('JSON_EXTRACT(provider.services, "$") LIKE :serviceType', {
-          serviceType: `%${params.serviceType}%`
+        // Normalize service type: convert underscores to spaces and use case-insensitive match
+        const normalizedService = params.serviceType.replace(/_/g, ' ');
+        query = query.andWhere('LOWER(JSON_EXTRACT(provider.services, "$")) LIKE LOWER(:serviceType)', {
+          serviceType: `%${normalizedService}%`
         });
       }
 

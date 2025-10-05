@@ -27,7 +27,7 @@ import {
   Remove,
   LocationOn,
   Person,
-  Priority
+  PriorityHigh
 } from '@mui/icons-material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -274,7 +274,7 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
                         </Typography>
                       </Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        <Priority sx={{ fontSize: 'small' }} />
+                        <PriorityHigh sx={{ fontSize: 'small' }} />
                         <Chip 
                           label={quoteRequest.urgency.toUpperCase()} 
                           size="small" 
@@ -438,14 +438,15 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
               <DateTimePicker
                 label="Quote Valid Until"
                 value={formData.validUntil}
-                onChange={(date) => setFormData({ ...formData, validUntil: date || addDays(new Date(), 30) })}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                    error: !!errors.validUntil,
-                    helperText: errors.validUntil
-                  }
-                }}
+                onChange={(date) => setFormData({ ...formData, validUntil: (date as Date) || addDays(new Date(), 30) })}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    fullWidth
+                    error={!!errors.validUntil}
+                    helperText={errors.validUntil}
+                  />
+                )}
                 minDateTime={new Date()}
               />
             </Grid>

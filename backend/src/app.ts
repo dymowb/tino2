@@ -20,7 +20,7 @@ import messageRoutes from '@/routes/messages';
 import paymentRoutes from '@/routes/payments';
 import reviewRoutes from '@/routes/reviews';
 import notificationRoutes from '@/routes/notifications';
-// import locationRoutes from '@/routes/locations';
+import locationRoutes from '@/routes/locations';
 // import adminRoutes from '@/routes/admin';
 import messageService from '@/services/MessageService';
 
@@ -112,7 +112,7 @@ export class App {
     // this.app.use(`/api/${config.server.apiVersion}/browser`, browserRoutes);
     this.app.use(`/api/${config.server.apiVersion}/payments`, paymentRoutes);
     this.app.use(`/api/${config.server.apiVersion}/reviews`, reviewRoutes);
-    // this.app.use(`/api/${config.server.apiVersion}/locations`, locationRoutes);
+    this.app.use(`/api/${config.server.apiVersion}/locations`, locationRoutes);
     // this.app.use(`/api/${config.server.apiVersion}/admin`, adminRoutes);
 
     this.app.all('*', (req, res) => {

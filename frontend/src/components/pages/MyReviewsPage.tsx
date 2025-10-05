@@ -35,7 +35,6 @@ import {
   Flag,
   Search,
   FilterList,
-  Review,
   RateReview,
   BusinessCenter
 } from '@mui/icons-material';
@@ -206,9 +205,10 @@ const MyReviewsPage: React.FC = () => {
 
   const getEligibleBookingsWithoutReviews = () => {
     if (!eligibleBookings?.data || !customerReviews?.data) return [];
-    
+    if (!Array.isArray(eligibleBookings.data) || !Array.isArray(customerReviews.data)) return [];
+
     const reviewedBookingIds = customerReviews.data.map((review: any) => review.bookingId);
-    return eligibleBookings.data.filter((booking: any) => 
+    return eligibleBookings.data.filter((booking: any) =>
       !reviewedBookingIds.includes(booking.id)
     );
   };
@@ -279,7 +279,7 @@ const MyReviewsPage: React.FC = () => {
               </Typography>
               <Grid container spacing={2}>
                 {Object.entries(review.criteria).map(([key, value]) => (
-                  <Grid item key={key}>
+                  <Grid item xs={12} sm={6} md={2.4} key={key}>
                     <Box sx={{ textAlign: 'center' }}>
                       <Typography variant="caption" display="block" sx={{ mb: 0.5 }}>
                         {key.charAt(0).toUpperCase() + key.slice(1)}
@@ -345,7 +345,7 @@ const MyReviewsPage: React.FC = () => {
         </Typography>
         <Grid container spacing={2}>
           {eligibleBookingsData.map((booking: any) => (
-            <Grid item xs={12} md={6} key={booking.id}>
+            <Grid xs={12} md={6} key={booking.id}>
               <Card sx={{ height: '100%' }}>
                 <CardContent>
                   <Box sx={{ display: 'flex', justify: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -390,7 +390,7 @@ const MyReviewsPage: React.FC = () => {
         {/* Header */}
         <Box sx={{ mb: 4 }}>
           <Typography variant="h4" component="h1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Review />
+            <RateReview />
             My Reviews
           </Typography>
           <Typography variant="body1" color="text.secondary">
@@ -426,7 +426,7 @@ const MyReviewsPage: React.FC = () => {
         {/* Filter and Search Bar */}
         <Paper sx={{ p: 2, mb: 3 }}>
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={4}>
+            <Grid xs={12} md={4}>
               <TextField
                 fullWidth
                 placeholder="Search reviews..."
@@ -442,12 +442,12 @@ const MyReviewsPage: React.FC = () => {
                 size="small"
               />
             </Grid>
-            <Grid item xs={6} md={2}>
+            <Grid xs={6} md={2}>
               <FormControl fullWidth size="small">
                 <InputLabel>Rating</InputLabel>
                 <Select
                   value={ratingFilter}
-                  onChange={(e) => setRatingFilter(e.target.value)}
+                  onChange={(e) => setRatingFilter(e.target.value as number | "")}
                   label="Rating"
                 >
                   <MenuItem value="">All Ratings</MenuItem>
@@ -459,7 +459,7 @@ const MyReviewsPage: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={6} md={2}>
+            <Grid xs={6} md={2}>
               <FormControl fullWidth size="small">
                 <InputLabel>Sort By</InputLabel>
                 <Select
@@ -473,7 +473,7 @@ const MyReviewsPage: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid xs={12} md={4}>
               <Button
                 variant="outlined"
                 startIcon={<FilterList />}

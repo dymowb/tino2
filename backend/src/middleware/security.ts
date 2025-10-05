@@ -61,8 +61,8 @@ export const rateLimiters = {
   }),
 
   auth: rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10, // 10 attempts per window
+    windowMs: 1 * 60 * 1000, // 1 minute (reduced for development)
+    max: 100, // 100 attempts per window (increased for development/debugging)
     message: {
       success: false,
       error: 'Too many authentication attempts, please try again later',

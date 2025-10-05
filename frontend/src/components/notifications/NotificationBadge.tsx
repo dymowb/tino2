@@ -294,7 +294,7 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
         )}
 
         {/* View All Footer */}
-        {recentNotifications?.data?.length > 0 && (
+        {(recentNotifications?.data?.length || 0) > 0 && (
           <>
             <Divider />
             <MenuItem onClick={handleViewAllNotifications}>

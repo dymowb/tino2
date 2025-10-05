@@ -65,7 +65,8 @@ const RefundDialog: React.FC<Props> = ({
   const [refundApplicationFee, setRefundApplicationFee] = useState(false);
 
   const refundMutation = useMutation({
-    mutationFn: apiService.refundPayment,
+    mutationFn: ({ paymentId, refundData }: { paymentId: string; refundData: any }) =>
+      apiService.refundPayment(paymentId, refundData),
     onSuccess: () => {
       toast.success('Refund processed successfully');
       onRefundSuccess();
@@ -112,7 +113,7 @@ const RefundDialog: React.FC<Props> = ({
       reverseTransfer: true, // Reverse the transfer to provider if applicable
     };
 
-    refundMutation.mutate(payment.id, refundData);
+    refundMutation.mutate({ paymentId: payment.id, refundData });
   };
 
   const formatAmount = (amount: number, currency = 'USD') => {

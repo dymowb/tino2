@@ -45,8 +45,16 @@ const RegisterForm: React.FC = () => {
       return;
     }
 
+    // Enhanced password validation to match backend requirements
     if (formData.password.length < 8) {
       setError('Password must be at least 8 characters long');
+      setLoading(false);
+      return;
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
+    if (!passwordRegex.test(formData.password)) {
+      setError('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&)');
       setLoading(false);
       return;
     }
@@ -62,7 +70,15 @@ const RegisterForm: React.FC = () => {
       });
       navigate('/');
     } catch (error: any) {
-      setError(error.response?.data?.error || error.message || 'Registration failed');
+      // Enhanced error handling for better user experience
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Registration failed';
+
+      // Handle validation errors specifically
+      if (error.response?.data?.errors?.password) {
+        setError(error.response.data.errors.password[0]);
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -210,7 +226,7 @@ const RegisterForm: React.FC = () => {
               onChange={handleChange}
               margin="normal"
               required
-              helperText="Must be at least 8 characters"
+              helperText="Must contain: 8+ characters, uppercase, lowercase, number, and special character (@$!%*?&)"
               sx={{ mb: 2 }}
             />
 

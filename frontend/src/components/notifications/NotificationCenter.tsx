@@ -385,7 +385,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   key={key}
                   control={
                     <Switch
-                      checked={value}
+                      checked={value as boolean}
                       onChange={(e) => {
                         const newPrefs = {
                           ...preferences,
@@ -409,7 +409,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   key={key}
                   control={
                     <Switch
-                      checked={value}
+                      checked={value as boolean}
                       onChange={(e) => {
                         const newPrefs = {
                           ...preferences,
@@ -433,7 +433,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   key={key}
                   control={
                     <Switch
-                      checked={value}
+                      checked={value as boolean}
                       onChange={(e) => {
                         const newPrefs = {
                           ...preferences,
