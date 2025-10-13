@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -69,13 +70,16 @@ function TabPanel(props: TabPanelProps) {
 const MyReviewsPage: React.FC = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // State management
   const [activeTab, setActiveTab] = useState(0);
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [ratingFilter, setRatingFilter] = useState<number | ''>('');
+  const [ratingFilter, setRatingFilter] = useState<number | ''>(
+    searchParams.get('rating') ? Number(searchParams.get('rating')) : ''
+  );
   const [searchQuery, setSearchQuery] = useState('');
 
   // Dialog states
@@ -158,6 +162,17 @@ const MyReviewsPage: React.FC = () => {
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
     setPage(1); // Reset page when changing tabs
+  };
+
+  const handleRatingFilterChange = (newRating: number | '') => {
+    setRatingFilter(newRating);
+    // Update URL parameters
+    if (newRating) {
+      searchParams.set('rating', String(newRating));
+    } else {
+      searchParams.delete('rating');
+    }
+    setSearchParams(searchParams);
   };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, review: any) => {
@@ -447,7 +462,7 @@ const MyReviewsPage: React.FC = () => {
                 <InputLabel>Rating</InputLabel>
                 <Select
                   value={ratingFilter}
-                  onChange={(e) => setRatingFilter(e.target.value as number | "")}
+                  onChange={(e) => handleRatingFilterChange(e.target.value as number | "")}
                   label="Rating"
                 >
                   <MenuItem value="">All Ratings</MenuItem>
@@ -479,7 +494,7 @@ const MyReviewsPage: React.FC = () => {
                 startIcon={<FilterList />}
                 onClick={() => {
                   setSearchQuery('');
-                  setRatingFilter('');
+                  handleRatingFilterChange('');
                   setSortBy('createdAt');
                   setSortOrder('desc');
                   setPage(1);

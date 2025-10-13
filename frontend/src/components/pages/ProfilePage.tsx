@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { apiService } from '../../services/api';
+import PasswordChangeDialog from '../profile/PasswordChangeDialog';
+import AccountDeletionDialog from '../profile/AccountDeletionDialog';
 
 interface UserProfile {
   id: number;
@@ -36,6 +38,8 @@ const ProfilePage: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [deletionDialogOpen, setDeletionDialogOpen] = useState(false);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -515,7 +519,7 @@ const ProfilePage: React.FC = () => {
         
         <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
           <button
-            onClick={() => alert('Change password feature integration pending')}
+            onClick={() => setPasswordDialogOpen(true)}
             style={{
               padding: '10px 20px',
               backgroundColor: '#f39c12',
@@ -560,11 +564,7 @@ const ProfilePage: React.FC = () => {
           </button>
           
           <button
-            onClick={() => {
-              if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-                alert('Account deletion feature integration pending');
-              }
-            }}
+            onClick={() => setDeletionDialogOpen(true)}
             style={{
               padding: '10px 20px',
               backgroundColor: '#e74c3c',
@@ -579,6 +579,18 @@ const ProfilePage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Password Change Dialog */}
+      <PasswordChangeDialog
+        open={passwordDialogOpen}
+        onClose={() => setPasswordDialogOpen(false)}
+      />
+
+      {/* Account Deletion Dialog */}
+      <AccountDeletionDialog
+        open={deletionDialogOpen}
+        onClose={() => setDeletionDialogOpen(false)}
+      />
     </div>
   );
 };

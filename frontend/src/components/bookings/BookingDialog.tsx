@@ -162,7 +162,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
       serviceType: formData.serviceType,
       description: formData.description,
       scheduledDate: formData.scheduledDate!.toISOString(),
-      estimatedDuration: formData.estimatedDuration,
+      estimatedDuration: Math.round(formData.estimatedDuration * 60), // Convert hours to minutes
       totalAmount: calculateEstimatedCost(),
       specialInstructions: formData.specialInstructions || undefined,
       location: formData.location
@@ -171,18 +171,8 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
     createBookingMutation.mutate(bookingData);
   };
 
-  const availableServices = [
-    'house_cleaning',
-    'deep_cleaning',
-    'plumbing',
-    'electrical',
-    'carpentry',
-    'painting',
-    'gardening',
-    'hvac',
-    'appliance_repair',
-    'pest_control'
-  ];
+  // Get services from the provider's service list
+  const availableServices = provider?.services || [];
 
   const formatServiceName = (service: string) => {
     return service.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());

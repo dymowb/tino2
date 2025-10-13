@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -77,9 +78,10 @@ interface Payment {
 }
 
 const PaymentsPage: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [currentTab, setCurrentTab] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('status') || '');
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
@@ -120,22 +122,33 @@ const PaymentsPage: React.FC = () => {
 
   const filteredPayments = payments.filter(payment => {
     if (!searchTerm) return true;
-    
+
     const searchLower = searchTerm.toLowerCase();
     const booking = payment.booking;
-    
+
     return (
       payment.id.toLowerCase().includes(searchLower) ||
       payment.description?.toLowerCase().includes(searchLower) ||
-      booking?.serviceType.toLowerCase().includes(searchLower) ||
-      booking?.customer.firstName.toLowerCase().includes(searchLower) ||
-      booking?.customer.lastName.toLowerCase().includes(searchLower) ||
-      booking?.provider.businessName.toLowerCase().includes(searchLower)
+      booking?.serviceType?.toLowerCase().includes(searchLower) ||
+      booking?.customer?.firstName?.toLowerCase().includes(searchLower) ||
+      booking?.customer?.lastName?.toLowerCase().includes(searchLower) ||
+      booking?.provider?.businessName?.toLowerCase().includes(searchLower)
     );
   });
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
+  };
+
+  const handleStatusFilterChange = (newStatus: string) => {
+    setStatusFilter(newStatus);
+    // Update URL parameters
+    if (newStatus) {
+      searchParams.set('status', newStatus);
+    } else {
+      searchParams.delete('status');
+    }
+    setSearchParams(searchParams);
   };
 
   const handlePaymentMenuClick = (event: React.MouseEvent<HTMLElement>, payment: Payment) => {
@@ -341,7 +354,7 @@ const PaymentsPage: React.FC = () => {
               size="small"
               label="Status"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => handleStatusFilterChange(e.target.value)}
               sx={{ minWidth: 120 }}
             >
               <MenuItem value="">All Status</MenuItem>
@@ -397,9 +410,9 @@ const PaymentsPage: React.FC = () => {
                             {payment.booking?.serviceType || payment.description}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            {isProvider 
-                              ? `${payment.booking?.customer.firstName} ${payment.booking?.customer.lastName}`
-                              : payment.booking?.provider.businessName
+                            {isProvider
+                              ? `${payment.booking?.customer?.firstName} ${payment.booking?.customer?.lastName}`
+                              : payment.booking?.provider?.businessName
                             }
                           </Typography>
                         </Box>

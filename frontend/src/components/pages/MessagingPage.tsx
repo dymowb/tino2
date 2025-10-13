@@ -20,6 +20,7 @@ import {
   Search as SearchIcon,
   Add as AddIcon,
   Message as MessageIcon,
+  Clear as ClearIcon,
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import apiService from '../../services/api';
@@ -176,6 +177,12 @@ const MessagingPage: React.FC = () => {
     refetch();
   };
 
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    // Refetch to ensure we have the full conversations list
+    refetch();
+  };
+
   return (
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
@@ -203,9 +210,19 @@ const MessagingPage: React.FC = () => {
                   ),
                   endAdornment: (
                     <InputAdornment position="end">
-                      <IconButton 
-                        size="small" 
+                      {searchTerm && (
+                        <IconButton
+                          size="small"
+                          onClick={handleClearSearch}
+                          title="Clear search"
+                        >
+                          <ClearIcon />
+                        </IconButton>
+                      )}
+                      <IconButton
+                        size="small"
                         onClick={() => setNewConversationOpen(true)}
+                        title="New conversation"
                       >
                         <AddIcon />
                       </IconButton>

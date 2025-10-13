@@ -3,10 +3,11 @@ import { AppDataSource } from '@/config/database';
 import { mongoClient } from '@/config/mongodb';
 import { User, UserType } from '@/models/User';
 import { Provider } from '@/models/Provider';
-import { Booking, BookingStatus, PaymentStatus } from '@/models/Booking';
+import { Booking, BookingStatus, PaymentStatus as BookingPaymentStatus } from '@/models/Booking';
 import { Review } from '@/models/Review';
 import { Conversation, ConversationType } from '@/models/Conversation';
 import { Message, MessageType } from '@/models/Message';
+import { Payment, PaymentStatus, PaymentMethod } from '@/models/Payment';
 import { passwordService } from '@/utils/password';
 import logger from '@/config/logger';
 
@@ -269,6 +270,7 @@ class DatabaseSeeder {
       await this.clearDatabase();
       await this.seedUsers();
       await this.seedBookings();
+      await this.seedPayments();
       await this.seedConversations();
       await this.seedReviews();
       logger.info('Database seeding completed successfully!');
@@ -288,6 +290,7 @@ class DatabaseSeeder {
       const userRepository = AppDataSource.getRepository(User);
       const providerRepository = AppDataSource.getRepository(Provider);
       const bookingRepository = AppDataSource.getRepository(Booking);
+      const paymentRepository = AppDataSource.getRepository(Payment);
       const reviewRepository = AppDataSource.getRepository(Review);
       const messageRepository = AppDataSource.getRepository(Message);
       const conversationRepository = AppDataSource.getRepository(Conversation);
@@ -296,6 +299,7 @@ class DatabaseSeeder {
       await reviewRepository.clear();
       await messageRepository.clear();
       await conversationRepository.clear();
+      await paymentRepository.clear();
       await bookingRepository.clear();
       await providerRepository.clear();
       await userRepository.clear();
@@ -478,9 +482,9 @@ class DatabaseSeeder {
         estimatedDuration: Math.floor(Math.random() * 180) + 60, // 1-4 hours
         status,
         totalAmount: Math.floor(Math.random() * 300) + 50, // $50-350
-        paymentStatus: status === BookingStatus.COMPLETED ? PaymentStatus.PAID :
-                      status === BookingStatus.CANCELLED ? PaymentStatus.REFUNDED :
-                      PaymentStatus.PENDING,
+        paymentStatus: status === BookingStatus.COMPLETED ? BookingPaymentStatus.PAID :
+                      status === BookingStatus.CANCELLED ? BookingPaymentStatus.REFUNDED :
+                      BookingPaymentStatus.PENDING,
         completedAt: completedDate,
         confirmedAt: status !== BookingStatus.PENDING ? scheduledDate : null,
         startedAt: status === BookingStatus.COMPLETED || status === BookingStatus.IN_PROGRESS ?
@@ -537,7 +541,7 @@ class DatabaseSeeder {
           estimatedDuration: Math.floor(Math.random() * 300) + 60,
           status,
           totalAmount: Math.floor(Math.random() * 400) + 100,
-          paymentStatus: status === BookingStatus.COMPLETED ? PaymentStatus.PAID : PaymentStatus.PENDING,
+          paymentStatus: status === BookingStatus.COMPLETED ? BookingPaymentStatus.PAID : BookingPaymentStatus.PENDING,
           confirmedAt: status !== BookingStatus.PENDING ? new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000) : null,
           startedAt: status === BookingStatus.COMPLETED || status === BookingStatus.IN_PROGRESS ? new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000) : null,
           completedAt: status === BookingStatus.COMPLETED ? new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000) : null,
@@ -593,7 +597,7 @@ class DatabaseSeeder {
           estimatedDuration: Math.floor(Math.random() * 300) + 60,
           status,
           totalAmount: Math.floor(Math.random() * 400) + 100,
-          paymentStatus: status === BookingStatus.COMPLETED ? PaymentStatus.PAID : PaymentStatus.PENDING,
+          paymentStatus: status === BookingStatus.COMPLETED ? BookingPaymentStatus.PAID : BookingPaymentStatus.PENDING,
           confirmedAt: status !== BookingStatus.PENDING ? new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000) : null,
           startedAt: status === BookingStatus.COMPLETED || status === BookingStatus.IN_PROGRESS ? new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000) : null,
           completedAt: status === BookingStatus.COMPLETED ? new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000) : null,
@@ -604,6 +608,114 @@ class DatabaseSeeder {
       }
       logger.info(`Added ${35} additional bookings for demo provider`);
     }
+  }
+
+  private async seedPayments(): Promise<void> {
+    logger.info('Seeding payments for bookings...');
+
+    const paymentRepository = AppDataSource.getRepository(Payment);
+    const paymentMethods = [PaymentMethod.CREDIT_CARD, PaymentMethod.DEBIT_CARD, PaymentMethod.PAYPAL, PaymentMethod.APPLE_PAY, PaymentMethod.GOOGLE_PAY];
+    const cardBrands = ['Visa', 'Mastercard', 'American Express', 'Discover'];
+
+    // Create payments for all bookings except cancelled ones
+    const bookingsWithPayments = this.bookings.filter(b => b.status !== BookingStatus.CANCELLED);
+    let paymentCount = 0;
+
+    for (const booking of bookingsWithPayments) {
+      const paymentMethod = getRandomItem(paymentMethods);
+      const platformFeeRate = 0.15; // 15% platform fee
+      const processingFeeRate = 0.029; // 2.9% + $0.30 processing fee
+
+      const amount = booking.totalAmount;
+      const platformFee = Math.round(amount * platformFeeRate * 100) / 100;
+      const processingFee = Math.round((amount * processingFeeRate + 0.30) * 100) / 100;
+      const providerAmount = Math.round((amount - platformFee - processingFee) * 100) / 100;
+
+      // Determine payment status based on booking status
+      let paymentStatus: PaymentStatus;
+      let paidAt: Date | null = null;
+      let completedAt: Date | null = null;
+      let failedAt: Date | null = null;
+      let refundedAt: Date | null = null;
+      let refundAmount = 0;
+
+      if (booking.status === BookingStatus.COMPLETED && booking.paymentStatus === BookingPaymentStatus.PAID) {
+        paymentStatus = PaymentStatus.SUCCEEDED;
+        paidAt = booking.confirmedAt || booking.createdAt;
+        completedAt = booking.completedAt || paidAt;
+      } else if (booking.status === BookingStatus.COMPLETED && booking.paymentStatus === BookingPaymentStatus.REFUNDED) {
+        paymentStatus = PaymentStatus.REFUNDED;
+        paidAt = booking.confirmedAt || booking.createdAt;
+        refundedAt = booking.completedAt || paidAt;
+        refundAmount = amount;
+      } else if (booking.status === BookingStatus.IN_PROGRESS) {
+        paymentStatus = PaymentStatus.PROCESSING;
+        paidAt = booking.startedAt || booking.confirmedAt || booking.createdAt;
+      } else if (booking.status === BookingStatus.CONFIRMED) {
+        paymentStatus = Math.random() > 0.8 ? PaymentStatus.SUCCEEDED : PaymentStatus.PROCESSING;
+        if (paymentStatus === PaymentStatus.SUCCEEDED) {
+          paidAt = booking.confirmedAt || booking.createdAt;
+        }
+      } else if (booking.status === BookingStatus.PENDING) {
+        paymentStatus = PaymentStatus.PENDING;
+      } else {
+        paymentStatus = PaymentStatus.FAILED;
+        failedAt = booking.createdAt;
+      }
+
+      // Build metadata
+      const metadata: any = {
+        escrowHold: paymentStatus !== PaymentStatus.SUCCEEDED && paymentStatus !== PaymentStatus.REFUNDED,
+      };
+
+      if (paymentMethod === PaymentMethod.CREDIT_CARD || paymentMethod === PaymentMethod.DEBIT_CARD) {
+        metadata.last4 = String(Math.floor(Math.random() * 9000) + 1000);
+        metadata.cardBrand = getRandomItem(cardBrands);
+      }
+
+      if (paymentStatus === PaymentStatus.SUCCEEDED) {
+        metadata.receipt_url = `https://stripe.com/receipts/${Math.random().toString(36).substring(7)}`;
+      }
+
+      if (paymentStatus === PaymentStatus.FAILED) {
+        const failureReasons = ['insufficient_funds', 'card_declined', 'expired_card', 'incorrect_cvc'];
+        metadata.failure_reason = getRandomItem(failureReasons);
+      }
+
+      if (paymentStatus === PaymentStatus.REFUNDED) {
+        const refundReasons = ['customer_request', 'duplicate_charge', 'fraudulent', 'service_not_delivered'];
+        metadata.refund_reason = getRandomItem(refundReasons);
+      }
+
+      const payment = paymentRepository.create({
+        bookingId: booking.id,
+        customerId: booking.customerId,
+        providerId: booking.providerId,
+        amount,
+        platformFee,
+        processingFee,
+        providerAmount,
+        currency: 'USD',
+        paymentMethod,
+        stripePaymentIntentId: `pi_${Math.random().toString(36).substring(2, 15)}`,
+        stripeChargeId: paymentStatus === PaymentStatus.SUCCEEDED ? `ch_${Math.random().toString(36).substring(2, 15)}` : null,
+        paypalTransactionId: paymentMethod === PaymentMethod.PAYPAL ? `PAY-${Math.random().toString(36).substring(2, 15).toUpperCase()}` : null,
+        stripeRefundId: paymentStatus === PaymentStatus.REFUNDED ? `re_${Math.random().toString(36).substring(2, 15)}` : null,
+        status: paymentStatus,
+        metadata,
+        paidAt,
+        completedAt,
+        failedAt,
+        refundedAt,
+        refundAmount,
+        notes: paymentStatus === PaymentStatus.FAILED ? 'Payment failed - customer notified' : null,
+      });
+
+      await paymentRepository.save(payment);
+      paymentCount++;
+    }
+
+    logger.info(`Created ${paymentCount} payments with varied statuses (pending, processing, succeeded, failed, refunded)`);
   }
 
   private async seedReviews(): Promise<void> {

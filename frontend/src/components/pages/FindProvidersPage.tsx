@@ -45,6 +45,7 @@ import { toast } from 'react-hot-toast';
 import { apiService, Provider } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import BookingDialog from '../bookings/BookingDialog';
+import QuoteRequestDialog from '../quotes/QuoteRequestDialog';
 
 interface ExtendedProvider extends Provider {
   distance?: number;
@@ -71,6 +72,8 @@ const FindProvidersPage: React.FC = () => {
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [showBookingDialog, setShowBookingDialog] = useState(false);
+  const [showQuoteDialog, setShowQuoteDialog] = useState(false);
+  const [selectedServiceForQuote, setSelectedServiceForQuote] = useState('');
 
   const serviceTypes = [
     'house_cleaning',
@@ -161,8 +164,17 @@ const FindProvidersPage: React.FC = () => {
     }));
   };
 
-  const handleQuoteRequest = async (providerId: string) => {
-    toast('Quote system - Coming in Task 3!');
+  const handleQuoteRequest = (provider: ExtendedProvider) => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to request quotes');
+      return;
+    }
+    if (user?.userType !== 'customer') {
+      toast.error('Only customers can request quotes');
+      return;
+    }
+    setSelectedServiceForQuote(provider.services?.[0] || '');
+    setShowQuoteDialog(true);
   };
 
   const handleBookNow = (provider: ExtendedProvider) => {
@@ -531,7 +543,7 @@ const FindProvidersPage: React.FC = () => {
                         <Button
                           fullWidth
                           variant="outlined"
-                          onClick={() => handleQuoteRequest(provider.id)}
+                          onClick={() => handleQuoteRequest(provider)}
                         >
                           Request Quote
                         </Button>
@@ -563,6 +575,16 @@ const FindProvidersPage: React.FC = () => {
         }}
         provider={selectedProvider}
         serviceType={searchParams.serviceTypes[0] || ''}
+      />
+
+      {/* Quote Request Dialog */}
+      <QuoteRequestDialog
+        open={showQuoteDialog}
+        onClose={() => {
+          setShowQuoteDialog(false);
+          setSelectedServiceForQuote('');
+        }}
+        serviceType={selectedServiceForQuote}
       />
     </Box>
   );

@@ -309,6 +309,10 @@ class ApiService {
     });
   }
 
+  async deleteAccount(): Promise<void> {
+    await this.api.delete('/users/profile');
+  }
+
   // Provider methods
   async getProviders(params?: {
     page?: number;
