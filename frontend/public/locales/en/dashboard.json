@@ -1,0 +1,137 @@
+{
+  "title": "Dashboard",
+  "provider_dashboard": "Provider Dashboard",
+  "welcome": "Welcome back, {{name}}!",
+  "overview": "Overview",
+  "quick_actions": "Quick Actions",
+  "recent_activity": "Recent Activity",
+  "access_denied": "Access Denied",
+  "provider_only": "This page is only available to service providers.",
+  "error_loading": "Failed to load dashboard statistics. Please try refreshing the page.",
+
+  "customer": {
+    "find_providers": "Find Providers",
+    "my_bookings": "My Bookings",
+    "active_bookings": "Active Bookings",
+    "completed_bookings": "Completed Bookings",
+    "pending_reviews": "Pending Reviews",
+    "total_spent": "Total Spent",
+    "saved_providers": "Saved Providers",
+    "recent_searches": "Recent Searches"
+  },
+
+  "provider": {
+    "title": "Provider Dashboard",
+    "total_bookings": "Total Bookings",
+    "pending_requests": "Pending Requests",
+    "requires_attention": "Requires attention",
+    "completed_jobs": "Completed Jobs",
+    "completion_rate": "{{rate}}% completion rate",
+    "total_earnings": "Total Earnings",
+    "this_month_earnings": "This Month",
+    "average_rating": "Average Rating",
+    "based_on_reviews": "Based on {{count}} reviews",
+    "total_reviews": "Total Reviews",
+    "response_rate": "Response Rate",
+    "avg_response_time": "Avg. {{time}} hours",
+    "profile_views": "Profile Views",
+    "edit_profile": "Edit Profile",
+    "availability": "Availability",
+    "manage_availability": "Manage Availability",
+    "view_analytics": "View Analytics",
+    "analytics_coming_soon": "Advanced analytics coming soon!",
+    "recent_bookings": "Recent Bookings",
+    "recent_reviews": "Recent Reviews",
+    "pending_quotes": "Pending Quotes",
+    "service_area": "Service Area",
+    "profile_summary": "Profile Summary",
+    "service_provider": "Service Provider",
+    "no_rating": "No rating",
+    "location_not_set": "Location not set",
+    "phone_not_set": "Phone not set",
+    "services_not_set": "Services not set",
+    "profile_completion": "Profile Completion",
+    "percent_complete": "{{percent}}% Complete"
+  },
+
+  "stats": {
+    "increase": "+{{percent}}% from last period",
+    "decrease": "-{{percent}}% from last period",
+    "no_change": "No change from last period",
+    "view_all": "View All",
+    "see_details": "See Details"
+  },
+
+  "period": {
+    "time_period": "Time Period",
+    "week": "week",
+    "month": "month",
+    "quarter": "quarter",
+    "year": "year",
+    "this_week": "This Week",
+    "this_month": "This Month",
+    "this_quarter": "This Quarter",
+    "this_year": "This Year",
+    "all_time": "All Time"
+  },
+
+  "table": {
+    "service": "Service",
+    "customer": "Customer",
+    "date_time": "Date & Time",
+    "status": "Status",
+    "amount": "Amount",
+    "actions": "Actions",
+    "location_not_available": "Location not available"
+  },
+
+  "actions": {
+    "book_service": "Book a Service",
+    "request_quote": "Request Quote",
+    "view_messages": "View Messages",
+    "check_payments": "Check Payments",
+    "write_review": "Write Review",
+    "update_profile": "Update Profile",
+    "view_details": "View Details",
+    "confirm_booking": "Confirm Booking",
+    "decline_booking": "Decline Booking",
+    "start_service": "Start Service",
+    "mark_complete": "Mark Complete",
+    "view_all_reviews": "View All Reviews"
+  },
+
+  "filters": {
+    "status_filter": "Status Filter",
+    "all_status": "All Status"
+  },
+
+  "empty": {
+    "no_bookings": "No bookings found. Start accepting booking requests to see them here.",
+    "no_bookings_cta": "Find a provider to get started",
+    "no_requests": "No pending requests",
+    "no_reviews": "No reviews yet. Complete some bookings to start receiving reviews!",
+    "no_activity": "No recent activity"
+  },
+
+  "dialogs": {
+    "edit_profile_title": "Edit Profile",
+    "edit_profile_info": "Profile editing functionality will be implemented in a future update.",
+    "edit_profile_desc": "You can currently view your profile information in the summary section. Full profile editing capabilities including services, rates, availability, and portfolio management coming soon.",
+    "availability_title": "Update Availability",
+    "availability_info": "Availability management functionality will be implemented in a future update.",
+    "availability_feature_intro": "This feature will allow you to:",
+    "availability_features": {
+      "working_hours": "Set working hours and days",
+      "block_dates": "Block specific dates",
+      "auto_booking": "Configure automatic booking acceptance",
+      "service_radius": "Set service radius and travel preferences"
+    },
+    "close": "Close"
+  },
+
+  "messages": {
+    "status_updated": "Booking status updated successfully",
+    "status_update_error": "Failed to update booking status",
+    "growth_period": "+{{percent}}% this {{period}}"
+  }
+}

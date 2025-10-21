@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Container,
   Paper,
@@ -22,6 +23,7 @@ import { motion } from 'framer-motion';
 const RegisterForm: React.FC = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
+  const { t } = useTranslation(['auth']);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -40,21 +42,21 @@ const RegisterForm: React.FC = () => {
     setError('');
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('auth:register.passwords_dont_match'));
       setLoading(false);
       return;
     }
 
     // Enhanced password validation to match backend requirements
     if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters long');
+      setError(t('auth:register.password_min_length'));
       setLoading(false);
       return;
     }
 
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
     if (!passwordRegex.test(formData.password)) {
-      setError('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&)');
+      setError(t('auth:register.password_requirements'));
       setLoading(false);
       return;
     }
@@ -71,7 +73,7 @@ const RegisterForm: React.FC = () => {
       navigate('/');
     } catch (error: any) {
       // Enhanced error handling for better user experience
-      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Registration failed';
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || t('auth:register.error');
 
       // Handle validation errors specifically
       if (error.response?.data?.errors?.password) {
@@ -124,10 +126,10 @@ const RegisterForm: React.FC = () => {
                 textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
               }}
             >
-              🚀 Join Tino 2
+              {t('auth:register.title')}
             </Typography>
             <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.9)' }}>
-              Create your account to get started
+              {t('auth:register.subtitle')}
             </Typography>
           </Box>
 
@@ -152,21 +154,21 @@ const RegisterForm: React.FC = () => {
             }}
           >
             <FormControl fullWidth margin="normal" sx={{ mb: 2 }}>
-              <InputLabel>Account Type</InputLabel>
+              <InputLabel>{t('auth:register.user_type')}</InputLabel>
               <Select
                 name="userType"
                 value={formData.userType}
-                label="Account Type"
+                label={t('auth:register.user_type')}
                 onChange={handleSelectChange}
               >
                 <MenuItem value="customer">
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    👤 <span>Customer - Looking for services</span>
+                    👤 <span>{t('auth:register.customer_desc')}</span>
                   </Box>
                 </MenuItem>
                 <MenuItem value="provider">
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    🔧 <span>Service Provider - Offering services</span>
+                    🔧 <span>{t('auth:register.provider_desc')}</span>
                   </Box>
                 </MenuItem>
               </Select>
@@ -175,7 +177,7 @@ const RegisterForm: React.FC = () => {
             <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField
                 fullWidth
-                label="First Name"
+                label={t('auth:register.first_name')}
                 name="firstName"
                 value={formData.firstName}
                 onChange={handleChange}
@@ -184,7 +186,7 @@ const RegisterForm: React.FC = () => {
               />
               <TextField
                 fullWidth
-                label="Last Name"
+                label={t('auth:register.last_name')}
                 name="lastName"
                 value={formData.lastName}
                 onChange={handleChange}
@@ -195,7 +197,7 @@ const RegisterForm: React.FC = () => {
 
             <TextField
               fullWidth
-              label="Email Address"
+              label={t('auth:register.email')}
               name="email"
               type="email"
               value={formData.email}
@@ -208,7 +210,7 @@ const RegisterForm: React.FC = () => {
 
             <TextField
               fullWidth
-              label="Phone Number (Optional)"
+              label={t('auth:register.phone')}
               name="phone"
               type="tel"
               value={formData.phone}
@@ -219,20 +221,20 @@ const RegisterForm: React.FC = () => {
 
             <TextField
               fullWidth
-              label="Password"
+              label={t('auth:register.password')}
               name="password"
               type="password"
               value={formData.password}
               onChange={handleChange}
               margin="normal"
               required
-              helperText="Must contain: 8+ characters, uppercase, lowercase, number, and special character (@$!%*?&)"
+              helperText={t('auth:register.password_helper')}
               sx={{ mb: 2 }}
             />
 
             <TextField
               fullWidth
-              label="Confirm Password"
+              label={t('auth:register.confirm_password')}
               name="confirmPassword"
               type="password"
               value={formData.confirmPassword}
@@ -259,12 +261,12 @@ const RegisterForm: React.FC = () => {
                 },
               }}
             >
-              {loading ? <CircularProgress size={24} color="inherit" /> : 'Create Account'}
+              {loading ? <CircularProgress size={24} color="inherit" /> : t('auth:register.submit')}
             </Button>
 
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary">
-                Already have an account?{' '}
+                {t('auth:register.already_have_account')}{' '}
                 <Link
                   to="/login"
                   style={{
@@ -273,7 +275,7 @@ const RegisterForm: React.FC = () => {
                     fontWeight: 600,
                   }}
                 >
-                  Sign in here
+                  {t('auth:register.login_link')}
                 </Link>
               </Typography>
             </Box>

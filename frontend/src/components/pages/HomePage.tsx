@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Container,
   Typography,
@@ -26,23 +27,24 @@ import { useAuth } from '../../contexts/AuthContext';
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
+  const { t } = useTranslation();
 
   const services = [
-    { icon: <CleaningServices />, name: 'House Cleaning', color: '#4CAF50' },
-    { icon: <Plumbing />, name: 'Plumbing', color: '#2196F3' },
-    { icon: <ElectricalServices />, name: 'Electrical', color: '#FF9800' },
-    { icon: <Carpenter />, name: 'Handyman', color: '#795548' },
-    { icon: <LocalFlorist />, name: 'Gardening', color: '#8BC34A' },
-    { icon: <Build />, name: 'Repairs', color: '#9C27B0' },
+    { icon: <CleaningServices />, nameKey: 'home.services.house_cleaning', color: '#4CAF50' },
+    { icon: <Plumbing />, nameKey: 'home.services.plumbing', color: '#2196F3' },
+    { icon: <ElectricalServices />, nameKey: 'home.services.electrical', color: '#FF9800' },
+    { icon: <Carpenter />, nameKey: 'home.services.handyman', color: '#795548' },
+    { icon: <LocalFlorist />, nameKey: 'home.services.gardening', color: '#8BC34A' },
+    { icon: <Build />, nameKey: 'home.services.repairs', color: '#9C27B0' },
   ];
 
-  const features = [
-    'Verified service providers',
-    'Real-time booking system',
-    'Secure payments',
-    'Customer reviews & ratings',
-    'GPS-based provider discovery',
-    'Instant messaging',
+  const featuresKeys = [
+    'home.features.verified_providers',
+    'home.features.real_time_booking',
+    'home.features.secure_payments',
+    'home.features.customer_reviews',
+    'home.features.gps_discovery',
+    'home.features.instant_messaging',
   ];
 
   return (
@@ -66,28 +68,28 @@ const HomePage: React.FC = () => {
               variant="h2"
               component="h1"
               gutterBottom
-              sx={{ 
+              sx={{
                 fontWeight: 'bold',
                 fontSize: { xs: '2.5rem', md: '3.5rem' }
               }}
             >
-              🏠 Welcome to Tino 2
+              {t('home.title')}
             </Typography>
             <Typography
               variant="h5"
-              sx={{ 
+              sx={{
                 mb: 4,
                 opacity: 0.9,
                 fontSize: { xs: '1.25rem', md: '1.5rem' }
               }}
             >
-              Your trusted platform for domestic services
+              {t('home.subtitle')}
             </Typography>
 
             {isAuthenticated && user ? (
               <Box>
                 <Typography variant="h6" sx={{ mb: 3 }}>
-                  Welcome back, {user.firstName}! 👋
+                  {t('home.welcome_back', { firstName: user.firstName })}
                 </Typography>
                 {user.userType === 'customer' ? (
                   <Button
@@ -104,7 +106,7 @@ const HomePage: React.FC = () => {
                       },
                     }}
                   >
-                    Find Service Providers
+                    {t('home.find_providers')}
                   </Button>
                 ) : (
                   <Button
@@ -121,7 +123,7 @@ const HomePage: React.FC = () => {
                       },
                     }}
                   >
-                    Go to Dashboard
+                    {t('home.go_to_dashboard')}
                   </Button>
                 )}
               </Box>
@@ -141,7 +143,7 @@ const HomePage: React.FC = () => {
                     },
                   }}
                 >
-                  Get Started
+                  {t('home.get_started')}
                 </Button>
                 <Button
                   variant="outlined"
@@ -159,7 +161,7 @@ const HomePage: React.FC = () => {
                     },
                   }}
                 >
-                  Sign In
+                  {t('home.sign_in')}
                 </Button>
               </Box>
             )}
@@ -176,12 +178,12 @@ const HomePage: React.FC = () => {
           gutterBottom
           sx={{ fontWeight: 'bold', mb: 6 }}
         >
-          Popular Services
+          {t('home.popular_services')}
         </Typography>
 
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 3 }}>
           {services.map((service, index) => (
-            <Box key={service.name}>
+            <Box key={service.nameKey}>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -213,7 +215,7 @@ const HomePage: React.FC = () => {
                       {service.icon}
                     </Box>
                     <Typography variant="h6" component="h3" fontWeight="bold">
-                      {service.name}
+                      {t(service.nameKey)}
                     </Typography>
                   </CardContent>
                 </Card>
@@ -233,12 +235,12 @@ const HomePage: React.FC = () => {
             gutterBottom
             sx={{ fontWeight: 'bold', mb: 6 }}
           >
-            Why Choose Tino 2?
+            {t('home.why_choose')}
           </Typography>
 
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 3 }}>
-            {features.map((feature, index) => (
-              <Box key={feature}>
+            {featuresKeys.map((featureKey, index) => (
+              <Box key={featureKey}>
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -246,7 +248,7 @@ const HomePage: React.FC = () => {
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                     <CheckCircle sx={{ color: 'primary.main', mr: 2 }} />
-                    <Typography variant="h6">{feature}</Typography>
+                    <Typography variant="h6">{t(featureKey)}</Typography>
                   </Box>
                 </motion.div>
               </Box>
@@ -266,36 +268,36 @@ const HomePage: React.FC = () => {
       >
         <Container maxWidth="md">
           <Typography variant="h4" component="h2" gutterBottom fontWeight="bold">
-            Ready to Get Started?
+            {t('home.ready_to_start')}
           </Typography>
           <Typography variant="h6" sx={{ mb: 4, opacity: 0.9 }}>
-            Join thousands of satisfied customers and trusted service providers
+            {t('home.join_message')}
           </Typography>
-          
+
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', mb: 4, flexWrap: 'wrap' }}>
-            <Chip 
-              label="⭐ 4.8/5 Rating" 
-              sx={{ 
-                bgcolor: 'rgba(255,255,255,0.2)', 
+            <Chip
+              label={t('home.stats.rating')}
+              sx={{
+                bgcolor: 'rgba(255,255,255,0.2)',
                 color: 'white',
                 fontWeight: 'bold'
-              }} 
+              }}
             />
-            <Chip 
-              label="🎯 50+ Services" 
-              sx={{ 
-                bgcolor: 'rgba(255,255,255,0.2)', 
+            <Chip
+              label={t('home.stats.services_count')}
+              sx={{
+                bgcolor: 'rgba(255,255,255,0.2)',
                 color: 'white',
                 fontWeight: 'bold'
-              }} 
+              }}
             />
-            <Chip 
-              label="✅ Verified Providers" 
-              sx={{ 
-                bgcolor: 'rgba(255,255,255,0.2)', 
+            <Chip
+              label={t('home.stats.verified_badge')}
+              sx={{
+                bgcolor: 'rgba(255,255,255,0.2)',
                 color: 'white',
                 fontWeight: 'bold'
-              }} 
+              }}
             />
           </Box>
 
@@ -314,7 +316,7 @@ const HomePage: React.FC = () => {
                 },
               }}
             >
-              Join Tino 2 Today
+              {t('home.join_today')}
             </Button>
           )}
         </Container>

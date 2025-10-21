@@ -1,0 +1,79 @@
+{
+  "title": "Messages",
+  "conversations": "Conversations",
+  "new_conversation": "New Conversation",
+  "new_conversation_tooltip": "New conversation",
+  "search_conversations": "Search conversations...",
+  "clear_search": "Clear search",
+  "no_conversations": "No conversations yet",
+  "no_results": "No conversations found",
+  "loading": "Loading conversations...",
+  "start_conversation": "Start a conversation to connect with providers or customers",
+  "yesterday": "Yesterday",
+  "conversation_label": "Conversation",
+  "select_conversation": "Select a conversation to start messaging",
+  "select_conversation_desc": "Choose a conversation from the list to view and send messages",
+
+  "conversation": {
+    "type_message": "Type a message...",
+    "send": "Send",
+    "attach_file": "Attach File",
+    "send_image": "Send Image",
+    "no_messages": "No messages yet",
+    "start_conversation_text": "Start the conversation by sending a message",
+    "online": "Online",
+    "offline": "Offline",
+    "typing": "typing...",
+    "participants": "{{count}} participant",
+    "participants_plural": "{{count}} participants"
+  },
+
+  "new": {
+    "title": "Start New Conversation",
+    "select_user": "Select User",
+    "search_users": "Search users...",
+    "search_users_label": "Search Users",
+    "search_placeholder": "Search by name or email",
+    "conversation_type": "Conversation Type",
+    "direct_message": "Direct Message",
+    "group_chat": "Group Chat",
+    "support": "Support",
+    "conversation_title": "Conversation Title",
+    "title_placeholder": "Enter a title for this conversation",
+    "description": "Description (Optional)",
+    "description_placeholder": "Brief description of the conversation",
+    "subject": "Subject (Optional)",
+    "message": "Message",
+    "selected_participants": "Selected Participants:",
+    "no_users_found": "No users found",
+    "start_typing": "Start typing to search for users",
+    "select_participant": "Please select at least one participant",
+    "context_title": "Conversation Context:",
+    "service_label": "Service: {{service}}",
+    "related_booking": "Related to Booking",
+    "related_quote": "Related to Quote Request",
+    "create": "Create Conversation",
+    "creating": "Creating...",
+    "success": "Conversation created successfully",
+    "error": "Failed to create conversation"
+  },
+
+  "actions": {
+    "cancel": "Cancel",
+    "delete_conversation": "Delete Conversation",
+    "delete_confirm": "Are you sure you want to delete this conversation?",
+    "mute": "Mute Notifications",
+    "unmute": "Unmute Notifications",
+    "archive": "Archive",
+    "unarchive": "Unarchive",
+    "block_user": "Block User",
+    "report": "Report"
+  },
+
+  "status": {
+    "sent": "Sent",
+    "delivered": "Delivered",
+    "read": "Read",
+    "failed": "Failed to send"
+  }
+}

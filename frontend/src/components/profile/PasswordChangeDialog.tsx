@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogTitle,
@@ -23,6 +24,7 @@ interface PasswordChangeDialogProps {
 }
 
 const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({ open, onClose }) => {
+  const { t } = useTranslation('profile');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -34,11 +36,11 @@ const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({ open, onClo
   const changePasswordMutation = useMutation({
     mutationFn: () => apiService.changePassword(currentPassword, newPassword),
     onSuccess: () => {
-      toast.success('Password changed successfully! You will receive a confirmation email.');
+      toast.success(t('password.success'));
       handleClose();
     },
     onError: (error: any) => {
-      const errorMessage = error?.response?.data?.error || 'Failed to change password';
+      const errorMessage = error?.response?.data?.error || t('password.error');
       toast.error(errorMessage);
     },
   });
@@ -47,23 +49,23 @@ const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({ open, onClo
     const errors: string[] = [];
 
     if (password.length < 8) {
-      errors.push('Password must be at least 8 characters long');
+      errors.push(t('password.validation.min_length_error'));
     }
 
     if (!/[A-Z]/.test(password)) {
-      errors.push('Password must contain at least one uppercase letter');
+      errors.push(t('password.validation.uppercase_error'));
     }
 
     if (!/[a-z]/.test(password)) {
-      errors.push('Password must contain at least one lowercase letter');
+      errors.push(t('password.validation.lowercase_error'));
     }
 
     if (!/[0-9]/.test(password)) {
-      errors.push('Password must contain at least one number');
+      errors.push(t('password.validation.number_error'));
     }
 
     if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-      errors.push('Password must contain at least one special character');
+      errors.push(t('password.validation.special_char_error'));
     }
 
     return errors;
@@ -79,7 +81,7 @@ const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({ open, onClo
 
     // Validate current password
     if (!currentPassword) {
-      toast.error('Please enter your current password');
+      toast.error(t('password.validation.current_required'));
       return;
     }
 
@@ -87,19 +89,19 @@ const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({ open, onClo
     const errors = validatePassword(newPassword);
     if (errors.length > 0) {
       setValidationErrors(errors);
-      toast.error('Please fix password validation errors');
+      toast.error(t('password.validation.fix_errors'));
       return;
     }
 
     // Confirm passwords match
     if (newPassword !== confirmPassword) {
-      toast.error('New passwords do not match');
+      toast.error(t('password.validation.new_passwords_dont_match'));
       return;
     }
 
     // Check if new password is different from current
     if (currentPassword === newPassword) {
-      toast.error('New password must be different from current password');
+      toast.error(t('password.validation.must_be_different'));
       return;
     }
 
@@ -120,17 +122,17 @@ const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({ open, onClo
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <form onSubmit={handleSubmit}>
-        <DialogTitle>Change Password</DialogTitle>
+        <DialogTitle>{t('password.change_password')}</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Please enter your current password and choose a new secure password.
+              {t('password.description')}
             </Typography>
 
             {validationErrors.length > 0 && (
               <Alert severity="warning" sx={{ mb: 2 }}>
                 <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                  Password requirements:
+                  {t('password.requirements')}
                 </Typography>
                 <ul style={{ margin: 0, paddingLeft: 20 }}>
                   {validationErrors.map((error, index) => (
@@ -144,7 +146,7 @@ const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({ open, onClo
 
             <TextField
               fullWidth
-              label="Current Password"
+              label={t('password.current_password')}
               type={showCurrentPassword ? 'text' : 'password'}
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
@@ -167,7 +169,7 @@ const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({ open, onClo
 
             <TextField
               fullWidth
-              label="New Password"
+              label={t('password.new_password')}
               type={showNewPassword ? 'text' : 'password'}
               value={newPassword}
               onChange={(e) => handleNewPasswordChange(e.target.value)}
@@ -191,7 +193,7 @@ const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({ open, onClo
 
             <TextField
               fullWidth
-              label="Confirm New Password"
+              label={t('password.confirm_password')}
               type={showConfirmPassword ? 'text' : 'password'}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
@@ -200,7 +202,7 @@ const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({ open, onClo
               error={confirmPassword !== '' && newPassword !== confirmPassword}
               helperText={
                 confirmPassword !== '' && newPassword !== confirmPassword
-                  ? 'Passwords do not match'
+                  ? t('password.validation.passwords_dont_match')
                   : ''
               }
               InputProps={{
@@ -220,7 +222,7 @@ const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({ open, onClo
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose} disabled={changePasswordMutation.isPending}>
-            Cancel
+            {t('password.cancel')}
           </Button>
           <Button
             type="submit"
@@ -234,7 +236,7 @@ const PasswordChangeDialog: React.FC<PasswordChangeDialogProps> = ({ open, onClo
               newPassword !== confirmPassword
             }
           >
-            {changePasswordMutation.isPending ? 'Changing...' : 'Change Password'}
+            {changePasswordMutation.isPending ? t('password.changing') : t('password.submit')}
           </Button>
         </DialogActions>
       </form>

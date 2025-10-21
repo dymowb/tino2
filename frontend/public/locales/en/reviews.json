@@ -1,0 +1,149 @@
+{
+  "title": "My Reviews",
+  "subtitle": "Manage your reviews and ratings",
+  "write_review": "Write Review",
+  "reviews_written": "Reviews Written",
+  "reviews_received": "Reviews Received",
+  "pending_reviews": "Pending Reviews",
+  "services_to_review": "Services Ready to Review",
+  "loading": "Loading reviews...",
+  "error": "Failed to load reviews. Please try again.",
+
+  "tabs": {
+    "reviews_written": "Reviews I've Written",
+    "reviews_received": "Reviews About My Services"
+  },
+
+  "filters": {
+    "rating": "Rating",
+    "all_ratings": "All Ratings",
+    "5_stars": "5 Stars",
+    "4_stars": "4 Stars",
+    "3_stars": "3 Stars",
+    "2_stars": "2 Stars",
+    "1_star": "1 Star",
+    "sort_by": "Sort By",
+    "date": "Date",
+    "rating_sort": "Rating",
+    "title_sort": "Title",
+    "search_placeholder": "Search reviews...",
+    "clear_filters": "Clear Filters"
+  },
+
+  "create": {
+    "title": "Write a Review",
+    "edit_title": "Edit Review",
+    "service_details": "Service Details",
+    "provider": "Provider",
+    "service_type": "Service Type",
+    "date": "Date",
+    "cost": "Cost",
+    "rating": "Overall Rating",
+    "overall_rating_display": "Overall Rating: {{rating}} stars",
+    "rate_experience": "Rate Your Experience",
+    "criteria": "Rate the following aspects:",
+    "quality": "Quality of Work",
+    "timeliness": "Timeliness",
+    "communication": "Communication",
+    "professionalism": "Professionalism",
+    "value": "Value for Money",
+    "review_title": "Review Title",
+    "title_placeholder": "Summarize your experience...",
+    "detailed_review": "Detailed Review",
+    "review_placeholder": "Share your experience with others...",
+    "review_placeholder_detail": "Tell others about your experience with this service provider...",
+    "char_count_500": "{{count}}/500 characters",
+    "photos": "Add Photos (Optional)",
+    "photo_coming_soon": "Photo upload feature coming soon",
+    "photo_help_text": "Add photos to help others see your experience",
+    "post_anonymously": "Post this review anonymously",
+    "anonymous_help_text": "Your name will be hidden, but the review will still be public",
+    "guidelines": "Review Guidelines",
+    "guidelines_text": "Be honest, constructive, and respectful. Reviews help other customers make informed decisions and help providers improve their services.",
+    "submit": "Submit Review",
+    "update": "Update Review",
+    "cancel": "Cancel",
+    "submitting": "Submitting...",
+    "updating": "Updating...",
+    "success": "Review posted successfully!",
+    "error": "Failed to post review",
+    "char_count": "{{count}}/{{max}} characters"
+  },
+
+  "card": {
+    "provider": "Provider",
+    "customer": "Customer",
+    "anonymous": "Anonymous",
+    "service_date": "Service Date",
+    "verified_purchase": "Verified Purchase",
+    "detailed_ratings": "Detailed Ratings:",
+    "helpful": "Helpful",
+    "not_helpful": "Not Helpful",
+    "report": "Report",
+    "edit": "Edit Review",
+    "delete": "Delete Review",
+    "flag_review": "Flag Review",
+    "respond_to_review": "Respond to Review",
+    "provider_response": "Provider Response"
+  },
+
+  "criteria_labels": {
+    "quality": "Quality",
+    "timeliness": "Timeliness",
+    "communication": "Communication",
+    "professionalism": "Professionalism",
+    "value": "Value"
+  },
+
+  "empty": {
+    "no_reviews": "No reviews yet",
+    "no_pending": "You have no services to review",
+    "no_match": "No reviews match your current filters.",
+    "no_completed_bookings": "No completed bookings available for review at this time.",
+    "no_reviews_written": "You haven't written any reviews yet.",
+    "no_reviews_received": "No reviews about your services yet."
+  },
+
+  "provider_response": {
+    "title": "Respond to Customer Review",
+    "anonymous_customer": "Anonymous Customer",
+    "customer_label": "Customer",
+    "stars_label": "{{rating}} stars",
+    "detailed_ratings": "Detailed Ratings:",
+    "already_responded": "You have already responded to this review.",
+    "your_response_label": "Your response ({{date}}):",
+    "your_response_title": "Your Response",
+    "response_label": "Response to Customer",
+    "response_placeholder": "Thank your customer and address their feedback professionally...",
+    "char_count": "{{count}}/1000 characters",
+    "guidelines_title": "Response Guidelines:",
+    "guideline_thank": "Thank the customer for their feedback",
+    "guideline_address": "Address any concerns professionally",
+    "guideline_concise": "Keep it concise and constructive",
+    "guideline_avoid": "Avoid arguing or being defensive",
+    "guideline_improve": "Show how you're improving based on feedback",
+    "service_details": "Service Details:",
+    "service_label": "Service:",
+    "date_label": "Date:",
+    "amount_label": "Amount:",
+    "cancel": "Cancel",
+    "submit": "Submit Response",
+    "submitting": "Submitting...",
+    "success": "Response submitted successfully!",
+    "error": "Failed to submit response",
+    "validation": {
+      "required": "Response is required",
+      "min_length": "Response must be at least 10 characters",
+      "max_length": "Response cannot exceed 1000 characters"
+    }
+  },
+
+  "messages": {
+    "delete_success": "Review deleted successfully",
+    "delete_error": "Failed to delete review",
+    "update_success": "Review updated successfully!",
+    "update_error": "Failed to update review",
+    "flag_success": "Review has been flagged for moderation",
+    "flag_error": "Failed to flag review"
+  }
+}

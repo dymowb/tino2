@@ -1,0 +1,166 @@
+{
+  "list": {
+    "title": "My Bookings",
+    "empty": "You have no bookings yet",
+    "filter_status": "Filter by Status",
+    "all_status": "All Bookings",
+    "search_placeholder": "Search bookings...",
+    "sort_by": "Sort By",
+    "date_newest": "Date (Newest First)",
+    "date_oldest": "Date (Oldest First)",
+    "amount_high": "Amount (High to Low)",
+    "amount_low": "Amount (Low to High)",
+    "refresh": "Refresh",
+    "login_required": "Please log in to view your bookings",
+    "error_loading": "Failed to load bookings. Please try again.",
+    "results_count": "{{count}} Booking Found",
+    "results_count_plural": "{{count}} Bookings Found",
+    "filter_applied": "({{status}})",
+    "no_results": "No bookings found matching your criteria.",
+    "start_booking_prompt": "Start by finding service providers and booking services!",
+    "booking_number": "Booking #{{id}}"
+  },
+
+  "create": {
+    "title": "Create New Booking",
+    "dialog_title": "Book Service with {{provider}}",
+    "select_provider": "Select Provider",
+    "select_service": "Select Service",
+    "service_type": "Service Type",
+    "select_date": "Select Date",
+    "select_time": "Select Time",
+    "scheduled_datetime": "Scheduled Date & Time",
+    "duration": "Duration",
+    "duration_hours": "Estimated Duration (hours)",
+    "hours": "hours",
+    "description": "Description",
+    "service_description": "Service Description",
+    "description_placeholder": "Please describe the service you need...",
+    "special_instructions": "Special Instructions (Optional)",
+    "instructions_placeholder": "Any special instructions or requirements...",
+    "location": "Service Location",
+    "address": "Street Address",
+    "city": "City",
+    "state": "State",
+    "zip": "ZIP Code",
+    "estimated_cost": "Estimated Cost",
+    "estimated_cost_display": "Estimated Cost: ${{cost}}",
+    "rate_calculation": "${{rate}} × {{duration}} hours",
+    "rate_per_unit": "${{rate}}/{{unit}}",
+    "reviews_count": "{{rating}} ({{count}} reviews)",
+    "booking_summary": "Booking Summary",
+    "submit": "Create Booking",
+    "creating": "Creating...",
+    "success": "Booking created successfully!",
+    "error": "Failed to create booking",
+    "validation": {
+      "service_required": "Service type is required",
+      "date_required": "Scheduled date is required",
+      "duration_min": "Duration must be at least 30 minutes",
+      "description_required": "Description is required",
+      "address_required": "Address is required",
+      "city_required": "City is required",
+      "state_required": "State is required",
+      "zip_required": "ZIP code is required"
+    },
+    "summary_labels": {
+      "provider": "Provider:",
+      "service": "Service:",
+      "duration": "Duration:",
+      "estimated_cost": "Estimated Cost:"
+    }
+  },
+
+  "details": {
+    "title": "Booking Details",
+    "booking_id": "Booking ID",
+    "status": "Status",
+    "service_type": "Service Type",
+    "provider": "Provider",
+    "customer": "Customer",
+    "scheduled": "Scheduled:",
+    "scheduled_date": "Scheduled Date",
+    "scheduled_time": "Scheduled Time",
+    "location_label": "Location:",
+    "duration_label": "Duration:",
+    "duration_hours": "{{hours}} hours",
+    "location": "Location",
+    "description": "Description",
+    "description_label": "Description:",
+    "special_instructions": "Special Instructions",
+    "special_instructions_label": "Special Instructions:",
+    "total": "Total:",
+    "payment": "Payment:",
+    "total_cost": "Total Cost",
+    "payment_status": "Payment Status",
+    "created": "Created:",
+    "created_at": "Created At",
+    "updated_at": "Updated At",
+    "notes": "Notes"
+  },
+
+  "actions": {
+    "cancel": "Cancel",
+    "cancel_booking": "Cancel Booking",
+    "reschedule": "Reschedule",
+    "confirm": "Confirm Booking",
+    "accept": "Accept",
+    "decline": "Decline",
+    "start_service": "Start Service",
+    "mark_complete": "Mark Complete",
+    "message": "Message",
+    "message_provider": "Message Provider",
+    "leave_review": "Leave Review",
+    "view_receipt": "View Receipt",
+    "get_directions": "Get Directions",
+    "keep_booking": "Keep Booking",
+    "cancelling": "Cancelling..."
+  },
+
+  "status": {
+    "pending": "Pending",
+    "confirmed": "Confirmed",
+    "in_progress": "In Progress",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  },
+
+  "cancel": {
+    "title": "Cancel Booking",
+    "confirm": "Are you sure you want to cancel this booking?",
+    "reason": "Reason for cancellation (optional)",
+    "reason_placeholder": "Please tell us why you're canceling...",
+    "submit": "Confirm Cancellation",
+    "success": "Booking cancelled successfully",
+    "error": "Failed to cancel booking",
+    "policy": "Cancellation Policy",
+    "policy_text": "Cancellations made more than 24 hours in advance receive a full refund. Cancellations within 24 hours may incur a fee."
+  },
+
+  "messages": {
+    "status_updated_success": "Booking status updated successfully!",
+    "status_updated_error": "Failed to update booking status",
+    "cancelled_success": "Booking cancelled successfully",
+    "cancelled_error": "Failed to cancel booking",
+    "review_coming_soon": "Review system - Coming in Task 6!",
+    "messaging_coming_soon": "Messaging system - Coming in Task 4!"
+  },
+
+  "reschedule": {
+    "title": "Reschedule Booking",
+    "new_date": "New Date",
+    "new_time": "New Time",
+    "reason": "Reason for Rescheduling (Optional)",
+    "submit": "Confirm Reschedule",
+    "success": "Booking rescheduled successfully",
+    "error": "Failed to reschedule booking"
+  },
+
+  "status_messages": {
+    "pending": "Your booking request is pending confirmation",
+    "confirmed": "Your booking has been confirmed",
+    "in_progress": "Service is currently in progress",
+    "completed": "This booking has been completed",
+    "cancelled": "This booking was cancelled"
+  }
+}

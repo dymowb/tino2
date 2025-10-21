@@ -15,7 +15,7 @@ router.get('/profile', UserController.getProfile);
 router.put('/profile', rateLimiters.general, UserController.updateProfile);
 
 // DELETE /api/users/profile - Delete user account (SEC-018)
-router.delete('/profile', rateLimiters.strict, UserController.deleteProfile);
+router.delete('/profile', rateLimiters.strict, UserController.deleteProfile.bind(UserController));
 
 // POST /api/users/profile/image - Upload profile image (FR-007)
 // router.post('/profile/image', 

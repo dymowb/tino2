@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { apiService } from '../../services/api';
 import PasswordChangeDialog from '../profile/PasswordChangeDialog';
@@ -31,6 +32,7 @@ interface ProviderProfile {
 }
 
 const ProfilePage: React.FC = () => {
+  const { t, i18n } = useTranslation(['profile']);
   const { user } = useAuth();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [providerProfile, setProviderProfile] = useState<ProviderProfile | null>(null);
@@ -165,7 +167,7 @@ const ProfilePage: React.FC = () => {
   if (loading) {
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
-        <p>Loading profile...</p>
+        <p>{t('profile:loading')}</p>
       </div>
     );
   }
@@ -188,7 +190,7 @@ const ProfilePage: React.FC = () => {
   return (
     <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-        <h1 style={{ color: '#2c3e50', margin: 0 }}>Profile Settings</h1>
+        <h1 style={{ color: '#2c3e50', margin: 0 }}>{t('profile:title')}</h1>
         {!editing ? (
           <button
             onClick={() => setEditing(true)}
@@ -202,7 +204,7 @@ const ProfilePage: React.FC = () => {
               fontWeight: 'bold'
             }}
           >
-            Edit Profile
+            {t('profile:edit_profile')}
           </button>
         ) : (
           <div style={{ display: 'flex', gap: '10px' }}>
@@ -219,7 +221,7 @@ const ProfilePage: React.FC = () => {
                 fontWeight: 'bold'
               }}
             >
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? t('profile:saving') : t('profile:save_changes')}
             </button>
             <button
               onClick={() => {
@@ -237,7 +239,7 @@ const ProfilePage: React.FC = () => {
                 fontWeight: 'bold'
               }}
             >
-              Cancel
+              {t('profile:cancel')}
             </button>
           </div>
         )}
@@ -251,12 +253,12 @@ const ProfilePage: React.FC = () => {
         marginBottom: '20px',
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
       }}>
-        <h3 style={{ color: '#34495e', marginBottom: '20px' }}>Basic Information</h3>
-        
+        <h3 style={{ color: '#34495e', marginBottom: '20px' }}>{t('profile:sections.basic_information')}</h3>
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
           <div>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              First Name:
+              {t('profile:fields.first_name')}:
             </label>
             {editing ? (
               <input
@@ -277,7 +279,7 @@ const ProfilePage: React.FC = () => {
 
           <div>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              Last Name:
+              {t('profile:fields.last_name')}:
             </label>
             {editing ? (
               <input
@@ -298,14 +300,14 @@ const ProfilePage: React.FC = () => {
 
           <div>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              Email:
+              {t('profile:fields.email')}:
             </label>
             <p style={{ margin: '0', color: '#555' }}>{userProfile?.email}</p>
           </div>
 
           <div>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              Phone:
+              {t('profile:fields.phone')}:
             </label>
             {editing ? (
               <input
@@ -320,13 +322,13 @@ const ProfilePage: React.FC = () => {
                 }}
               />
             ) : (
-              <p style={{ margin: '0', color: '#555' }}>{userProfile?.phone || 'Not provided'}</p>
+              <p style={{ margin: '0', color: '#555' }}>{userProfile?.phone || t('profile:fields.not_provided')}</p>
             )}
           </div>
 
           <div>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              Account Type:
+              {t('profile:fields.account_type')}:
             </label>
             <p style={{ margin: '0', color: '#555', textTransform: 'capitalize' }}>
               {userProfile?.user_type}
@@ -335,10 +337,10 @@ const ProfilePage: React.FC = () => {
 
           <div>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              Member Since:
+              {t('profile:fields.member_since')}:
             </label>
             <p style={{ margin: '0', color: '#555' }}>
-              {userProfile?.created_at ? formatDate(userProfile.created_at) : 'Unknown'}
+              {userProfile?.created_at ? formatDate(userProfile.created_at) : t('profile:fields.not_provided')}
             </p>
           </div>
         </div>
@@ -353,12 +355,12 @@ const ProfilePage: React.FC = () => {
           marginBottom: '20px',
           boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
         }}>
-          <h3 style={{ color: '#34495e', marginBottom: '20px' }}>Provider Information</h3>
-          
+          <h3 style={{ color: '#34495e', marginBottom: '20px' }}>{t('profile:sections.provider_information')}</h3>
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '20px' }}>
             <div>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                Business Name:
+                {t('profile:fields.business_name')}:
               </label>
               {editing ? (
                 <input
@@ -379,7 +381,7 @@ const ProfilePage: React.FC = () => {
 
             <div>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                Hourly Rate:
+                {t('profile:fields.hourly_rate')}:
               </label>
               {editing ? (
                 <input
@@ -402,16 +404,16 @@ const ProfilePage: React.FC = () => {
 
             <div>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                Rating:
+                {t('profile:fields.rating')}:
               </label>
               <p style={{ margin: '0', color: '#555' }}>
-                ⭐ {providerProfile?.rating} ({providerProfile?.total_reviews} reviews)
+                ⭐ {providerProfile?.rating} ({providerProfile?.total_reviews} {t('profile:fields.reviews')})
               </p>
             </div>
 
             <div>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                Availability:
+                {t('profile:fields.availability')}:
               </label>
               {editing ? (
                 <select
@@ -448,7 +450,7 @@ const ProfilePage: React.FC = () => {
 
           <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              Description:
+              {t('profile:fields.description')}:
             </label>
             {editing ? (
               <textarea
@@ -465,14 +467,14 @@ const ProfilePage: React.FC = () => {
               />
             ) : (
               <p style={{ margin: '0', color: '#555', lineHeight: '1.5' }}>
-                {providerProfile?.description || 'No description provided'}
+                {providerProfile?.description || t('profile:fields.no_description')}
               </p>
             )}
           </div>
 
           <div>
             <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
-              Services Offered:
+              {t('profile:fields.services_offered')}:
             </label>
             {editing ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
@@ -515,8 +517,8 @@ const ProfilePage: React.FC = () => {
         borderRadius: '8px',
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
       }}>
-        <h3 style={{ color: '#34495e', marginBottom: '20px' }}>Account Actions</h3>
-        
+        <h3 style={{ color: '#34495e', marginBottom: '20px' }}>{t('profile:sections.account_actions')}</h3>
+
         <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
           <button
             onClick={() => setPasswordDialogOpen(true)}
@@ -530,11 +532,11 @@ const ProfilePage: React.FC = () => {
               fontWeight: 'bold'
             }}
           >
-            Change Password
+            {t('profile:password.change_password')}
           </button>
-          
+
           <button
-            onClick={() => alert('Notification preferences feature integration pending')}
+            onClick={() => alert(t('profile:messages.notifications_pending'))}
             style={{
               padding: '10px 20px',
               backgroundColor: '#9b59b6',
@@ -545,11 +547,11 @@ const ProfilePage: React.FC = () => {
               fontWeight: 'bold'
             }}
           >
-            Notification Settings
+            {t('profile:settings.notification_settings')}
           </button>
-          
+
           <button
-            onClick={() => alert('Privacy settings feature integration pending')}
+            onClick={() => alert(t('profile:messages.privacy_pending'))}
             style={{
               padding: '10px 20px',
               backgroundColor: '#16a085',
@@ -560,9 +562,9 @@ const ProfilePage: React.FC = () => {
               fontWeight: 'bold'
             }}
           >
-            Privacy Settings
+            {t('profile:settings.privacy_settings')}
           </button>
-          
+
           <button
             onClick={() => setDeletionDialogOpen(true)}
             style={{
@@ -575,7 +577,7 @@ const ProfilePage: React.FC = () => {
               fontWeight: 'bold'
             }}
           >
-            Delete Account
+            {t('profile:delete_account.button')}
           </button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -26,14 +27,14 @@ import {
   Badge
 } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2';
-import { 
-  LocationOn, 
-  Phone, 
-  Email, 
-  Star, 
-  Verified, 
-  Security, 
-  Schedule, 
+import {
+  LocationOn,
+  Phone,
+  Email,
+  Star,
+  Verified,
+  Security,
+  Schedule,
   MyLocation,
   Search,
   FilterList,
@@ -54,6 +55,7 @@ interface ExtendedProvider extends Provider {
 
 const FindProvidersPage: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
+  const { t } = useTranslation(['providers']);
   const [searchParams, setSearchParams] = useState({
     latitude: 40.7128,
     longitude: -74.0060,
@@ -102,23 +104,23 @@ const FindProvidersPage: React.FC = () => {
             latitude,
             longitude
           }));
-          toast.success('Location updated!');
+          toast.success(t('providers:messages.location_updated'));
         },
         (error) => {
           console.error('Error getting location:', error);
-          toast.error('Failed to get your location');
+          toast.error(t('providers:messages.location_error'));
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
       );
     } else {
-      toast.error('Geolocation is not supported by this browser');
+      toast.error(t('providers:messages.geolocation_unsupported'));
     }
-  }, []);
+  }, [t]);
 
   // Geocode address search
   const handleAddressSearch = async () => {
     if (!addressSearch.trim()) {
-      toast.error('Please enter an address');
+      toast.error(t('providers:messages.enter_address'));
       return;
     }
 
@@ -130,10 +132,10 @@ const FindProvidersPage: React.FC = () => {
           latitude: result.latitude,
           longitude: result.longitude
         }));
-        toast.success(`Location set to ${result.formatted_address || addressSearch}`);
+        toast.success(t('providers:messages.location_set', { address: result.formatted_address || addressSearch }));
       }
     } catch (error) {
-      toast.error('Failed to find location');
+      toast.error(t('providers:messages.location_failed'));
     }
   };
 
@@ -166,11 +168,11 @@ const FindProvidersPage: React.FC = () => {
 
   const handleQuoteRequest = (provider: ExtendedProvider) => {
     if (!isAuthenticated) {
-      toast.error('Please log in to request quotes');
+      toast.error(t('providers:messages.login_required_quote'));
       return;
     }
     if (user?.userType !== 'customer') {
-      toast.error('Only customers can request quotes');
+      toast.error(t('providers:messages.customers_only_quote'));
       return;
     }
     setSelectedServiceForQuote(provider.services?.[0] || '');
@@ -179,11 +181,11 @@ const FindProvidersPage: React.FC = () => {
 
   const handleBookNow = (provider: ExtendedProvider) => {
     if (!isAuthenticated) {
-      toast.error('Please log in to book services');
+      toast.error(t('providers:messages.login_required_booking'));
       return;
     }
     if (user?.userType !== 'customer') {
-      toast.error('Only customers can book services');
+      toast.error(t('providers:messages.customers_only_booking'));
       return;
     }
     setSelectedProvider(provider);
@@ -209,20 +211,20 @@ const FindProvidersPage: React.FC = () => {
   return (
     <Box sx={{ p: 3, maxWidth: '1400px', mx: 'auto' }}>
       <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>
-        Find Service Providers
+        {t('providers:search.title')}
       </Typography>
 
       {/* Location and Search Controls */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" sx={{ mb: 2 }}>
-          Search Location
+          {t('providers:search.search_location')}
         </Typography>
-        
+
         <Grid container spacing={2} alignItems="center">
           <Grid xs={12} md={6}>
             <TextField
               fullWidth
-              label="Search by address"
+              label={t('providers:search.search_by_address')}
               value={addressSearch}
               onChange={(e) => setAddressSearch(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleAddressSearch()}
@@ -235,7 +237,7 @@ const FindProvidersPage: React.FC = () => {
               }}
             />
           </Grid>
-          
+
           <Grid xs={12} md={3}>
             <Button
               fullWidth
@@ -244,10 +246,10 @@ const FindProvidersPage: React.FC = () => {
               onClick={getCurrentLocation}
               sx={{ height: '56px' }}
             >
-              Use My Location
+              {t('providers:search.use_my_location')}
             </Button>
           </Grid>
-          
+
           <Grid xs={12} md={3}>
             <Button
               fullWidth
@@ -256,7 +258,7 @@ const FindProvidersPage: React.FC = () => {
               onClick={() => setShowFilters(!showFilters)}
               sx={{ height: '56px' }}
             >
-              {showFilters ? 'Hide Filters' : 'Show Filters'}
+              {showFilters ? t('providers:search.hide_filters') : t('providers:search.show_filters')}
             </Button>
           </Grid>
         </Grid>
@@ -266,20 +268,20 @@ const FindProvidersPage: React.FC = () => {
       {showFilters && (
         <Paper sx={{ p: 3, mb: 3 }}>
           <Typography variant="h6" sx={{ mb: 2 }}>
-            Filters
+            {t('providers:search.filters')}
           </Typography>
-          
+
           <Grid container spacing={3}>
             {/* Service Types */}
             <Grid xs={12} md={6}>
               <Typography variant="subtitle1" sx={{ mb: 1 }}>
-                Service Types
+                {t('providers:search.service_types')}
               </Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                 {serviceTypes.map(type => (
                   <Chip
                     key={type}
-                    label={type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    label={t(`providers:services.${type}`, type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()))}
                     onClick={() => handleServiceTypeChange(type, !searchParams.serviceTypes.includes(type))}
                     color={searchParams.serviceTypes.includes(type) ? 'primary' : 'default'}
                     variant={searchParams.serviceTypes.includes(type) ? 'filled' : 'outlined'}
@@ -292,22 +294,22 @@ const FindProvidersPage: React.FC = () => {
             <Grid xs={12} md={6}>
               <Stack spacing={2}>
                 <FormControl>
-                  <InputLabel>Sort By</InputLabel>
+                  <InputLabel>{t('providers:search.sort_by')}</InputLabel>
                   <Select
                     value={searchParams.sortBy}
-                    label="Sort By"
+                    label={t('providers:search.sort_by')}
                     onChange={(e) => setSearchParams(prev => ({ ...prev, sortBy: e.target.value as any }))}
                   >
-                    <MenuItem value="distance">Distance</MenuItem>
-                    <MenuItem value="rating">Rating</MenuItem>
-                    <MenuItem value="price">Price</MenuItem>
-                    <MenuItem value="response_time">Response Time</MenuItem>
+                    <MenuItem value="distance">{t('providers:search.distance')}</MenuItem>
+                    <MenuItem value="rating">{t('providers:search.rating_option')}</MenuItem>
+                    <MenuItem value="price">{t('providers:search.price_option')}</MenuItem>
+                    <MenuItem value="response_time">{t('providers:search.response_time_option')}</MenuItem>
                   </Select>
                 </FormControl>
 
                 <Box>
                   <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    Search Radius: {searchParams.radius}km
+                    {t('providers:search.search_radius_km', { radius: searchParams.radius })}
                   </Typography>
                   <Slider
                     value={searchParams.radius}
@@ -331,7 +333,7 @@ const FindProvidersPage: React.FC = () => {
               <Stack direction="row" spacing={2} flexWrap="wrap">
                 <Box>
                   <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    Minimum Rating: {searchParams.minRating}
+                    {t('providers:search.minimum_rating_value', { rating: searchParams.minRating })}
                   </Typography>
                   <Slider
                     value={searchParams.minRating}
@@ -352,32 +354,32 @@ const FindProvidersPage: React.FC = () => {
 
                 <FormControlLabel
                   control={
-                    <Switch 
+                    <Switch
                       checked={searchParams.hasInsurance}
                       onChange={(e) => setSearchParams(prev => ({ ...prev, hasInsurance: e.target.checked }))}
                     />
                   }
-                  label="Has Insurance"
+                  label={t('providers:search.insurance')}
                 />
-                
+
                 <FormControlLabel
                   control={
-                    <Switch 
+                    <Switch
                       checked={searchParams.hasBackgroundCheck}
                       onChange={(e) => setSearchParams(prev => ({ ...prev, hasBackgroundCheck: e.target.checked }))}
                     />
                   }
-                  label="Background Check"
+                  label={t('providers:search.background_check')}
                 />
-                
+
                 <FormControlLabel
                   control={
-                    <Switch 
+                    <Switch
                       checked={searchParams.isAvailable}
                       onChange={(e) => setSearchParams(prev => ({ ...prev, isAvailable: e.target.checked }))}
                     />
                   }
-                  label="Available Now"
+                  label={t('providers:search.available_now_label')}
                 />
               </Stack>
             </Grid>
@@ -394,7 +396,7 @@ const FindProvidersPage: React.FC = () => {
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          Failed to load providers. Please try again.
+          {t('providers:search.error_loading')}
         </Alert>
       )}
 
@@ -402,18 +404,23 @@ const FindProvidersPage: React.FC = () => {
         <>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Typography variant="h6">
-              {pagination?.totalCount || 0} Provider{(pagination?.totalCount || 0) !== 1 ? 's' : ''} Found
+              {t(
+                (pagination?.totalCount || 0) === 1
+                  ? 'providers:search.providers_found'
+                  : 'providers:search.providers_found_plural',
+                { count: pagination?.totalCount || 0 }
+              )}
             </Typography>
-            
+
             <Button onClick={() => refetch()} variant="outlined" startIcon={<Search />}>
-              Refresh
+              {t('providers:search.refresh')}
             </Button>
           </Box>
 
           {providers.length === 0 ? (
             <Paper sx={{ p: 4, textAlign: 'center' }}>
               <Typography variant="body1" color="text.secondary">
-                No providers found matching your criteria. Try adjusting your filters or expanding your search radius.
+                {t('providers:search.no_providers_description')}
               </Typography>
             </Paper>
           ) : (
@@ -432,7 +439,7 @@ const FindProvidersPage: React.FC = () => {
                           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                             <Rating value={provider.rating} readOnly size="small" />
                             <Typography variant="body2" sx={{ ml: 1 }}>
-                              {provider.rating} ({provider.totalReviews} reviews)
+                              {provider.rating} ({provider.totalReviews} {t('providers:card.reviews')})
                             </Typography>
                           </Box>
                         </Box>
@@ -467,20 +474,20 @@ const FindProvidersPage: React.FC = () => {
                       {/* Services */}
                       <Box sx={{ mb: 2 }}>
                         <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                          Services:
+                          {t('providers:card.services_label')}
                         </Typography>
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                           {provider.services?.slice(0, 3).map((service, index) => (
-                            <Chip 
+                            <Chip
                               key={index}
-                              label={service.replace(/_/g, ' ')}
+                              label={t(`providers:services.${service}`, service.replace(/_/g, ' '))}
                               size="small"
                               variant="outlined"
                             />
                           ))}
                           {provider.services && provider.services.length > 3 && (
-                            <Chip 
-                              label={`+${provider.services.length - 3} more`}
+                            <Chip
+                              label={t('providers:card.more_services', { count: provider.services.length - 3 })}
                               size="small"
                               variant="outlined"
                             />
@@ -491,23 +498,23 @@ const FindProvidersPage: React.FC = () => {
                       {/* Badges */}
                       <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
                         {provider.isInsured && (
-                          <Tooltip title="Insured">
-                            <Chip 
-                              icon={<Security />} 
-                              label="Insured" 
-                              size="small" 
-                              color="success" 
+                          <Tooltip title={t('providers:card.insured')}>
+                            <Chip
+                              icon={<Security />}
+                              label={t('providers:card.insured')}
+                              size="small"
+                              color="success"
                               variant="outlined"
                             />
                           </Tooltip>
                         )}
                         {provider.isBackgroundChecked && (
-                          <Tooltip title="Background Checked">
-                            <Chip 
-                              icon={<Verified />} 
-                              label="Verified" 
-                              size="small" 
-                              color="info" 
+                          <Tooltip title={t('providers:card.verified')}>
+                            <Chip
+                              icon={<Verified />}
+                              label={t('providers:card.verified')}
+                              size="small"
+                              color="info"
                               variant="outlined"
                             />
                           </Tooltip>
@@ -519,7 +526,7 @@ const FindProvidersPage: React.FC = () => {
                         <Typography variant="h6" color="primary.main">
                           ${provider.pricing?.baseRate || 50}
                           <Typography component="span" variant="body2" color="text.secondary">
-                            /{provider.pricing?.rateType || 'hour'}
+                            /{t(`providers:card.${provider.pricing?.rateType || 'hour'}`, provider.pricing?.rateType || 'hour')}
                           </Typography>
                         </Typography>
                       </Box>
@@ -527,10 +534,10 @@ const FindProvidersPage: React.FC = () => {
                       {/* Stats */}
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                         <Typography variant="body2" color="text.secondary">
-                          {provider.completedJobs} completed jobs
+                          {provider.completedJobs} {t('providers:card.completed_jobs_label')}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          Responds in {provider.averageResponseTime}h
+                          {t('providers:card.responds_in_hours', { time: provider.averageResponseTime })}
                         </Typography>
                       </Box>
                     </CardContent>
@@ -545,14 +552,14 @@ const FindProvidersPage: React.FC = () => {
                           variant="outlined"
                           onClick={() => handleQuoteRequest(provider)}
                         >
-                          Request Quote
+                          {t('providers:card.request_quote')}
                         </Button>
                         <Button
                           fullWidth
                           variant="contained"
                           onClick={() => handleBookNow(provider)}
                         >
-                          Book Now
+                          {t('providers:card.book_now')}
                         </Button>
                       </Stack>
                     </Box>

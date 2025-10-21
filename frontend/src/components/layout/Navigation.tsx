@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   AppBar,
   Toolbar,
@@ -35,8 +36,10 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import NotificationBadge from '../notifications/NotificationBadge';
+import LanguageSwitcher from '../common/LanguageSwitcher';
 
 const Navigation: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
@@ -65,19 +68,19 @@ const Navigation: React.FC = () => {
   };
 
   const navigationItems = [
-    { label: 'Home', path: '/', icon: <HomeIcon />, public: true },
+    { label: t('navigation.home'), path: '/', icon: <HomeIcon />, public: true },
     ...(isAuthenticated && user?.userType === 'customer' ? [
-      { label: 'Find Providers', path: '/providers', icon: <SearchIcon />, public: false },
-      { label: 'My Bookings', path: '/bookings', icon: <BookingIcon />, public: false },
-      { label: 'Messages', path: '/messages', icon: <MessageIcon />, public: false },
-      { label: 'Payments', path: '/payments', icon: <PaymentIcon />, public: false },
-      { label: 'My Reviews', path: '/reviews', icon: <ReviewIcon />, public: false },
+      { label: t('navigation.find_providers'), path: '/providers', icon: <SearchIcon />, public: false },
+      { label: t('navigation.my_bookings'), path: '/bookings', icon: <BookingIcon />, public: false },
+      { label: t('navigation.messages'), path: '/messages', icon: <MessageIcon />, public: false },
+      { label: t('navigation.payments'), path: '/payments', icon: <PaymentIcon />, public: false },
+      { label: t('navigation.my_reviews'), path: '/reviews', icon: <ReviewIcon />, public: false },
     ] : []),
     ...(isAuthenticated && user?.userType === 'provider' ? [
-      { label: 'Dashboard', path: '/dashboard', icon: <DashboardIcon />, public: false },
-      { label: 'Messages', path: '/messages', icon: <MessageIcon />, public: false },
-      { label: 'Payments', path: '/payments', icon: <PaymentIcon />, public: false },
-      { label: 'My Reviews', path: '/reviews', icon: <ReviewIcon />, public: false },
+      { label: t('navigation.dashboard'), path: '/dashboard', icon: <DashboardIcon />, public: false },
+      { label: t('navigation.messages'), path: '/messages', icon: <MessageIcon />, public: false },
+      { label: t('navigation.payments'), path: '/payments', icon: <PaymentIcon />, public: false },
+      { label: t('navigation.my_reviews'), path: '/reviews', icon: <ReviewIcon />, public: false },
     ] : []),
   ];
 
@@ -148,13 +151,14 @@ const Navigation: React.FC = () => {
   const renderUserSection = () => {
     if (!isAuthenticated || !user) {
       return (
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <LanguageSwitcher />
           <Button
             color="inherit"
             onClick={() => navigate('/login')}
             sx={{ textTransform: 'none' }}
           >
-            Login
+            {t('navigation.login')}
           </Button>
           <Button
             color="secondary"
@@ -162,7 +166,7 @@ const Navigation: React.FC = () => {
             onClick={() => navigate('/register')}
             sx={{ textTransform: 'none' }}
           >
-            Sign Up
+            {t('navigation.register')}
           </Button>
         </Box>
       );
@@ -171,11 +175,12 @@ const Navigation: React.FC = () => {
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <Chip
-          label={user.userType === 'customer' ? 'Customer' : 'Service Provider'}
+          label={user.userType === 'customer' ? t('profile.fields.customer') : t('profile.fields.provider')}
           size="small"
           color={user.userType === 'customer' ? 'secondary' : 'primary'}
           sx={{ color: 'white', fontWeight: 'bold' }}
         />
+        <LanguageSwitcher />
         <NotificationBadge />
         <IconButton onClick={handleUserMenuOpen} sx={{ p: 0 }}>
           <Avatar
@@ -198,11 +203,11 @@ const Navigation: React.FC = () => {
         >
           <MenuItem onClick={() => { navigate('/profile'); handleUserMenuClose(); }}>
             <ProfileIcon sx={{ mr: 2 }} />
-            Profile
+            {t('navigation.profile')}
           </MenuItem>
           <MenuItem onClick={handleLogout}>
             <LogoutIcon sx={{ mr: 2 }} />
-            Logout
+            {t('navigation.logout')}
           </MenuItem>
         </Menu>
       </Box>

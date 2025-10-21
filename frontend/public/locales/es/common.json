@@ -1,0 +1,136 @@
+{
+  "app_name": "Tino 2",
+  "welcome": "Bienvenido",
+  "loading": "Cargando...",
+  "error": "Error",
+  "success": "Éxito",
+  "cancel": "Cancelar",
+  "save": "Guardar",
+  "delete": "Eliminar",
+  "edit": "Editar",
+  "close": "Cerrar",
+  "submit": "Enviar",
+  "confirm": "Confirmar",
+  "search": "Buscar",
+  "filter": "Filtrar",
+  "sort": "Ordenar",
+  "refresh": "Actualizar",
+  "export": "Exportar",
+  "back": "Atrás",
+  "next": "Siguiente",
+  "previous": "Anterior",
+  "view_details": "Ver detalles",
+  "no_results": "No se encontraron resultados",
+  "try_again": "Intentar de nuevo",
+  "go_back": "Volver",
+  "learn_more": "Saber más",
+
+  "navigation": {
+    "home": "Inicio",
+    "find_providers": "Buscar Proveedores",
+    "my_bookings": "Mis Reservas",
+    "my_quotes": "Mis Cotizaciones",
+    "messages": "Mensajes",
+    "payments": "Pagos",
+    "my_reviews": "Mis Reseñas",
+    "profile": "Perfil",
+    "dashboard": "Panel",
+    "notifications": "Notificaciones",
+    "settings": "Configuración",
+    "logout": "Cerrar Sesión",
+    "login": "Iniciar Sesión",
+    "register": "Registrarse"
+  },
+
+  "status": {
+    "pending": "Pendiente",
+    "confirmed": "Confirmado",
+    "in_progress": "En Progreso",
+    "completed": "Completado",
+    "cancelled": "Cancelado",
+    "failed": "Fallido",
+    "succeeded": "Exitoso",
+    "processing": "Procesando",
+    "refunded": "Reembolsado"
+  },
+
+  "time": {
+    "today": "Hoy",
+    "yesterday": "Ayer",
+    "this_week": "Esta Semana",
+    "this_month": "Este Mes",
+    "this_quarter": "Este Trimestre",
+    "this_year": "Este Año",
+    "last_week": "Semana Pasada",
+    "last_month": "Mes Pasado",
+    "last_year": "Año Pasado",
+    "custom": "Personalizado"
+  },
+
+  "actions": {
+    "download": "Descargar",
+    "upload": "Subir",
+    "share": "Compartir",
+    "print": "Imprimir",
+    "copy": "Copiar",
+    "paste": "Pegar",
+    "cut": "Cortar",
+    "undo": "Deshacer",
+    "redo": "Rehacer"
+  },
+
+  "validation": {
+    "required": "Este campo es obligatorio",
+    "invalid_email": "Dirección de correo electrónico no válida",
+    "invalid_phone": "Número de teléfono no válido",
+    "min_length": "Se requieren al menos {{count}} caracteres",
+    "max_length": "Máximo {{count}} caracteres permitidos",
+    "must_match": "Los campos deben coincidir",
+    "invalid_format": "Formato no válido"
+  },
+
+  "errors": {
+    "generic": "Algo salió mal. Por favor, inténtalo de nuevo.",
+    "network": "Error de red. Por favor, verifica tu conexión.",
+    "unauthorized": "No estás autorizado para realizar esta acción.",
+    "not_found": "No se encontró el recurso solicitado.",
+    "server_error": "Error del servidor. Por favor, inténtalo más tarde.",
+    "timeout": "Se agotó el tiempo de espera. Por favor, inténtalo de nuevo."
+  },
+
+  "home": {
+    "title": "🏠 Bienvenido a Tino 2",
+    "subtitle": "Tu plataforma de confianza para servicios domésticos",
+    "welcome_back": "Bienvenido de nuevo, {{firstName}}! 👋",
+    "find_providers": "Buscar Proveedores de Servicios",
+    "go_to_dashboard": "Ir al Panel",
+    "get_started": "Comenzar",
+    "sign_in": "Iniciar Sesión",
+    "popular_services": "Servicios Populares",
+    "why_choose": "¿Por Qué Elegir Tino 2?",
+    "ready_to_start": "¿Listo para Comenzar?",
+    "join_message": "Únete a miles de clientes satisfechos y proveedores de servicios confiables",
+    "join_today": "Únete a Tino 2 Hoy",
+    "services": {
+      "house_cleaning": "Limpieza del Hogar",
+      "plumbing": "Plomería",
+      "electrical": "Electricidad",
+      "handyman": "Manitas",
+      "gardening": "Jardinería",
+      "repairs": "Reparaciones"
+    },
+    "features": {
+      "verified_providers": "Proveedores verificados",
+      "real_time_booking": "Sistema de reservas en tiempo real",
+      "secure_payments": "Pagos seguros",
+      "customer_reviews": "Reseñas y calificaciones de clientes",
+      "gps_discovery": "Descubrimiento de proveedores basado en GPS",
+      "instant_messaging": "Mensajería instantánea"
+    },
+    "stats": {
+      "rating": "⭐ 4.8/5 Calificación",
+      "services_count": "🎯 50+ Servicios",
+      "verified_badge": "✅ Proveedores Verificados"
+    }
+  }
+}

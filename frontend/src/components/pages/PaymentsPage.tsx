@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import {
   Box,
@@ -78,6 +79,7 @@ interface Payment {
 }
 
 const PaymentsPage: React.FC = () => {
+  const { t } = useTranslation(['payments']);
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentTab, setCurrentTab] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
@@ -121,6 +123,12 @@ const PaymentsPage: React.FC = () => {
   }, [paymentsData]);
 
   const filteredPayments = payments.filter(payment => {
+    // Status filter
+    if (statusFilter && payment.status !== statusFilter) {
+      return false;
+    }
+
+    // Search term filter
     if (!searchTerm) return true;
 
     const searchLower = searchTerm.toLowerCase();
@@ -236,7 +244,7 @@ const PaymentsPage: React.FC = () => {
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <PaymentIcon color="primary" sx={{ mr: 1 }} />
-                <Typography variant="h6">Total Payments</Typography>
+                <Typography variant="h6">{t('payments:stats.total_payments')}</Typography>
               </Box>
               <Typography variant="h4">{stats.count}</Typography>
               <Typography variant="body2" color="text.secondary">
@@ -251,7 +259,7 @@ const PaymentsPage: React.FC = () => {
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <ReceiptIcon color="success" sx={{ mr: 1 }} />
-                <Typography variant="h6">Successful</Typography>
+                <Typography variant="h6">{t('payments:stats.successful')}</Typography>
               </Box>
               <Typography variant="h4">{stats.successCount}</Typography>
               <Typography variant="body2" color="text.secondary">
@@ -266,7 +274,7 @@ const PaymentsPage: React.FC = () => {
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <EscrowIcon color="warning" sx={{ mr: 1 }} />
-                <Typography variant="h6">In Escrow</Typography>
+                <Typography variant="h6">{t('payments:stats.in_escrow')}</Typography>
               </Box>
               <Typography variant="h4">
                 {payments.filter(p => p.escrowStatus === 'held').length}
@@ -283,13 +291,13 @@ const PaymentsPage: React.FC = () => {
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <DownloadIcon color="info" sx={{ mr: 1 }} />
-                <Typography variant="h6">Platform Fees</Typography>
+                <Typography variant="h6">{t('payments:stats.platform_fees')}</Typography>
               </Box>
               <Typography variant="h4">
                 {formatAmount(payments.reduce((acc, p) => acc + p.platformFee, 0))}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Total collected
+                {t('payments:stats.total_collected')}
               </Typography>
             </CardContent>
           </Card>
@@ -302,7 +310,7 @@ const PaymentsPage: React.FC = () => {
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">
-          {isProvider ? 'Payment Management' : 'Payment History'}
+          {isProvider ? t('payments:payment_management') : t('payments:payment_history')}
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
@@ -310,13 +318,13 @@ const PaymentsPage: React.FC = () => {
             onClick={() => refetch()}
             variant="outlined"
           >
-            Refresh
+            {t('payments:refresh')}
           </Button>
           <Button
             startIcon={<DownloadIcon />}
             variant="outlined"
           >
-            Export
+            {t('payments:export')}
           </Button>
         </Box>
       </Box>
@@ -327,16 +335,16 @@ const PaymentsPage: React.FC = () => {
         <CardContent>
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
             <Tabs value={currentTab} onChange={handleTabChange}>
-              <Tab label="All Payments" />
-              {!isProvider && <Tab label="My Purchases" />}
-              {isProvider && <Tab label="My Earnings" />}
+              <Tab label={t('payments:all_payments')} />
+              {!isProvider && <Tab label={t('payments:my_purchases')} />}
+              {isProvider && <Tab label={t('payments:my_earnings')} />}
             </Tabs>
           </Box>
 
           <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
             <TextField
               size="small"
-              placeholder="Search payments..."
+              placeholder={t('payments:filters.search_placeholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               InputProps={{
@@ -348,22 +356,22 @@ const PaymentsPage: React.FC = () => {
               }}
               sx={{ flexGrow: 1 }}
             />
-            
+
             <TextField
               select
               size="small"
-              label="Status"
+              label={t('payments:table.status')}
               value={statusFilter}
               onChange={(e) => handleStatusFilterChange(e.target.value)}
               sx={{ minWidth: 120 }}
             >
-              <MenuItem value="">All Status</MenuItem>
-              <MenuItem value="pending">Pending</MenuItem>
-              <MenuItem value="processing">Processing</MenuItem>
-              <MenuItem value="succeeded">Succeeded</MenuItem>
-              <MenuItem value="failed">Failed</MenuItem>
-              <MenuItem value="cancelled">Cancelled</MenuItem>
-              <MenuItem value="refunded">Refunded</MenuItem>
+              <MenuItem value="">{t('payments:filters.all_status')}</MenuItem>
+              <MenuItem value="pending">{t('payments:status.pending')}</MenuItem>
+              <MenuItem value="processing">{t('payments:status.processing')}</MenuItem>
+              <MenuItem value="succeeded">{t('payments:status.succeeded')}</MenuItem>
+              <MenuItem value="failed">{t('payments:status.failed')}</MenuItem>
+              <MenuItem value="cancelled">{t('payments:status.cancelled')}</MenuItem>
+              <MenuItem value="refunded">{t('payments:status.refunded')}</MenuItem>
             </TextField>
           </Box>
 
@@ -371,28 +379,28 @@ const PaymentsPage: React.FC = () => {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Payment ID</TableCell>
-                  <TableCell>Service</TableCell>
-                  <TableCell>Amount</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Escrow</TableCell>
-                  <TableCell>Payment Method</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell align="center">Actions</TableCell>
+                  <TableCell>{t('payments:table.payment_id')}</TableCell>
+                  <TableCell>{t('payments:table.service')}</TableCell>
+                  <TableCell>{t('payments:table.amount')}</TableCell>
+                  <TableCell>{t('payments:table.status')}</TableCell>
+                  <TableCell>{t('payments:table.escrow')}</TableCell>
+                  <TableCell>{t('payments:table.payment_method')}</TableCell>
+                  <TableCell>{t('payments:table.date')}</TableCell>
+                  <TableCell align="center">{t('payments:table.actions')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
-                      Loading payments...
+                      {t('payments:loading_payments')}
                     </TableCell>
                   </TableRow>
                 ) : filteredPayments.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
                       <Typography variant="body2" color="text.secondary">
-                        No payments found
+                        {t('payments:no_payments_found')}
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -424,21 +432,21 @@ const PaymentsPage: React.FC = () => {
                           </Typography>
                           {payment.platformFee > 0 && (
                             <Typography variant="caption" color="text.secondary">
-                              Fee: {formatAmount(payment.platformFee, payment.currency)}
+                              {t('payments:table.fee')}: {formatAmount(payment.platformFee, payment.currency)}
                             </Typography>
                           )}
                         </Box>
                       </TableCell>
                       <TableCell>
                         <Chip
-                          label={payment.status}
+                          label={t(`payments:status.${payment.status}`)}
                           color={getStatusColor(payment.status) as any}
                           size="small"
                         />
                       </TableCell>
                       <TableCell>
                         <Chip
-                          label={payment.escrowStatus}
+                          label={t(`payments:escrow_status.${payment.escrowStatus}`)}
                           color={getEscrowStatusColor(payment.escrowStatus) as any}
                           size="small"
                           variant="outlined"
@@ -498,16 +506,16 @@ const PaymentsPage: React.FC = () => {
       >
         <MenuItem onClick={handleViewDetails}>
           <ReceiptIcon sx={{ mr: 1 }} fontSize="small" />
-          View Details
+          {t('payments:actions.view_details')}
         </MenuItem>
         <MenuItem onClick={handleDownloadReceipt}>
           <DownloadIcon sx={{ mr: 1 }} fontSize="small" />
-          Download Receipt
+          {t('payments:actions.download_receipt')}
         </MenuItem>
         {selectedPayment?.status === 'succeeded' && selectedPayment?.escrowStatus === 'held' && (
           <MenuItem onClick={handleInitiateRefund}>
             <RefreshIcon sx={{ mr: 1 }} fontSize="small" />
-            Initiate Refund
+            {t('payments:actions.initiate_refund')}
           </MenuItem>
         )}
       </Menu>

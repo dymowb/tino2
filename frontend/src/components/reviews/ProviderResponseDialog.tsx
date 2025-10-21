@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogTitle,
@@ -38,6 +39,7 @@ const ProviderResponseDialog: React.FC<ProviderResponseDialogProps> = ({
   onClose,
   review
 }) => {
+  const { t } = useTranslation('reviews');
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [response, setResponse] = useState('');
@@ -51,13 +53,13 @@ const ProviderResponseDialog: React.FC<ProviderResponseDialogProps> = ({
       queryClient.invalidateQueries({ queryKey: ['reviews'] });
       queryClient.invalidateQueries({ queryKey: ['provider-reviews'] });
       queryClient.invalidateQueries({ queryKey: ['my-provider-reviews'] });
-      toast.success('Response submitted successfully!');
+      toast.success(t('provider_response.success'));
       onClose();
       setResponse('');
       setErrors({});
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || 'Failed to submit response');
+      toast.error(error?.response?.data?.error || t('provider_response.error'));
     },
   });
 
@@ -65,13 +67,13 @@ const ProviderResponseDialog: React.FC<ProviderResponseDialogProps> = ({
     const newErrors: Record<string, string> = {};
 
     if (!response.trim()) {
-      newErrors.response = 'Response is required';
+      newErrors.response = t('provider_response.validation.required');
     }
     if (response.length < 10) {
-      newErrors.response = 'Response must be at least 10 characters';
+      newErrors.response = t('provider_response.validation.min_length');
     }
     if (response.length > 1000) {
-      newErrors.response = 'Response cannot exceed 1000 characters';
+      newErrors.response = t('provider_response.validation.max_length');
     }
 
     setErrors(newErrors);
@@ -95,14 +97,6 @@ const ProviderResponseDialog: React.FC<ProviderResponseDialogProps> = ({
 
   if (!review) return null;
 
-  const criteriaLabels = {
-    quality: 'Quality',
-    timeliness: 'Timeliness',
-    communication: 'Communication',
-    professionalism: 'Professionalism',
-    value: 'Value'
-  };
-
   return (
     <Dialog
       open={open}
@@ -114,7 +108,7 @@ const ProviderResponseDialog: React.FC<ProviderResponseDialogProps> = ({
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Reply color="primary" />
-          Respond to Customer Review
+          {t('provider_response.title')}
           <Box sx={{ ml: 'auto' }}>
             <Button onClick={handleClose} size="small">
               <Close />
@@ -122,7 +116,7 @@ const ProviderResponseDialog: React.FC<ProviderResponseDialogProps> = ({
           </Box>
         </Box>
       </DialogTitle>
-      
+
       <DialogContent sx={{ pt: 2 }}>
         {/* Review Display */}
         <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1, mb: 3 }}>
@@ -133,10 +127,10 @@ const ProviderResponseDialog: React.FC<ProviderResponseDialogProps> = ({
             <Box sx={{ flex: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                 <Typography variant="subtitle1" fontWeight="bold">
-                  {review.isAnonymous ? 'Anonymous Customer' : review.customer?.firstName || 'Customer'}
+                  {review.isAnonymous ? t('provider_response.anonymous_customer') : review.customer?.firstName || t('provider_response.customer_label')}
                 </Typography>
-                <Chip 
-                  label={`${review.rating} stars`}
+                <Chip
+                  label={t('provider_response.stars_label', { rating: review.rating })}
                   size="small"
                   color="primary"
                   icon={<Star />}
@@ -165,13 +159,13 @@ const ProviderResponseDialog: React.FC<ProviderResponseDialogProps> = ({
             <>
               <Divider sx={{ my: 2 }} />
               <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                Detailed Ratings:
+                {t('provider_response.detailed_ratings')}
               </Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                 {Object.entries(review.criteria).map(([key, value]) => (
                   <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Typography variant="body2">
-                      {`${criteriaLabels[key as keyof typeof criteriaLabels]}: ${Number(value)}/5`}
+                      {`${t(`criteria_labels.${key}`)}: ${Number(value)}/5`}
                     </Typography>
                   </Box>
                 ))}
@@ -184,11 +178,11 @@ const ProviderResponseDialog: React.FC<ProviderResponseDialogProps> = ({
         {review.providerResponse && (
           <Alert severity="info" sx={{ mb: 3 }}>
             <Typography variant="body2">
-              <strong>You have already responded to this review.</strong>
+              <strong>{t('provider_response.already_responded')}</strong>
             </Typography>
             <Box sx={{ mt: 1, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                Your response ({new Date(review.providerResponse.createdAt).toLocaleDateString()}):
+                {t('provider_response.your_response_label', { date: new Date(review.providerResponse.createdAt).toLocaleDateString() })}
               </Typography>
               <Typography variant="body1">
                 {review.providerResponse.response}
@@ -201,33 +195,33 @@ const ProviderResponseDialog: React.FC<ProviderResponseDialogProps> = ({
         {!review.providerResponse && (
           <Box>
             <Typography variant="h6" sx={{ mb: 2 }}>
-              Your Response
+              {t('provider_response.your_response_title')}
             </Typography>
-            
+
             <TextField
               fullWidth
               multiline
               rows={4}
-              label="Response to Customer"
-              placeholder="Thank your customer and address their feedback professionally..."
+              label={t('provider_response.response_label')}
+              placeholder={t('provider_response.response_placeholder')}
               value={response}
               onChange={(e) => setResponse(e.target.value)}
               error={!!errors.response}
-              helperText={errors.response || `${response.length}/1000 characters`}
+              helperText={errors.response || t('provider_response.char_count', { count: response.length })}
               inputProps={{ maxLength: 1000 }}
               sx={{ mb: 2 }}
             />
 
             <Alert severity="info">
               <Typography variant="body2">
-                <strong>Response Guidelines:</strong>
+                <strong>{t('provider_response.guidelines_title')}</strong>
               </Typography>
               <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
-                <li>Thank the customer for their feedback</li>
-                <li>Address any concerns professionally</li>
-                <li>Keep it concise and constructive</li>
-                <li>Avoid arguing or being defensive</li>
-                <li>Show how you're improving based on feedback</li>
+                <li>{t('provider_response.guideline_thank')}</li>
+                <li>{t('provider_response.guideline_address')}</li>
+                <li>{t('provider_response.guideline_concise')}</li>
+                <li>{t('provider_response.guideline_avoid')}</li>
+                <li>{t('provider_response.guideline_improve')}</li>
               </ul>
             </Alert>
           </Box>
@@ -237,23 +231,23 @@ const ProviderResponseDialog: React.FC<ProviderResponseDialogProps> = ({
         {review.booking && (
           <Box sx={{ mt: 3, p: 2, bgcolor: 'primary.50', borderRadius: 1 }}>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Service Details:
+              {t('provider_response.service_details')}
             </Typography>
             <Typography variant="body2">
-              <strong>Service:</strong> {review.booking.serviceType?.replace('_', ' ')} | 
-              <strong> Date:</strong> {new Date(review.booking.scheduledDate).toLocaleDateString()} | 
-              <strong> Amount:</strong> ${review.booking.totalAmount}
+              <strong>{t('provider_response.service_label')}</strong> {review.booking.serviceType?.replace('_', ' ')} |
+              <strong> {t('provider_response.date_label')}</strong> {new Date(review.booking.scheduledDate).toLocaleDateString()} |
+              <strong> {t('provider_response.amount_label')}</strong> ${review.booking.totalAmount}
             </Typography>
           </Box>
         )}
       </DialogContent>
 
       <DialogActions sx={{ p: 3 }}>
-        <Button 
+        <Button
           onClick={handleClose}
           disabled={addResponseMutation.isPending}
         >
-          Cancel
+          {t('provider_response.cancel')}
         </Button>
         {!review.providerResponse && (
           <Button
@@ -262,7 +256,7 @@ const ProviderResponseDialog: React.FC<ProviderResponseDialogProps> = ({
             disabled={addResponseMutation.isPending}
             startIcon={addResponseMutation.isPending ? <CircularProgress size={20} /> : <Send />}
           >
-            {addResponseMutation.isPending ? 'Submitting...' : 'Submit Response'}
+            {addResponseMutation.isPending ? t('provider_response.submitting') : t('provider_response.submit')}
           </Button>
         )}
       </DialogActions>

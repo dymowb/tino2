@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -49,6 +50,7 @@ import { apiService, Booking } from '../../services/api';
 
 const MyBookingsPage: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
+  const { t } = useTranslation(['bookings']);
   const queryClient = useQueryClient();
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
@@ -88,10 +90,10 @@ const MyBookingsPage: React.FC = () => {
       apiService.updateBooking(bookingId, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
-      toast.success('Booking status updated successfully!');
+      toast.success(t('bookings:messages.status_updated_success'));
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || 'Failed to update booking status');
+      toast.error(error?.response?.data?.error || t('bookings:messages.status_updated_error'));
     },
   });
 
@@ -101,13 +103,13 @@ const MyBookingsPage: React.FC = () => {
       apiService.cancelBooking(bookingId, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
-      toast.success('Booking cancelled successfully');
+      toast.success(t('bookings:messages.cancelled_success'));
       setShowCancelDialog(false);
       setCancelReason('');
       setSelectedBooking(null);
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || 'Failed to cancel booking');
+      toast.error(error?.response?.data?.error || t('bookings:messages.cancelled_error'));
     },
   });
 
@@ -183,7 +185,7 @@ const MyBookingsPage: React.FC = () => {
   if (!isAuthenticated) {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Typography variant="h6">Please log in to view your bookings</Typography>
+        <Typography variant="h6">{t('bookings:list.login_required')}</Typography>
       </Box>
     );
   }
@@ -192,7 +194,7 @@ const MyBookingsPage: React.FC = () => {
     <Box sx={{ p: 3, maxWidth: '1400px', mx: 'auto' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-          My Bookings
+          {t('bookings:list.title')}
         </Typography>
         <Button
           startIcon={<Refresh />}
@@ -200,25 +202,25 @@ const MyBookingsPage: React.FC = () => {
           variant="outlined"
           disabled={isLoading}
         >
-          Refresh
+          {t('bookings:list.refresh')}
         </Button>
       </Box>
 
       {/* Status Filter */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <FormControl sx={{ minWidth: 200 }}>
-          <InputLabel>Filter by Status</InputLabel>
+          <InputLabel>{t('bookings:list.filter_status')}</InputLabel>
           <Select
             value={filterStatus}
-            label="Filter by Status"
+            label={t('bookings:list.filter_status')}
             onChange={(e) => setFilterStatus(e.target.value)}
           >
-            <MenuItem value="all">All Bookings</MenuItem>
-            <MenuItem value="pending">Pending</MenuItem>
-            <MenuItem value="confirmed">Confirmed</MenuItem>
-            <MenuItem value="in_progress">In Progress</MenuItem>
-            <MenuItem value="completed">Completed</MenuItem>
-            <MenuItem value="cancelled">Cancelled</MenuItem>
+            <MenuItem value="all">{t('bookings:list.all_status')}</MenuItem>
+            <MenuItem value="pending">{t('bookings:status.pending')}</MenuItem>
+            <MenuItem value="confirmed">{t('bookings:status.confirmed')}</MenuItem>
+            <MenuItem value="in_progress">{t('bookings:status.in_progress')}</MenuItem>
+            <MenuItem value="completed">{t('bookings:status.completed')}</MenuItem>
+            <MenuItem value="cancelled">{t('bookings:status.cancelled')}</MenuItem>
           </Select>
         </FormControl>
       </Paper>
@@ -233,7 +235,7 @@ const MyBookingsPage: React.FC = () => {
       {/* Error State */}
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          Failed to load bookings. Please try again.
+          {t('bookings:list.error_loading')}
         </Alert>
       )}
 
@@ -242,19 +244,24 @@ const MyBookingsPage: React.FC = () => {
         <>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Typography variant="h6">
-              {pagination?.total || 0} Booking{(pagination?.total || 0) !== 1 ? 's' : ''} Found
-              {filterStatus !== 'all' && ` (${filterStatus.replace('_', ' ')})`}
+              {t(
+                (pagination?.total || 0) === 1
+                  ? 'bookings:list.results_count'
+                  : 'bookings:list.results_count_plural',
+                { count: pagination?.total || 0 }
+              )}
+              {filterStatus !== 'all' && ` ${t('bookings:list.filter_applied', { status: filterStatus.replace('_', ' ') })}`}
             </Typography>
           </Box>
 
           {bookings.length === 0 ? (
             <Paper sx={{ p: 4, textAlign: 'center' }}>
               <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-                No bookings found matching your criteria.
+                {t('bookings:list.no_results')}
               </Typography>
               {user?.userType === 'customer' && (
                 <Typography variant="body2" color="text.secondary">
-                  Start by finding service providers and booking services!
+                  {t('bookings:list.start_booking_prompt')}
                 </Typography>
               )}
             </Paper>
@@ -271,12 +278,12 @@ const MyBookingsPage: React.FC = () => {
                             {booking.serviceType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            Booking #{booking.id}
+                            {t('bookings:list.booking_number', { id: booking.id })}
                           </Typography>
                         </Box>
                         <Chip
                           icon={getStatusIcon(booking.status)}
-                          label={booking.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          label={t(`bookings:status.${booking.status}`)}
                           color={getStatusColor(booking.status)}
                           variant="filled"
                         />
@@ -289,19 +296,19 @@ const MyBookingsPage: React.FC = () => {
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Schedule fontSize="small" color="primary" />
                               <Typography variant="body2">
-                                <strong>Scheduled:</strong> {formatDate(booking.scheduledDate)}
+                                <strong>{t('bookings:details.scheduled')}</strong> {formatDate(booking.scheduledDate)}
                               </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <LocationOn fontSize="small" color="primary" />
                               <Typography variant="body2">
-                                <strong>Location:</strong> {booking.location.address}
+                                <strong>{t('bookings:details.location_label')}</strong> {booking.location.address}
                               </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Schedule fontSize="small" color="primary" />
                               <Typography variant="body2">
-                                <strong>Duration:</strong> {booking.estimatedDuration} hours
+                                <strong>{t('bookings:details.duration_label')}</strong> {t('bookings:details.duration_hours', { hours: booking.estimatedDuration })}
                               </Typography>
                             </Box>
                           </Stack>
@@ -311,17 +318,17 @@ const MyBookingsPage: React.FC = () => {
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Payment fontSize="small" color="primary" />
                               <Typography variant="body2">
-                                <strong>Total:</strong> {formatCurrency(booking.totalAmount)}
+                                <strong>{t('bookings:details.total')}</strong> {formatCurrency(booking.totalAmount)}
                               </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Payment fontSize="small" color="primary" />
                               <Typography variant="body2">
-                                <strong>Payment:</strong> {booking.paymentStatus.replace('_', ' ')}
+                                <strong>{t('bookings:details.payment')}</strong> {booking.paymentStatus.replace('_', ' ')}
                               </Typography>
                             </Box>
                             <Typography variant="body2" color="text.secondary">
-                              Created: {formatDate(booking.createdAt)}
+                              {t('bookings:details.created')} {formatDate(booking.createdAt)}
                             </Typography>
                           </Stack>
                         </Grid>
@@ -331,7 +338,7 @@ const MyBookingsPage: React.FC = () => {
                       {booking.description && (
                         <Box sx={{ mb: 2 }}>
                           <Typography variant="body2">
-                            <strong>Description:</strong> {booking.description}
+                            <strong>{t('bookings:details.description_label')}</strong> {booking.description}
                           </Typography>
                         </Box>
                       )}
@@ -340,7 +347,7 @@ const MyBookingsPage: React.FC = () => {
                       {booking.specialInstructions && (
                         <Box sx={{ mb: 2 }}>
                           <Typography variant="body2">
-                            <strong>Special Instructions:</strong> {booking.specialInstructions}
+                            <strong>{t('bookings:details.special_instructions_label')}</strong> {booking.specialInstructions}
                           </Typography>
                         </Box>
                       )}
@@ -359,7 +366,7 @@ const MyBookingsPage: React.FC = () => {
                               onClick={() => handleStatusUpdate(booking.id, 'confirmed')}
                               disabled={updateStatusMutation.isPending}
                             >
-                              Accept
+                              {t('bookings:actions.accept')}
                             </Button>
                             <Button
                               variant="outlined"
@@ -371,7 +378,7 @@ const MyBookingsPage: React.FC = () => {
                               }}
                               disabled={updateStatusMutation.isPending}
                             >
-                              Decline
+                              {t('bookings:actions.decline')}
                             </Button>
                           </>
                         )}
@@ -384,7 +391,7 @@ const MyBookingsPage: React.FC = () => {
                             onClick={() => handleStatusUpdate(booking.id, 'in_progress')}
                             disabled={updateStatusMutation.isPending}
                           >
-                            Start Service
+                            {t('bookings:actions.start_service')}
                           </Button>
                         )}
 
@@ -396,7 +403,7 @@ const MyBookingsPage: React.FC = () => {
                             onClick={() => handleStatusUpdate(booking.id, 'completed')}
                             disabled={updateStatusMutation.isPending}
                           >
-                            Mark Complete
+                            {t('bookings:actions.mark_complete')}
                           </Button>
                         )}
 
@@ -406,9 +413,9 @@ const MyBookingsPage: React.FC = () => {
                             variant="outlined"
                             color="primary"
                             startIcon={<Star />}
-                            onClick={() => toast('Review system - Coming in Task 6!')}
+                            onClick={() => toast(t('bookings:messages.review_coming_soon'))}
                           >
-                            Leave Review
+                            {t('bookings:actions.leave_review')}
                           </Button>
                         )}
 
@@ -424,16 +431,16 @@ const MyBookingsPage: React.FC = () => {
                             }}
                             disabled={updateStatusMutation.isPending}
                           >
-                            Cancel
+                            {t('bookings:actions.cancel')}
                           </Button>
                         )}
 
                         <Button
                           variant="outlined"
                           startIcon={<Chat />}
-                          onClick={() => toast('Messaging system - Coming in Task 4!')}
+                          onClick={() => toast(t('bookings:messages.messaging_coming_soon'))}
                         >
-                          Message
+                          {t('bookings:actions.message')}
                         </Button>
                       </Box>
                     </CardContent>
@@ -452,16 +459,16 @@ const MyBookingsPage: React.FC = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Cancel Booking</DialogTitle>
+        <DialogTitle>{t('bookings:cancel.title')}</DialogTitle>
         <DialogContent>
           <Typography variant="body1" sx={{ mb: 2 }}>
-            Are you sure you want to cancel this booking?
+            {t('bookings:cancel.confirm')}
           </Typography>
           <TextField
             fullWidth
             multiline
             rows={3}
-            label="Reason for cancellation (optional)"
+            label={t('bookings:cancel.reason')}
             value={cancelReason}
             onChange={(e) => setCancelReason(e.target.value)}
             variant="outlined"
@@ -469,7 +476,7 @@ const MyBookingsPage: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowCancelDialog(false)}>
-            Keep Booking
+            {t('bookings:actions.keep_booking')}
           </Button>
           <Button
             onClick={handleCancelBooking}
@@ -477,7 +484,7 @@ const MyBookingsPage: React.FC = () => {
             variant="contained"
             disabled={cancelBookingMutation.isPending}
           >
-            {cancelBookingMutation.isPending ? 'Cancelling...' : 'Cancel Booking'}
+            {cancelBookingMutation.isPending ? t('bookings:actions.cancelling') : t('bookings:actions.cancel_booking')}
           </Button>
         </DialogActions>
       </Dialog>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Container,
   Paper,
@@ -18,6 +19,7 @@ import { motion } from 'framer-motion';
 const LoginForm: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { t } = useTranslation(['auth']);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -34,7 +36,7 @@ const LoginForm: React.FC = () => {
       await login(formData.email, formData.password);
       navigate('/');
     } catch (error: any) {
-      setError(error.response?.data?.error || error.message || 'Login failed');
+      setError(error.response?.data?.error || error.message || t('auth:login.error'));
     } finally {
       setLoading(false);
     }
@@ -81,18 +83,18 @@ const LoginForm: React.FC = () => {
               variant="h4"
               component="h1"
               gutterBottom
-              sx={{ 
-                fontWeight: 'bold', 
+              sx={{
+                fontWeight: 'bold',
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 backgroundClip: 'text',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}
             >
-              🏠 Welcome Back to Tino 2
+              {t('auth:login.title')}
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Sign in to access your domestic service platform
+              {t('auth:login.subtitle')}
             </Typography>
           </Box>
 
@@ -110,7 +112,7 @@ const LoginForm: React.FC = () => {
           <Box component="form" onSubmit={handleSubmit}>
             <TextField
               fullWidth
-              label="Email Address"
+              label={t('auth:login.email')}
               name="email"
               type="email"
               value={formData.email}
@@ -123,7 +125,7 @@ const LoginForm: React.FC = () => {
 
             <TextField
               fullWidth
-              label="Password"
+              label={t('auth:login.password')}
               name="password"
               type="password"
               value={formData.password}
@@ -151,11 +153,11 @@ const LoginForm: React.FC = () => {
                 },
               }}
             >
-              {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
+              {loading ? <CircularProgress size={24} color="inherit" /> : t('auth:login.submit')}
             </Button>
 
             <Divider sx={{ my: 3 }}>
-              <Chip label="Try Demo Accounts" size="small" />
+              <Chip label={t('auth:login.demo_accounts')} size="small" />
             </Divider>
 
             <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
@@ -165,7 +167,7 @@ const LoginForm: React.FC = () => {
                 onClick={() => fillDemoAccount('customer')}
                 sx={{ textTransform: 'none' }}
               >
-                👤 Customer Demo
+                {t('auth:login.customer_demo')}
               </Button>
               <Button
                 variant="outlined"
@@ -173,13 +175,13 @@ const LoginForm: React.FC = () => {
                 onClick={() => fillDemoAccount('provider')}
                 sx={{ textTransform: 'none' }}
               >
-                🔧 Provider Demo
+                {t('auth:login.provider_demo')}
               </Button>
             </Box>
 
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary">
-                Don't have an account?{' '}
+                {t('auth:login.no_account')}{' '}
                 <Link
                   to="/register"
                   style={{
@@ -188,7 +190,7 @@ const LoginForm: React.FC = () => {
                     fontWeight: 600,
                   }}
                 >
-                  Sign up here
+                  {t('auth:login.register_link')}
                 </Link>
               </Typography>
             </Box>

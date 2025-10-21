@@ -1,0 +1,149 @@
+{
+  "title": "Mis Reseñas",
+  "subtitle": "Gestiona tus reseñas y calificaciones",
+  "write_review": "Escribir Reseña",
+  "reviews_written": "Reseñas Escritas",
+  "reviews_received": "Reseñas Recibidas",
+  "pending_reviews": "Reseñas Pendientes",
+  "services_to_review": "Servicios Listos para Reseñar",
+  "loading": "Cargando reseñas...",
+  "error": "Error al cargar las reseñas. Por favor, intenta de nuevo.",
+
+  "tabs": {
+    "reviews_written": "Reseñas que he Escrito",
+    "reviews_received": "Reseñas Sobre mis Servicios"
+  },
+
+  "filters": {
+    "rating": "Calificación",
+    "all_ratings": "Todas las Calificaciones",
+    "5_stars": "5 Estrellas",
+    "4_stars": "4 Estrellas",
+    "3_stars": "3 Estrellas",
+    "2_stars": "2 Estrellas",
+    "1_star": "1 Estrella",
+    "sort_by": "Ordenar Por",
+    "date": "Fecha",
+    "rating_sort": "Calificación",
+    "title_sort": "Título",
+    "search_placeholder": "Buscar reseñas...",
+    "clear_filters": "Limpiar Filtros"
+  },
+
+  "create": {
+    "title": "Escribir una Reseña",
+    "edit_title": "Editar Reseña",
+    "service_details": "Detalles del Servicio",
+    "provider": "Proveedor",
+    "service_type": "Tipo de Servicio",
+    "date": "Fecha",
+    "cost": "Costo",
+    "rating": "Calificación General",
+    "overall_rating_display": "Calificación General: {{rating}} estrellas",
+    "rate_experience": "Califica Tu Experiencia",
+    "criteria": "Califica los siguientes aspectos:",
+    "quality": "Calidad del Trabajo",
+    "timeliness": "Puntualidad",
+    "communication": "Comunicación",
+    "professionalism": "Profesionalismo",
+    "value": "Relación Calidad-Precio",
+    "review_title": "Título de la Reseña",
+    "title_placeholder": "Resume tu experiencia...",
+    "detailed_review": "Reseña Detallada",
+    "review_placeholder": "Comparte tu experiencia con otros...",
+    "review_placeholder_detail": "Cuéntale a otros sobre tu experiencia con este proveedor de servicios...",
+    "char_count_500": "{{count}}/500 caracteres",
+    "photos": "Agregar Fotos (Opcional)",
+    "photo_coming_soon": "Función de carga de fotos próximamente",
+    "photo_help_text": "Agrega fotos para ayudar a otros a ver tu experiencia",
+    "post_anonymously": "Publicar esta reseña de forma anónima",
+    "anonymous_help_text": "Tu nombre estará oculto, pero la reseña seguirá siendo pública",
+    "guidelines": "Directrices de Reseñas",
+    "guidelines_text": "Sé honesto, constructivo y respetuoso. Las reseñas ayudan a otros clientes a tomar decisiones informadas y ayudan a los proveedores a mejorar sus servicios.",
+    "submit": "Enviar Reseña",
+    "update": "Actualizar Reseña",
+    "cancel": "Cancelar",
+    "submitting": "Enviando...",
+    "updating": "Actualizando...",
+    "success": "¡Reseña publicada exitosamente!",
+    "error": "Error al publicar la reseña",
+    "char_count": "{{count}}/{{max}} caracteres"
+  },
+
+  "card": {
+    "provider": "Proveedor",
+    "customer": "Cliente",
+    "anonymous": "Anónimo",
+    "service_date": "Fecha del Servicio",
+    "verified_purchase": "Compra Verificada",
+    "detailed_ratings": "Calificaciones Detalladas:",
+    "helpful": "Útil",
+    "not_helpful": "No útil",
+    "report": "Reportar",
+    "edit": "Editar Reseña",
+    "delete": "Eliminar Reseña",
+    "flag_review": "Marcar Reseña",
+    "respond_to_review": "Responder a Reseña",
+    "provider_response": "Respuesta del Proveedor"
+  },
+
+  "criteria_labels": {
+    "quality": "Calidad",
+    "timeliness": "Puntualidad",
+    "communication": "Comunicación",
+    "professionalism": "Profesionalismo",
+    "value": "Valor"
+  },
+
+  "empty": {
+    "no_reviews": "Aún no hay reseñas",
+    "no_pending": "No tienes servicios para reseñar",
+    "no_match": "Ninguna reseña coincide con tus filtros actuales.",
+    "no_completed_bookings": "No hay reservas completadas disponibles para reseñar en este momento.",
+    "no_reviews_written": "Aún no has escrito ninguna reseña.",
+    "no_reviews_received": "Aún no hay reseñas sobre tus servicios."
+  },
+
+  "provider_response": {
+    "title": "Responder a Reseña del Cliente",
+    "anonymous_customer": "Cliente Anónimo",
+    "customer_label": "Cliente",
+    "stars_label": "{{rating}} estrellas",
+    "detailed_ratings": "Calificaciones Detalladas:",
+    "already_responded": "Ya has respondido a esta reseña.",
+    "your_response_label": "Tu respuesta ({{date}}):",
+    "your_response_title": "Tu Respuesta",
+    "response_label": "Respuesta al Cliente",
+    "response_placeholder": "Agradece a tu cliente y aborda sus comentarios de manera profesional...",
+    "char_count": "{{count}}/1000 caracteres",
+    "guidelines_title": "Pautas de Respuesta:",
+    "guideline_thank": "Agradece al cliente por sus comentarios",
+    "guideline_address": "Aborda cualquier inquietud de manera profesional",
+    "guideline_concise": "Mantén la respuesta concisa y constructiva",
+    "guideline_avoid": "Evita discutir o ser defensivo",
+    "guideline_improve": "Muestra cómo estás mejorando basándote en los comentarios",
+    "service_details": "Detalles del Servicio:",
+    "service_label": "Servicio:",
+    "date_label": "Fecha:",
+    "amount_label": "Monto:",
+    "cancel": "Cancelar",
+    "submit": "Enviar Respuesta",
+    "submitting": "Enviando...",
+    "success": "¡Respuesta enviada exitosamente!",
+    "error": "Error al enviar la respuesta",
+    "validation": {
+      "required": "La respuesta es requerida",
+      "min_length": "La respuesta debe tener al menos 10 caracteres",
+      "max_length": "La respuesta no puede exceder los 1000 caracteres"
+    }
+  },
+
+  "messages": {
+    "delete_success": "Reseña eliminada exitosamente",
+    "delete_error": "Error al eliminar la reseña",
+    "update_success": "¡Reseña actualizada exitosamente!",
+    "update_error": "Error al actualizar la reseña",
+    "flag_success": "La reseña ha sido marcada para moderación",
+    "flag_error": "Error al marcar la reseña"
+  }
+}

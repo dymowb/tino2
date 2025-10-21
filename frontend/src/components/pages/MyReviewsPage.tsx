@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Container,
@@ -68,6 +69,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const MyReviewsPage: React.FC = () => {
+  const { t } = useTranslation(['reviews']);
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -138,11 +140,11 @@ const MyReviewsPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-customer-reviews'] });
       queryClient.invalidateQueries({ queryKey: ['my-provider-reviews'] });
-      toast.success('Review deleted successfully');
+      toast.success(t('reviews:messages.delete_success'));
       handleMenuClose();
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || 'Failed to delete review');
+      toast.error(error?.response?.data?.error || t('reviews:messages.delete_error'));
     },
   });
 
@@ -151,11 +153,11 @@ const MyReviewsPage: React.FC = () => {
     mutationFn: ({ reviewId, reason }: { reviewId: string; reason: string }) =>
       apiService.flagReview(reviewId, reason, 'Flagged by user'),
     onSuccess: () => {
-      toast.success('Review has been flagged for moderation');
+      toast.success(t('reviews:messages.flag_success'));
       handleMenuClose();
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || 'Failed to flag review');
+      toast.error(error?.response?.data?.error || t('reviews:messages.flag_error'));
     },
   });
 
@@ -244,9 +246,9 @@ const MyReviewsPage: React.FC = () => {
               </Avatar>
               <Box>
                 <Typography variant="subtitle1" fontWeight="bold">
-                  {showProvider 
-                    ? (review.provider?.businessName || 'Provider')
-                    : (review.isAnonymous ? 'Anonymous' : review.customer?.firstName || 'Customer')
+                  {showProvider
+                    ? (review.provider?.businessName || t('reviews:card.provider'))
+                    : (review.isAnonymous ? t('reviews:card.anonymous') : review.customer?.firstName || t('reviews:card.customer'))
                   }
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -290,7 +292,7 @@ const MyReviewsPage: React.FC = () => {
           {review.criteria && (
             <Box sx={{ mb: 2 }}>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                Detailed Ratings:
+                {t('reviews:card.detailed_ratings')}
               </Typography>
               <Grid container spacing={2}>
                 {Object.entries(review.criteria).map(([key, value]) => (
@@ -312,7 +314,7 @@ const MyReviewsPage: React.FC = () => {
             <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
               <Typography variant="subtitle2" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Reply fontSize="small" />
-                Provider Response
+                {t('reviews:card.provider_response')}
               </Typography>
               <Typography variant="body2">
                 {review.providerResponse.response}
@@ -332,7 +334,7 @@ const MyReviewsPage: React.FC = () => {
                 size="small"
                 onClick={() => handleRespondToReview(review)}
               >
-                Respond to Review
+                {t('reviews:card.respond_to_review')}
               </Button>
             </Box>
           )}
@@ -343,11 +345,11 @@ const MyReviewsPage: React.FC = () => {
 
   const renderEligibleBookingsSection = () => {
     const eligibleBookingsData = getEligibleBookingsWithoutReviews();
-    
+
     if (eligibleBookingsData.length === 0) {
       return (
         <Alert severity="info">
-          No completed bookings available for review at this time.
+          {t('reviews:empty.no_completed_bookings')}
         </Alert>
       );
     }
@@ -356,7 +358,7 @@ const MyReviewsPage: React.FC = () => {
       <Box sx={{ mb: 3 }}>
         <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
           <RateReview />
-          Services Ready for Review
+          {t('reviews:services_to_review')}
         </Typography>
         <Grid container spacing={2}>
           {eligibleBookingsData.map((booking: any) => (
@@ -366,7 +368,7 @@ const MyReviewsPage: React.FC = () => {
                   <Box sx={{ display: 'flex', justify: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                     <Box>
                       <Typography variant="h6">
-                        {booking.provider?.businessName || 'Provider'}
+                        {booking.provider?.businessName || t('reviews:card.provider')}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         {booking.serviceType?.replace('_', ' ')}
@@ -384,7 +386,7 @@ const MyReviewsPage: React.FC = () => {
                     onClick={() => handleCreateReview(booking)}
                     fullWidth
                   >
-                    Write Review
+                    {t('reviews:write_review')}
                   </Button>
                 </CardContent>
               </Card>
@@ -399,6 +401,35 @@ const MyReviewsPage: React.FC = () => {
   const isLoading = activeTab === 0 ? customerLoading : providerLoading;
   const error = activeTab === 0 ? customerError : providerError;
 
+  // Client-side filtering for rating (fallback in case backend filtering doesn't work)
+  const filteredReviews = React.useMemo(() => {
+    if (!currentReviews?.data || !Array.isArray(currentReviews.data)) {
+      return [];
+    }
+
+    return currentReviews.data.filter((review: any) => {
+      // Rating filter
+      if (ratingFilter && review.rating !== Number(ratingFilter)) {
+        return false;
+      }
+
+      // Search query filter
+      if (searchQuery) {
+        const searchLower = searchQuery.toLowerCase();
+        return (
+          review.title?.toLowerCase().includes(searchLower) ||
+          review.comment?.toLowerCase().includes(searchLower) ||
+          review.customer?.firstName?.toLowerCase().includes(searchLower) ||
+          review.customer?.lastName?.toLowerCase().includes(searchLower) ||
+          review.provider?.businessName?.toLowerCase().includes(searchLower) ||
+          review.booking?.serviceType?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      return true;
+    });
+  }, [currentReviews, ratingFilter, searchQuery]);
+
   return (
     <Container maxWidth="lg">
       <Box sx={{ py: 3 }}>
@@ -406,10 +437,10 @@ const MyReviewsPage: React.FC = () => {
         <Box sx={{ mb: 4 }}>
           <Typography variant="h4" component="h1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <RateReview />
-            My Reviews
+            {t('reviews:title')}
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Manage your reviews and ratings
+            {t('reviews:subtitle')}
           </Typography>
         </Box>
 
@@ -422,16 +453,16 @@ const MyReviewsPage: React.FC = () => {
             textColor="primary"
             variant="fullWidth"
           >
-            <Tab 
-              label="Reviews I've Written" 
-              icon={<Edit />} 
+            <Tab
+              label={t('reviews:tabs.reviews_written')}
+              icon={<Edit />}
               iconPosition="start"
               disabled={user?.userType !== 'customer' && user?.userType !== 'provider'}
             />
             {user?.userType === 'provider' && (
-              <Tab 
-                label="Reviews About My Services" 
-                icon={<BusinessCenter />} 
+              <Tab
+                label={t('reviews:tabs.reviews_received')}
+                icon={<BusinessCenter />}
                 iconPosition="start"
               />
             )}
@@ -444,7 +475,7 @@ const MyReviewsPage: React.FC = () => {
             <Grid xs={12} md={4}>
               <TextField
                 fullWidth
-                placeholder="Search reviews..."
+                placeholder={t('reviews:filters.search_placeholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 InputProps={{
@@ -459,32 +490,32 @@ const MyReviewsPage: React.FC = () => {
             </Grid>
             <Grid xs={6} md={2}>
               <FormControl fullWidth size="small">
-                <InputLabel>Rating</InputLabel>
+                <InputLabel>{t('reviews:filters.rating')}</InputLabel>
                 <Select
                   value={ratingFilter}
                   onChange={(e) => handleRatingFilterChange(e.target.value as number | "")}
-                  label="Rating"
+                  label={t('reviews:filters.rating')}
                 >
-                  <MenuItem value="">All Ratings</MenuItem>
-                  <MenuItem value={5}>5 Stars</MenuItem>
-                  <MenuItem value={4}>4 Stars</MenuItem>
-                  <MenuItem value={3}>3 Stars</MenuItem>
-                  <MenuItem value={2}>2 Stars</MenuItem>
-                  <MenuItem value={1}>1 Star</MenuItem>
+                  <MenuItem value="">{t('reviews:filters.all_ratings')}</MenuItem>
+                  <MenuItem value={5}>{t('reviews:filters.5_stars')}</MenuItem>
+                  <MenuItem value={4}>{t('reviews:filters.4_stars')}</MenuItem>
+                  <MenuItem value={3}>{t('reviews:filters.3_stars')}</MenuItem>
+                  <MenuItem value={2}>{t('reviews:filters.2_stars')}</MenuItem>
+                  <MenuItem value={1}>{t('reviews:filters.1_star')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
             <Grid xs={6} md={2}>
               <FormControl fullWidth size="small">
-                <InputLabel>Sort By</InputLabel>
+                <InputLabel>{t('reviews:filters.sort_by')}</InputLabel>
                 <Select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  label="Sort By"
+                  label={t('reviews:filters.sort_by')}
                 >
-                  <MenuItem value="createdAt">Date</MenuItem>
-                  <MenuItem value="rating">Rating</MenuItem>
-                  <MenuItem value="title">Title</MenuItem>
+                  <MenuItem value="createdAt">{t('reviews:filters.date')}</MenuItem>
+                  <MenuItem value="rating">{t('reviews:filters.rating_sort')}</MenuItem>
+                  <MenuItem value="title">{t('reviews:filters.title_sort')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -500,7 +531,7 @@ const MyReviewsPage: React.FC = () => {
                   setPage(1);
                 }}
               >
-                Clear Filters
+                {t('reviews:filters.clear_filters')}
               </Button>
             </Grid>
           </Grid>
@@ -512,22 +543,24 @@ const MyReviewsPage: React.FC = () => {
           
           {error ? (
             <Alert severity="error">
-              Failed to load reviews. Please try again.
+              {t('reviews:error')}
             </Alert>
           ) : isLoading ? (
-            <Typography>Loading reviews...</Typography>
-          ) : !currentReviews?.data?.length ? (
+            <Typography>{t('reviews:loading')}</Typography>
+          ) : filteredReviews.length === 0 ? (
             <Alert severity="info">
-              {activeTab === 0 
-                ? "You haven't written any reviews yet."
-                : "No reviews about your services yet."
+              {ratingFilter || searchQuery
+                ? t('reviews:empty.no_match')
+                : activeTab === 0
+                  ? t('reviews:empty.no_reviews_written')
+                  : t('reviews:empty.no_reviews_received')
               }
             </Alert>
           ) : (
             <>
-              {currentReviews.data.map((review: any) => renderReviewCard(review, activeTab === 1))}
-              
-              {currentReviews.pagination && currentReviews.pagination.pages > 1 && (
+              {filteredReviews.map((review: any) => renderReviewCard(review, activeTab === 1))}
+
+              {currentReviews?.pagination && currentReviews.pagination.pages > 1 && (
                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
                   <Pagination
                     count={currentReviews.pagination.pages}
@@ -545,19 +578,22 @@ const MyReviewsPage: React.FC = () => {
           <TabPanel value={activeTab} index={1}>
             {error ? (
               <Alert severity="error">
-                Failed to load reviews. Please try again.
+                {t('reviews:error')}
               </Alert>
             ) : isLoading ? (
-              <Typography>Loading reviews...</Typography>
-            ) : !currentReviews?.data?.length ? (
+              <Typography>{t('reviews:loading')}</Typography>
+            ) : filteredReviews.length === 0 ? (
               <Alert severity="info">
-                No reviews about your services yet.
+                {ratingFilter || searchQuery
+                  ? t('reviews:empty.no_match')
+                  : t('reviews:empty.no_reviews_received')
+                }
               </Alert>
             ) : (
               <>
-                {currentReviews.data.map((review: any) => renderReviewCard(review, true))}
-                
-                {currentReviews.pagination && currentReviews.pagination.pages > 1 && (
+                {filteredReviews.map((review: any) => renderReviewCard(review, true))}
+
+                {currentReviews?.pagination && currentReviews.pagination.pages > 1 && (
                   <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
                     <Pagination
                       count={currentReviews.pagination.pages}
@@ -581,15 +617,15 @@ const MyReviewsPage: React.FC = () => {
           {menuReview?.customerId === user?.id && (
             <>
               <MenuItem onClick={handleEditReview}>
-                <Edit sx={{ mr: 1 }} /> Edit Review
+                <Edit sx={{ mr: 1 }} /> {t('reviews:card.edit')}
               </MenuItem>
               <MenuItem onClick={handleDeleteReview}>
-                <Delete sx={{ mr: 1 }} /> Delete Review
+                <Delete sx={{ mr: 1 }} /> {t('reviews:card.delete')}
               </MenuItem>
             </>
           )}
           <MenuItem onClick={handleFlagReview}>
-            <Flag sx={{ mr: 1 }} /> Flag Review
+            <Flag sx={{ mr: 1 }} /> {t('reviews:card.flag_review')}
           </MenuItem>
         </Menu>
 

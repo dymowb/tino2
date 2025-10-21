@@ -1,0 +1,100 @@
+{
+  "title": "Notifications",
+  "subtitle": "Stay updated with your bookings, payments, reviews, and messages",
+  "all": "All Notifications",
+  "unread": "Unread",
+  "mark_all_read": "Mark All as Read",
+  "mark_as_read": "Mark as Read",
+  "mark_as_unread": "Mark as Unread",
+  "delete": "Delete",
+  "delete_all": "Delete All",
+  "no_notifications": "No notifications",
+  "empty_message": "You're all caught up!",
+
+  "types": {
+    "all": "All",
+    "bookings": "Bookings",
+    "payments": "Payments",
+    "messages": "Messages",
+    "reviews": "Reviews",
+    "system": "System"
+  },
+
+  "booking": {
+    "new_booking": "New booking request from {{customer}}",
+    "booking_confirmed": "Your booking has been confirmed",
+    "booking_cancelled": "Booking cancelled by {{name}}",
+    "booking_completed": "Booking marked as completed",
+    "booking_reminder": "Reminder: Booking scheduled for {{time}}",
+    "booking_updated": "Booking details updated"
+  },
+
+  "payment": {
+    "payment_received": "Payment received: {{amount}}",
+    "payment_sent": "Payment sent successfully",
+    "payment_failed": "Payment failed for booking #{{id}}",
+    "refund_processed": "Refund processed: {{amount}}",
+    "payout_scheduled": "Payout scheduled for {{date}}",
+    "payout_completed": "Payout completed: {{amount}}"
+  },
+
+  "message": {
+    "new_message": "New message from {{sender}}",
+    "conversation_started": "{{name}} started a conversation"
+  },
+
+  "review": {
+    "new_review": "New review received from {{customer}}",
+    "review_response": "{{provider}} responded to your review",
+    "review_reminder": "Don't forget to review your recent service"
+  },
+
+  "system": {
+    "account_verified": "Your account has been verified",
+    "password_changed": "Your password was changed",
+    "profile_updated": "Your profile was updated",
+    "maintenance": "Scheduled maintenance on {{date}}",
+    "new_feature": "Check out our new feature: {{feature}}"
+  },
+
+  "preferences": {
+    "title": "Notification Preferences",
+    "description": "Choose how you want to be notified",
+    "description_detailed": "Notification preferences are managed through the notification center settings. Click on any notification to access preference controls, or use the settings button in the notification center header.",
+    "tip_label": "Tip:",
+    "tip_message": "You can customize email, SMS, and push notification preferences for different types of notifications including bookings, payments, reviews, and messages.",
+    "email": "Email Notifications",
+    "sms": "SMS Notifications",
+    "push": "Push Notifications",
+    "booking_notifications": "Booking Notifications",
+    "payment_notifications": "Payment Notifications",
+    "message_notifications": "Message Notifications",
+    "review_notifications": "Review Notifications",
+    "marketing": "Marketing & Promotions",
+    "save": "Save Preferences",
+    "success": "Preferences saved successfully",
+    "error": "Failed to save preferences"
+  },
+
+  "history": {
+    "title": "History",
+    "page_title": "Notification History",
+    "description": "Your notification history shows all notifications from the past 30 days, including read and deleted notifications.",
+    "retention_policy": "Retention Policy:",
+    "retention_30_days": "Notifications are kept for 30 days",
+    "retention_90_days": "High-priority notifications are kept for 90 days",
+    "retention_1_year": "System notifications are kept for 1 year",
+    "note_label": "Note:",
+    "note_message": "Deleted notifications cannot be recovered. Important information should be saved separately if needed for future reference."
+  },
+
+  "time": {
+    "just_now": "Just now",
+    "minutes_ago": "{{count}} minute ago",
+    "minutes_ago_plural": "{{count}} minutes ago",
+    "hours_ago": "{{count}} hour ago",
+    "hours_ago_plural": "{{count}} hours ago",
+    "days_ago": "{{count}} day ago",
+    "days_ago_plural": "{{count}} days ago"
+  }
+}

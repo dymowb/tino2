@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Grid,
@@ -57,6 +58,7 @@ interface Conversation {
 }
 
 const MessagingPage: React.FC = () => {
+  const { t } = useTranslation(['messages']);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [newConversationOpen, setNewConversationOpen] = useState(false);
@@ -123,7 +125,7 @@ const MessagingPage: React.FC = () => {
     if (isToday(date)) {
       return format(date, 'HH:mm');
     } else if (isYesterday(date)) {
-      return 'Yesterday';
+      return t('messages:yesterday');
     } else {
       return format(date, 'MMM d');
     }
@@ -133,20 +135,20 @@ const MessagingPage: React.FC = () => {
     if (conversation.title) {
       return conversation.title;
     }
-    
+
     if (conversation.type === 'direct') {
       const otherParticipants = conversation.participants.filter(p => {
         const currentUser = apiService.getStoredUser();
         return p.id !== currentUser?.id;
       });
-      
+
       if (otherParticipants.length === 1) {
         const participant = otherParticipants[0];
         return `${participant.firstName} ${participant.lastName}`;
       }
     }
-    
-    return 'Conversation';
+
+    return t('messages:conversation_label');
   };
 
   const getConversationAvatar = (conversation: Conversation) => {
@@ -187,7 +189,7 @@ const MessagingPage: React.FC = () => {
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
         <Typography variant="h4" gutterBottom>
-          Messages
+          {t('messages:title')}
         </Typography>
       </Box>
 
@@ -199,7 +201,7 @@ const MessagingPage: React.FC = () => {
               <TextField
                 fullWidth
                 size="small"
-                placeholder="Search conversations..."
+                placeholder={t('messages:search_conversations')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 InputProps={{
@@ -214,7 +216,7 @@ const MessagingPage: React.FC = () => {
                         <IconButton
                           size="small"
                           onClick={handleClearSearch}
-                          title="Clear search"
+                          title={t('messages:clear_search')}
                         >
                           <ClearIcon />
                         </IconButton>
@@ -222,7 +224,7 @@ const MessagingPage: React.FC = () => {
                       <IconButton
                         size="small"
                         onClick={() => setNewConversationOpen(true)}
-                        title="New conversation"
+                        title={t('messages:new_conversation_tooltip')}
                       >
                         <AddIcon />
                       </IconButton>
@@ -236,13 +238,13 @@ const MessagingPage: React.FC = () => {
               {isLoading ? (
                 <Box sx={{ p: 3, textAlign: 'center' }}>
                   <Typography variant="body2" color="text.secondary">
-                    Loading conversations...
+                    {t('messages:loading')}
                   </Typography>
                 </Box>
               ) : filteredConversations.length === 0 ? (
                 <Box sx={{ p: 3, textAlign: 'center' }}>
                   <Typography variant="body2" color="text.secondary">
-                    {searchTerm ? 'No conversations found' : 'No conversations yet'}
+                    {searchTerm ? t('messages:no_results') : t('messages:no_conversations')}
                   </Typography>
                 </Box>
               ) : (
@@ -304,7 +306,7 @@ const MessagingPage: React.FC = () => {
                                 fontWeight: conversation.unreadCount > 0 ? 500 : 400
                               }}
                             >
-                              {conversation.lastMessage?.message || 'No messages yet'}
+                              {conversation.lastMessage?.message || t('messages:conversation.no_messages')}
                             </Typography>
                             {conversation.lastMessage && (
                               <Typography variant="caption" color="text.secondary">
@@ -331,19 +333,19 @@ const MessagingPage: React.FC = () => {
               onConversationUpdate={() => refetch()}
             />
           ) : (
-            <Paper sx={{ 
-              height: '100%', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center' 
+            <Paper sx={{
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}>
               <Box sx={{ textAlign: 'center', p: 4 }}>
                 <MessageIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                 <Typography variant="h6" color="text.secondary" gutterBottom>
-                  Select a conversation to start messaging
+                  {t('messages:select_conversation')}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Choose a conversation from the list to view and send messages
+                  {t('messages:select_conversation_desc')}
                 </Typography>
               </Box>
             </Paper>

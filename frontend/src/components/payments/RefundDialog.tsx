@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogTitle,
@@ -59,6 +60,7 @@ const RefundDialog: React.FC<Props> = ({
   payment,
   onRefundSuccess,
 }) => {
+  const { t } = useTranslation('payments');
   const [refundType, setRefundType] = useState<'full' | 'partial'>('full');
   const [refundAmount, setRefundAmount] = useState<number>(payment.amount / 100);
   const [refundReason, setRefundReason] = useState('');
@@ -68,12 +70,12 @@ const RefundDialog: React.FC<Props> = ({
     mutationFn: ({ paymentId, refundData }: { paymentId: string; refundData: any }) =>
       apiService.refundPayment(paymentId, refundData),
     onSuccess: () => {
-      toast.success('Refund processed successfully');
+      toast.success(t('refund.success'));
       onRefundSuccess();
       onClose();
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to process refund');
+      toast.error(error.response?.data?.error || t('refund.error'));
     },
   });
 
@@ -97,12 +99,12 @@ const RefundDialog: React.FC<Props> = ({
 
   const handleSubmit = () => {
     if (!refundReason.trim()) {
-      toast.error('Please provide a reason for the refund');
+      toast.error(t('refund.validation.reason_required'));
       return;
     }
 
     if (refundType === 'partial' && refundAmount <= 0) {
-      toast.error('Please enter a valid refund amount');
+      toast.error(t('refund.validation.invalid_amount'));
       return;
     }
 
@@ -132,7 +134,7 @@ const RefundDialog: React.FC<Props> = ({
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <RefundIcon />
-          Process Refund
+          {t('refund.title')}
         </Box>
       </DialogTitle>
 
@@ -141,10 +143,9 @@ const RefundDialog: React.FC<Props> = ({
           <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
             <WarningIcon fontSize="small" />
             <Box>
-              <Typography variant="subtitle2">Important</Typography>
+              <Typography variant="subtitle2">{t('refund.warning_title')}</Typography>
               <Typography variant="body2">
-                This action will refund the payment and may reverse any transfers made to the provider. 
-                Please ensure you have a valid reason for processing this refund.
+                {t('refund.warning_text')}
               </Typography>
             </Box>
           </Box>
@@ -153,32 +154,32 @@ const RefundDialog: React.FC<Props> = ({
         <Card sx={{ mb: 3 }}>
           <CardContent>
             <Typography variant="subtitle1" gutterBottom>
-              Payment Details
+              {t('refund.payment_details')}
             </Typography>
-            
+
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2">Payment ID:</Typography>
+              <Typography variant="body2">{t('refund.payment_id')}</Typography>
               <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                 {payment.id.substring(0, 12)}...
               </Typography>
             </Box>
-            
+
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2">Service:</Typography>
+              <Typography variant="body2">{t('refund.service')}</Typography>
               <Typography variant="body2">
-                {payment.booking?.serviceType || 'Service Payment'}
+                {payment.booking?.serviceType || t('refund.service_payment')}
               </Typography>
             </Box>
-            
+
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2">Provider:</Typography>
+              <Typography variant="body2">{t('refund.provider')}</Typography>
               <Typography variant="body2">
                 {payment.booking?.provider.businessName || 'N/A'}
               </Typography>
             </Box>
-            
+
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2">Status:</Typography>
+              <Typography variant="body2">{t('refund.status')}</Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Chip label={payment.status} size="small" />
                 <Chip label={payment.escrowStatus} size="small" variant="outlined" />
@@ -186,23 +187,23 @@ const RefundDialog: React.FC<Props> = ({
             </Box>
 
             <Divider sx={{ my: 2 }} />
-            
+
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2">Total Amount:</Typography>
+              <Typography variant="body2">{t('refund.total_amount')}</Typography>
               <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                 {formatAmount(maxRefundAmount)}
               </Typography>
             </Box>
-            
+
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2" color="text.secondary">Platform Fee:</Typography>
+              <Typography variant="body2" color="text.secondary">{t('refund.platform_fee')}</Typography>
               <Typography variant="body2" color="text.secondary">
                 {formatAmount(platformFeeAmount)}
               </Typography>
             </Box>
-            
+
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Typography variant="body2" color="text.secondary">Provider Amount:</Typography>
+              <Typography variant="body2" color="text.secondary">{t('refund.provider_amount')}</Typography>
               <Typography variant="body2" color="text.secondary">
                 {formatAmount(providerAmount)}
               </Typography>
@@ -211,17 +212,17 @@ const RefundDialog: React.FC<Props> = ({
         </Card>
 
         <FormControl component="fieldset" sx={{ mb: 3 }}>
-          <FormLabel component="legend">Refund Type</FormLabel>
+          <FormLabel component="legend">{t('refund.refund_type')}</FormLabel>
           <RadioGroup value={refundType} onChange={handleRefundTypeChange}>
             <FormControlLabel
               value="full"
               control={<Radio />}
-              label={`Full Refund (${formatAmount(maxRefundAmount)})`}
+              label={t('refund.full_refund', { amount: formatAmount(maxRefundAmount) })}
             />
             <FormControlLabel
               value="partial"
               control={<Radio />}
-              label="Partial Refund"
+              label={t('refund.partial_refund')}
             />
           </RadioGroup>
         </FormControl>
@@ -229,7 +230,7 @@ const RefundDialog: React.FC<Props> = ({
         {refundType === 'partial' && (
           <TextField
             fullWidth
-            label="Refund Amount"
+            label={t('refund.refund_amount')}
             type="number"
             value={refundAmount}
             onChange={handleRefundAmountChange}
@@ -238,19 +239,19 @@ const RefundDialog: React.FC<Props> = ({
               max: maxRefundAmount,
               step: 0.01,
             }}
-            helperText={`Maximum refund amount: ${formatAmount(maxRefundAmount)}`}
+            helperText={t('refund.max_refund_amount', { amount: formatAmount(maxRefundAmount) })}
             sx={{ mb: 3 }}
           />
         )}
 
         <TextField
           fullWidth
-          label="Reason for Refund"
+          label={t('refund.reason')}
           multiline
           rows={3}
           value={refundReason}
           onChange={(e) => setRefundReason(e.target.value)}
-          placeholder="Please provide a detailed reason for this refund..."
+          placeholder={t('refund.reason_placeholder')}
           required
           sx={{ mb: 3 }}
         />
@@ -266,10 +267,10 @@ const RefundDialog: React.FC<Props> = ({
           label={
             <Box>
               <Typography variant="body2">
-                Refund application fee ({formatAmount(platformFeeAmount)})
+                {t('refund.refund_app_fee', { amount: formatAmount(platformFeeAmount) })}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                Check this to also refund the platform fee to the customer
+                {t('refund.refund_app_fee_help')}
               </Typography>
             </Box>
           }
@@ -280,29 +281,29 @@ const RefundDialog: React.FC<Props> = ({
             <InfoIcon fontSize="small" />
             <Box>
               <Typography variant="body2">
-                Processing this refund will:
+                {t('refund.processing_info')}
               </Typography>
               <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
                 <li>
                   <Typography variant="body2">
-                    Refund {formatAmount(refundType === 'full' ? maxRefundAmount : refundAmount)} to the customer's original payment method
+                    {t('refund.info_customer_refund', { amount: formatAmount(refundType === 'full' ? maxRefundAmount : refundAmount) })}
                   </Typography>
                 </li>
                 <li>
                   <Typography variant="body2">
-                    Reverse any transfers made to the provider (if applicable)
+                    {t('refund.info_reverse_transfer')}
                   </Typography>
                 </li>
                 {refundApplicationFee && (
                   <li>
                     <Typography variant="body2">
-                      Refund the platform fee of {formatAmount(platformFeeAmount)}
+                      {t('refund.info_platform_fee', { amount: formatAmount(platformFeeAmount) })}
                     </Typography>
                   </li>
                 )}
                 <li>
                   <Typography variant="body2">
-                    Update the payment status to "refunded"
+                    {t('refund.info_update_status')}
                   </Typography>
                 </li>
               </ul>
@@ -313,7 +314,7 @@ const RefundDialog: React.FC<Props> = ({
 
       <DialogActions>
         <Button onClick={onClose} disabled={refundMutation.isPending}>
-          Cancel
+          {t('refund.cancel')}
         </Button>
         <Button
           onClick={handleSubmit}
@@ -322,7 +323,7 @@ const RefundDialog: React.FC<Props> = ({
           disabled={refundMutation.isPending || !refundReason.trim()}
           startIcon={refundMutation.isPending ? <CircularProgress size={16} /> : <RefundIcon />}
         >
-          {refundMutation.isPending ? 'Processing...' : 'Process Refund'}
+          {refundMutation.isPending ? t('refund.processing') : t('refund.submit')}
         </Button>
       </DialogActions>
     </Dialog>

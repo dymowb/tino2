@@ -1,0 +1,136 @@
+{
+  "app_name": "Tino 2",
+  "welcome": "Welcome",
+  "loading": "Loading...",
+  "error": "Error",
+  "success": "Success",
+  "cancel": "Cancel",
+  "save": "Save",
+  "delete": "Delete",
+  "edit": "Edit",
+  "close": "Close",
+  "submit": "Submit",
+  "confirm": "Confirm",
+  "search": "Search",
+  "filter": "Filter",
+  "sort": "Sort",
+  "refresh": "Refresh",
+  "export": "Export",
+  "back": "Back",
+  "next": "Next",
+  "previous": "Previous",
+  "view_details": "View Details",
+  "no_results": "No results found",
+  "try_again": "Try again",
+  "go_back": "Go back",
+  "learn_more": "Learn more",
+
+  "navigation": {
+    "home": "Home",
+    "find_providers": "Find Providers",
+    "my_bookings": "My Bookings",
+    "my_quotes": "My Quotes",
+    "messages": "Messages",
+    "payments": "Payments",
+    "my_reviews": "My Reviews",
+    "profile": "Profile",
+    "dashboard": "Dashboard",
+    "notifications": "Notifications",
+    "settings": "Settings",
+    "logout": "Logout",
+    "login": "Login",
+    "register": "Register"
+  },
+
+  "status": {
+    "pending": "Pending",
+    "confirmed": "Confirmed",
+    "in_progress": "In Progress",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "failed": "Failed",
+    "succeeded": "Succeeded",
+    "processing": "Processing",
+    "refunded": "Refunded"
+  },
+
+  "time": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "this_week": "This Week",
+    "this_month": "This Month",
+    "this_quarter": "This Quarter",
+    "this_year": "This Year",
+    "last_week": "Last Week",
+    "last_month": "Last Month",
+    "last_year": "Last Year",
+    "custom": "Custom"
+  },
+
+  "actions": {
+    "download": "Download",
+    "upload": "Upload",
+    "share": "Share",
+    "print": "Print",
+    "copy": "Copy",
+    "paste": "Paste",
+    "cut": "Cut",
+    "undo": "Undo",
+    "redo": "Redo"
+  },
+
+  "validation": {
+    "required": "This field is required",
+    "invalid_email": "Invalid email address",
+    "invalid_phone": "Invalid phone number",
+    "min_length": "Minimum {{count}} characters required",
+    "max_length": "Maximum {{count}} characters allowed",
+    "must_match": "Fields must match",
+    "invalid_format": "Invalid format"
+  },
+
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "network": "Network error. Please check your connection.",
+    "unauthorized": "You are not authorized to perform this action.",
+    "not_found": "The requested resource was not found.",
+    "server_error": "Server error. Please try again later.",
+    "timeout": "Request timed out. Please try again."
+  },
+
+  "home": {
+    "title": "🏠 Welcome to Tino 2",
+    "subtitle": "Your trusted platform for domestic services",
+    "welcome_back": "Welcome back, {{firstName}}! 👋",
+    "find_providers": "Find Service Providers",
+    "go_to_dashboard": "Go to Dashboard",
+    "get_started": "Get Started",
+    "sign_in": "Sign In",
+    "popular_services": "Popular Services",
+    "why_choose": "Why Choose Tino 2?",
+    "ready_to_start": "Ready to Get Started?",
+    "join_message": "Join thousands of satisfied customers and trusted service providers",
+    "join_today": "Join Tino 2 Today",
+    "services": {
+      "house_cleaning": "House Cleaning",
+      "plumbing": "Plumbing",
+      "electrical": "Electrical",
+      "handyman": "Handyman",
+      "gardening": "Gardening",
+      "repairs": "Repairs"
+    },
+    "features": {
+      "verified_providers": "Verified service providers",
+      "real_time_booking": "Real-time booking system",
+      "secure_payments": "Secure payments",
+      "customer_reviews": "Customer reviews & ratings",
+      "gps_discovery": "GPS-based provider discovery",
+      "instant_messaging": "Instant messaging"
+    },
+    "stats": {
+      "rating": "⭐ 4.8/5 Rating",
+      "services_count": "🎯 50+ Services",
+      "verified_badge": "✅ Verified Providers"
+    }
+  }
+}

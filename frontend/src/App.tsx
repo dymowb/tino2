@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import theme from './theme/theme';
+import './i18n'; // Initialize i18next
 import Navigation from './components/layout/Navigation';
 import HomePage from './components/pages/HomePage';
 import LoginForm from './components/auth/LoginForm';

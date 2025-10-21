@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogTitle,
@@ -55,6 +56,7 @@ const NewConversationDialog: React.FC<Props> = ({
   preselectedUsers = [],
   metadata,
 }) => {
+  const { t } = useTranslation('messages');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<string[]>(preselectedUsers);
   const [title, setTitle] = useState('');
@@ -105,12 +107,12 @@ const NewConversationDialog: React.FC<Props> = ({
   const createConversationMutation = useMutation({
     mutationFn: apiService.createConversation,
     onSuccess: (data) => {
-      toast.success('Conversation created successfully');
+      toast.success(t('new.success'));
       onConversationCreated(data.id);
       handleClose();
     },
     onError: (error) => {
-      toast.error('Failed to create conversation');
+      toast.error(t('new.error'));
       console.error('Create conversation error:', error);
     },
   });
@@ -134,7 +136,7 @@ const NewConversationDialog: React.FC<Props> = ({
 
   const handleCreateConversation = () => {
     if (selectedUsers.length === 0) {
-      toast.error('Please select at least one participant');
+      toast.error(t('new.select_participant'));
       return;
     }
 
@@ -156,20 +158,20 @@ const NewConversationDialog: React.FC<Props> = ({
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Start New Conversation</DialogTitle>
-      
+      <DialogTitle>{t('new.title')}</DialogTitle>
+
       <DialogContent>
         <Box sx={{ mb: 3 }}>
           <FormControl fullWidth margin="normal">
-            <InputLabel>Conversation Type</InputLabel>
+            <InputLabel>{t('new.conversation_type')}</InputLabel>
             <Select
               value={conversationType}
               onChange={(e) => setConversationType(e.target.value as any)}
-              label="Conversation Type"
+              label={t('new.conversation_type')}
             >
-              <MenuItem value="direct">Direct Message</MenuItem>
-              <MenuItem value="group">Group Chat</MenuItem>
-              <MenuItem value="support">Support</MenuItem>
+              <MenuItem value="direct">{t('new.direct_message')}</MenuItem>
+              <MenuItem value="group">{t('new.group_chat')}</MenuItem>
+              <MenuItem value="support">{t('new.support')}</MenuItem>
             </Select>
           </FormControl>
 
@@ -178,19 +180,19 @@ const NewConversationDialog: React.FC<Props> = ({
               <TextField
                 fullWidth
                 margin="normal"
-                label="Conversation Title"
+                label={t('new.conversation_title')}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter a title for this conversation"
+                placeholder={t('new.title_placeholder')}
               />
-              
+
               <TextField
                 fullWidth
                 margin="normal"
-                label="Description (Optional)"
+                label={t('new.description')}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Brief description of the conversation"
+                placeholder={t('new.description_placeholder')}
                 multiline
                 rows={2}
               />
@@ -200,10 +202,10 @@ const NewConversationDialog: React.FC<Props> = ({
           <TextField
             fullWidth
             margin="normal"
-            label="Search Users"
+            label={t('new.search_users_label')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by name or email"
+            placeholder={t('new.search_placeholder')}
             InputProps={{
               endAdornment: <SearchIcon />,
             }}
@@ -213,22 +215,22 @@ const NewConversationDialog: React.FC<Props> = ({
         {selectedUsers.length > 0 && (
           <Box sx={{ mb: 2 }}>
             <Typography variant="subtitle2" gutterBottom>
-              Selected Participants:
+              {t('new.selected_participants')}
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
               {getSelectedUserNames().split(', ').map((name, index) => (
-                <Chip 
+                <Chip
                   key={index}
-                  label={name} 
+                  label={name}
                   onDelete={() => {
-                    const userToRemove = users.find(user => 
+                    const userToRemove = users.find(user =>
                       `${user.firstName} ${user.lastName}` === name
                     );
                     if (userToRemove) {
                       handleUserToggle(userToRemove.id);
                     }
                   }}
-                  size="small" 
+                  size="small"
                 />
               ))}
             </Box>
@@ -242,7 +244,7 @@ const NewConversationDialog: React.FC<Props> = ({
             </Box>
           ) : users.length === 0 ? (
             <Typography variant="body2" color="text.secondary" sx={{ p: 2, textAlign: 'center' }}>
-              {searchTerm ? 'No users found' : 'Start typing to search for users'}
+              {searchTerm ? t('new.no_users_found') : t('new.start_typing')}
             </Typography>
           ) : (
             <List>
@@ -290,16 +292,16 @@ const NewConversationDialog: React.FC<Props> = ({
         {metadata && (
           <Box sx={{ mt: 2, p: 2, backgroundColor: 'action.hover', borderRadius: 1 }}>
             <Typography variant="subtitle2" gutterBottom>
-              Conversation Context:
+              {t('new.context_title')}
             </Typography>
             {metadata.serviceType && (
-              <Chip label={`Service: ${metadata.serviceType}`} size="small" sx={{ mr: 1 }} />
+              <Chip label={t('new.service_label', { service: metadata.serviceType })} size="small" sx={{ mr: 1 }} />
             )}
             {metadata.bookingId && (
-              <Chip label="Related to Booking" size="small" sx={{ mr: 1 }} />
+              <Chip label={t('new.related_booking')} size="small" sx={{ mr: 1 }} />
             )}
             {metadata.quoteRequestId && (
-              <Chip label="Related to Quote Request" size="small" />
+              <Chip label={t('new.related_quote')} size="small" />
             )}
           </Box>
         )}
@@ -307,7 +309,7 @@ const NewConversationDialog: React.FC<Props> = ({
 
       <DialogActions>
         <Button onClick={handleClose}>
-          Cancel
+          {t('actions.cancel')}
         </Button>
         <Button
           onClick={handleCreateConversation}
@@ -317,7 +319,7 @@ const NewConversationDialog: React.FC<Props> = ({
           {createConversationMutation.isPending ? (
             <CircularProgress size={20} />
           ) : (
-            'Create Conversation'
+            t('new.create')
           )}
         </Button>
       </DialogActions>

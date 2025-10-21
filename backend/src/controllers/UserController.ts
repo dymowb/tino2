@@ -8,6 +8,7 @@ import { AuthenticatedRequest } from '@/types';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
+import { userService } from '@/services/UserService';
 
 // Configure multer for profile image uploads
 const storage = multer.diskStorage({
@@ -140,32 +141,17 @@ class UserController {
   // DELETE /api/users/profile - Delete user account (SEC-018)
   public async deleteProfile(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userRepository = getRepository(User);
-      const user = await userRepository.findOne({ where: { id: req.user.id } });
-
-      if (!user) {
-        res.status(404).json({
-          success: false,
-          error: 'User not found'
-        });
-        return;
-      }
-
-      // Soft delete by setting isActive to false (data retention for compliance)
-      user.isActive = false;
-      await userRepository.save(user);
+      await userService.deactivateUser(req.user.userId);
 
       res.json({
         success: true,
         message: 'Account deactivated successfully'
       });
-
-      logger.info(`User account deactivated for user ${req.user.id}`);
     } catch (error) {
       logger.error('Error deactivating user account:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        error: error instanceof Error ? error.message : 'Internal server error'
       });
     }
   }

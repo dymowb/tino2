@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogTitle,
@@ -63,6 +64,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
   provider,
   serviceType = ''
 }) => {
+  const { t } = useTranslation('bookings');
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -89,12 +91,12 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
     mutationFn: (bookingData: any) => apiService.createBooking(bookingData),
     onSuccess: (newBooking: Booking) => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
-      toast.success('Booking created successfully!');
+      toast.success(t('create.success'));
       onClose();
       resetForm();
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || 'Failed to create booking');
+      toast.error(error?.response?.data?.error || t('create.error'));
     },
   });
 
@@ -121,28 +123,28 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
     const newErrors: Record<string, string> = {};
 
     if (!formData.serviceType) {
-      newErrors.serviceType = 'Service type is required';
+      newErrors.serviceType = t('create.validation.service_required');
     }
     if (!formData.scheduledDate) {
-      newErrors.scheduledDate = 'Scheduled date is required';
+      newErrors.scheduledDate = t('create.validation.date_required');
     }
     if (formData.estimatedDuration < 0.5) {
-      newErrors.estimatedDuration = 'Duration must be at least 30 minutes';
+      newErrors.estimatedDuration = t('create.validation.duration_min');
     }
     if (!formData.description.trim()) {
-      newErrors.description = 'Description is required';
+      newErrors.description = t('create.validation.description_required');
     }
     if (!formData.location.address.trim()) {
-      newErrors.address = 'Address is required';
+      newErrors.address = t('create.validation.address_required');
     }
     if (!formData.location.city.trim()) {
-      newErrors.city = 'City is required';
+      newErrors.city = t('create.validation.city_required');
     }
     if (!formData.location.state.trim()) {
-      newErrors.state = 'State is required';
+      newErrors.state = t('create.validation.state_required');
     }
     if (!formData.location.zipCode.trim()) {
-      newErrors.zipCode = 'ZIP code is required';
+      newErrors.zipCode = t('create.validation.zip_required');
     }
 
     setErrors(newErrors);
@@ -191,7 +193,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Person />
-          Book Service with {provider.businessName}
+          {t('create.dialog_title', { provider: provider.businessName })}
         </Box>
       </DialogTitle>
       
@@ -207,7 +209,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                   <Star sx={{ color: 'gold', fontSize: 'small' }} />
                   <Typography variant="body2">
-                    {provider.rating} ({provider.totalReviews} reviews)
+                    {t('create.reviews_count', { rating: provider.rating, count: provider.totalReviews })}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -219,7 +221,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Payment sx={{ fontSize: 'small' }} />
                   <Typography variant="body2">
-                    ${provider.pricing?.baseRate || 50}/{provider.pricing?.rateType || 'hour'}
+                    {t('create.rate_per_unit', { rate: provider.pricing?.baseRate || 50, unit: provider.pricing?.rateType || 'hour' })}
                   </Typography>
                 </Box>
               </Box>
@@ -228,10 +230,10 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
             {/* Service Details */}
             <Grid xs={12} md={6}>
               <FormControl fullWidth error={!!errors.serviceType}>
-                <InputLabel>Service Type</InputLabel>
+                <InputLabel>{t('create.service_type')}</InputLabel>
                 <Select
                   value={formData.serviceType}
-                  label="Service Type"
+                  label={t('create.service_type')}
                   onChange={(e) => setFormData({ ...formData, serviceType: e.target.value })}
                 >
                   {availableServices.map(service => (
@@ -250,7 +252,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
 
             <Grid xs={12} md={6}>
               <DateTimePicker
-                label="Scheduled Date & Time"
+                label={t('create.scheduled_datetime')}
                 value={formData.scheduledDate}
                 onChange={(date) => setFormData({ ...formData, scheduledDate: date as Date | null })}
                 renderInput={(params) => (
@@ -269,7 +271,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
               <TextField
                 fullWidth
                 type="number"
-                label="Estimated Duration (hours)"
+                label={t('create.duration_hours')}
                 value={formData.estimatedDuration}
                 onChange={(e) => setFormData({ ...formData, estimatedDuration: parseFloat(e.target.value) || 0 })}
                 error={!!errors.estimatedDuration}
@@ -281,10 +283,13 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
             <Grid xs={12} md={6}>
               <Box sx={{ p: 2, bgcolor: 'primary.50', borderRadius: 1 }}>
                 <Typography variant="h6" color="primary">
-                  Estimated Cost: ${calculateEstimatedCost().toFixed(2)}
+                  {t('create.estimated_cost_display', { cost: calculateEstimatedCost().toFixed(2) })}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  ${provider.pricing?.baseRate || 50} × {formData.estimatedDuration} hours
+                  {t('create.rate_calculation', {
+                    rate: provider.pricing?.baseRate || 50,
+                    duration: formData.estimatedDuration
+                  })}
                 </Typography>
               </Box>
             </Grid>
@@ -295,8 +300,8 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
                 fullWidth
                 multiline
                 rows={3}
-                label="Service Description"
-                placeholder="Please describe the service you need..."
+                label={t('create.service_description')}
+                placeholder={t('create.description_placeholder')}
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 error={!!errors.description}
@@ -310,8 +315,8 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
                 fullWidth
                 multiline
                 rows={2}
-                label="Special Instructions (Optional)"
-                placeholder="Any special instructions or requirements..."
+                label={t('create.special_instructions')}
+                placeholder={t('create.instructions_placeholder')}
                 value={formData.specialInstructions}
                 onChange={(e) => setFormData({ ...formData, specialInstructions: e.target.value })}
               />
@@ -320,14 +325,14 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
             {/* Location */}
             <Grid xs={12}>
               <Typography variant="h6" sx={{ mb: 2 }}>
-                Service Location
+                {t('create.location')}
               </Typography>
             </Grid>
 
             <Grid xs={12}>
               <TextField
                 fullWidth
-                label="Street Address"
+                label={t('create.address')}
                 value={formData.location.address}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -341,7 +346,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
             <Grid xs={12} md={4}>
               <TextField
                 fullWidth
-                label="City"
+                label={t('create.city')}
                 value={formData.location.city}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -355,7 +360,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
             <Grid xs={12} md={4}>
               <TextField
                 fullWidth
-                label="State"
+                label={t('create.state')}
                 value={formData.location.state}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -369,7 +374,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
             <Grid xs={12} md={4}>
               <TextField
                 fullWidth
-                label="ZIP Code"
+                label={t('create.zip')}
                 value={formData.location.zipCode}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -385,19 +390,19 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
               <Divider sx={{ my: 2 }} />
               <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
                 <Typography variant="h6" sx={{ mb: 1 }}>
-                  Booking Summary
+                  {t('create.booking_summary')}
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 0.5 }}>
-                  <strong>Provider:</strong> {provider.businessName}
+                  <strong>{t('create.summary_labels.provider')}</strong> {provider.businessName}
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 0.5 }}>
-                  <strong>Service:</strong> {formatServiceName(formData.serviceType)}
+                  <strong>{t('create.summary_labels.service')}</strong> {formatServiceName(formData.serviceType)}
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 0.5 }}>
-                  <strong>Duration:</strong> {formData.estimatedDuration} hours
+                  <strong>{t('create.summary_labels.duration')}</strong> {formData.estimatedDuration} {t('create.hours')}
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 0.5 }}>
-                  <strong>Estimated Cost:</strong> ${calculateEstimatedCost().toFixed(2)}
+                  <strong>{t('create.summary_labels.estimated_cost')}</strong> ${calculateEstimatedCost().toFixed(2)}
                 </Typography>
               </Box>
             </Grid>
@@ -406,11 +411,11 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
       </DialogContent>
 
       <DialogActions sx={{ p: 3 }}>
-        <Button 
+        <Button
           onClick={onClose}
           disabled={createBookingMutation.isPending}
         >
-          Cancel
+          {t('actions.cancel')}
         </Button>
         <Button
           onClick={handleSubmit}
@@ -418,7 +423,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
           disabled={createBookingMutation.isPending}
           startIcon={createBookingMutation.isPending ? <CircularProgress size={20} /> : <Schedule />}
         >
-          {createBookingMutation.isPending ? 'Creating...' : 'Create Booking'}
+          {createBookingMutation.isPending ? t('create.creating') : t('create.submit')}
         </Button>
       </DialogActions>
     </Dialog>

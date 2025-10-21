@@ -1,0 +1,79 @@
+{
+  "title": "Mensajes",
+  "conversations": "Conversaciones",
+  "new_conversation": "Nueva Conversación",
+  "new_conversation_tooltip": "Nueva conversación",
+  "search_conversations": "Buscar conversaciones...",
+  "clear_search": "Limpiar búsqueda",
+  "no_conversations": "Aún no hay conversaciones",
+  "no_results": "No se encontraron conversaciones",
+  "loading": "Cargando conversaciones...",
+  "start_conversation": "Inicia una conversación para conectarte con proveedores o clientes",
+  "yesterday": "Ayer",
+  "conversation_label": "Conversación",
+  "select_conversation": "Selecciona una conversación para empezar a enviar mensajes",
+  "select_conversation_desc": "Elige una conversación de la lista para ver y enviar mensajes",
+
+  "conversation": {
+    "type_message": "Escribe un mensaje...",
+    "send": "Enviar",
+    "attach_file": "Adjuntar Archivo",
+    "send_image": "Enviar Imagen",
+    "no_messages": "Aún no hay mensajes",
+    "start_conversation_text": "Comienza la conversación enviando un mensaje",
+    "online": "En línea",
+    "offline": "Desconectado",
+    "typing": "escribiendo...",
+    "participants": "{{count}} participante",
+    "participants_plural": "{{count}} participantes"
+  },
+
+  "new": {
+    "title": "Iniciar Nueva Conversación",
+    "select_user": "Seleccionar Usuario",
+    "search_users": "Buscar usuarios...",
+    "search_users_label": "Buscar Usuarios",
+    "search_placeholder": "Buscar por nombre o correo electrónico",
+    "conversation_type": "Tipo de Conversación",
+    "direct_message": "Mensaje Directo",
+    "group_chat": "Chat Grupal",
+    "support": "Soporte",
+    "conversation_title": "Título de la Conversación",
+    "title_placeholder": "Ingresa un título para esta conversación",
+    "description": "Descripción (Opcional)",
+    "description_placeholder": "Breve descripción de la conversación",
+    "subject": "Asunto (Opcional)",
+    "message": "Mensaje",
+    "selected_participants": "Participantes Seleccionados:",
+    "no_users_found": "No se encontraron usuarios",
+    "start_typing": "Comienza a escribir para buscar usuarios",
+    "select_participant": "Por favor selecciona al menos un participante",
+    "context_title": "Contexto de la Conversación:",
+    "service_label": "Servicio: {{service}}",
+    "related_booking": "Relacionado con Reserva",
+    "related_quote": "Relacionado con Solicitud de Cotización",
+    "create": "Crear Conversación",
+    "creating": "Creando...",
+    "success": "Conversación creada exitosamente",
+    "error": "Error al crear la conversación"
+  },
+
+  "actions": {
+    "cancel": "Cancelar",
+    "delete_conversation": "Eliminar Conversación",
+    "delete_confirm": "¿Estás seguro de que quieres eliminar esta conversación?",
+    "mute": "Silenciar Notificaciones",
+    "unmute": "Activar Notificaciones",
+    "archive": "Archivar",
+    "unarchive": "Desarchivar",
+    "block_user": "Bloquear Usuario",
+    "report": "Reportar"
+  },
+
+  "status": {
+    "sent": "Enviado",
+    "delivered": "Entregado",
+    "read": "Leído",
+    "failed": "Error al enviar"
+  }
+}

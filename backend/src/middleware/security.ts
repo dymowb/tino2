@@ -108,6 +108,18 @@ export const rateLimiters = {
       return req.user?.userId || req.ip || 'unknown';
     },
   }),
+
+  strict: rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 5, // 5 attempts per hour for sensitive operations
+    message: {
+      success: false,
+      error: 'Too many attempts for this sensitive operation, please try again later',
+    },
+    keyGenerator: (req: Request) => {
+      return req.user?.userId || req.ip || 'unknown';
+    },
+  }),
 };
 
 export const validateApiKey = (req: Request, res: Response, next: NextFunction): void => {

@@ -1,0 +1,137 @@
+{
+  "title": "Panel",
+  "provider_dashboard": "Panel del Proveedor",
+  "welcome": "¡Bienvenido de nuevo, {{name}}!",
+  "overview": "Resumen",
+  "quick_actions": "Acciones Rápidas",
+  "recent_activity": "Actividad Reciente",
+  "access_denied": "Acceso Denegado",
+  "provider_only": "Esta página solo está disponible para proveedores de servicios.",
+  "error_loading": "Error al cargar las estadísticas del panel. Por favor, intente actualizar la página.",
+
+  "customer": {
+    "find_providers": "Buscar Proveedores",
+    "my_bookings": "Mis Reservas",
+    "active_bookings": "Reservas Activas",
+    "completed_bookings": "Reservas Completadas",
+    "pending_reviews": "Reseñas Pendientes",
+    "total_spent": "Total Gastado",
+    "saved_providers": "Proveedores Guardados",
+    "recent_searches": "Búsquedas Recientes"
+  },
+
+  "provider": {
+    "title": "Panel del Proveedor",
+    "total_bookings": "Reservas Totales",
+    "pending_requests": "Solicitudes Pendientes",
+    "requires_attention": "Requiere atención",
+    "completed_jobs": "Trabajos Completados",
+    "completion_rate": "{{rate}}% tasa de finalización",
+    "total_earnings": "Ganancias Totales",
+    "this_month_earnings": "Este Mes",
+    "average_rating": "Calificación Promedio",
+    "based_on_reviews": "Basado en {{count}} reseñas",
+    "total_reviews": "Reseñas Totales",
+    "response_rate": "Tasa de Respuesta",
+    "avg_response_time": "Prom. {{time}} horas",
+    "profile_views": "Vistas del Perfil",
+    "edit_profile": "Editar Perfil",
+    "availability": "Disponibilidad",
+    "manage_availability": "Gestionar Disponibilidad",
+    "view_analytics": "Ver Análisis",
+    "analytics_coming_soon": "¡Análisis avanzados próximamente!",
+    "recent_bookings": "Reservas Recientes",
+    "recent_reviews": "Reseñas Recientes",
+    "pending_quotes": "Cotizaciones Pendientes",
+    "service_area": "Área de Servicio",
+    "profile_summary": "Resumen del Perfil",
+    "service_provider": "Proveedor de Servicios",
+    "no_rating": "Sin calificación",
+    "location_not_set": "Ubicación no establecida",
+    "phone_not_set": "Teléfono no establecido",
+    "services_not_set": "Servicios no establecidos",
+    "profile_completion": "Finalización del Perfil",
+    "percent_complete": "{{percent}}% Completo"
+  },
+
+  "stats": {
+    "increase": "+{{percent}}% del período anterior",
+    "decrease": "-{{percent}}% del período anterior",
+    "no_change": "Sin cambios del período anterior",
+    "view_all": "Ver Todo",
+    "see_details": "Ver Detalles"
+  },
+
+  "period": {
+    "time_period": "Período de Tiempo",
+    "week": "semana",
+    "month": "mes",
+    "quarter": "trimestre",
+    "year": "año",
+    "this_week": "Esta Semana",
+    "this_month": "Este Mes",
+    "this_quarter": "Este Trimestre",
+    "this_year": "Este Año",
+    "all_time": "Todo el Tiempo"
+  },
+
+  "table": {
+    "service": "Servicio",
+    "customer": "Cliente",
+    "date_time": "Fecha y Hora",
+    "status": "Estado",
+    "amount": "Monto",
+    "actions": "Acciones",
+    "location_not_available": "Ubicación no disponible"
+  },
+
+  "actions": {
+    "book_service": "Reservar un Servicio",
+    "request_quote": "Solicitar Cotización",
+    "view_messages": "Ver Mensajes",
+    "check_payments": "Verificar Pagos",
+    "write_review": "Escribir Reseña",
+    "update_profile": "Actualizar Perfil",
+    "view_details": "Ver Detalles",
+    "confirm_booking": "Confirmar Reserva",
+    "decline_booking": "Rechazar Reserva",
+    "start_service": "Iniciar Servicio",
+    "mark_complete": "Marcar Completo",
+    "view_all_reviews": "Ver Todas las Reseñas"
+  },
+
+  "filters": {
+    "status_filter": "Filtro de Estado",
+    "all_status": "Todos los Estados"
+  },
+
+  "empty": {
+    "no_bookings": "No se encontraron reservas. Comienza a aceptar solicitudes de reserva para verlas aquí.",
+    "no_bookings_cta": "Encuentra un proveedor para comenzar",
+    "no_requests": "No hay solicitudes pendientes",
+    "no_reviews": "Aún no hay reseñas. ¡Completa algunas reservas para comenzar a recibir reseñas!",
+    "no_activity": "No hay actividad reciente"
+  },
+
+  "dialogs": {
+    "edit_profile_title": "Editar Perfil",
+    "edit_profile_info": "La funcionalidad de edición de perfil se implementará en una actualización futura.",
+    "edit_profile_desc": "Actualmente puedes ver la información de tu perfil en la sección de resumen. Las capacidades completas de edición de perfil, incluyendo servicios, tarifas, disponibilidad y gestión de portafolio llegarán pronto.",
+    "availability_title": "Actualizar Disponibilidad",
+    "availability_info": "La funcionalidad de gestión de disponibilidad se implementará en una actualización futura.",
+    "availability_feature_intro": "Esta función te permitirá:",
+    "availability_features": {
+      "working_hours": "Establecer horas y días de trabajo",
+      "block_dates": "Bloquear fechas específicas",
+      "auto_booking": "Configurar aceptación automática de reservas",
+      "service_radius": "Establecer radio de servicio y preferencias de viaje"
+    },
+    "close": "Cerrar"
+  },
+
+  "messages": {
+    "status_updated": "Estado de reserva actualizado exitosamente",
+    "status_update_error": "Error al actualizar el estado de la reserva",
+    "growth_period": "+{{percent}}% este {{period}}"
+  }
+}

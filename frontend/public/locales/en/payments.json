@@ -1,0 +1,152 @@
+{
+  "title": "Payments",
+  "payment_history": "Payment History",
+  "payment_management": "Payment Management",
+  "all_payments": "All Payments",
+  "my_purchases": "My Purchases",
+  "my_earnings": "My Earnings",
+  "refresh": "Refresh",
+  "export": "Export",
+  "loading_payments": "Loading payments...",
+  "no_payments_found": "No payments found",
+
+  "stats": {
+    "total_payments": "Total Payments",
+    "successful": "Successful",
+    "in_escrow": "In Escrow",
+    "platform_fees": "Platform Fees",
+    "total_collected": "Total collected"
+  },
+
+  "table": {
+    "payment_id": "Payment ID",
+    "service": "Service",
+    "amount": "Amount",
+    "status": "Status",
+    "escrow": "Escrow",
+    "payment_method": "Payment Method",
+    "date": "Date",
+    "actions": "Actions",
+    "fee": "Fee"
+  },
+
+  "status": {
+    "pending": "Pending",
+    "processing": "Processing",
+    "succeeded": "Succeeded",
+    "failed": "Failed",
+    "cancelled": "Cancelled",
+    "refunded": "Refunded"
+  },
+
+  "escrow_status": {
+    "held": "Held",
+    "released": "Released",
+    "disputed": "Disputed"
+  },
+
+  "payment_method": {
+    "card": "Card",
+    "bank": "Bank Transfer",
+    "paypal": "PayPal",
+    "apple_pay": "Apple Pay",
+    "google_pay": "Google Pay"
+  },
+
+  "actions": {
+    "view_details": "View Details",
+    "download_receipt": "Download Receipt",
+    "initiate_refund": "Initiate Refund",
+    "dispute": "Dispute Payment"
+  },
+
+  "new_payment": {
+    "title": "Process Payment",
+    "steps": {
+      "select_booking": "Select Booking",
+      "payment_details": "Payment Details",
+      "confirmation": "Confirmation"
+    },
+    "select_booking_title": "Select a Booking to Pay",
+    "select_booking_subtitle": "Choose a confirmed booking that requires payment",
+    "no_bookings_available": "No confirmed bookings available for payment. Make sure you have bookings that are confirmed by the provider.",
+    "payment_information": "Payment Information",
+    "secure_payment": "Secure Payment with Escrow Protection",
+    "escrow_info": "Your payment will be securely held in escrow until the service is completed. The provider will only receive payment after you confirm satisfaction.",
+    "booking_summary": "Booking Summary",
+    "service": "Service:",
+    "provider": "Provider:",
+    "date": "Date:",
+    "total_amount": "Total Amount:",
+    "card_details": "Card Details",
+    "payment_info_secure": "Your payment information is encrypted and secure",
+    "amount": "Amount",
+    "payment_method": "Payment Method",
+    "add_payment_method": "Add Payment Method",
+    "card_number": "Card Number",
+    "expiry_date": "Expiry Date",
+    "cvv": "CVV",
+    "cardholder_name": "Cardholder Name",
+    "billing_address": "Billing Address",
+    "save_card": "Save card for future use",
+    "submit": "Process Payment",
+    "pay_amount": "Pay ${{amount}}",
+    "processing": "Processing...",
+    "cancel": "Cancel",
+    "back": "Back",
+    "success": "Payment successful! Funds are held in escrow until service completion.",
+    "error": "Payment failed",
+    "intent_error": "Failed to create payment intent",
+    "payment_for_service": "Payment for {{service}}",
+    "card_element_not_found": "Card element not found",
+    "unexpected_error": "An unexpected error occurred"
+  },
+
+  "refund": {
+    "title": "Process Refund",
+    "request_title": "Request Refund",
+    "warning_title": "Important",
+    "warning_text": "This action will refund the payment and may reverse any transfers made to the provider. Please ensure you have a valid reason for processing this refund.",
+    "payment_details": "Payment Details",
+    "payment_id": "Payment ID:",
+    "service": "Service:",
+    "service_payment": "Service Payment",
+    "provider": "Provider:",
+    "status": "Status:",
+    "total_amount": "Total Amount:",
+    "platform_fee": "Platform Fee:",
+    "provider_amount": "Provider Amount:",
+    "refund_type": "Refund Type",
+    "full_refund": "Full Refund ({{amount}})",
+    "partial_refund": "Partial Refund",
+    "refund_amount": "Refund Amount",
+    "max_refund_amount": "Maximum refund amount: {{amount}}",
+    "reason": "Reason for Refund",
+    "reason_placeholder": "Please provide a detailed reason for this refund...",
+    "refund_app_fee": "Refund application fee ({{amount}})",
+    "refund_app_fee_help": "Check this to also refund the platform fee to the customer",
+    "processing_info": "Processing this refund will:",
+    "info_customer_refund": "Refund {{amount}} to the customer's original payment method",
+    "info_reverse_transfer": "Reverse any transfers made to the provider (if applicable)",
+    "info_platform_fee": "Refund the platform fee of {{amount}}",
+    "info_update_status": "Update the payment status to \"refunded\"",
+    "cancel": "Cancel",
+    "submit": "Process Refund",
+    "processing": "Processing...",
+    "success": "Refund processed successfully",
+    "error": "Failed to process refund",
+    "validation": {
+      "reason_required": "Please provide a reason for the refund",
+      "invalid_amount": "Please enter a valid refund amount"
+    },
+    "description": "Description",
+    "submit_request": "Submit Refund Request",
+    "request_success": "Refund request submitted",
+    "request_error": "Failed to submit refund request"
+  },
+
+  "filters": {
+    "all_status": "All Status",
+    "search_placeholder": "Search payments..."
+  }
+}

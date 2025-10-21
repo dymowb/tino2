@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -67,6 +68,7 @@ import { apiService } from '../../services/api';
 import LoadingSpinner from '../common/LoadingSpinner';
 
 const ProviderDashboardPage: React.FC = () => {
+  const { t } = useTranslation(['dashboard', 'bookings']);
   const { user } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -120,11 +122,11 @@ const ProviderDashboardPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['provider-bookings'] });
       queryClient.invalidateQueries({ queryKey: ['provider-dashboard-stats'] });
-      toast.success('Booking status updated successfully');
+      toast.success(t('dashboard:messages.status_updated'));
       handleMenuClose();
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || 'Failed to update booking status');
+      toast.error(error?.response?.data?.error || t('dashboard:messages.status_update_error'));
     },
   });
 
@@ -195,7 +197,7 @@ const ProviderDashboardPage: React.FC = () => {
     if (!bookings?.data?.length) {
       return (
         <Alert severity="info">
-          No bookings found. Start accepting booking requests to see them here.
+          {t('dashboard:empty.no_bookings')}
         </Alert>
       );
     }
@@ -211,12 +213,12 @@ const ProviderDashboardPage: React.FC = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Service</TableCell>
-                <TableCell>Customer</TableCell>
-                <TableCell>Date & Time</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Amount</TableCell>
-                <TableCell align="right">Actions</TableCell>
+                <TableCell>{t('dashboard:table.service')}</TableCell>
+                <TableCell>{t('dashboard:table.customer')}</TableCell>
+                <TableCell>{t('dashboard:table.date_time')}</TableCell>
+                <TableCell>{t('dashboard:table.status')}</TableCell>
+                <TableCell>{t('dashboard:table.amount')}</TableCell>
+                <TableCell align="right">{t('dashboard:table.actions')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -229,7 +231,7 @@ const ProviderDashboardPage: React.FC = () => {
                     <Typography variant="caption" color="textSecondary">
                       {typeof booking.location === 'string'
                         ? booking.location
-                        : `${booking.location?.city || ''}, ${booking.location?.state || ''}`.trim().replace(/^,\s*|,\s*$/g, '') || 'Location not available'}
+                        : `${booking.location?.city || ''}, ${booking.location?.state || ''}`.trim().replace(/^,\s*|,\s*$/g, '') || t('dashboard:table.location_not_available')}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -297,8 +299,8 @@ const ProviderDashboardPage: React.FC = () => {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
         <Alert severity="error">
-          <Typography variant="h6">Access Denied</Typography>
-          <Typography>This page is only available to service providers.</Typography>
+          <Typography variant="h6">{t('dashboard:access_denied')}</Typography>
+          <Typography>{t('dashboard:provider_only')}</Typography>
         </Alert>
       </Box>
     );
@@ -316,10 +318,10 @@ const ProviderDashboardPage: React.FC = () => {
           <Dashboard color="primary" sx={{ fontSize: 40 }} />
           <Box>
             <Typography variant="h4" component="h1" fontWeight="bold">
-              Provider Dashboard
+              {t('dashboard:provider.title')}
             </Typography>
             <Typography variant="subtitle1" color="textSecondary">
-              Welcome back, {user?.firstName || 'Provider'}!
+              {t('dashboard:welcome', { name: user?.firstName || 'Provider' })}
             </Typography>
           </Box>
         </Box>
@@ -329,45 +331,45 @@ const ProviderDashboardPage: React.FC = () => {
             startIcon={<Edit />}
             onClick={() => setProfileDialogOpen(true)}
           >
-            Edit Profile
+            {t('dashboard:provider.edit_profile')}
           </Button>
           <Button
             variant="outlined"
             startIcon={<EditCalendar />}
             onClick={() => setAvailabilityDialogOpen(true)}
           >
-            Availability
+            {t('dashboard:provider.availability')}
           </Button>
           <Button
             variant="contained"
             startIcon={<Analytics />}
-            onClick={() => toast('Advanced analytics coming soon!')}
+            onClick={() => toast(t('dashboard:provider.analytics_coming_soon'))}
           >
-            View Analytics
+            {t('dashboard:provider.view_analytics')}
           </Button>
         </Box>
       </Box>
 
       {statsError && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          Failed to load dashboard statistics. Please try refreshing the page.
+          {t('dashboard:error_loading')}
         </Alert>
       )}
 
       {/* Period Selector */}
       <Box sx={{ mb: 3 }}>
         <FormControl size="small">
-          <InputLabel>Time Period</InputLabel>
+          <InputLabel>{t('dashboard:period.time_period')}</InputLabel>
           <Select
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
-            label="Time Period"
+            label={t('dashboard:period.time_period')}
             sx={{ minWidth: 120 }}
           >
-            <MenuItem value="week">This Week</MenuItem>
-            <MenuItem value="month">This Month</MenuItem>
-            <MenuItem value="quarter">This Quarter</MenuItem>
-            <MenuItem value="year">This Year</MenuItem>
+            <MenuItem value="week">{t('dashboard:period.this_week')}</MenuItem>
+            <MenuItem value="month">{t('dashboard:period.this_month')}</MenuItem>
+            <MenuItem value="quarter">{t('dashboard:period.this_quarter')}</MenuItem>
+            <MenuItem value="year">{t('dashboard:period.this_year')}</MenuItem>
           </Select>
         </FormControl>
       </Box>
@@ -376,56 +378,62 @@ const ProviderDashboardPage: React.FC = () => {
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid xs={12} sm={6} md={4} lg={2}>
           {renderStatCard(
-            'Total Bookings',
+            t('dashboard:provider.total_bookings'),
             dashboardStats?.totalBookings || 0,
             <CalendarToday />,
             theme.palette.primary.main,
-            `+${dashboardStats?.bookingGrowth || 0}% this ${selectedPeriod}`
+            t('dashboard:messages.growth_period', {
+              percent: dashboardStats?.bookingGrowth || 0,
+              period: t(`dashboard:period.${selectedPeriod}`)
+            })
           )}
         </Grid>
         <Grid xs={12} sm={6} md={4} lg={2}>
           {renderStatCard(
-            'Pending Requests',
+            t('dashboard:provider.pending_requests'),
             dashboardStats?.pendingBookings || 0,
             <Pending />,
             theme.palette.warning.main,
-            'Requires attention'
+            t('dashboard:provider.requires_attention')
           )}
         </Grid>
         <Grid xs={12} sm={6} md={4} lg={2}>
           {renderStatCard(
-            'Completed Jobs',
+            t('dashboard:provider.completed_jobs'),
             dashboardStats?.completedBookings || 0,
             <CheckCircle />,
             theme.palette.success.main,
-            `${dashboardStats?.completionRate || 0}% completion rate`
+            t('dashboard:provider.completion_rate', { rate: dashboardStats?.completionRate || 0 })
           )}
         </Grid>
         <Grid xs={12} sm={6} md={4} lg={2}>
           {renderStatCard(
-            'Total Earnings',
+            t('dashboard:provider.total_earnings'),
             `$${dashboardStats?.totalEarnings || 0}`,
             <AttachMoney />,
             theme.palette.info.main,
-            `+${dashboardStats?.earningsGrowth || 0}% this ${selectedPeriod}`
+            t('dashboard:messages.growth_period', {
+              percent: dashboardStats?.earningsGrowth || 0,
+              period: t(`dashboard:period.${selectedPeriod}`)
+            })
           )}
         </Grid>
         <Grid xs={12} sm={6} md={4} lg={2}>
           {renderStatCard(
-            'Average Rating',
+            t('dashboard:provider.average_rating'),
             `${dashboardStats?.averageRating || providerProfile?.rating || 0}`,
             <Star />,
             theme.palette.secondary.main,
-            `Based on ${reviews?.pagination?.total || 0} reviews`
+            t('dashboard:provider.based_on_reviews', { count: reviews?.pagination?.total || 0 })
           )}
         </Grid>
         <Grid xs={12} sm={6} md={4} lg={2}>
           {renderStatCard(
-            'Response Rate',
+            t('dashboard:provider.response_rate'),
             `${dashboardStats?.responseRate || 95}%`,
             <Reply />,
             theme.palette.success.main,
-            'Avg. 2 hours'
+            t('dashboard:provider.avg_response_time', { time: 2 })
           )}
         </Grid>
       </Grid>
@@ -437,22 +445,22 @@ const ProviderDashboardPage: React.FC = () => {
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                 <Typography variant="h6" fontWeight="bold">
-                  Recent Bookings
+                  {t('dashboard:provider.recent_bookings')}
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                   <FormControl size="small" sx={{ minWidth: 120 }}>
-                    <InputLabel>Status Filter</InputLabel>
+                    <InputLabel>{t('dashboard:filters.status_filter')}</InputLabel>
                     <Select
                       value={statusFilter}
                       onChange={(e) => setStatusFilter(e.target.value)}
-                      label="Status Filter"
+                      label={t('dashboard:filters.status_filter')}
                       startAdornment={<FilterList />}
                     >
-                      <MenuItem value="">All Status</MenuItem>
-                      <MenuItem value="pending">Pending</MenuItem>
-                      <MenuItem value="confirmed">Confirmed</MenuItem>
-                      <MenuItem value="in_progress">In Progress</MenuItem>
-                      <MenuItem value="completed">Completed</MenuItem>
+                      <MenuItem value="">{t('dashboard:filters.all_status')}</MenuItem>
+                      <MenuItem value="pending">{t('bookings:status.pending')}</MenuItem>
+                      <MenuItem value="confirmed">{t('bookings:status.confirmed')}</MenuItem>
+                      <MenuItem value="in_progress">{t('bookings:status.in_progress')}</MenuItem>
+                      <MenuItem value="completed">{t('bookings:status.completed')}</MenuItem>
                     </Select>
                   </FormControl>
                 </Box>
@@ -471,7 +479,7 @@ const ProviderDashboardPage: React.FC = () => {
               <Card>
                 <CardContent>
                   <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
-                    Profile Summary
+                    {t('dashboard:provider.profile_summary')}
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                     <Avatar
@@ -485,32 +493,32 @@ const ProviderDashboardPage: React.FC = () => {
                         {user?.firstName} {user?.lastName}
                       </Typography>
                       <Typography variant="body2" color="textSecondary">
-                        {providerProfile?.businessName || 'Service Provider'}
+                        {providerProfile?.businessName || t('dashboard:provider.service_provider')}
                       </Typography>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
                         <Star sx={{ fontSize: 16, color: 'gold' }} />
                         <Typography variant="body2">
-                          {providerProfile?.rating?.toFixed(1) || 'No rating'}
+                          {providerProfile?.rating?.toFixed(1) || t('dashboard:provider.no_rating')}
                         </Typography>
                       </Box>
                     </Box>
                   </Box>
-                  
+
                   <Divider sx={{ my: 2 }} />
-                  
+
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <LocationOn sx={{ fontSize: 16, color: 'text.secondary' }} />
                       <Typography variant="body2" color="textSecondary">
                         {typeof providerProfile?.location === 'string'
                           ? providerProfile.location
-                          : providerProfile?.location?.address || 'Location not set'}
+                          : providerProfile?.location?.address || t('dashboard:provider.location_not_set')}
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Phone sx={{ fontSize: 16, color: 'text.secondary' }} />
                       <Typography variant="body2" color="textSecondary">
-                        {user?.phone || 'Phone not set'}
+                        {user?.phone || t('dashboard:provider.phone_not_set')}
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -522,22 +530,22 @@ const ProviderDashboardPage: React.FC = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Business sx={{ fontSize: 16, color: 'text.secondary' }} />
                       <Typography variant="body2" color="textSecondary">
-                        {providerProfile?.services?.join(', ') || 'Services not set'}
+                        {providerProfile?.services?.join(', ') || t('dashboard:provider.services_not_set')}
                       </Typography>
                     </Box>
                   </Box>
-                  
+
                   <Box sx={{ mt: 2 }}>
                     <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-                      Profile Completion
+                      {t('dashboard:provider.profile_completion')}
                     </Typography>
-                    <LinearProgress 
-                      variant="determinate" 
-                      value={providerProfile?.profileCompletion || 70} 
+                    <LinearProgress
+                      variant="determinate"
+                      value={providerProfile?.profileCompletion || 70}
                       sx={{ height: 8, borderRadius: 4 }}
                     />
                     <Typography variant="caption" color="textSecondary">
-                      {providerProfile?.profileCompletion || 70}% Complete
+                      {t('dashboard:provider.percent_complete', { percent: providerProfile?.profileCompletion || 70 })}
                     </Typography>
                   </Box>
                 </CardContent>
@@ -549,7 +557,7 @@ const ProviderDashboardPage: React.FC = () => {
               <Card>
                 <CardContent>
                   <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
-                    Recent Reviews
+                    {t('dashboard:provider.recent_reviews')}
                   </Typography>
                   {reviews?.data?.length ? (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -581,12 +589,12 @@ const ProviderDashboardPage: React.FC = () => {
                         </Box>
                       ))}
                       <Button size="small" variant="outlined" fullWidth>
-                        View All Reviews
+                        {t('dashboard:actions.view_all_reviews')}
                       </Button>
                     </Box>
                   ) : (
                     <Alert severity="info">
-                      No reviews yet. Complete some bookings to start receiving reviews!
+                      {t('dashboard:empty.no_reviews')}
                     </Alert>
                   )}
                 </CardContent>
@@ -604,63 +612,62 @@ const ProviderDashboardPage: React.FC = () => {
       >
         {selectedBooking?.status === 'pending' && [
           <MenuItem key="confirm" onClick={() => handleBookingStatusUpdate('confirmed')}>
-            <CheckCircle sx={{ mr: 1 }} /> Confirm Booking
+            <CheckCircle sx={{ mr: 1 }} /> {t('dashboard:actions.confirm_booking')}
           </MenuItem>,
           <MenuItem key="cancel" onClick={() => handleBookingStatusUpdate('cancelled')}>
-            <Cancel sx={{ mr: 1 }} /> Decline Booking
+            <Cancel sx={{ mr: 1 }} /> {t('dashboard:actions.decline_booking')}
           </MenuItem>
         ]}
         {selectedBooking?.status === 'confirmed' && (
           <MenuItem onClick={() => handleBookingStatusUpdate('in_progress')}>
-            <Schedule sx={{ mr: 1 }} /> Start Service
+            <Schedule sx={{ mr: 1 }} /> {t('dashboard:actions.start_service')}
           </MenuItem>
         )}
         {selectedBooking?.status === 'in_progress' && (
           <MenuItem onClick={() => handleBookingStatusUpdate('completed')}>
-            <CheckCircle sx={{ mr: 1 }} /> Mark Complete
+            <CheckCircle sx={{ mr: 1 }} /> {t('dashboard:actions.mark_complete')}
           </MenuItem>
         )}
         <MenuItem onClick={handleMenuClose}>
-          <Visibility sx={{ mr: 1 }} /> View Details
+          <Visibility sx={{ mr: 1 }} /> {t('dashboard:actions.view_details')}
         </MenuItem>
       </Menu>
 
       {/* Profile Edit Dialog */}
       <Dialog open={profileDialogOpen} onClose={() => setProfileDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Edit Profile</DialogTitle>
+        <DialogTitle>{t('dashboard:dialogs.edit_profile_title')}</DialogTitle>
         <DialogContent>
           <Alert severity="info" sx={{ mb: 2 }}>
-            Profile editing functionality will be implemented in a future update.
+            {t('dashboard:dialogs.edit_profile_info')}
           </Alert>
           <Typography variant="body2">
-            You can currently view your profile information in the summary section.
-            Full profile editing capabilities including services, rates, availability, and portfolio management coming soon.
+            {t('dashboard:dialogs.edit_profile_desc')}
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setProfileDialogOpen(false)}>Close</Button>
+          <Button onClick={() => setProfileDialogOpen(false)}>{t('dashboard:dialogs.close')}</Button>
         </DialogActions>
       </Dialog>
 
       {/* Availability Dialog */}
       <Dialog open={availabilityDialogOpen} onClose={() => setAvailabilityDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Update Availability</DialogTitle>
+        <DialogTitle>{t('dashboard:dialogs.availability_title')}</DialogTitle>
         <DialogContent>
           <Alert severity="info" sx={{ mb: 2 }}>
-            Availability management functionality will be implemented in a future update.
+            {t('dashboard:dialogs.availability_info')}
           </Alert>
           <Typography variant="body2">
-            This feature will allow you to:
+            {t('dashboard:dialogs.availability_feature_intro')}
           </Typography>
           <ul>
-            <li>Set working hours and days</li>
-            <li>Block specific dates</li>
-            <li>Configure automatic booking acceptance</li>
-            <li>Set service radius and travel preferences</li>
+            <li>{t('dashboard:dialogs.availability_features.working_hours')}</li>
+            <li>{t('dashboard:dialogs.availability_features.block_dates')}</li>
+            <li>{t('dashboard:dialogs.availability_features.auto_booking')}</li>
+            <li>{t('dashboard:dialogs.availability_features.service_radius')}</li>
           </ul>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setAvailabilityDialogOpen(false)}>Close</Button>
+          <Button onClick={() => setAvailabilityDialogOpen(false)}>{t('dashboard:dialogs.close')}</Button>
         </DialogActions>
       </Dialog>
     </Box>

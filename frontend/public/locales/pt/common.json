@@ -1,0 +1,136 @@
+{
+  "app_name": "Tino 2",
+  "welcome": "Bem-vindo",
+  "loading": "Carregando...",
+  "error": "Erro",
+  "success": "Sucesso",
+  "cancel": "Cancelar",
+  "save": "Salvar",
+  "delete": "Excluir",
+  "edit": "Editar",
+  "close": "Fechar",
+  "submit": "Enviar",
+  "confirm": "Confirmar",
+  "search": "Pesquisar",
+  "filter": "Filtrar",
+  "sort": "Ordenar",
+  "refresh": "Atualizar",
+  "export": "Exportar",
+  "back": "Voltar",
+  "next": "Próximo",
+  "previous": "Anterior",
+  "view_details": "Ver Detalhes",
+  "no_results": "Nenhum resultado encontrado",
+  "try_again": "Tentar novamente",
+  "go_back": "Voltar",
+  "learn_more": "Saiba mais",
+
+  "navigation": {
+    "home": "Início",
+    "find_providers": "Buscar Prestadores",
+    "my_bookings": "Minhas Reservas",
+    "my_quotes": "Minhas Cotações",
+    "messages": "Mensagens",
+    "payments": "Pagamentos",
+    "my_reviews": "Minhas Avaliações",
+    "profile": "Perfil",
+    "dashboard": "Painel",
+    "notifications": "Notificações",
+    "settings": "Configurações",
+    "logout": "Sair",
+    "login": "Entrar",
+    "register": "Registrar"
+  },
+
+  "status": {
+    "pending": "Pendente",
+    "confirmed": "Confirmado",
+    "in_progress": "Em Andamento",
+    "completed": "Concluído",
+    "cancelled": "Cancelado",
+    "failed": "Falhou",
+    "succeeded": "Bem-sucedido",
+    "processing": "Processando",
+    "refunded": "Reembolsado"
+  },
+
+  "time": {
+    "today": "Hoje",
+    "yesterday": "Ontem",
+    "this_week": "Esta Semana",
+    "this_month": "Este Mês",
+    "this_quarter": "Este Trimestre",
+    "this_year": "Este Ano",
+    "last_week": "Semana Passada",
+    "last_month": "Mês Passado",
+    "last_year": "Ano Passado",
+    "custom": "Personalizado"
+  },
+
+  "actions": {
+    "download": "Baixar",
+    "upload": "Enviar",
+    "share": "Compartilhar",
+    "print": "Imprimir",
+    "copy": "Copiar",
+    "paste": "Colar",
+    "cut": "Recortar",
+    "undo": "Desfazer",
+    "redo": "Refazer"
+  },
+
+  "validation": {
+    "required": "Este campo é obrigatório",
+    "invalid_email": "Endereço de e-mail inválido",
+    "invalid_phone": "Número de telefone inválido",
+    "min_length": "Mínimo de {{count}} caracteres necessários",
+    "max_length": "Máximo de {{count}} caracteres permitidos",
+    "must_match": "Os campos devem corresponder",
+    "invalid_format": "Formato inválido"
+  },
+
+  "errors": {
+    "generic": "Algo deu errado. Por favor, tente novamente.",
+    "network": "Erro de rede. Verifique sua conexão.",
+    "unauthorized": "Você não está autorizado a realizar esta ação.",
+    "not_found": "O recurso solicitado não foi encontrado.",
+    "server_error": "Erro do servidor. Tente novamente mais tarde.",
+    "timeout": "Tempo esgotado. Tente novamente."
+  },
+
+  "home": {
+    "title": "🏠 Bem-vindo ao Tino 2",
+    "subtitle": "Sua plataforma de confiança para serviços domésticos",
+    "welcome_back": "Bem-vindo de volta, {{firstName}}! 👋",
+    "find_providers": "Buscar Prestadores de Serviços",
+    "go_to_dashboard": "Ir para o Painel",
+    "get_started": "Começar",
+    "sign_in": "Entrar",
+    "popular_services": "Serviços Populares",
+    "why_choose": "Por Que Escolher o Tino 2?",
+    "ready_to_start": "Pronto para Começar?",
+    "join_message": "Junte-se a milhares de clientes satisfeitos e prestadores de serviços confiáveis",
+    "join_today": "Junte-se ao Tino 2 Hoje",
+    "services": {
+      "house_cleaning": "Limpeza Residencial",
+      "plumbing": "Encanamento",
+      "electrical": "Eletricidade",
+      "handyman": "Faz-Tudo",
+      "gardening": "Jardinagem",
+      "repairs": "Reparos"
+    },
+    "features": {
+      "verified_providers": "Prestadores verificados",
+      "real_time_booking": "Sistema de reservas em tempo real",
+      "secure_payments": "Pagamentos seguros",
+      "customer_reviews": "Avaliações e classificações de clientes",
+      "gps_discovery": "Descoberta de prestadores baseada em GPS",
+      "instant_messaging": "Mensagens instantâneas"
+    },
+    "stats": {
+      "rating": "⭐ 4.8/5 Avaliação",
+      "services_count": "🎯 50+ Serviços",
+      "verified_badge": "✅ Prestadores Verificados"
+    }
+  }
+}

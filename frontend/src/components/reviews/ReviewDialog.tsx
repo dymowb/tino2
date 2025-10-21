@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogTitle,
@@ -54,14 +55,6 @@ interface ReviewFormData {
   photos: string[];
 }
 
-const criteriaLabels = {
-  quality: 'Quality of Work',
-  timeliness: 'Timeliness',
-  communication: 'Communication',
-  professionalism: 'Professionalism',
-  value: 'Value for Money'
-};
-
 const ReviewDialog: React.FC<ReviewDialogProps> = ({
   open,
   onClose,
@@ -69,6 +62,7 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
   existingReview,
   mode
 }) => {
+  const { t } = useTranslation('reviews');
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -131,12 +125,12 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
       queryClient.invalidateQueries({ queryKey: ['reviews'] });
       queryClient.invalidateQueries({ queryKey: ['provider-reviews'] });
       queryClient.invalidateQueries({ queryKey: ['my-reviews'] });
-      toast.success('Review submitted successfully!');
+      toast.success(t('create.success'));
       onClose();
       resetForm();
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || 'Failed to submit review');
+      toast.error(error?.response?.data?.error || t('create.error'));
     },
   });
 
@@ -148,11 +142,11 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
       queryClient.invalidateQueries({ queryKey: ['reviews'] });
       queryClient.invalidateQueries({ queryKey: ['provider-reviews'] });
       queryClient.invalidateQueries({ queryKey: ['my-reviews'] });
-      toast.success('Review updated successfully!');
+      toast.success(t('messages.update_success'));
       onClose();
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || 'Failed to update review');
+      toast.error(error?.response?.data?.error || t('messages.update_error'));
     },
   });
 
@@ -267,7 +261,7 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Star color="primary" />
-          {mode === 'create' ? 'Write a Review' : 'Edit Review'}
+          {mode === 'create' ? t('create.title') : t('create.edit_title')}
           <Box sx={{ ml: 'auto' }}>
             <Button onClick={onClose} size="small">
               <Close />
@@ -286,12 +280,12 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
                   <Person />
                 </Avatar>
                 <Box>
-                  <Typography variant="h6">{booking.provider?.businessName || 'Provider'}</Typography>
+                  <Typography variant="h6">{booking.provider?.businessName || t('create.provider')}</Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Service: {booking.serviceType?.replace('_', ' ')}
+                    {t('create.service_type')}: {booking.serviceType?.replace('_', ' ')}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Date: {new Date(booking.scheduledDate).toLocaleDateString()}
+                    {t('create.date')}: {new Date(booking.scheduledDate).toLocaleDateString()}
                   </Typography>
                 </Box>
                 <Box sx={{ ml: 'auto' }}>
@@ -309,7 +303,7 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
           <Grid xs={12}>
             <Box sx={{ textAlign: 'center', mb: 2 }}>
               <Typography variant="h6" sx={{ mb: 1 }}>
-                Overall Rating: {calculateOverallRating().toFixed(1)} stars
+                {t('create.overall_rating_display', { rating: calculateOverallRating().toFixed(1) })}
               </Typography>
               <Rating
                 value={calculateOverallRating()}
@@ -327,19 +321,19 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
           {/* Detailed Criteria Ratings */}
           <Grid xs={12}>
             <Typography variant="h6" sx={{ mb: 2 }}>
-              Rate Your Experience
+              {t('create.rate_experience')}
             </Typography>
-            {Object.entries(criteriaLabels).map(([key, label]) => (
+            {(Object.keys(formData.criteria) as Array<keyof typeof formData.criteria>).map((key) => (
               <Box key={key} sx={{ mb: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body1">{label}</Typography>
+                  <Typography variant="body1">{t(`create.${key}`)}</Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {formData.criteria[key as keyof typeof formData.criteria]} stars
+                    {formData.criteria[key]} stars
                   </Typography>
                 </Box>
                 <Rating
-                  value={formData.criteria[key as keyof typeof formData.criteria]}
-                  onChange={(_, value) => handleCriteriaChange(key as keyof typeof formData.criteria, value || 1)}
+                  value={formData.criteria[key]}
+                  onChange={(_, value) => handleCriteriaChange(key, value || 1)}
                   size="medium"
                 />
                 {errors[key] && (
@@ -355,8 +349,8 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
           <Grid xs={12}>
             <TextField
               fullWidth
-              label="Review Title"
-              placeholder="Summarize your experience..."
+              label={t('create.review_title')}
+              placeholder={t('create.title_placeholder')}
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               error={!!errors.title}
@@ -371,12 +365,12 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
               fullWidth
               multiline
               rows={4}
-              label="Detailed Review"
-              placeholder="Tell others about your experience with this service provider..."
+              label={t('create.detailed_review')}
+              placeholder={t('create.review_placeholder_detail')}
               value={formData.comment}
               onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
               error={!!errors.comment}
-              helperText={errors.comment || `${formData.comment.length}/500 characters`}
+              helperText={errors.comment || t('create.char_count_500', { count: formData.comment.length })}
               inputProps={{ maxLength: 500 }}
             />
           </Grid>
@@ -386,10 +380,10 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
             <Box sx={{ border: '2px dashed', borderColor: 'grey.300', borderRadius: 1, p: 3, textAlign: 'center' }}>
               <PhotoCamera sx={{ fontSize: 48, color: 'grey.400', mb: 1 }} />
               <Typography variant="body2" color="text.secondary">
-                Photo upload feature coming soon
+                {t('create.photo_coming_soon')}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                Add photos to help others see your experience
+                {t('create.photo_help_text')}
               </Typography>
             </Box>
           </Grid>
@@ -403,10 +397,10 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
                   onChange={(e) => setFormData({ ...formData, isAnonymous: e.target.checked })}
                 />
               }
-              label="Post this review anonymously"
+              label={t('create.post_anonymously')}
             />
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-              Your name will be hidden, but the review will still be public
+              {t('create.anonymous_help_text')}
             </Typography>
           </Grid>
 
@@ -414,8 +408,7 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
           <Grid xs={12}>
             <Alert severity="info" sx={{ mt: 2 }}>
               <Typography variant="body2">
-                <strong>Review Guidelines:</strong> Be honest, constructive, and respectful. 
-                Reviews help other customers make informed decisions and help providers improve their services.
+                <strong>{t('create.guidelines')}:</strong> {t('create.guidelines_text')}
               </Typography>
             </Alert>
           </Grid>
@@ -423,11 +416,11 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
       </DialogContent>
 
       <DialogActions sx={{ p: 3 }}>
-        <Button 
+        <Button
           onClick={onClose}
           disabled={isLoading}
         >
-          Cancel
+          {t('create.cancel')}
         </Button>
         <Button
           onClick={handleSubmit}
@@ -435,9 +428,9 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
           disabled={isLoading}
           startIcon={isLoading ? <CircularProgress size={20} /> : <Star />}
         >
-          {isLoading 
-            ? (mode === 'create' ? 'Submitting...' : 'Updating...') 
-            : (mode === 'create' ? 'Submit Review' : 'Update Review')
+          {isLoading
+            ? (mode === 'create' ? t('create.submitting') : t('create.updating'))
+            : (mode === 'create' ? t('create.submit') : t('create.update'))
           }
         </Button>
       </DialogActions>

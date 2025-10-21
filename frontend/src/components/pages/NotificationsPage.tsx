@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -40,11 +41,12 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index, ...other })
 };
 
 const NotificationsPage: React.FC = () => {
+  const { t } = useTranslation('notifications');
   const { user } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [searchParams, setSearchParams] = useSearchParams();
-  
+
   // Get initial tab from URL params
   const initialTab = searchParams.get('tab');
   const getTabIndex = (tab: string | null) => {
@@ -90,10 +92,10 @@ const NotificationsPage: React.FC = () => {
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" component="h1" fontWeight="bold" sx={{ mb: 1 }}>
           <Notifications sx={{ mr: 2, verticalAlign: 'middle' }} />
-          Notifications
+          {t('title')}
         </Typography>
         <Typography variant="subtitle1" color="text.secondary">
-          Stay updated with your bookings, payments, reviews, and messages
+          {t('subtitle')}
         </Typography>
       </Box>
 
@@ -115,19 +117,19 @@ const NotificationsPage: React.FC = () => {
         >
           <Tab
             icon={<Notifications />}
-            label="All Notifications"
+            label={t('all')}
             iconPosition="start"
             sx={{ gap: 1 }}
           />
           <Tab
             icon={<Settings />}
-            label="Preferences"
+            label={t('preferences.title')}
             iconPosition="start"
             sx={{ gap: 1 }}
           />
           <Tab
             icon={<History />}
-            label="History"
+            label={t('history.title')}
             iconPosition="start"
             sx={{ gap: 1 }}
           />
@@ -152,20 +154,19 @@ const NotificationsPage: React.FC = () => {
 
 // Notification Preferences Panel Component
 const NotificationPreferencesPanel: React.FC = () => {
+  const { t } = useTranslation('notifications');
+
   return (
     <Paper sx={{ p: 3 }}>
       <Typography variant="h6" sx={{ mb: 3 }}>
-        Notification Preferences
+        {t('preferences.title')}
       </Typography>
       <Typography variant="body1" color="text.secondary">
-        Notification preferences are managed through the notification center settings.
-        Click on any notification to access preference controls, or use the settings
-        button in the notification center header.
+        {t('preferences.description_detailed')}
       </Typography>
       <Box sx={{ mt: 3, p: 2, bgcolor: 'info.50', borderRadius: 1, border: 1, borderColor: 'info.200' }}>
         <Typography variant="body2" color="info.main">
-          <strong>Tip:</strong> You can customize email, SMS, and push notification preferences
-          for different types of notifications including bookings, payments, reviews, and messages.
+          <strong>{t('preferences.tip_label')}</strong> {t('preferences.tip_message')}
         </Typography>
       </Box>
     </Paper>
@@ -174,37 +175,37 @@ const NotificationPreferencesPanel: React.FC = () => {
 
 // Notification History Panel Component
 const NotificationHistoryPanel: React.FC = () => {
+  const { t } = useTranslation('notifications');
+
   return (
     <Paper sx={{ p: 3 }}>
       <Typography variant="h6" sx={{ mb: 3 }}>
-        Notification History
+        {t('history.page_title')}
       </Typography>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-        Your notification history shows all notifications from the past 30 days,
-        including read and deleted notifications.
+        {t('history.description')}
       </Typography>
-      
+
       <Box sx={{ mt: 3 }}>
         <Typography variant="body2" color="text.secondary">
-          <strong>Retention Policy:</strong>
+          <strong>{t('history.retention_policy')}</strong>
         </Typography>
         <Box component="ul" sx={{ mt: 1, pl: 2 }}>
           <Typography component="li" variant="body2" color="text.secondary">
-            Notifications are kept for 30 days
+            {t('history.retention_30_days')}
           </Typography>
           <Typography component="li" variant="body2" color="text.secondary">
-            High-priority notifications are kept for 90 days
+            {t('history.retention_90_days')}
           </Typography>
           <Typography component="li" variant="body2" color="text.secondary">
-            System notifications are kept for 1 year
+            {t('history.retention_1_year')}
           </Typography>
         </Box>
       </Box>
 
       <Box sx={{ mt: 3, p: 2, bgcolor: 'warning.50', borderRadius: 1, border: 1, borderColor: 'warning.200' }}>
         <Typography variant="body2" color="warning.main">
-          <strong>Note:</strong> Deleted notifications cannot be recovered. Important information
-          should be saved separately if needed for future reference.
+          <strong>{t('history.note_label')}</strong> {t('history.note_message')}
         </Typography>
       </Box>
     </Paper>

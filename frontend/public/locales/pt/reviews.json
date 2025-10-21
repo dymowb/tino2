@@ -1,0 +1,149 @@
+{
+  "title": "Minhas Avaliações",
+  "subtitle": "Gerencie suas avaliações e classificações",
+  "write_review": "Escrever Avaliação",
+  "reviews_written": "Avaliações Escritas",
+  "reviews_received": "Avaliações Recebidas",
+  "pending_reviews": "Avaliações Pendentes",
+  "services_to_review": "Serviços Prontos para Avaliar",
+  "loading": "Carregando avaliações...",
+  "error": "Falha ao carregar avaliações. Por favor, tente novamente.",
+
+  "tabs": {
+    "reviews_written": "Avaliações que Escrevi",
+    "reviews_received": "Avaliações Sobre Meus Serviços"
+  },
+
+  "filters": {
+    "rating": "Avaliação",
+    "all_ratings": "Todas as Avaliações",
+    "5_stars": "5 Estrelas",
+    "4_stars": "4 Estrelas",
+    "3_stars": "3 Estrelas",
+    "2_stars": "2 Estrelas",
+    "1_star": "1 Estrela",
+    "sort_by": "Ordenar Por",
+    "date": "Data",
+    "rating_sort": "Avaliação",
+    "title_sort": "Título",
+    "search_placeholder": "Pesquisar avaliações...",
+    "clear_filters": "Limpar Filtros"
+  },
+
+  "create": {
+    "title": "Escrever uma Avaliação",
+    "edit_title": "Editar Avaliação",
+    "service_details": "Detalhes do Serviço",
+    "provider": "Prestador",
+    "service_type": "Tipo de Serviço",
+    "date": "Data",
+    "cost": "Custo",
+    "rating": "Avaliação Geral",
+    "overall_rating_display": "Avaliação Geral: {{rating}} estrelas",
+    "rate_experience": "Avalie Sua Experiência",
+    "criteria": "Avalie os seguintes aspectos:",
+    "quality": "Qualidade do Trabalho",
+    "timeliness": "Pontualidade",
+    "communication": "Comunicação",
+    "professionalism": "Profissionalismo",
+    "value": "Relação Custo-Benefício",
+    "review_title": "Título da Avaliação",
+    "title_placeholder": "Resuma sua experiência...",
+    "detailed_review": "Avaliação Detalhada",
+    "review_placeholder": "Compartilhe sua experiência com outros...",
+    "review_placeholder_detail": "Conte aos outros sobre sua experiência com este prestador de serviços...",
+    "char_count_500": "{{count}}/500 caracteres",
+    "photos": "Adicionar Fotos (Opcional)",
+    "photo_coming_soon": "Recurso de upload de fotos em breve",
+    "photo_help_text": "Adicione fotos para ajudar outros a ver sua experiência",
+    "post_anonymously": "Publicar esta avaliação anonimamente",
+    "anonymous_help_text": "Seu nome ficará oculto, mas a avaliação ainda será pública",
+    "guidelines": "Diretrizes de Avaliação",
+    "guidelines_text": "Seja honesto, construtivo e respeitoso. As avaliações ajudam outros clientes a tomar decisões informadas e ajudam os prestadores a melhorar seus serviços.",
+    "submit": "Enviar Avaliação",
+    "update": "Atualizar Avaliação",
+    "cancel": "Cancelar",
+    "submitting": "Enviando...",
+    "updating": "Atualizando...",
+    "success": "Avaliação publicada com sucesso!",
+    "error": "Falha ao publicar avaliação",
+    "char_count": "{{count}}/{{max}} caracteres"
+  },
+
+  "card": {
+    "provider": "Prestador",
+    "customer": "Cliente",
+    "anonymous": "Anônimo",
+    "service_date": "Data do Serviço",
+    "verified_purchase": "Compra Verificada",
+    "detailed_ratings": "Avaliações Detalhadas:",
+    "helpful": "Útil",
+    "not_helpful": "Não útil",
+    "report": "Denunciar",
+    "edit": "Editar Avaliação",
+    "delete": "Excluir Avaliação",
+    "flag_review": "Sinalizar Avaliação",
+    "respond_to_review": "Responder à Avaliação",
+    "provider_response": "Resposta do Prestador"
+  },
+
+  "criteria_labels": {
+    "quality": "Qualidade",
+    "timeliness": "Pontualidade",
+    "communication": "Comunicação",
+    "professionalism": "Profissionalismo",
+    "value": "Valor"
+  },
+
+  "empty": {
+    "no_reviews": "Ainda não há avaliações",
+    "no_pending": "Você não tem serviços para avaliar",
+    "no_match": "Nenhuma avaliação corresponde aos seus filtros atuais.",
+    "no_completed_bookings": "Nenhuma reserva concluída disponível para avaliação no momento.",
+    "no_reviews_written": "Você ainda não escreveu nenhuma avaliação.",
+    "no_reviews_received": "Ainda não há avaliações sobre seus serviços."
+  },
+
+  "provider_response": {
+    "title": "Responder à Avaliação do Cliente",
+    "anonymous_customer": "Cliente Anônimo",
+    "customer_label": "Cliente",
+    "stars_label": "{{rating}} estrelas",
+    "detailed_ratings": "Avaliações Detalhadas:",
+    "already_responded": "Você já respondeu a esta avaliação.",
+    "your_response_label": "Sua resposta ({{date}}):",
+    "your_response_title": "Sua Resposta",
+    "response_label": "Resposta ao Cliente",
+    "response_placeholder": "Agradeça ao seu cliente e aborde seus comentários de maneira profissional...",
+    "char_count": "{{count}}/1000 caracteres",
+    "guidelines_title": "Diretrizes de Resposta:",
+    "guideline_thank": "Agradeça ao cliente pelos comentários",
+    "guideline_address": "Aborde quaisquer preocupações de maneira profissional",
+    "guideline_concise": "Mantenha a resposta concisa e construtiva",
+    "guideline_avoid": "Evite discutir ou ser defensivo",
+    "guideline_improve": "Mostre como você está melhorando com base nos comentários",
+    "service_details": "Detalhes do Serviço:",
+    "service_label": "Serviço:",
+    "date_label": "Data:",
+    "amount_label": "Valor:",
+    "cancel": "Cancelar",
+    "submit": "Enviar Resposta",
+    "submitting": "Enviando...",
+    "success": "Resposta enviada com sucesso!",
+    "error": "Falha ao enviar resposta",
+    "validation": {
+      "required": "A resposta é obrigatória",
+      "min_length": "A resposta deve ter pelo menos 10 caracteres",
+      "max_length": "A resposta não pode exceder 1000 caracteres"
+    }
+  },
+
+  "messages": {
+    "delete_success": "Avaliação excluída com sucesso",
+    "delete_error": "Falha ao excluir avaliação",
+    "update_success": "Avaliação atualizada com sucesso!",
+    "update_error": "Falha ao atualizar avaliação",
+    "flag_success": "A avaliação foi sinalizada para moderação",
+    "flag_error": "Falha ao sinalizar avaliação"
+  }
+}

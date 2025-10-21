@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogTitle,
@@ -80,6 +81,7 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
   onClose,
   serviceType = ''
 }) => {
+  const { t } = useTranslation('quotes');
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -117,12 +119,12 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
     mutationFn: (requestData: any) => apiService.createQuoteRequest(requestData),
     onSuccess: (newRequest: QuoteRequest) => {
       queryClient.invalidateQueries({ queryKey: ['quote-requests'] });
-      toast.success('Quote request created successfully!');
+      toast.success(t('request.success'));
       onClose();
       resetForm();
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || 'Failed to create quote request');
+      toast.error(error?.response?.data?.error || t('request.error'));
     },
   });
 
@@ -157,25 +159,25 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
     const newErrors: Record<string, string> = {};
 
     if (!formData.serviceType) {
-      newErrors.serviceType = 'Service type is required';
+      newErrors.serviceType = t('request.validation.service_type_required');
     }
     if (!formData.description.trim()) {
-      newErrors.description = 'Description is required';
+      newErrors.description = t('request.validation.description_required');
     }
     if (!formData.location.address.trim()) {
-      newErrors.address = 'Address is required';
+      newErrors.address = t('request.validation.address_required');
     }
     if (!formData.location.city.trim()) {
-      newErrors.city = 'City is required';
+      newErrors.city = t('request.validation.city_required');
     }
     if (!formData.location.state.trim()) {
-      newErrors.state = 'State is required';
+      newErrors.state = t('request.validation.state_required');
     }
     if (!formData.location.zipCode.trim()) {
-      newErrors.zipCode = 'ZIP code is required';
+      newErrors.zipCode = t('request.validation.zip_required');
     }
     if (formData.budget.min >= formData.budget.max) {
-      newErrors.budget = 'Minimum budget must be less than maximum budget';
+      newErrors.budget = t('request.validation.budget_min_max');
     }
 
     setErrors(newErrors);
@@ -235,12 +237,12 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
   };
 
   const requirementCategories = [
-    'Experience',
-    'Certification',
-    'Equipment',
-    'Insurance',
-    'Availability',
-    'Special Skills'
+    { value: 'experience', label: t('request.requirement_categories.experience') },
+    { value: 'certification', label: t('request.requirement_categories.certification') },
+    { value: 'equipment', label: t('request.requirement_categories.equipment') },
+    { value: 'insurance', label: t('request.requirement_categories.insurance') },
+    { value: 'availability', label: t('request.requirement_categories.availability') },
+    { value: 'special_skills', label: t('request.requirement_categories.special_skills') }
   ];
 
   return (
@@ -254,7 +256,7 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <RequestQuote />
-          Request Service Quotes
+          {t('request.title')}
         </Box>
       </DialogTitle>
 
@@ -264,10 +266,10 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
             {/* Service Type */}
             <Grid item xs={12} md={6}>
               <FormControl fullWidth error={!!errors.serviceType}>
-                <InputLabel>Service Type</InputLabel>
+                <InputLabel>{t('request.service_type')}</InputLabel>
                 <Select
                   value={formData.serviceType}
-                  label="Service Type"
+                  label={t('request.service_type')}
                   onChange={(e) => setFormData({ ...formData, serviceType: e.target.value })}
                 >
                   {availableServices.map(service => (
@@ -287,17 +289,17 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
             {/* Urgency */}
             <Grid item xs={12} md={6}>
               <FormControl fullWidth>
-                <InputLabel>Urgency Level</InputLabel>
+                <InputLabel>{t('request.urgency_level')}</InputLabel>
                 <Select
                   value={formData.urgency}
-                  label="Urgency Level"
+                  label={t('request.urgency_level')}
                   onChange={(e) => setFormData({ ...formData, urgency: e.target.value as any })}
                   startAdornment={<PriorityHigh sx={{ mr: 1 }} />}
                 >
-                  <MenuItem value="low">Low - Flexible timeline</MenuItem>
-                  <MenuItem value="medium">Medium - Within a week</MenuItem>
-                  <MenuItem value="high">High - Within 2-3 days</MenuItem>
-                  <MenuItem value="urgent">Urgent - ASAP</MenuItem>
+                  <MenuItem value="low">{t('request.urgency_low')}</MenuItem>
+                  <MenuItem value="medium">{t('request.urgency_medium')}</MenuItem>
+                  <MenuItem value="high">{t('request.urgency_high')}</MenuItem>
+                  <MenuItem value="urgent">{t('request.urgency_urgent')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -308,8 +310,8 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
                 fullWidth
                 multiline
                 rows={4}
-                label="Service Description"
-                placeholder="Please describe the service you need in detail..."
+                label={t('request.description')}
+                placeholder={t('request.description_placeholder')}
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 error={!!errors.description}
@@ -324,14 +326,14 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
             <Grid item xs={12}>
               <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <LocationOn />
-                Service Location
+                {t('request.location')}
               </Typography>
             </Grid>
 
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Street Address"
+                label={t('request.street_address')}
                 value={formData.location.address}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -345,7 +347,7 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
             <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
-                label="City"
+                label={t('request.city')}
                 value={formData.location.city}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -359,7 +361,7 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
             <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
-                label="State"
+                label={t('request.state')}
                 value={formData.location.state}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -373,7 +375,7 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
             <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
-                label="ZIP Code"
+                label={t('request.zip_code')}
                 value={formData.location.zipCode}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -388,7 +390,7 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
             <Grid item xs={12}>
               <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <AttachMoney />
-                Budget Range
+                {t('request.budget_range')}
               </Typography>
               <Box sx={{ px: 2 }}>
                 <Slider
@@ -412,7 +414,7 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
                   ]}
                 />
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  Budget: ${formData.budget.min} - ${formData.budget.max}
+                  {t('request.budget_display', { min: formData.budget.min, max: formData.budget.max })}
                 </Typography>
                 {errors.budget && (
                   <Typography variant="caption" color="error">
@@ -425,7 +427,7 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
             {/* Preferred Date */}
             <Grid item xs={12} md={6}>
               <DateTimePicker
-                label="Preferred Start Date (Optional)"
+                label={t('request.preferred_start_date')}
                 value={formData.preferredDate}
                 onChange={(date) => setFormData({ ...formData, preferredDate: date as Date | null })}
                 renderInput={(params) => (
@@ -447,40 +449,40 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
               <TextField
                 fullWidth
                 type="number"
-                label="Search Radius (miles)"
+                label={t('request.search_radius')}
                 value={formData.searchRadius}
-                onChange={(e) => setFormData({ 
-                  ...formData, 
-                  searchRadius: parseInt(e.target.value) || 25 
+                onChange={(e) => setFormData({
+                  ...formData,
+                  searchRadius: parseInt(e.target.value) || 25
                 })}
                 inputProps={{ min: 5, max: 100, step: 5 }}
-                helperText="How far should we search for providers?"
+                helperText={t('request.search_radius_help')}
               />
             </Grid>
 
             {/* Requirements */}
             <Grid item xs={12}>
               <Typography variant="h6" sx={{ mb: 2 }}>
-                Special Requirements (Optional)
+                {t('request.special_requirements')}
               </Typography>
-              
+
               {/* Add New Requirement */}
               <Card sx={{ mb: 2, bgcolor: 'grey.50' }}>
                 <CardContent>
                   <Grid container spacing={2} alignItems="center">
                     <Grid item xs={12} md={3}>
                       <FormControl fullWidth size="small">
-                        <InputLabel>Category</InputLabel>
+                        <InputLabel>{t('request.category')}</InputLabel>
                         <Select
                           value={newRequirement.category}
-                          label="Category"
+                          label={t('request.category')}
                           onChange={(e) => setNewRequirement({
                             ...newRequirement,
                             category: e.target.value
                           })}
                         >
                           {requirementCategories.map(cat => (
-                            <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+                            <MenuItem key={cat.value} value={cat.value}>{cat.label}</MenuItem>
                           ))}
                         </Select>
                       </FormControl>
@@ -489,28 +491,28 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
                       <TextField
                         fullWidth
                         size="small"
-                        label="Requirement"
+                        label={t('request.requirement')}
                         value={newRequirement.requirement}
                         onChange={(e) => setNewRequirement({
                           ...newRequirement,
                           requirement: e.target.value
                         })}
-                        placeholder="e.g., Must have plumbing license"
+                        placeholder={t('request.requirement_placeholder')}
                       />
                     </Grid>
                     <Grid item xs={12} md={2}>
                       <FormControl fullWidth size="small">
-                        <InputLabel>Type</InputLabel>
+                        <InputLabel>{t('request.type')}</InputLabel>
                         <Select
                           value={newRequirement.mandatory ? 'mandatory' : 'preferred'}
-                          label="Type"
+                          label={t('request.type')}
                           onChange={(e) => setNewRequirement({
                             ...newRequirement,
                             mandatory: e.target.value === 'mandatory'
                           })}
                         >
-                          <MenuItem value="preferred">Preferred</MenuItem>
-                          <MenuItem value="mandatory">Mandatory</MenuItem>
+                          <MenuItem value="preferred">{t('request.preferred')}</MenuItem>
+                          <MenuItem value="mandatory">{t('request.mandatory')}</MenuItem>
                         </Select>
                       </FormControl>
                     </Grid>
@@ -548,14 +550,14 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
             {/* Expires At */}
             <Grid item xs={12} md={6}>
               <DateTimePicker
-                label="Quote Request Expires"
+                label={t('request.quote_expires')}
                 value={formData.expiresAt}
                 onChange={(date) => setFormData({ ...formData, expiresAt: date as Date | null })}
                 renderInput={(params) => (
                   <TextField
                     {...params}
                     fullWidth
-                    helperText="When should this request close automatically?"
+                    helperText={t('request.expires_help')}
                   />
                 )}
                 minDateTime={addDays(new Date(), 1)}
@@ -566,11 +568,11 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
       </DialogContent>
 
       <DialogActions sx={{ p: 3 }}>
-        <Button 
+        <Button
           onClick={onClose}
           disabled={createQuoteRequestMutation.isPending}
         >
-          Cancel
+          {t('request.cancel')}
         </Button>
         <Button
           onClick={handleSubmit}
@@ -578,7 +580,7 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
           disabled={createQuoteRequestMutation.isPending}
           startIcon={createQuoteRequestMutation.isPending ? <CircularProgress size={20} /> : <RequestQuote />}
         >
-          {createQuoteRequestMutation.isPending ? 'Creating...' : 'Request Quotes'}
+          {createQuoteRequestMutation.isPending ? t('request.creating') : t('request.submit')}
         </Button>
       </DialogActions>
     </Dialog>

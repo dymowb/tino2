@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogTitle,
@@ -33,6 +34,7 @@ interface AccountDeletionDialogProps {
 }
 
 const AccountDeletionDialog: React.FC<AccountDeletionDialogProps> = ({ open, onClose }) => {
+  const { t } = useTranslation('profile');
   const navigate = useNavigate();
   const { logout } = useAuth();
   const [confirmStep, setConfirmStep] = useState(1);
@@ -43,17 +45,30 @@ const AccountDeletionDialog: React.FC<AccountDeletionDialogProps> = ({ open, onC
     activeBookings: false,
   });
 
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (open) {
+      setConfirmStep(1);
+      setConfirmText('');
+      setAcknowledgements({
+        dataLoss: false,
+        noRecovery: false,
+        activeBookings: false,
+      });
+    }
+  }, [open]);
+
   const deleteAccountMutation = useMutation({
     mutationFn: () => apiService.deleteAccount(),
     onSuccess: () => {
-      toast.success('Account deletion initiated. Your account will be deactivated.');
+      toast.success(t('delete_account.success'));
       handleClose();
       // Log out and redirect to home page
       logout();
       navigate('/');
     },
     onError: (error: any) => {
-      const errorMessage = error?.response?.data?.error || 'Failed to delete account';
+      const errorMessage = error?.response?.data?.error || t('delete_account.error');
       toast.error(errorMessage);
     },
   });
@@ -78,7 +93,7 @@ const AccountDeletionDialog: React.FC<AccountDeletionDialogProps> = ({ open, onC
   };
 
   const canConfirmDeletion = () => {
-    return confirmText.toUpperCase() === 'DELETE MY ACCOUNT';
+    return confirmText.toUpperCase() === t('delete_account.delete_text').toUpperCase();
   };
 
   const handleDeleteAccount = () => {
@@ -92,7 +107,7 @@ const AccountDeletionDialog: React.FC<AccountDeletionDialogProps> = ({ open, onC
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
           <WarningIcon />
-          <Typography variant="h6">Delete Account</Typography>
+          <Typography variant="h6">{t('delete_account.title')}</Typography>
         </Box>
       </DialogTitle>
 
@@ -101,16 +116,15 @@ const AccountDeletionDialog: React.FC<AccountDeletionDialogProps> = ({ open, onC
           <Box>
             <Alert severity="error" sx={{ mb: 3 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
-                Warning: This action will permanently delete your account
+                {t('delete_account.warning_permanent')}
               </Typography>
               <Typography variant="body2">
-                Your account will be deactivated immediately and scheduled for permanent deletion after
-                30 days. During this grace period, you may contact support to recover your account.
+                {t('delete_account.deactivation_notice')}
               </Typography>
             </Alert>
 
             <Typography variant="h6" sx={{ mb: 2 }}>
-              What will happen:
+              {t('delete_account.what_happens')}
             </Typography>
 
             <List>
@@ -119,8 +133,8 @@ const AccountDeletionDialog: React.FC<AccountDeletionDialogProps> = ({ open, onC
                   <DeleteForever color="error" />
                 </ListItemIcon>
                 <ListItemText
-                  primary="All your personal data will be deleted"
-                  secondary="Including profile information, settings, and preferences"
+                  primary={t('delete_account.consequences.personal_data')}
+                  secondary={t('delete_account.consequences.personal_data_detail')}
                 />
               </ListItem>
               <ListItem>
@@ -128,8 +142,8 @@ const AccountDeletionDialog: React.FC<AccountDeletionDialogProps> = ({ open, onC
                   <DeleteForever color="error" />
                 </ListItemIcon>
                 <ListItemText
-                  primary="Your bookings history will be removed"
-                  secondary="All past and future bookings will be cancelled"
+                  primary={t('delete_account.consequences.bookings')}
+                  secondary={t('delete_account.consequences.bookings_detail')}
                 />
               </ListItem>
               <ListItem>
@@ -137,8 +151,8 @@ const AccountDeletionDialog: React.FC<AccountDeletionDialogProps> = ({ open, onC
                   <DeleteForever color="error" />
                 </ListItemIcon>
                 <ListItemText
-                  primary="Your reviews and ratings will be anonymized"
-                  secondary="Reviews will remain but no longer be associated with your account"
+                  primary={t('delete_account.consequences.reviews')}
+                  secondary={t('delete_account.consequences.reviews_detail')}
                 />
               </ListItem>
               <ListItem>
@@ -146,15 +160,15 @@ const AccountDeletionDialog: React.FC<AccountDeletionDialogProps> = ({ open, onC
                   <DeleteForever color="error" />
                 </ListItemIcon>
                 <ListItemText
-                  primary="Your messages will be deleted"
-                  secondary="All conversation history will be permanently removed"
+                  primary={t('delete_account.consequences.messages')}
+                  secondary={t('delete_account.consequences.messages_detail')}
                 />
               </ListItem>
             </List>
 
             <Box sx={{ mt: 3 }}>
               <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
-                Please acknowledge the following:
+                {t('delete_account.acknowledge_instruction')}
               </Typography>
 
               <FormControlLabel
@@ -166,7 +180,7 @@ const AccountDeletionDialog: React.FC<AccountDeletionDialogProps> = ({ open, onC
                     }
                   />
                 }
-                label="I understand that all my data will be permanently deleted"
+                label={t('delete_account.ack_data_loss')}
               />
 
               <FormControlLabel
@@ -178,7 +192,7 @@ const AccountDeletionDialog: React.FC<AccountDeletionDialogProps> = ({ open, onC
                     }
                   />
                 }
-                label="I understand this action cannot be easily undone"
+                label={t('delete_account.ack_no_recovery')}
               />
 
               <FormControlLabel
@@ -193,15 +207,13 @@ const AccountDeletionDialog: React.FC<AccountDeletionDialogProps> = ({ open, onC
                     }
                   />
                 }
-                label="I understand that any active bookings will be cancelled"
+                label={t('delete_account.ack_active_bookings')}
               />
             </Box>
 
             <Alert severity="info" sx={{ mt: 3 }}>
               <Typography variant="body2">
-                <strong>30-Day Grace Period:</strong> Your account will be deactivated immediately,
-                but you have 30 days to contact support if you change your mind before permanent
-                deletion.
+                <strong>{t('delete_account.grace_period_title')}</strong> {t('delete_account.grace_period_description')}
               </Typography>
             </Alert>
           </Box>
@@ -211,25 +223,25 @@ const AccountDeletionDialog: React.FC<AccountDeletionDialogProps> = ({ open, onC
           <Box>
             <Alert severity="error" sx={{ mb: 3 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                Final Confirmation Required
+                {t('delete_account.final_confirmation')}
               </Typography>
             </Alert>
 
             <Typography variant="body1" sx={{ mb: 2 }}>
-              To confirm account deletion, please type{' '}
-              <strong style={{ color: '#d32f2f' }}>DELETE MY ACCOUNT</strong> in the box below:
+              {t('delete_account.type_instruction')}{' '}
+              <strong style={{ color: '#d32f2f' }}>{t('delete_account.delete_text')}</strong> {t('delete_account.type_instruction_full')}
             </Typography>
 
             <TextField
               fullWidth
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
-              placeholder="Type: DELETE MY ACCOUNT"
+              placeholder={t('delete_account.placeholder')}
               autoFocus
               error={confirmText !== '' && !canConfirmDeletion()}
               helperText={
                 confirmText !== '' && !canConfirmDeletion()
-                  ? 'Please type exactly: DELETE MY ACCOUNT'
+                  ? t('delete_account.type_exactly')
                   : ''
               }
               sx={{ mb: 2 }}
@@ -238,15 +250,14 @@ const AccountDeletionDialog: React.FC<AccountDeletionDialogProps> = ({ open, onC
             {canConfirmDeletion() && (
               <Alert severity="success" icon={<CheckCircle />}>
                 <Typography variant="body2">
-                  Confirmation text verified. You may proceed with account deletion.
+                  {t('delete_account.confirmation_verified')}
                 </Typography>
               </Alert>
             )}
 
             <Alert severity="warning" sx={{ mt: 2 }}>
               <Typography variant="body2">
-                This is your last chance to cancel. Once you click "Delete My Account", your account
-                will be deactivated immediately.
+                {t('delete_account.last_chance')}
               </Typography>
             </Alert>
           </Box>
@@ -255,7 +266,7 @@ const AccountDeletionDialog: React.FC<AccountDeletionDialogProps> = ({ open, onC
 
       <DialogActions>
         <Button onClick={handleClose} disabled={deleteAccountMutation.isPending}>
-          Cancel
+          {t('delete_account.cancel')}
         </Button>
 
         {confirmStep === 1 && (
@@ -265,13 +276,13 @@ const AccountDeletionDialog: React.FC<AccountDeletionDialogProps> = ({ open, onC
             onClick={() => setConfirmStep(2)}
             disabled={!canProceedToStep2()}
           >
-            Continue to Confirmation
+            {t('delete_account.continue')}
           </Button>
         )}
 
         {confirmStep === 2 && (
           <>
-            <Button onClick={() => setConfirmStep(1)}>Back</Button>
+            <Button onClick={() => setConfirmStep(1)}>{t('delete_account.back')}</Button>
             <Button
               variant="contained"
               color="error"
@@ -279,7 +290,7 @@ const AccountDeletionDialog: React.FC<AccountDeletionDialogProps> = ({ open, onC
               disabled={!canConfirmDeletion() || deleteAccountMutation.isPending}
               startIcon={<DeleteForever />}
             >
-              {deleteAccountMutation.isPending ? 'Deleting...' : 'Delete My Account'}
+              {deleteAccountMutation.isPending ? t('delete_account.deleting') : t('delete_account.submit')}
             </Button>
           </>
         )}

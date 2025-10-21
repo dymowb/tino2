@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogTitle,
@@ -72,6 +73,7 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
   onClose,
   quoteRequest
 }) => {
+  const { t } = useTranslation('quotes');
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -130,12 +132,12 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
     onSuccess: (newQuote: Quote) => {
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
       queryClient.invalidateQueries({ queryKey: ['quote-requests'] });
-      toast.success('Quote submitted successfully!');
+      toast.success(t('submission.success'));
       onClose();
       resetForm();
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || 'Failed to submit quote');
+      toast.error(error?.response?.data?.error || t('submission.error'));
     },
   });
 
@@ -163,16 +165,16 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
     const newErrors: Record<string, string> = {};
 
     if (!formData.description.trim()) {
-      newErrors.description = 'Description is required';
+      newErrors.description = t('submission.validation.description_required');
     }
     if (formData.estimatedPrice <= 0) {
-      newErrors.estimatedPrice = 'Price must be greater than 0';
+      newErrors.estimatedPrice = t('submission.validation.price_greater_than_zero');
     }
     if (formData.estimatedDuration <= 0) {
-      newErrors.estimatedDuration = 'Duration must be greater than 0';
+      newErrors.estimatedDuration = t('submission.validation.duration_greater_than_zero');
     }
     if (!formData.validUntil || formData.validUntil <= new Date()) {
-      newErrors.validUntil = 'Valid until date must be in the future';
+      newErrors.validUntil = t('submission.validation.valid_until_future');
     }
 
     setErrors(newErrors);
@@ -251,7 +253,7 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <SendAndArchive />
-          Submit Quote for {formatServiceName(quoteRequest.serviceType)}
+          {t('submission.title', { service: formatServiceName(quoteRequest.serviceType) })}
         </Box>
       </DialogTitle>
 
@@ -263,21 +265,21 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
               <Card sx={{ mb: 3, bgcolor: 'grey.50' }}>
                 <CardContent>
                   <Typography variant="h6" sx={{ mb: 2 }}>
-                    Quote Request Details
+                    {t('submission.quote_request_details')}
                   </Typography>
                   <Grid container spacing={2}>
                     <Grid item xs={12} md={6}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                         <Person sx={{ fontSize: 'small' }} />
                         <Typography variant="body2">
-                          <strong>Service:</strong> {formatServiceName(quoteRequest.serviceType)}
+                          <strong>{t('submission.service_label')}</strong> {formatServiceName(quoteRequest.serviceType)}
                         </Typography>
                       </Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                         <PriorityHigh sx={{ fontSize: 'small' }} />
-                        <Chip 
-                          label={quoteRequest.urgency.toUpperCase()} 
-                          size="small" 
+                        <Chip
+                          label={quoteRequest.urgency.toUpperCase()}
+                          size="small"
                           color={getUrgencyColor(quoteRequest.urgency) as any}
                         />
                       </Box>
@@ -293,12 +295,12 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                           <AttachMoney sx={{ fontSize: 'small' }} />
                           <Typography variant="body2">
-                            <strong>Budget:</strong> ${quoteRequest.budget.min} - ${quoteRequest.budget.max}
+                            <strong>{t('submission.budget_label')}</strong> ${quoteRequest.budget.min} - ${quoteRequest.budget.max}
                           </Typography>
                         </Box>
                       )}
                       <Typography variant="body2" sx={{ mb: 1 }}>
-                        <strong>Description:</strong> {quoteRequest.description}
+                        <strong>{t('submission.description_label')}</strong> {quoteRequest.description}
                       </Typography>
                     </Grid>
                   </Grid>
@@ -312,8 +314,8 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
                 fullWidth
                 multiline
                 rows={3}
-                label="Quote Description"
-                placeholder="Describe your proposed service and approach..."
+                label={t('submission.quote_description')}
+                placeholder={t('submission.quote_description_placeholder')}
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 error={!!errors.description}
@@ -328,14 +330,14 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
             <Grid item xs={12}>
               <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <AttachMoney />
-                Pricing Breakdown
+                {t('submission.pricing_breakdown')}
               </Typography>
               <Grid container spacing={2}>
                 <Grid item xs={12} md={2}>
                   <TextField
                     fullWidth
                     type="number"
-                    label="Labor"
+                    label={t('submission.labor')}
                     value={formData.breakdown.labor}
                     onChange={(e) => updateBreakdown('labor', parseFloat(e.target.value) || 0)}
                     InputProps={{
@@ -348,7 +350,7 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
                   <TextField
                     fullWidth
                     type="number"
-                    label="Materials"
+                    label={t('submission.materials')}
                     value={formData.breakdown.materials}
                     onChange={(e) => updateBreakdown('materials', parseFloat(e.target.value) || 0)}
                     InputProps={{
@@ -361,7 +363,7 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
                   <TextField
                     fullWidth
                     type="number"
-                    label="Equipment"
+                    label={t('submission.equipment')}
                     value={formData.breakdown.equipment}
                     onChange={(e) => updateBreakdown('equipment', parseFloat(e.target.value) || 0)}
                     InputProps={{
@@ -374,7 +376,7 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
                   <TextField
                     fullWidth
                     type="number"
-                    label="Other"
+                    label={t('submission.other')}
                     value={formData.breakdown.other}
                     onChange={(e) => updateBreakdown('other', parseFloat(e.target.value) || 0)}
                     InputProps={{
@@ -387,7 +389,7 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
                   <TextField
                     fullWidth
                     type="number"
-                    label="Tax"
+                    label={t('submission.tax')}
                     value={formData.breakdown.tax}
                     onChange={(e) => updateBreakdown('tax', parseFloat(e.target.value) || 0)}
                     InputProps={{
@@ -397,16 +399,16 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
                   />
                 </Grid>
                 <Grid item xs={12} md={2}>
-                  <Box sx={{ 
-                    p: 2, 
-                    border: 2, 
-                    borderColor: 'primary.main', 
-                    borderRadius: 1, 
+                  <Box sx={{
+                    p: 2,
+                    border: 2,
+                    borderColor: 'primary.main',
+                    borderRadius: 1,
                     bgcolor: 'primary.50',
-                    textAlign: 'center' 
+                    textAlign: 'center'
                   }}>
                     <Typography variant="h6" color="primary">
-                      Total: ${formData.estimatedPrice.toFixed(2)}
+                      {t('submission.total')} ${formData.estimatedPrice.toFixed(2)}
                     </Typography>
                   </Box>
                 </Grid>
@@ -418,17 +420,17 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
               <TextField
                 fullWidth
                 type="number"
-                label="Estimated Duration (hours)"
+                label={t('submission.estimated_duration')}
                 value={formData.estimatedDuration}
-                onChange={(e) => setFormData({ 
-                  ...formData, 
-                  estimatedDuration: parseFloat(e.target.value) || 0 
+                onChange={(e) => setFormData({
+                  ...formData,
+                  estimatedDuration: parseFloat(e.target.value) || 0
                 })}
                 error={!!errors.estimatedDuration}
                 helperText={errors.estimatedDuration}
                 InputProps={{
                   startAdornment: <Schedule sx={{ mr: 1 }} />,
-                  endAdornment: <InputAdornment position="end">hours</InputAdornment>
+                  endAdornment: <InputAdornment position="end">{t('submission.hours')}</InputAdornment>
                 }}
                 inputProps={{ min: 0.5, step: 0.5 }}
               />
@@ -436,7 +438,7 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
 
             <Grid item xs={12} md={6}>
               <DateTimePicker
-                label="Quote Valid Until"
+                label={t('submission.quote_valid_until')}
                 value={formData.validUntil}
                 onChange={(date) => setFormData({ ...formData, validUntil: (date as Date) || addDays(new Date(), 30) })}
                 renderInput={(params) => (
@@ -454,9 +456,9 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
             {/* Terms and Conditions */}
             <Grid item xs={12}>
               <Typography variant="h6" sx={{ mb: 2 }}>
-                Terms and Conditions
+                {t('submission.terms_and_conditions')}
               </Typography>
-              
+
               {/* Add New Term */}
               <Card sx={{ mb: 2, bgcolor: 'grey.50' }}>
                 <CardContent>
@@ -465,20 +467,20 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
                       <TextField
                         fullWidth
                         size="small"
-                        label="Term Category"
+                        label={t('submission.term_category')}
                         value={newTerm.item}
                         onChange={(e) => setNewTerm({ ...newTerm, item: e.target.value })}
-                        placeholder="e.g., Payment, Timeline, Quality"
+                        placeholder={t('submission.term_category_placeholder')}
                       />
                     </Grid>
                     <Grid item xs={12} md={8}>
                       <TextField
                         fullWidth
                         size="small"
-                        label="Term Description"
+                        label={t('submission.term_description')}
                         value={newTerm.description}
                         onChange={(e) => setNewTerm({ ...newTerm, description: e.target.value })}
-                        placeholder="e.g., 50% deposit required upon acceptance"
+                        placeholder={t('submission.term_description_placeholder')}
                       />
                     </Grid>
                     <Grid item xs={12} md={1}>
@@ -527,8 +529,8 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
                 fullWidth
                 multiline
                 rows={3}
-                label="Additional Notes (Optional)"
-                placeholder="Any additional information or special considerations..."
+                label={t('submission.additional_notes')}
+                placeholder={t('submission.additional_notes_placeholder')}
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               />
@@ -540,26 +542,26 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
               <Card sx={{ bgcolor: 'primary.50' }}>
                 <CardContent>
                   <Typography variant="h6" sx={{ mb: 2 }}>
-                    Quote Summary
+                    {t('submission.quote_summary')}
                   </Typography>
                   <Grid container spacing={2}>
                     <Grid item xs={12} md={6}>
                       <Typography variant="body2" sx={{ mb: 0.5 }}>
-                        <strong>Service:</strong> {formatServiceName(quoteRequest.serviceType)}
+                        <strong>{t('submission.service_label')}</strong> {formatServiceName(quoteRequest.serviceType)}
                       </Typography>
                       <Typography variant="body2" sx={{ mb: 0.5 }}>
-                        <strong>Duration:</strong> {formData.estimatedDuration} hours
+                        <strong>{t('submission.duration_label')}</strong> {formData.estimatedDuration} {t('submission.hours')}
                       </Typography>
                       <Typography variant="body2">
-                        <strong>Valid Until:</strong> {formData.validUntil.toLocaleDateString()}
+                        <strong>{t('submission.valid_until_label')}</strong> {formData.validUntil.toLocaleDateString()}
                       </Typography>
                     </Grid>
                     <Grid item xs={12} md={6}>
                       <Typography variant="h5" color="primary" sx={{ textAlign: 'right' }}>
-                        Total: ${formData.estimatedPrice.toFixed(2)}
+                        {t('submission.total')} ${formData.estimatedPrice.toFixed(2)}
                       </Typography>
                       <Typography variant="body2" sx={{ textAlign: 'right' }}>
-                        ${(formData.estimatedPrice / formData.estimatedDuration).toFixed(2)}/hour
+                        ${(formData.estimatedPrice / formData.estimatedDuration).toFixed(2)}{t('submission.per_hour')}
                       </Typography>
                     </Grid>
                   </Grid>
@@ -571,11 +573,11 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
       </DialogContent>
 
       <DialogActions sx={{ p: 3 }}>
-        <Button 
+        <Button
           onClick={onClose}
           disabled={createQuoteMutation.isPending}
         >
-          Cancel
+          {t('submission.cancel')}
         </Button>
         <Button
           onClick={handleSubmit}
@@ -583,7 +585,7 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
           disabled={createQuoteMutation.isPending}
           startIcon={createQuoteMutation.isPending ? <CircularProgress size={20} /> : <SendAndArchive />}
         >
-          {createQuoteMutation.isPending ? 'Submitting...' : 'Submit Quote'}
+          {createQuoteMutation.isPending ? t('submission.submitting') : t('submission.submit')}
         </Button>
       </DialogActions>
     </Dialog>

@@ -1,0 +1,91 @@
+{
+  "title": "Notificações",
+  "subtitle": "Mantenha-se atualizado com suas reservas, pagamentos, avaliações e mensagens",
+  "all": "Todas as Notificações",
+  "unread": "Não lidas",
+  "mark_all_read": "Marcar Todas como Lidas",
+  "mark_as_read": "Marcar como Lida",
+  "mark_as_unread": "Marcar como Não Lida",
+  "delete": "Excluir",
+  "delete_all": "Excluir Todas",
+  "no_notifications": "Sem notificações",
+  "empty_message": "Você está em dia!",
+  "types": {
+    "all": "Todas",
+    "bookings": "Reservas",
+    "payments": "Pagamentos",
+    "messages": "Mensagens",
+    "reviews": "Avaliações",
+    "system": "Sistema"
+  },
+  "booking": {
+    "new_booking": "Nova solicitação de reserva de {{customer}}",
+    "booking_confirmed": "Sua reserva foi confirmada",
+    "booking_cancelled": "Reserva cancelada por {{name}}",
+    "booking_completed": "Reserva marcada como concluída",
+    "booking_reminder": "Lembrete: Reserva agendada para {{time}}",
+    "booking_updated": "Detalhes da reserva atualizados"
+  },
+  "payment": {
+    "payment_received": "Pagamento recebido: {{amount}}",
+    "payment_sent": "Pagamento enviado com sucesso",
+    "payment_failed": "Falha no pagamento da reserva #{{id}}",
+    "refund_processed": "Reembolso processado: {{amount}}",
+    "payout_scheduled": "Pagamento agendado para {{date}}",
+    "payout_completed": "Pagamento concluído: {{amount}}"
+  },
+  "message": {
+    "new_message": "Nova mensagem de {{sender}}",
+    "conversation_started": "{{name}} iniciou uma conversa"
+  },
+  "review": {
+    "new_review": "Nova avaliação recebida de {{customer}}",
+    "review_response": "{{provider}} respondeu à sua avaliação",
+    "review_reminder": "Não esqueça de avaliar seu serviço recente"
+  },
+  "system": {
+    "account_verified": "Sua conta foi verificada",
+    "password_changed": "Sua senha foi alterada",
+    "profile_updated": "Seu perfil foi atualizado",
+    "maintenance": "Manutenção programada em {{date}}",
+    "new_feature": "Confira nosso novo recurso: {{feature}}"
+  },
+  "preferences": {
+    "title": "Preferências de Notificação",
+    "description": "Escolha como você deseja ser notificado",
+    "description_detailed": "As preferências de notificação são gerenciadas através das configurações da central de notificações. Clique em qualquer notificação para acessar os controles de preferências, ou use o botão de configurações no cabeçalho da central de notificações.",
+    "tip_label": "Dica:",
+    "tip_message": "Você pode personalizar as preferências de notificação por e-mail, SMS e push para diferentes tipos de notificações, incluindo reservas, pagamentos, avaliações e mensagens.",
+    "email": "Notificações por E-mail",
+    "sms": "Notificações por SMS",
+    "push": "Notificações Push",
+    "booking_notifications": "Notificações de Reservas",
+    "payment_notifications": "Notificações de Pagamentos",
+    "message_notifications": "Notificações de Mensagens",
+    "review_notifications": "Notificações de Avaliações",
+    "marketing": "Marketing e Promoções",
+    "save": "Salvar Preferências",
+    "success": "Preferências salvas com sucesso",
+    "error": "Falha ao salvar preferências"
+  },
+  "history": {
+    "title": "Histórico",
+    "page_title": "Histórico de Notificações",
+    "description": "Seu histórico de notificações mostra todas as notificações dos últimos 30 dias, incluindo notificações lidas e excluídas.",
+    "retention_policy": "Política de Retenção:",
+    "retention_30_days": "As notificações são mantidas por 30 dias",
+    "retention_90_days": "As notificações de alta prioridade são mantidas por 90 dias",
+    "retention_1_year": "As notificações do sistema são mantidas por 1 ano",
+    "note_label": "Nota:",
+    "note_message": "Notificações excluídas não podem ser recuperadas. Informações importantes devem ser salvas separadamente se necessárias para referência futura."
+  },
+  "time": {
+    "just_now": "Agora mesmo",
+    "minutes_ago": "{{count}} minuto atrás",
+    "minutes_ago_plural": "{{count}} minutos atrás",
+    "hours_ago": "{{count}} hora atrás",
+    "hours_ago_plural": "{{count}} horas atrás",
+    "days_ago": "{{count}} dia atrás",
+    "days_ago_plural": "{{count}} dias atrás"
+  }
+}

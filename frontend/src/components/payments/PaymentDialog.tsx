@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogTitle,
@@ -63,13 +64,12 @@ interface Booking {
   };
 }
 
-const steps = ['Select Booking', 'Payment Details', 'Confirmation'];
-
 const PaymentForm: React.FC<{
   selectedBooking: Booking | null;
   onPaymentSuccess: () => void;
   onClose: () => void;
 }> = ({ selectedBooking, onPaymentSuccess, onClose }) => {
+  const { t } = useTranslation('payments');
   const stripe = useStripe();
   const elements = useElements();
   const [processing, setProcessing] = useState(false);
@@ -82,7 +82,7 @@ const PaymentForm: React.FC<{
       setClientSecret(data.clientSecret);
     },
     onError: (error: any) => {
-      setPaymentError(error.response?.data?.error || 'Failed to create payment intent');
+      setPaymentError(error.response?.data?.error || t('new_payment.intent_error'));
     },
   });
 
@@ -92,7 +92,7 @@ const PaymentForm: React.FC<{
         bookingId: selectedBooking.id,
         amount: selectedBooking.totalAmount * 100, // Convert to cents
         currency: 'usd',
-        description: `Payment for ${selectedBooking.serviceType}`,
+        description: t('new_payment.payment_for_service', { service: selectedBooking.serviceType }),
         metadata: {
           bookingId: selectedBooking.id,
           serviceType: selectedBooking.serviceType,
@@ -113,7 +113,7 @@ const PaymentForm: React.FC<{
 
     const cardElement = elements.getElement(CardElement);
     if (!cardElement) {
-      setPaymentError('Card element not found');
+      setPaymentError(t('new_payment.card_element_not_found'));
       setProcessing(false);
       return;
     }
@@ -129,13 +129,13 @@ const PaymentForm: React.FC<{
       });
 
       if (error) {
-        setPaymentError(error.message || 'Payment failed');
+        setPaymentError(error.message || t('new_payment.error'));
       } else if (paymentIntent?.status === 'succeeded') {
-        toast.success('Payment successful! Funds are held in escrow until service completion.');
+        toast.success(t('new_payment.success'));
         onPaymentSuccess();
       }
     } catch (error: any) {
-      setPaymentError(error.message || 'An unexpected error occurred');
+      setPaymentError(error.message || t('new_payment.unexpected_error'));
     } finally {
       setProcessing(false);
     }
@@ -160,20 +160,19 @@ const PaymentForm: React.FC<{
     <Box component="form" onSubmit={handleSubmit}>
       <Box sx={{ mb: 3 }}>
         <Typography variant="h6" gutterBottom>
-          Payment Information
+          {t('new_payment.payment_information')}
         </Typography>
-        
+
         <Card sx={{ mb: 2 }}>
           <CardContent>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
               <SecurityIcon color="primary" sx={{ mr: 1 }} />
               <Typography variant="subtitle1">
-                Secure Payment with Escrow Protection
+                {t('new_payment.secure_payment')}
               </Typography>
             </Box>
             <Alert severity="info" sx={{ mb: 2 }}>
-              Your payment will be securely held in escrow until the service is completed. 
-              The provider will only receive payment after you confirm satisfaction.
+              {t('new_payment.escrow_info')}
             </Alert>
           </CardContent>
         </Card>
@@ -182,25 +181,25 @@ const PaymentForm: React.FC<{
           <Card sx={{ mb: 3 }}>
             <CardContent>
               <Typography variant="subtitle1" gutterBottom>
-                Booking Summary
+                {t('new_payment.booking_summary')}
               </Typography>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Service:</Typography>
+                <Typography variant="body2">{t('new_payment.service')}</Typography>
                 <Typography variant="body2">{selectedBooking.serviceType}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Provider:</Typography>
+                <Typography variant="body2">{t('new_payment.provider')}</Typography>
                 <Typography variant="body2">{selectedBooking.provider.businessName}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Date:</Typography>
+                <Typography variant="body2">{t('new_payment.date')}</Typography>
                 <Typography variant="body2">
                   {new Date(selectedBooking.scheduledDate).toLocaleDateString()}
                 </Typography>
               </Box>
               <Divider sx={{ my: 2 }} />
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="h6">Total Amount:</Typography>
+                <Typography variant="h6">{t('new_payment.total_amount')}</Typography>
                 <Typography variant="h6" color="primary">
                   ${selectedBooking.totalAmount.toFixed(2)}
                 </Typography>
@@ -212,19 +211,19 @@ const PaymentForm: React.FC<{
         <Card>
           <CardContent>
             <Typography variant="subtitle1" gutterBottom>
-              Card Details
+              {t('new_payment.card_details')}
             </Typography>
-            <Box sx={{ 
-              border: 1, 
-              borderColor: 'divider', 
-              borderRadius: 1, 
-              p: 2, 
+            <Box sx={{
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: 1,
+              p: 2,
               mb: 2,
               backgroundColor: 'background.paper'
             }}>
               <CardElement options={cardElementOptions} />
             </Box>
-            
+
             {paymentError && (
               <Alert severity="error" sx={{ mb: 2 }}>
                 {paymentError}
@@ -234,7 +233,7 @@ const PaymentForm: React.FC<{
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <SecurityIcon fontSize="small" color="action" />
               <Typography variant="caption" color="text.secondary">
-                Your payment information is encrypted and secure
+                {t('new_payment.payment_info_secure')}
               </Typography>
             </Box>
           </CardContent>
@@ -243,7 +242,7 @@ const PaymentForm: React.FC<{
 
       <DialogActions>
         <Button onClick={onClose} disabled={processing}>
-          Cancel
+          {t('new_payment.cancel')}
         </Button>
         <Button
           type="submit"
@@ -251,7 +250,7 @@ const PaymentForm: React.FC<{
           disabled={!stripe || processing || !clientSecret}
           startIcon={processing ? <CircularProgress size={16} /> : <PaymentIcon />}
         >
-          {processing ? 'Processing...' : `Pay $${selectedBooking?.totalAmount.toFixed(2) || '0.00'}`}
+          {processing ? t('new_payment.processing') : t('new_payment.pay_amount', { amount: selectedBooking?.totalAmount.toFixed(2) || '0.00' })}
         </Button>
       </DialogActions>
     </Box>
@@ -265,10 +264,13 @@ const PaymentDialog: React.FC<Props> = ({
   bookingId,
   prefilledAmount,
 }) => {
+  const { t } = useTranslation('payments');
   const [activeStep, setActiveStep] = useState(0);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
   const currentUser = apiService.getStoredUser();
+
+  const steps = [t('new_payment.steps.select_booking'), t('new_payment.steps.payment_details'), t('new_payment.steps.confirmation')];
 
   const { data: bookingsData, isLoading: bookingsLoading } = useQuery({
     queryKey: ['bookings', 'confirmed'],
@@ -317,10 +319,10 @@ const PaymentDialog: React.FC<Props> = ({
         return (
           <Box>
             <Typography variant="h6" gutterBottom>
-              Select a Booking to Pay
+              {t('new_payment.select_booking_title')}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Choose a confirmed booking that requires payment
+              {t('new_payment.select_booking_subtitle')}
             </Typography>
 
             {bookingsLoading ? (
@@ -329,15 +331,15 @@ const PaymentDialog: React.FC<Props> = ({
               </Box>
             ) : bookingsData?.data?.length === 0 ? (
               <Alert severity="info">
-                No confirmed bookings available for payment. Make sure you have bookings that are confirmed by the provider.
+                {t('new_payment.no_bookings_available')}
               </Alert>
             ) : (
               <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
                 {bookingsData?.data?.map((booking: Booking) => (
-                  <Card 
-                    key={booking.id} 
-                    sx={{ 
-                      mb: 2, 
+                  <Card
+                    key={booking.id}
+                    sx={{
+                      mb: 2,
                       cursor: 'pointer',
                       '&:hover': { boxShadow: 3 }
                     }}
@@ -353,15 +355,15 @@ const PaymentDialog: React.FC<Props> = ({
                             {booking.description}
                           </Typography>
                           <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                            <Chip 
-                              label={booking.provider.businessName} 
-                              size="small" 
-                              variant="outlined" 
+                            <Chip
+                              label={booking.provider.businessName}
+                              size="small"
+                              variant="outlined"
                             />
-                            <Chip 
-                              label={new Date(booking.scheduledDate).toLocaleDateString()} 
-                              size="small" 
-                              variant="outlined" 
+                            <Chip
+                              label={new Date(booking.scheduledDate).toLocaleDateString()}
+                              size="small"
+                              variant="outlined"
                             />
                           </Box>
                         </Box>
@@ -398,7 +400,7 @@ const PaymentDialog: React.FC<Props> = ({
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <PaymentIcon />
-          Process Payment
+          {t('new_payment.title')}
         </Box>
       </DialogTitle>
 
@@ -420,13 +422,13 @@ const PaymentDialog: React.FC<Props> = ({
 
       {activeStep === 0 && !bookingId && (
         <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
+          <Button onClick={handleClose}>{t('new_payment.cancel')}</Button>
         </DialogActions>
       )}
 
       {activeStep === 1 && activeStep > 0 && !bookingId && (
         <DialogActions>
-          <Button onClick={handleBack}>Back</Button>
+          <Button onClick={handleBack}>{t('new_payment.back')}</Button>
         </DialogActions>
       )}
     </Dialog>

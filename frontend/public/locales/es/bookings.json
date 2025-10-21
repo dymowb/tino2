@@ -1,0 +1,166 @@
+{
+  "list": {
+    "title": "Mis Reservas",
+    "empty": "Aún no tienes reservas",
+    "filter_status": "Filtrar por Estado",
+    "all_status": "Todas las Reservas",
+    "search_placeholder": "Buscar reservas...",
+    "sort_by": "Ordenar Por",
+    "date_newest": "Fecha (Más Reciente Primero)",
+    "date_oldest": "Fecha (Más Antigua Primero)",
+    "amount_high": "Monto (Mayor a Menor)",
+    "amount_low": "Monto (Menor a Mayor)",
+    "refresh": "Actualizar",
+    "login_required": "Por favor inicia sesión para ver tus reservas",
+    "error_loading": "Error al cargar las reservas. Por favor, inténtalo de nuevo.",
+    "results_count": "{{count}} Reserva Encontrada",
+    "results_count_plural": "{{count}} Reservas Encontradas",
+    "filter_applied": "({{status}})",
+    "no_results": "No se encontraron reservas que coincidan con tus criterios.",
+    "start_booking_prompt": "¡Comienza buscando proveedores de servicios y reservando servicios!",
+    "booking_number": "Reserva #{{id}}"
+  },
+
+  "create": {
+    "title": "Crear Nueva Reserva",
+    "dialog_title": "Reservar Servicio con {{provider}}",
+    "select_provider": "Seleccionar Proveedor",
+    "select_service": "Seleccionar Servicio",
+    "service_type": "Tipo de Servicio",
+    "select_date": "Seleccionar Fecha",
+    "select_time": "Seleccionar Hora",
+    "scheduled_datetime": "Fecha y Hora Programada",
+    "duration": "Duración",
+    "duration_hours": "Duración Estimada (horas)",
+    "hours": "horas",
+    "description": "Descripción",
+    "service_description": "Descripción del Servicio",
+    "description_placeholder": "Por favor describe el servicio que necesitas...",
+    "special_instructions": "Instrucciones Especiales (Opcional)",
+    "instructions_placeholder": "¿Algún requisito o instrucción especial?...",
+    "location": "Ubicación del Servicio",
+    "address": "Dirección",
+    "city": "Ciudad",
+    "state": "Estado",
+    "zip": "Código Postal",
+    "estimated_cost": "Costo Estimado",
+    "estimated_cost_display": "Costo Estimado: ${{cost}}",
+    "rate_calculation": "${{rate}} × {{duration}} horas",
+    "rate_per_unit": "${{rate}}/{{unit}}",
+    "reviews_count": "{{rating}} ({{count}} reseñas)",
+    "booking_summary": "Resumen de la Reserva",
+    "submit": "Crear Reserva",
+    "creating": "Creando...",
+    "success": "¡Reserva creada exitosamente!",
+    "error": "Error al crear la reserva",
+    "validation": {
+      "service_required": "El tipo de servicio es requerido",
+      "date_required": "La fecha programada es requerida",
+      "duration_min": "La duración debe ser al menos 30 minutos",
+      "description_required": "La descripción es requerida",
+      "address_required": "La dirección es requerida",
+      "city_required": "La ciudad es requerida",
+      "state_required": "El estado es requerido",
+      "zip_required": "El código postal es requerido"
+    },
+    "summary_labels": {
+      "provider": "Proveedor:",
+      "service": "Servicio:",
+      "duration": "Duración:",
+      "estimated_cost": "Costo Estimado:"
+    }
+  },
+
+  "details": {
+    "title": "Detalles de la Reserva",
+    "booking_id": "ID de Reserva",
+    "status": "Estado",
+    "service_type": "Tipo de Servicio",
+    "provider": "Proveedor",
+    "customer": "Cliente",
+    "scheduled": "Programada:",
+    "scheduled_date": "Fecha Programada",
+    "scheduled_time": "Hora Programada",
+    "location_label": "Ubicación:",
+    "duration_label": "Duración:",
+    "duration_hours": "{{hours}} horas",
+    "location": "Ubicación",
+    "description": "Descripción",
+    "description_label": "Descripción:",
+    "special_instructions": "Instrucciones Especiales",
+    "special_instructions_label": "Instrucciones Especiales:",
+    "total": "Total:",
+    "payment": "Pago:",
+    "total_cost": "Costo Total",
+    "payment_status": "Estado del Pago",
+    "created": "Creado:",
+    "created_at": "Creado el",
+    "updated_at": "Actualizado el",
+    "notes": "Notas"
+  },
+
+  "actions": {
+    "cancel": "Cancelar",
+    "cancel_booking": "Cancelar Reserva",
+    "reschedule": "Reprogramar",
+    "confirm": "Confirmar Reserva",
+    "accept": "Aceptar",
+    "decline": "Rechazar",
+    "start_service": "Iniciar Servicio",
+    "mark_complete": "Marcar como Completado",
+    "message": "Mensaje",
+    "message_provider": "Mensaje al Proveedor",
+    "leave_review": "Dejar Reseña",
+    "view_receipt": "Ver Recibo",
+    "get_directions": "Obtener Direcciones",
+    "keep_booking": "Mantener Reserva",
+    "cancelling": "Cancelando..."
+  },
+
+  "status": {
+    "pending": "Pendiente",
+    "confirmed": "Confirmada",
+    "in_progress": "En Progreso",
+    "completed": "Completada",
+    "cancelled": "Cancelada"
+  },
+
+  "cancel": {
+    "title": "Cancelar Reserva",
+    "confirm": "¿Estás seguro de que quieres cancelar esta reserva?",
+    "reason": "Motivo de la cancelación (opcional)",
+    "reason_placeholder": "Por favor, dinos por qué estás cancelando...",
+    "submit": "Confirmar Cancelación",
+    "success": "Reserva cancelada exitosamente",
+    "error": "Error al cancelar la reserva",
+    "policy": "Política de Cancelación",
+    "policy_text": "Las cancelaciones realizadas con más de 24 horas de anticipación reciben un reembolso completo. Las cancelaciones dentro de las 24 horas pueden incurrir en una tarifa."
+  },
+
+  "messages": {
+    "status_updated_success": "¡Estado de la reserva actualizado exitosamente!",
+    "status_updated_error": "Error al actualizar el estado de la reserva",
+    "cancelled_success": "Reserva cancelada exitosamente",
+    "cancelled_error": "Error al cancelar la reserva",
+    "review_coming_soon": "Sistema de reseñas - ¡Próximamente en Tarea 6!",
+    "messaging_coming_soon": "Sistema de mensajería - ¡Próximamente en Tarea 4!"
+  },
+
+  "reschedule": {
+    "title": "Reprogramar Reserva",
+    "new_date": "Nueva Fecha",
+    "new_time": "Nueva Hora",
+    "reason": "Motivo de la Reprogramación (Opcional)",
+    "submit": "Confirmar Reprogramación",
+    "success": "Reserva reprogramada exitosamente",
+    "error": "Error al reprogramar la reserva"
+  },
+
+  "status_messages": {
+    "pending": "Tu solicitud de reserva está pendiente de confirmación",
+    "confirmed": "Tu reserva ha sido confirmada",
+    "in_progress": "El servicio está actualmente en progreso",
+    "completed": "Esta reserva ha sido completada",
+    "cancelled": "Esta reserva fue cancelada"
+  }
+}
