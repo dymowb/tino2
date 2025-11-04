@@ -19,6 +19,7 @@ import {
 } from './types/agent.types';
 import { WorkflowContext } from './types/workflow.types';
 import { anthropicService, ClaudeModel } from './services/anthropic.service';
+import response from 'twilio/lib/http/response';
 
 /**
  * Input for Requirements Agent
@@ -144,6 +145,7 @@ If you have all required information:
   ): Promise<AgentResult<RequirementsAgentOutput>> {
     console.log(`📋 RequirementsAgent.process() called (turn ${input.currentTurn || 1})`);
     const startTime = Date.now();
+    const MAX_REFLECTION_ITERATIONS = 3;
 
     // Build conversation context
     const conversationContext = this.buildConversationContext(input);
@@ -156,34 +158,48 @@ ${conversationContext}
 Analyze the conversation and respond with JSON following the format specified in your system prompt.`;
 
     try {
-      const response = await anthropicService.callClaude({
-        model: ClaudeModel.HAIKU,
-        systemPrompt: this.metadata.systemPrompt,
-        userMessage,
-        maxTokens: this.metadata.maxTokens,
-        temperature: this.metadata.temperature,
-      });
+      let iterationCount = 0;
+      let bestOutput: RequirementsAgentOutput | null = null;
+      let totalTokensUsed = 0;
+      let finalExecutionTimeMs = 0;
+      while (iterationCount < MAX_REFLECTION_ITERATIONS) {  
+        const response = await anthropicService.callClaude({
+          model: ClaudeModel.HAIKU,
+          systemPrompt: this.metadata.systemPrompt,
+          userMessage,
+          maxTokens: this.metadata.maxTokens,
+          temperature: this.metadata.temperature,
+        });
 
-      // Parse Claude's JSON response
-      const output = this.parseClaudeResponse(response.text);
-      const executionTimeMs = Date.now() - startTime;
+        // Parse Claude's JSON response
+        const output = this.parseClaudeResponse(response.text);
+        bestOutput = output;  
+        const executionTimeMs = Date.now() - startTime;
+        totalTokensUsed += response.usage.inputTokens + response.usage.outputTokens;  // ← Add
+        finalExecutionTimeMs = executionTimeMs;  // ← Add
+        const reflection = await this.reflect(output, input);
+        console.log(`🤔 Reflection: needsImprovement=${reflection.needsImprovement}, confidence=${reflection.confidence}`);
+        // If output is good enough, we're done
+        if (!reflection.needsImprovement) {
+          console.log('✅ Reflection satisfied - breaking early');
+          break;
+        }
 
-      console.log(`✅ RequirementsAgent completed in ${executionTimeMs}ms`);
-      console.log(`📊 Requirements ${output.isComplete ? 'COMPLETE' : 'INCOMPLETE'}`);
-      if (!output.isComplete) {
-        console.log(`❓ Follow-up: "${output.followUpQuestion?.substring(0, 80)}..."`);
-      }
-
+        // Otherwise, log that we're retrying
+        console.log(`🔄 Reflection suggests improvements (attempt ${iterationCount + 1}/${MAX_REFLECTION_ITERATIONS})`);
+        iterationCount++;
+     }
+     
       return {
         success: true,
-        output,
+        output: bestOutput!,
         metadata: {
-          executionTimeMs,
-          tokensUsed: response.usage.inputTokens + response.usage.outputTokens,
+          executionTimeMs: finalExecutionTimeMs,
+          tokensUsed: totalTokensUsed,
           modelUsed: ClaudeModel.HAIKU,
-          confidence: this.calculateConfidence(output),
+          confidence: this.calculateConfidence(bestOutput!),
         },
-        suggestedNextAgent: output.isComplete ? 'search' : null, // Continue to search if complete
+        suggestedNextAgent: bestOutput!.isComplete ? 'search' : null, // Continue to search if complete
       };
     } catch (error: any) {
       console.error('❌ RequirementsAgent error:', error.message);
