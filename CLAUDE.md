@@ -181,6 +181,15 @@ I developed software for a few years, but it's been 15+ years since I last coded
 2. Design and implementation patterns (SOLID, DDD, etc.)
 3. Agentic AI systems (MCP Servers, Skills, agent patterns like reflection, planning, tool use)
 
+## 🎓 Teaching Calibration
+**IMPORTANT**: At the start of EVERY session, read `@LEARNING_PROGRESS.md` to calibrate:
+- Teaching difficulty level (what size tasks to give)
+- Intervention style (how much guidance needed)
+- What needs more explanation vs what's familiar
+- Signals to increase/decrease difficulty
+
+This ensures consistent, appropriately-challenging learning across sessions.
+
 ## Working Relationship
 
 **You (Claude)**: Software architect and developer
