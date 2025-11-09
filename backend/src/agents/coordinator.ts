@@ -26,15 +26,20 @@ import {
   DEFAULT_WORKFLOW_CONFIG,
 } from './types/workflow.types';
 import { workflowStateService } from './services/state.service';
+import { mockAgent } from './mock.agent';
+import { requirementsAgent } from './requirements.agent';
 
 /**
  * Agent registry
  *
  * Maps agent names to their implementations.
  * Coordinator uses this to look up and execute agents.
+ *
+ * Note: Using 'any' for now since agent interface is still evolving
+ * TODO Phase 2+: Update agent.types.ts to match actual implementation
  */
 interface AgentRegistry {
-  [agentName: string]: Agent<any, any>;
+  [agentName: string]: any;
 }
 
 /**
@@ -56,6 +61,12 @@ export class CoordinatorAgent {
 
   constructor(config: Partial<WorkflowConfig> = {}) {
     this.config = { ...DEFAULT_WORKFLOW_CONFIG, ...config };
+
+    // Register mock agent for Phase 1 testing
+    this.registerAgent('mock', mockAgent);
+
+    // Register requirements agent for Phase 2
+    this.registerAgent('requirements', requirementsAgent);
   }
 
   /**
@@ -64,7 +75,7 @@ export class CoordinatorAgent {
    * @param name - Agent identifier (e.g., 'requirements', 'search')
    * @param agent - Agent implementation
    */
-  registerAgent(name: string, agent: Agent<any, any>): void {
+  registerAgent(name: string, agent: any): void {
     this.agents[name] = agent;
     console.log(`✅ Registered agent: ${name}`);
   }
@@ -151,7 +162,6 @@ export class CoordinatorAgent {
     }
 
     // State machine: Check what's missing and route accordingly
-
     // Step 1: Requirements gathering
     if (!context.requirements) {
       return 'requirements';
@@ -240,8 +250,10 @@ export class CoordinatorAgent {
       await workflowStateService.addActivity(workflowId, activity);
 
       // Execute the agent
-      // Note: We pass the entire context, agent extracts what it needs
-      const result = await agent.execute(workflow.context, workflow.context);
+      // Note: For Phase 1 mock agent, we pass the user's initial request
+      // For Phase 2+ agents, they'll extract what they need from context
+      const input = this.prepareAgentInput(agentName, workflow);
+      const result = await agent.execute(input, workflow.context);
 
       // Agent completed successfully
       const endTime = new Date();
@@ -286,6 +298,63 @@ export class CoordinatorAgent {
   }
 
   /**
+   * Prepare input for an agent based on workflow state
+   *
+   * @param agentName - Which agent to prepare input for
+   * @param workflow - Current workflow state
+   * @returns Input object for the agent
+   */
+  private prepareAgentInput(agentName: string, workflow: WorkflowState): any {
+    switch (agentName) {
+      case 'mock':
+        // Mock agent just needs the user's message
+        return { message: workflow.context.userRequest };
+
+      case 'requirements':
+        // Requirements agent needs user request and any previous conversation
+        return {
+          userRequest: workflow.context.userRequest,
+          conversationHistory: workflow.agentHistory.map(activity => ({
+            agentName: activity.agentName,
+            timestamp: activity.startTime,
+            output: activity.output,
+          })),
+        };
+
+      case 'search':
+        // Search agent needs the gathered requirements
+        return {
+          requirements: workflow.context.requirements,
+        };
+
+      case 'analysis':
+        // Analysis agent needs search results
+        return {
+          providers: workflow.context.searchResults,
+          requirements: workflow.context.requirements,
+        };
+
+      case 'recommendation':
+        // Recommendation agent needs analysis
+        return {
+          analysisResults: workflow.context.analysisResults,
+          requirements: workflow.context.requirements,
+        };
+
+      case 'verification':
+        // Verification agent needs recommendations
+        return {
+          recommendations: workflow.context.recommendations,
+          requirements: workflow.context.requirements,
+        };
+
+      default:
+        // Unknown agent - pass entire context
+        return workflow.context;
+    }
+  }
+
+  /**
    * Update workflow context based on agent result
    *
    * Maps agent output to the correct context field
@@ -303,6 +372,10 @@ export class CoordinatorAgent {
     const contextUpdates: Partial<WorkflowContext> = {};
 
     switch (agentName) {
+      case 'mock':
+        // Store mock agent response for Phase 1 UAT testing
+        contextUpdates.mockResponse = result.output;
+        break;
       case 'requirements':
         contextUpdates.requirements = result.output;
         break;

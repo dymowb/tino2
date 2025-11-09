@@ -23,6 +23,7 @@
     "db:reset": "ts-node src/scripts/resetDatabase.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.68.0",
     "@browserbasehq/mcp-server-browserbase": "^2.0.1",
     "@googlemaps/google-maps-services-js": "^3.4.2",
     "@sendgrid/mail": "^8.1.5",
@@ -67,6 +68,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.54.2",
+    "@types/bcrypt": "^6.0.0",
     "@types/compression": "^1.7.5",
     "@types/jest": "^29.5.12",
     "@types/supertest": "^6.0.2",
