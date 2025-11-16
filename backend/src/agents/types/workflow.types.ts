@@ -11,6 +11,7 @@
  * - WorkflowStatus: Progress tracking for the workflow
  */
 
+import { RequirementsAgentOutput } from '../requirements.agent';
 import { AgentActivity } from './agent.types';
 
 /**
@@ -21,6 +22,7 @@ import { AgentActivity } from './agent.types';
 export enum WorkflowStatus {
   PENDING = 'pending',       // Workflow created but not started
   ACTIVE = 'active',         // Currently processing
+  WAITING_FOR_USER = 'waiting_for_user', // Paused, waiting for user input
   COMPLETED = 'completed',   // Successfully finished
   FAILED = 'failed',         // Encountered unrecoverable error
   CANCELLED = 'cancelled',   // User or system cancelled
@@ -52,7 +54,7 @@ export interface WorkflowContext {
    * Requirements gathered by Requirements Agent
    * Undefined until Requirements Agent completes
    */
-  requirements?: RequirementsSummary;
+  requirements?: RequirementsAgentOutput;
 
   /**
    * Providers found by Search Agent
@@ -77,6 +79,18 @@ export interface WorkflowContext {
    * Undefined until Verification Agent completes
    */
   verification?: VerificationReport;
+
+  /**
+   * Mock response for Phase 1 UAT testing
+   * Undefined until Mock Agent completes (Phase 1 only)
+   */
+  mockResponse?: {
+    response: string;
+    testData: {
+      processedAt: Date;
+      inputLength: number;
+    };
+  };
 }
 
 /**

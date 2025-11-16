@@ -111,8 +111,23 @@ export class CoordinatorAgent {
         // Decide which agent to execute next
         const nextAgentName = this.decideNextAgent(workflow);
 
-        // If no next agent, workflow is complete
+        // If no next agent, workflow is done (either completed or waiting for user)
         if (!nextAgentName) {
+          // Check if we're waiting for user input
+          if (
+            workflow.context.requirements &&
+            !workflow.context.requirements.isComplete &&
+            workflow.context.requirements.followUpQuestion
+          ) {
+            // Workflow is paused, waiting for user response
+            await workflowStateService.updateWorkflow(workflowId, () => ({
+              status: WorkflowStatus.WAITING_FOR_USER,
+            }));
+            console.log(`⏸️  Workflow ${workflowId} paused - waiting for user response`);
+            return;
+          }
+
+          // Otherwise, workflow is complete
           await workflowStateService.completeWorkflow(workflowId);
           console.log(`✅ Workflow ${workflowId} completed successfully`);
           return;
@@ -164,6 +179,18 @@ export class CoordinatorAgent {
     // State machine: Check what's missing and route accordingly
     // Step 1: Requirements gathering
     if (!context.requirements) {
+      // No requirements yet - run requirements agent for first time
+      return 'requirements';
+    }
+
+    if (context.requirements && !context.requirements.isComplete) {
+      // Requirements incomplete - check if waiting for user response
+      if (context.requirements.followUpQuestion) {
+        // Agent is waiting for user to answer follow-up question
+        // Pause workflow until user provides more information
+        return null; // Stop execution, await user input
+      }
+      // No follow-up question but incomplete - run requirements agent again
       return 'requirements';
     }
 

@@ -1,0 +1,315 @@
+/**
+ * Agentic Assistant Controller
+ *
+ * Handles HTTP requests for the multi-agent service discovery system.
+ */
+
+import { Response } from 'express';
+import { AuthenticatedRequest } from '@/types';
+import logger from '@/config/logger';
+import { coordinator } from '@/agents/coordinator';
+import { workflowStateService } from '@/agents/services/state.service';
+import { WorkflowStatus } from '@/agents/types/workflow.types';
+
+class AgenticAssistantController {
+  /**
+   * POST /api/v1/agentic-assistant/workflows
+   * Start a new workflow
+   */
+  public async startWorkflow(req: AuthenticatedRequest, res: Response): Promise<void> {
+    // Step 1: Log incoming request
+    console.log('\n🚀 ===== NEW WORKFLOW REQUEST =====');
+    console.log('📥 Request body:', JSON.stringify(req.body, null, 2));
+    console.log('👤 User ID:', req.user?.userId);
+
+    try {
+      const { initialMessage } = req.body;
+      const userId = req.user?.userId;
+
+      // Step 2: Validate request
+      console.log('🔍 Validating request...');
+      if (!initialMessage || typeof initialMessage !== 'string') {
+        console.log('❌ Validation failed: missing initialMessage');
+        res.status(400).json({
+          success: false,
+          error: 'initialMessage is required and must be a string'
+        });
+        return;
+      }
+
+      if (!userId) {
+        console.log('❌ Validation failed: user not authenticated');
+        res.status(401).json({
+          success: false,
+          error: 'User not authenticated'
+        });
+        return;
+      }
+      console.log('✅ Validation passed');
+
+      // Step 3: Create new workflow
+      console.log('💾 Creating workflow in state service...');
+      const workflow = await workflowStateService.createWorkflow(userId, initialMessage);
+      console.log('🆔 Generated workflow ID:', workflow.id);
+      console.log('✅ Workflow created in state service');
+
+      // Step 4: Start workflow execution asynchronously
+      console.log('🤖 Starting coordinator.executeWorkflow() asynchronously...');
+      console.log('⏱️  (This returns immediately - agents work in background)');
+      coordinator.executeWorkflow(workflow.id).catch((error) => {
+        console.log('💥 Workflow execution failed:', error);
+        logger.error(`Workflow ${workflow.id} execution failed:`, error);
+      });
+
+      logger.info(`Workflow ${workflow.id} started for user ${userId}`);
+
+      // Step 5: Return response to client
+      console.log('📤 Sending success response to client');
+      console.log('===== END WORKFLOW REQUEST =====\n');
+
+      res.status(201).json({
+        success: true,
+        data: {
+          workflowId: workflow.id,
+          status: workflow.status,
+          message: 'Workflow started successfully',
+        },
+      });
+    } catch (error) {
+      console.log('💥 ERROR in startWorkflow:', error);
+      logger.error('Error starting workflow:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+      });
+    }
+  }
+
+  /**
+   * GET /api/v1/agentic-assistant/workflows/:id
+   * Get workflow status and results
+   */
+  public async getWorkflow(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.userId;
+
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: 'User not authenticated'
+        });
+        return;
+      }
+
+      // Get workflow
+      const workflow = await workflowStateService.getWorkflow(id);
+
+      if (!workflow) {
+        res.status(404).json({
+          success: false,
+          error: 'Workflow not found',
+        });
+        return;
+      }
+
+      // Check ownership
+      if (workflow.userId !== userId) {
+        res.status(403).json({
+          success: false,
+          error: 'Access denied',
+        });
+        return;
+      }
+
+      logger.info(`Workflow ${id} retrieved for user ${userId}`);
+
+      res.json({
+        success: true,
+        data: {
+          workflow,
+        },
+      });
+    } catch (error) {
+      logger.error('Error retrieving workflow:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+      });
+    }
+  }
+
+  /**
+   * POST /api/v1/agentic-assistant/workflows/:id/messages
+   * Send a user message to continue the conversation
+   */
+  public async sendMessage(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { message } = req.body;
+      const userId = req.user?.userId;
+
+      // Validate request
+      if (!message || typeof message !== 'string') {
+        res.status(400).json({
+          success: false,
+          error: 'message is required and must be a string',
+        });
+        return;
+      }
+
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: 'User not authenticated'
+        });
+        return;
+      }
+
+      // Get workflow
+      const workflow = await workflowStateService.getWorkflow(id);
+
+      if (!workflow) {
+        res.status(404).json({
+          success: false,
+          error: 'Workflow not found',
+        });
+        return;
+      }
+
+      // Check ownership
+      if (workflow.userId !== userId) {
+        res.status(403).json({
+          success: false,
+          error: 'Access denied',
+        });
+        return;
+      }
+
+      // Check if workflow is still active
+      if (workflow.status !== WorkflowStatus.ACTIVE && workflow.status !== WorkflowStatus.PENDING) {
+        res.status(400).json({
+          success: false,
+          error: `Cannot send message to ${workflow.status} workflow`,
+        });
+        return;
+      }
+
+      // TODO Phase 2+: Update context with user message
+      // For Phase 1, we don't have conversational agents yet
+      // In Phase 2, we'll add a proper message history to WorkflowContext
+
+      logger.info(`Message sent to workflow ${id} by user ${userId}`);
+
+      res.json({
+        success: true,
+        data: {
+          workflowId: id,
+          status: workflow.status,
+          message: 'Message received successfully',
+        },
+      });
+    } catch (error) {
+      logger.error('Error sending message to workflow:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+      });
+    }
+  }
+
+  /**
+   * DELETE /api/v1/agentic-assistant/workflows/:id
+   * Cancel a workflow
+   */
+  public async cancelWorkflow(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.userId;
+
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: 'User not authenticated'
+        });
+        return;
+      }
+
+      // Get workflow
+      const workflow = await workflowStateService.getWorkflow(id);
+
+      if (!workflow) {
+        res.status(404).json({
+          success: false,
+          error: 'Workflow not found',
+        });
+        return;
+      }
+
+      // Check ownership
+      if (workflow.userId !== userId) {
+        res.status(403).json({
+          success: false,
+          error: 'Access denied',
+        });
+        return;
+      }
+
+      // Cancel workflow
+      await workflowStateService.failWorkflow(id, {
+        message: 'Workflow cancelled by user',
+      });
+
+      logger.info(`Workflow ${id} cancelled by user ${userId}`);
+
+      res.json({
+        success: true,
+        data: {
+          message: 'Workflow cancelled successfully',
+        },
+      });
+    } catch (error) {
+      logger.error('Error cancelling workflow:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+      });
+    }
+  }
+
+  /**
+   * GET /api/v1/agentic-assistant/stats
+   * Get system statistics
+   */
+  public async getStats(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.userId;
+
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: 'User not authenticated'
+        });
+        return;
+      }
+
+      // Get stats from coordinator
+      const stats = await coordinator.getStats();
+
+      logger.info(`Stats retrieved by user ${userId}`);
+
+      res.json({
+        success: true,
+        data: stats,
+      });
+    } catch (error) {
+      logger.error('Error retrieving stats:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+      });
+    }
+  }
+}
+
+export default new AgenticAssistantController();
