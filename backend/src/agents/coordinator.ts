@@ -28,6 +28,7 @@ import {
 import { workflowStateService } from './services/state.service';
 import { mockAgent } from './mock.agent';
 import { requirementsAgent } from './requirements.agent';
+import { searchAgent } from './search.agent';
 
 /**
  * Agent registry
@@ -67,6 +68,10 @@ export class CoordinatorAgent {
 
     // Register requirements agent for Phase 2
     this.registerAgent('requirements', requirementsAgent);
+
+    // Register search agent for Phase 3
+    this.registerAgent('search', searchAgent);
+
   }
 
   /**
@@ -351,7 +356,9 @@ export class CoordinatorAgent {
       case 'search':
         // Search agent needs the gathered requirements
         return {
-          requirements: workflow.context.requirements,
+          requirements: workflow.context.requirements?.requirementsSummary || null,
+          workflowId: workflow.id, // Pass workflow ID for potential database access
+          userId: workflow.userId, // Pass user ID for personalized search
         };
 
       case 'analysis':
@@ -407,7 +414,7 @@ export class CoordinatorAgent {
         contextUpdates.requirements = result.output;
         break;
       case 'search':
-        contextUpdates.searchResults = result.output;
+        contextUpdates.searchResults = result.output.providers;
         break;
       case 'analysis':
         contextUpdates.analysisResults = result.output;

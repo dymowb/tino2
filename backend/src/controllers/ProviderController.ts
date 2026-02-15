@@ -14,7 +14,12 @@ export class ProviderController {
         const response: ApiResponse = {
           success: false,
           message: 'Validation failed',
-          errors: errors.array(),
+          errors: errors.array().reduce((acc, err) => {
+            const field = err.type === 'field' ? err.path : 'unknown';
+            if (!acc[field]) acc[field] = [];
+            acc[field].push(err.msg);
+            return acc;
+          }, {} as Record<string, string[]>),
         };
         res.status(400).json(response);
         return;
@@ -145,7 +150,12 @@ export class ProviderController {
         const response: ApiResponse = {
           success: false,
           message: 'Validation failed',
-          errors: errors.array(),
+          errors: errors.array().reduce((acc, err) => {
+            const field = err.type === 'field' ? err.path : 'unknown';
+            if (!acc[field]) acc[field] = [];
+            acc[field].push(err.msg);
+            return acc;
+          }, {} as Record<string, string[]>),
         };
         res.status(400).json(response);
         return;

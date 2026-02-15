@@ -13,10 +13,10 @@
 import { Agent, AgentMetadata, AgentResult, ReflectionResult } from './types/agent.types';
 import { WorkflowContext } from './types/workflow.types';
 import { RequirementsAgentOutput } from './requirements.agent';
+import { anthropicService, ClaudeModel } from './services/anthropic.service';
 import ProviderService from '@/services/ProviderService';
 import { Provider } from '@/models/Provider';
 import logger from '@/config/logger';
-import e from 'express';
 
 /**
  * Input for Search Agent
@@ -150,6 +150,57 @@ Plan your search strategy before executing queries.`,
   };
 
   /**
+   * Infer which services from the catalog match the user's requirements.
+   * Uses LLM to understand natural language → service name mapping.
+   *
+   * Examples:
+   *   "blocked drain" → ["Drain Cleaning", "Plumbing Repair", "Emergency Plumbing"]
+   *   "plumber" → ["Plumbing Repair", "Pipe Installation", "Leak Detection", ...]
+   *   "need someone to paint my house exterior" → ["Exterior Painting", "Pressure Washing"]
+   */
+  private async inferServices(
+    requirements: SearchAgentInput['requirements'],
+    serviceCatalog: string[]
+  ): Promise<string[]> {
+    // YOUR CODE HERE:
+    // 1. Write the systemPrompt - tell the LLM its role
+    // 2. Write the userMessage - include requirements + catalog
+    // 3. Ask for JSON array response format
+    //
+    // Hints:
+    // - requirements has: serviceType, description, urgency
+    // - serviceCatalog is a string[] of all available service names
+    // - Think about domain knowledge: "plumber" should match "Drain Cleaning"
+    // - Use JSON.stringify() to include the catalog in the message
+
+    const systemPrompt = 'You are a service inference agent. Your job is to analyze user requirements and map them to matching service names from a catalog. The matching is based on semantic similarity and domain knowledge (e.g. A plumber handles drain cleaning, pipe repairs, leak detection. A painter does pressure washing, etc). Return only a JSON array of matching service names that exist exactly in the provided catalog.';
+    const userMessage = `User requirements: Service type= ${JSON.stringify(requirements.serviceType)}; Service requirements= ${JSON.stringify(requirements.specialRequirements)}\nAvailable services: ${JSON.stringify(serviceCatalog)}`;
+
+    const response = await anthropicService.callClaude({
+      model: ClaudeModel.HAIKU,
+      systemPrompt,
+      userMessage,
+      maxTokens: 500,
+      temperature: 0.2,
+    });
+
+    // Parse response - extract JSON array of service names
+    try {
+      const jsonMatch = response.text.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) {
+        logger.warn('No JSON array found in inferServices response, falling back to serviceType');
+        return requirements.serviceType ? [requirements.serviceType] : [];
+      }
+      const services = JSON.parse(jsonMatch[0]) as string[];
+      logger.info('Inferred services from requirements', { services });
+      return services;
+    } catch (error) {
+      logger.warn('Failed to parse inferServices response, falling back', { error });
+      return requirements.serviceType ? [requirements.serviceType] : [];
+    }
+  }
+
+  /**
    * Execute search for providers
    */
   async execute(
@@ -160,10 +211,13 @@ Plan your search strategy before executing queries.`,
     logger.info(`Search Agent executing`, { workflowId: context.workflowId });
 
     try {
-      // Step 1: Transform requirements into ProviderSearchQuery
-      // TODO: Complete this transformation
+      // Step 1: Infer matching services from catalog using LLM
+      const serviceCatalog = await ProviderService.getServiceCatalog();
+      const inferredServices = await this.inferServices(input.requirements, serviceCatalog);
+
+      // Step 2: Transform requirements into ProviderSearchQuery
       const searchQuery = {
-        services: input.requirements.serviceType ? [input.requirements.serviceType] : undefined,
+        services: inferredServices.length > 0 ? inferredServices : undefined,
         // TODO: Add latitude/longitude if available (for now, skip geocoding)
         radius: 25, // Default 25 miles
         minRating: undefined, // TODO: Could infer from budget (high budget = high quality expectation)

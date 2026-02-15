@@ -64,6 +64,9 @@ interface Config {
       serverKey: string;
     };
   };
+  anthropic?: {
+    apiKey: string;
+  };
   logging: {
     level: string;
     file: string;
@@ -131,6 +134,9 @@ const config: Config = {
     firebase: {
       serverKey: process.env.FIREBASE_SERVER_KEY || '',
     },
+  },
+  anthropic: {
+    apiKey: process.env.ANTHROPIC_API_KEY || '',
   },
   logging: {
     level: process.env.LOG_LEVEL || 'info',

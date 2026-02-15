@@ -18,7 +18,7 @@ const storage = multer.diskStorage({
       await fs.mkdir(uploadPath, { recursive: true });
       cb(null, uploadPath);
     } catch (error) {
-      cb(error, uploadPath);
+      cb(error as Error, uploadPath);
     }
   },
   filename: (req, file, cb) => {

@@ -84,6 +84,7 @@ export class UserService {
 
       const tokenPayload: Omit<JwtPayload, 'iat' | 'exp'> = {
         userId: user.id,
+        id: user.id,
         email: user.email,
         userType: user.userType,
       };
@@ -251,6 +252,7 @@ export class UserService {
 
       const tokenPayload: Omit<JwtPayload, 'iat' | 'exp'> = {
         userId: user.id,
+        id: user.id,
         email: user.email,
         userType: user.userType,
       };

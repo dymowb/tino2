@@ -137,6 +137,26 @@ export interface AgentMetadata {
 }
 
 /**
+ * Reflection Result
+ *
+ * Result from an agent's self-evaluation (reflection pattern).
+ * Used to determine if the agent's output needs improvement.
+ */
+export interface ReflectionResult {
+  /** Whether the output needs improvement */
+  needsImprovement: boolean;
+
+  /** List of suggested improvements (empty if no improvement needed) */
+  improvements: string[];
+
+  /** Confidence in the output quality (0-1 scale) */
+  confidence: number;
+
+  /** Optional reasoning for why improvements are needed */
+  reasoning?: string;
+}
+
+/**
  * Generic Agent Interface
  *
  * THIS IS THE KEY! All agents implement this interface.
@@ -218,11 +238,7 @@ export interface Agent<TInput = unknown, TOutput = unknown> {
    *     return { needsImprovement: false, improvements: [], confidence: 0.9 };
    *   }
    */
-  reflect(output: TOutput, input: TInput): Promise<{
-    needsImprovement: boolean;
-    improvements: string[];
-    confidence: number;
-  }>;
+  reflect(output: TOutput, input: TInput): Promise<ReflectionResult>;
 }
 
 /**
@@ -231,19 +247,34 @@ export interface Agent<TInput = unknown, TOutput = unknown> {
  * Wrapper around agent output that includes metadata about execution.
  *
  * Q: Why wrap the output instead of returning it directly?
- * A: So we can include execution metadata (duration, activity log) without
+ * A: So we can include execution metadata (timing, tokens, confidence) without
  *    mixing it with the actual result data.
  *
+ * Design Decision: Coordinator manages AgentActivity lifecycle separately.
+ * Agents return simple success/output/metadata, coordinator creates activity records.
+ *
  * Think of it like HTTP responses:
+ *   - success: The status code (200 OK, 500 Error)
  *   - output: The response body (actual data)
- *   - activity: The response headers (metadata about request)
+ *   - metadata: Performance metrics (timing, tokens)
  */
 export interface AgentResult<TOutput> {
+  /** Whether the agent execution was successful */
+  success: boolean;
+
   /** The actual output data from the agent */
   output: TOutput;
 
-  /** Detailed activity log for this execution */
-  activity: AgentActivity;
+  /** Execution metadata (timing, tokens, confidence) */
+  metadata: {
+    executionTimeMs: number;
+    tokensUsed: number;
+    modelUsed: string;
+    confidence: number;
+  };
+
+  /** Any errors that occurred (present if success is false) */
+  errors?: string[];
 
   /**
    * Suggested next agent (HINT ONLY - coordinator decides)
@@ -256,13 +287,7 @@ export interface AgentResult<TOutput> {
    *
    * The coordinator may consider this hint but is not required to follow it.
    */
-  suggestedNextAgent?: string;
-
-  /**
-   * Whether this result should trigger workflow completion
-   * Example: Verification agent might set this to true if quality is sufficient
-   */
-  shouldTerminate?: boolean;
+  suggestedNextAgent?: string | null;
 }
 
 /**

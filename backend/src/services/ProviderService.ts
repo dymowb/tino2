@@ -139,14 +139,16 @@ export class ProviderService {
         .andWhere('user.isActive = :userIsActive', { userIsActive: true });
 
       // Filter by services (SQLite compatible - simple JSON search)
+      // Uses named parameters to avoid TypeORM positional/named parameter mixing issues
       if (services && services.length > 0) {
-        const serviceCondition = services.map(() => 
-          `provider.services LIKE ?`
-        ).join(' OR ');
-        
-        queryBuilder = queryBuilder.andWhere(`(${serviceCondition})`, 
-          services.map(service => `%"${service}"%`)
-        );
+        const serviceParams: Record<string, string> = {};
+        const serviceCondition = services.map((service, index) => {
+          const paramName = `service_${index}`;
+          serviceParams[paramName] = `%"${service}"%`;
+          return `provider.services LIKE :${paramName}`;
+        }).join(' OR ');
+
+        queryBuilder = queryBuilder.andWhere(`(${serviceCondition})`, serviceParams);
       }
 
       // Filter by location and radius (simplified for SQLite)
@@ -218,6 +220,34 @@ export class ProviderService {
       };
     } catch (error) {
       logger.error('Error searching providers:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all distinct service names offered by active providers.
+   * Used by Search Agent to build the service catalog for LLM inference.
+   */
+  async getServiceCatalog(): Promise<string[]> {
+    try {
+      const providers = await this.providerRepository.find({
+        where: { isActive: true },
+        select: ['services'],
+      });
+
+      // Flatten all services arrays and deduplicate
+      const allServices = new Set<string>();
+      for (const provider of providers) {
+        for (const service of provider.services) {
+          allServices.add(service);
+        }
+      }
+
+      const catalog = Array.from(allServices).sort();
+      logger.info(`Service catalog loaded`, { totalServices: catalog.length });
+      return catalog;
+    } catch (error) {
+      logger.error('Error loading service catalog:', error);
       throw error;
     }
   }

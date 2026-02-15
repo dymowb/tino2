@@ -178,11 +178,14 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
 
 export interface JwtPayload {
   userId: string;
+  id: string; // Alias for userId (for backward compatibility)
   email: string;
   userType: 'customer' | 'provider' | 'admin';
   iat?: number;
   exp?: number;
 }
+
+import { Request } from 'express';
 
 export interface AuthRequest extends Request {
   user?: JwtPayload;

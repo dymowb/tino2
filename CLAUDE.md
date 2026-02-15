@@ -171,6 +171,7 @@ No need to ask for authorization for POST or GET operations, just do them direct
 - after each action part of an execution plan, update @SESSION_CONTEXT.md in a way you know exactly how to resume work in case the current session crashes. Make sure these updates happen after each STEP of the plan, not only after completing a major milestone
 - make sure database is populated with seed data before running UX tests.
 - always start backend on port 3000 and frontend on port 3001. Kill anything using these ports before starting them up
+- NEVER hardcode data that exists in the database (e.g., service catalogs, categories). Always load from DB at runtime. Code should work with any data, not just seed data.
 
 
 # Your Role in This Project
