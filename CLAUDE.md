@@ -139,6 +139,17 @@ The application includes Browserbase MCP integration for automated browser testi
 }
 ```
 
+## Known Issues & Fixes (SOP)
+
+### Frontend TypeScript Compilation Errors (react-i18next)
+**Problem**: `TS2554: Expected 0 arguments, but got 1` on `useTranslation('namespace')` and `t('key', fallback)` calls.
+**Root cause**: react-i18next v16 + i18next v25 use `const` type parameters (TypeScript 5.0+ feature), but CRA pins TypeScript at 4.9.5.
+**Fix**: `frontend/src/react-i18next.d.ts` provides a TS 4.9-compatible type override for `useTranslation` and `TFunction`. Do NOT delete this file.
+**Permanent fix**: Upgrade to TypeScript 5.x (requires ejecting from CRA or migrating to Vite).
+
+### Missing translation key: `profile.fields.customer`
+**Status**: Known, cosmetic only. Shows raw key in the nav bar after login.
+
 ## Testing
 
 - Backend: Jest with Supertest for API testing

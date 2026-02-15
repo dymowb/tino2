@@ -27,7 +27,8 @@
 - `search.agent.ts:161-200` - `inferServices()` method with LLM prompt (user wrote the prompts)
 - `ProviderService.ts:225-249` - `getServiceCatalog()` method (loads distinct services from DB)
 - `ProviderService.ts:141-151` - Fixed LIKE query to use named params
-- `CLAUDE.md` - Added "no hardcoded data" directive
+- `CLAUDE.md` - Added "no hardcoded data" directive + Known Issues SOP
+- `frontend/src/react-i18next.d.ts` - Fixed TS 4.9 compatibility for react-i18next v16
 
 **UAT Results (Final)**:
 - Requirements Agent executed ✅ (2687ms)
