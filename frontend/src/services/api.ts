@@ -182,6 +182,64 @@ export interface Quote {
   provider?: Provider;
 }
 
+export interface WorkflowProviderResult {
+  providerId: string;
+  providerName: string;
+  businessName: string;
+  services: string[];
+  matchScore: number;
+  rating: number;
+  totalReviews: number;
+  pricing: {
+    baseRate: number;
+    currency: string;
+    rateType: string;
+  } | null;
+  location: {
+    city: string;
+    state: string;
+  } | null;
+  isBackgroundChecked: boolean;
+  isInsured: boolean;
+}
+
+export interface WorkflowData {
+  id: string;
+  userId: string;
+  status: 'pending' | 'active' | 'completed' | 'failed' | 'cancelled' | 'waiting_for_user';
+  currentAgent: string | null;
+  agentHistory: Array<{
+    agentName: string;
+    action: string;
+    status: string;
+    startTime: string;
+    endTime?: string;
+    durationMs?: number;
+    output?: Record<string, unknown>;
+  }>;
+  context: {
+    workflowId: string;
+    userId: string;
+    userRequest: string;
+    createdAt: string;
+    requirements?: {
+      isComplete: boolean;
+      followUpQuestion?: string;
+      extractedFacts?: string[];
+      missingInformation?: string[];
+    };
+    searchResults?: WorkflowProviderResult[];
+  };
+  error?: {
+    message: string;
+    code?: string;
+    agentName?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+}
+
 class ApiService {
   private api: AxiosInstance;
   private baseURL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api/v1';
@@ -769,6 +827,36 @@ class ApiService {
       params,
     });
     return response.data;
+  }
+
+  // AI Assistant Workflow methods
+  async startWorkflow(initialMessage: string): Promise<{ workflowId: string; status: string }> {
+    const response = await this.api.post<ApiResponse<{ workflowId: string; status: string }>>(
+      '/agentic-assistant/workflows',
+      { initialMessage },
+      { timeout: 30000 } // LLM calls can take longer
+    );
+    return response.data.data!;
+  }
+
+  async getWorkflow(workflowId: string): Promise<WorkflowData> {
+    const response = await this.api.get<ApiResponse<{ workflow: WorkflowData }>>(
+      `/agentic-assistant/workflows/${workflowId}`
+    );
+    return response.data.data!.workflow;
+  }
+
+  async sendWorkflowMessage(workflowId: string, message: string): Promise<WorkflowData> {
+    const response = await this.api.post<ApiResponse<{ workflow: WorkflowData }>>(
+      `/agentic-assistant/workflows/${workflowId}/message`,
+      { message },
+      { timeout: 30000 }
+    );
+    return response.data.data!.workflow;
+  }
+
+  async cancelWorkflow(workflowId: string): Promise<void> {
+    await this.api.delete(`/agentic-assistant/workflows/${workflowId}`);
   }
 
   // Health check

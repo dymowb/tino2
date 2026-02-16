@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Tabs,
+  Tab,
   Box,
   Typography,
   Card,
@@ -47,6 +49,7 @@ import { apiService, Provider } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import BookingDialog from '../bookings/BookingDialog';
 import QuoteRequestDialog from '../quotes/QuoteRequestDialog';
+import AIAssistantTab from '../assistant/AIAssistantTab';
 
 interface ExtendedProvider extends Provider {
   distance?: number;
@@ -76,6 +79,8 @@ const FindProvidersPage: React.FC = () => {
   const [showBookingDialog, setShowBookingDialog] = useState(false);
   const [showQuoteDialog, setShowQuoteDialog] = useState(false);
   const [selectedServiceForQuote, setSelectedServiceForQuote] = useState('');
+  const [activeTab, setActiveTab] = useState(0);
+
 
   const serviceTypes = [
     'house_cleaning',
@@ -214,6 +219,14 @@ const FindProvidersPage: React.FC = () => {
         {t('providers:search.title')}
       </Typography>
 
+      <Tabs value={activeTab} onChange={(_e, newValue) => setActiveTab(newValue)} sx={{ mb: 3 }}>
+        <Tab label={t('assistant:tabs.aiAssistant')} />
+        <Tab label={t('assistant:tabs.browseFilter')} />
+      </Tabs>
+
+      {activeTab === 0 && <AIAssistantTab />}
+
+      {activeTab === 1 && (<>
       {/* Location and Search Controls */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" sx={{ mb: 2 }}>
@@ -572,6 +585,7 @@ const FindProvidersPage: React.FC = () => {
           {/* Pagination could be added here if needed */}
         </>
       )}
+      </>)}
 
       {/* Booking Dialog */}
       <BookingDialog

@@ -5,14 +5,14 @@
  * - Immutable updates for consistency
  * - Concurrency protection via per-workflow locks
  * - TTL-based cleanup for zombie workflows
- * - Immediate deletion on completion
+ * - TTL-based cleanup for completed workflows
  *
  * Design Decisions (based on requirements analysis):
  * 1. In-memory storage (Map) for low latency (<1ms)
  * 2. Immutable updates to prevent partial state corruption
  * 3. Per-workflow locks to handle concurrent API requests
  * 4. TTL of 30 minutes to clean up abandoned workflows
- * 5. Immediate deletion after completion to free memory
+ * 5. Completed workflows kept for 5 min (frontend polling), then cleaned up
  *
  * Future Enhancement (Phase 2+):
  * - Async persistence to DB for learning (eventual consistency)
@@ -30,6 +30,9 @@ interface WorkflowConfig {
   /** How long before abandoned workflow is cleaned up (milliseconds) */
   ttl: number;
 
+  /** How long to keep completed/failed/cancelled workflows in memory (milliseconds) */
+  completedTtl: number;
+
   /** How often to run cleanup task (milliseconds) */
   cleanupInterval: number;
 
@@ -38,8 +41,9 @@ interface WorkflowConfig {
 }
 
 const DEFAULT_CONFIG: WorkflowConfig = {
-  ttl: 30 * 60 * 1000,        // 30 minutes
-  cleanupInterval: 60 * 1000,  // 1 minute
+  ttl: 30 * 60 * 1000,           // 30 minutes
+  completedTtl: 5 * 60 * 1000,   // 5 minutes — enough for frontend polling
+  cleanupInterval: 60 * 1000,    // 1 minute
   logCleanup: true,
 };
 
@@ -258,15 +262,11 @@ export class WorkflowStateService {
       completedAt: new Date(),
     }));
 
-    // TODO Phase 2: Async save to DB for learning
-    // const workflow = this.workflows.get(workflowId);
-    // await this.saveToDatabase(workflow);
-
-    // Delete from memory immediately
-    this.workflows.delete(workflowId);
+    // Keep in memory for completedTtl so frontend can poll for results
+    // Cleanup task will remove it after the TTL expires
 
     if (this.config.logCleanup) {
-      console.log(`✅ Workflow ${workflowId} completed and removed from memory`);
+      console.log(`✅ Workflow ${workflowId} completed (will be cleaned up after ${this.config.completedTtl / 1000}s)`);
     }
   }
 
@@ -287,15 +287,10 @@ export class WorkflowStateService {
       error,
     }));
 
-    // TODO Phase 2: Async save failed workflows for analysis
-    // const workflow = this.workflows.get(workflowId);
-    // await this.saveFailedWorkflow(workflow);
-
-    // Delete from memory
-    this.workflows.delete(workflowId);
+    // Keep in memory for completedTtl so frontend can poll for error details
 
     if (this.config.logCleanup) {
-      console.log(`❌ Workflow ${workflowId} failed and removed: ${error.message}`);
+      console.log(`❌ Workflow ${workflowId} failed: ${error.message} (will be cleaned up after ${this.config.completedTtl / 1000}s)`);
     }
   }
 
@@ -311,11 +306,10 @@ export class WorkflowStateService {
       completedAt: new Date(),
     }));
 
-    // Delete from memory
-    this.workflows.delete(workflowId);
+    // Keep in memory briefly so frontend gets the cancelled status
 
     if (this.config.logCleanup) {
-      console.log(`🚫 Workflow ${workflowId} cancelled by user`);
+      console.log(`🚫 Workflow ${workflowId} cancelled by user (will be cleaned up after ${this.config.completedTtl / 1000}s)`);
     }
   }
 
@@ -410,31 +404,44 @@ export class WorkflowStateService {
 
   /**
    * Clean up workflows that exceeded TTL
+   *
+   * Two categories:
+   * 1. Zombie workflows (pending/active that exceeded main TTL) — abandoned by users
+   * 2. Completed workflows (completed/failed/cancelled past completedTtl) — already consumed by frontend
    */
   private cleanupZombieWorkflows(): void {
     const now = Date.now();
-    const ttl = this.config.ttl;
     const toDelete: string[] = [];
+    const terminalStatuses = [WorkflowStatus.COMPLETED, WorkflowStatus.FAILED, WorkflowStatus.CANCELLED];
 
     for (const [id, workflow] of this.workflows) {
-      const age = now - workflow.createdAt.getTime();
+      const isTerminal = terminalStatuses.includes(workflow.status);
 
-      if (age > ttl) {
-        toDelete.push(id);
+      if (isTerminal && workflow.completedAt) {
+        // Completed workflows: use shorter completedTtl
+        const completedAge = now - workflow.completedAt.getTime();
+        if (completedAge > this.config.completedTtl) {
+          toDelete.push(id);
+        }
+      } else {
+        // Active/pending workflows: use main TTL for zombie detection
+        const age = now - workflow.createdAt.getTime();
+        if (age > this.config.ttl) {
+          toDelete.push(id);
+        }
       }
     }
 
-    // Delete zombie workflows
     for (const id of toDelete) {
       this.workflows.delete(id);
 
       if (this.config.logCleanup) {
-        console.log(`🧹 Cleaned up zombie workflow ${id} (exceeded ${ttl}ms TTL)`);
+        console.log(`🧹 Cleaned up workflow ${id}`);
       }
     }
 
     if (toDelete.length > 0 && this.config.logCleanup) {
-      console.log(`🧹 Cleanup complete: removed ${toDelete.length} zombie workflows`);
+      console.log(`🧹 Cleanup complete: removed ${toDelete.length} workflows`);
     }
   }
 

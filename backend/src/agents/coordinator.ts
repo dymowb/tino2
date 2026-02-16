@@ -213,9 +213,13 @@ export class CoordinatorAgent {
     }
 
     // Step 3: Provider analysis
-    if (!context.analysisResults) {
-      return 'analysis';
-    }
+    // TODO Phase 4: Uncomment when Analysis Agent is built
+    // if (!context.analysisResults) {
+    //   return 'analysis';
+    // }
+
+    // For now, search results are sufficient to complete the workflow
+    return null;
 
     // Step 4: Generate recommendations
     if (!context.recommendations) {

@@ -1,0 +1,45 @@
+{
+  "tabs": {
+    "aiAssistant": "AI Assistant",
+    "browseFilter": "Browse & Filter"
+  },
+  "welcome": {
+    "title": "Find the Right Provider",
+    "subtitle": "Describe what you need and our AI will find the best matches for you.",
+    "placeholder": "e.g., I need a plumber to fix a leaking kitchen faucet in Austin, TX. My budget is $150-200 and I need it done this week."
+  },
+  "status": {
+    "starting": "Starting your request...",
+    "requirements": "Understanding your requirements...",
+    "search": "Searching for providers...",
+    "analysis": "Analyzing results...",
+    "completed": "Here are your matches!",
+    "failed": "Something went wrong",
+    "cancelled": "Request cancelled"
+  },
+  "followUp": {
+    "title": "We need a bit more information",
+    "placeholder": "Type your answer..."
+  },
+  "results": {
+    "title": "Recommended Providers",
+    "matchScore": "{{score}}% match",
+    "noResults": "No providers found matching your criteria. Try broadening your requirements.",
+    "rating": "{{rating}} ({{count}} reviews)",
+    "baseRate": "From {{rate}}/{{type}}",
+    "backgroundChecked": "Background Checked",
+    "insured": "Insured"
+  },
+  "actions": {
+    "send": "Send",
+    "cancel": "Cancel",
+    "retry": "Try Again",
+    "newSearch": "New Search",
+    "viewProfile": "View Profile",
+    "requestQuote": "Request Quote"
+  },
+  "errors": {
+    "startFailed": "Failed to start the assistant. Please try again.",
+    "messageFailed": "Failed to send your message. Please try again."
+  }
+}

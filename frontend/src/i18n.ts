@@ -23,6 +23,7 @@ i18n
       'profile',
       'notifications',
       'dashboard',
+      'assistant',
     ],
     backend: {
       loadPath: '/locales/{{lng}}/{{ns}}.json',

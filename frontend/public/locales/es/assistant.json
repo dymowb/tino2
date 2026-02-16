@@ -1,0 +1,45 @@
+{
+  "tabs": {
+    "aiAssistant": "Asistente IA",
+    "browseFilter": "Buscar & Filtrar"
+  },
+  "welcome": {
+    "title": "Encuentra al Profesional Adecuado",
+    "subtitle": "Describe lo que necesitas y nuestra IA encontrará las mejores opciones para ti.",
+    "placeholder": "ej: Necesito un plomero para arreglar un grifo de cocina que gotea en Ciudad de México. Mi presupuesto es $3000-5000 y lo necesito esta semana."
+  },
+  "status": {
+    "starting": "Iniciando tu solicitud...",
+    "requirements": "Entendiendo tus necesidades...",
+    "search": "Buscando profesionales...",
+    "analysis": "Analizando resultados...",
+    "completed": "¡Aquí están tus opciones!",
+    "failed": "Algo salió mal",
+    "cancelled": "Solicitud cancelada"
+  },
+  "followUp": {
+    "title": "Necesitamos más información",
+    "placeholder": "Escribe tu respuesta..."
+  },
+  "results": {
+    "title": "Profesionales Recomendados",
+    "matchScore": "{{score}}% compatible",
+    "noResults": "No se encontraron profesionales. Intenta ampliar tus criterios.",
+    "rating": "{{rating}} ({{count}} reseñas)",
+    "baseRate": "Desde {{rate}}/{{type}}",
+    "backgroundChecked": "Antecedentes Verificados",
+    "insured": "Asegurado"
+  },
+  "actions": {
+    "send": "Enviar",
+    "cancel": "Cancelar",
+    "retry": "Intentar de Nuevo",
+    "newSearch": "Nueva Búsqueda",
+    "viewProfile": "Ver Perfil",
+    "requestQuote": "Solicitar Presupuesto"
+  },
+  "errors": {
+    "startFailed": "Error al iniciar el asistente. Inténtalo de nuevo.",
+    "messageFailed": "Error al enviar tu mensaje. Inténtalo de nuevo."
+  }
+}

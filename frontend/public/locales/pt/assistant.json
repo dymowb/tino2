@@ -1,0 +1,45 @@
+{
+  "tabs": {
+    "aiAssistant": "Assistente IA",
+    "browseFilter": "Buscar & Filtrar"
+  },
+  "welcome": {
+    "title": "Encontre o Profissional Certo",
+    "subtitle": "Descreva o que você precisa e nossa IA encontrará as melhores opções para você.",
+    "placeholder": "ex: Preciso de um encanador para consertar uma torneira da cozinha que está vazando em São Paulo. Meu orçamento é R$300-500 e preciso para esta semana."
+  },
+  "status": {
+    "starting": "Iniciando sua solicitação...",
+    "requirements": "Entendendo suas necessidades...",
+    "search": "Buscando profissionais...",
+    "analysis": "Analisando resultados...",
+    "completed": "Aqui estão suas opções!",
+    "failed": "Algo deu errado",
+    "cancelled": "Solicitação cancelada"
+  },
+  "followUp": {
+    "title": "Precisamos de mais informações",
+    "placeholder": "Digite sua resposta..."
+  },
+  "results": {
+    "title": "Profissionais Recomendados",
+    "matchScore": "{{score}}% compatível",
+    "noResults": "Nenhum profissional encontrado. Tente ampliar seus critérios.",
+    "rating": "{{rating}} ({{count}} avaliações)",
+    "baseRate": "A partir de {{rate}}/{{type}}",
+    "backgroundChecked": "Antecedentes Verificados",
+    "insured": "Segurado"
+  },
+  "actions": {
+    "send": "Enviar",
+    "cancel": "Cancelar",
+    "retry": "Tentar Novamente",
+    "newSearch": "Nova Busca",
+    "viewProfile": "Ver Perfil",
+    "requestQuote": "Solicitar Orçamento"
+  },
+  "errors": {
+    "startFailed": "Falha ao iniciar o assistente. Tente novamente.",
+    "messageFailed": "Falha ao enviar sua mensagem. Tente novamente."
+  }
+}
