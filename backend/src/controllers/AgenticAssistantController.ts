@@ -186,8 +186,9 @@ class AgenticAssistantController {
         return;
       }
 
-      // Check if workflow is still active
-      if (workflow.status !== WorkflowStatus.ACTIVE && workflow.status !== WorkflowStatus.PENDING) {
+      // Check if workflow can accept messages
+      const acceptableStatuses = [WorkflowStatus.ACTIVE, WorkflowStatus.PENDING, WorkflowStatus.WAITING_FOR_USER];
+      if (!acceptableStatuses.includes(workflow.status)) {
         res.status(400).json({
           success: false,
           error: `Cannot send message to ${workflow.status} workflow`,
@@ -195,18 +196,41 @@ class AgenticAssistantController {
         return;
       }
 
-      // TODO Phase 2+: Update context with user message
-      // For Phase 1, we don't have conversational agents yet
-      // In Phase 2, we'll add a proper message history to WorkflowContext
+      // Append user message to conversation history in context
+      const existingMessages = workflow.context.conversationMessages ?? [];
+      const contextUpdate: any = {
+        conversationMessages: [
+          ...existingMessages,
+          { role: 'user', content: message, timestamp: new Date() },
+        ],
+      };
 
+      // If requirements had a follow-up question, clear it so the coordinator
+      // knows the user has answered and re-runs the requirements agent
+      if (workflow.context.requirements?.followUpQuestion) {
+        contextUpdate.requirements = {
+          ...workflow.context.requirements,
+          followUpQuestion: undefined,
+        };
+      }
+
+      await workflowStateService.updateContext(id, contextUpdate);
+
+      // If workflow was paused waiting for the user, resume it
+      if (workflow.status === WorkflowStatus.WAITING_FOR_USER) {
+        coordinator.executeWorkflow(id).catch((error) => {
+          logger.error(`Workflow ${id} resume failed:`, error);
+        });
+      }
+
+      // Return the current workflow state so client can poll
+      const updatedWorkflow = await workflowStateService.getWorkflow(id);
       logger.info(`Message sent to workflow ${id} by user ${userId}`);
 
       res.json({
         success: true,
         data: {
-          workflowId: id,
-          status: workflow.status,
-          message: 'Message received successfully',
+          workflow: updatedWorkflow,
         },
       });
     } catch (error) {

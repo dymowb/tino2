@@ -12,9 +12,9 @@ import config from '../../config/environment';
  * Claude Model Options
  */
 export enum ClaudeModel {
-  HAIKU = 'claude-3-5-haiku-20241022',     // Fast, cheap - for conversations
-  SONNET = 'claude-3-5-sonnet-20241022',   // Balanced - for analysis
-  OPUS = 'claude-3-opus-20240229',         // Powerful - for synthesis
+  HAIKU = 'claude-haiku-4-5-20251001',     // Fast, cheap - for conversations
+  SONNET = 'claude-sonnet-4-6',            // Balanced - for analysis
+  OPUS = 'claude-opus-4-6',               // Powerful - for synthesis
 }
 
 /**
@@ -141,8 +141,8 @@ class AnthropicService {
 
     switch (model) {
       case ClaudeModel.HAIKU:
-        inputCostPer1M = 0.25;
-        outputCostPer1M = 1.25;
+        inputCostPer1M = 0.80;
+        outputCostPer1M = 4.0;
         break;
       case ClaudeModel.SONNET:
         inputCostPer1M = 3.0;

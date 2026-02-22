@@ -10,7 +10,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiService, WorkflowData, WorkflowProviderResult } from '../services/api';
+import { apiService, WorkflowData, WorkflowProviderResult, ProviderAnalysis, Recommendation } from '../services/api';
 
 /** Message in the conversation history */
 export interface ChatMessage {
@@ -36,6 +36,12 @@ export interface AssistantWorkflowState {
 
   /** Provider results when workflow is completed */
   results: WorkflowProviderResult[];
+
+  /** Analysis results from Analysis Agent (keyed by providerId) */
+  analysisResults: ProviderAnalysis[];
+
+  /** Ranked recommendations from Recommendation Agent */
+  recommendations: Recommendation[];
 
   /** Which agent is currently working (for progress display) */
   currentStep: string | null;
@@ -186,6 +192,8 @@ export function useAssistantWorkflow(): AssistantWorkflowState {
       isProcessing: workflow?.status === 'pending' || workflow?.status === 'active',
       followUpQuestion: workflow?.context?.requirements?.followUpQuestion ?? null,
       results: workflow?.context?.searchResults ?? [],
+      analysisResults: workflow?.context?.analysisResults ?? [],
+      recommendations: workflow?.context?.recommendations ?? [],
       currentStep: workflow?.currentAgent ?? null,
       error: workflow?.error?.message ?? null,
     };

@@ -132,7 +132,7 @@ class SearchAgent implements Agent<SearchAgentInput, SearchAgentOutput> {
   readonly metadata: AgentMetadata = {
     name: 'search',
     description: 'Finds and ranks service providers based on requirements',
-    model: 'claude-3-5-sonnet-20241022', // Use Sonnet for planning + ranking logic
+    model: 'claude-sonnet-4-6', // Use Sonnet for planning + ranking logic
     tools: [], // No MCP tools needed - direct database access
     maxTokens: 2000, // Enough for planning + reasoning
     temperature: 0.3, // Low temperature for consistent, deterministic search strategy

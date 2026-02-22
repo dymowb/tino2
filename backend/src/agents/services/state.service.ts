@@ -348,6 +348,7 @@ export class WorkflowStateService {
       byStatus: {
         [WorkflowStatus.PENDING]: 0,
         [WorkflowStatus.ACTIVE]: 0,
+        [WorkflowStatus.WAITING_FOR_USER]: 0,
         [WorkflowStatus.COMPLETED]: 0,
         [WorkflowStatus.FAILED]: 0,
         [WorkflowStatus.CANCELLED]: 0,

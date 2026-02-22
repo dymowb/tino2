@@ -29,6 +29,8 @@ import { workflowStateService } from './services/state.service';
 import { mockAgent } from './mock.agent';
 import { requirementsAgent } from './requirements.agent';
 import { searchAgent } from './search.agent';
+import { analysisAgent } from './analysis.agent';
+import { recommendationAgent } from './recommendation.agent';
 
 /**
  * Agent registry
@@ -72,6 +74,11 @@ export class CoordinatorAgent {
     // Register search agent for Phase 3
     this.registerAgent('search', searchAgent);
 
+    // Register analysis agent for Phase 4
+    this.registerAgent('analysis', analysisAgent);
+
+    // Register recommendation agent for Phase 5
+    this.registerAgent('recommendation', recommendationAgent);
   }
 
   /**
@@ -213,34 +220,16 @@ export class CoordinatorAgent {
     }
 
     // Step 3: Provider analysis
-    // TODO Phase 4: Uncomment when Analysis Agent is built
-    // if (!context.analysisResults) {
-    //   return 'analysis';
-    // }
+    if (!context.analysisResults) {
+      return 'analysis';
+    }
 
-    // For now, search results are sufficient to complete the workflow
-    return null;
-
-    // Step 4: Generate recommendations
+    // Step 4: Generate recommendations (Phase 5)
     if (!context.recommendations) {
       return 'recommendation';
     }
 
-    // Step 5: Quality verification
-    if (!context.verification) {
-      return 'verification';
-    }
-
-    // Edge case: Verification failed - might need to loop back
-    if (context.verification && !context.verification.passed) {
-      console.log(`⚠️  Verification failed for workflow ${workflow.id}`);
-      // TODO Phase 2+: LLM decides whether to retry or fail
-      // return await this.llmHandleVerificationFailure(workflow);
-
-      // For now: Just complete anyway (Phase 1 simplification)
-      return null;
-    }
-
+    // Step 5: Quality verification (future phase — not yet implemented)
     // All steps complete
     return null;
   }
@@ -355,6 +344,7 @@ export class CoordinatorAgent {
             timestamp: activity.startTime,
             output: activity.output,
           })),
+          conversationMessages: workflow.context.conversationMessages,
         };
 
       case 'search':
@@ -373,8 +363,9 @@ export class CoordinatorAgent {
         };
 
       case 'recommendation':
-        // Recommendation agent needs analysis
+        // Recommendation agent needs search results + analysis + requirements
         return {
+          providers: workflow.context.searchResults,
           analysisResults: workflow.context.analysisResults,
           requirements: workflow.context.requirements,
         };
@@ -416,15 +407,24 @@ export class CoordinatorAgent {
         break;
       case 'requirements':
         contextUpdates.requirements = result.output;
+        // If requirements agent asked a follow-up, record it in conversation messages
+        if (!result.output.isComplete && result.output.followUpQuestion) {
+          const workflow = await workflowStateService.getWorkflow(workflowId);
+          const existing = workflow?.context.conversationMessages ?? [];
+          contextUpdates.conversationMessages = [
+            ...existing,
+            { role: 'agent', content: result.output.followUpQuestion, timestamp: new Date() },
+          ];
+        }
         break;
       case 'search':
         contextUpdates.searchResults = result.output.providers;
         break;
       case 'analysis':
-        contextUpdates.analysisResults = result.output;
+        contextUpdates.analysisResults = result.output.analyses;
         break;
       case 'recommendation':
-        contextUpdates.recommendations = result.output;
+        contextUpdates.recommendations = result.output.recommendations;
         break;
       case 'verification':
         contextUpdates.verification = result.output;

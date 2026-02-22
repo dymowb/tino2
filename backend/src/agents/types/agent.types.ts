@@ -107,7 +107,7 @@ export interface AgentMetadata {
   readonly description: string;
 
   /** Which Claude model to use */
-  readonly model: 'claude-3-haiku-20240307' | 'claude-3-5-sonnet-20241022' | 'claude-opus-4-20250514';
+  readonly model: 'claude-haiku-4-5-20251001' | 'claude-sonnet-4-6' | 'claude-opus-4-6';
 
   /**
    * Which MCP tools this agent can use

@@ -50,6 +50,13 @@ export interface WorkflowContext {
   /** Original user request that started the workflow */
   userRequest: string;
 
+  /** Conversational messages between user and agents (for multi-turn dialogs) */
+  conversationMessages?: Array<{
+    role: 'user' | 'agent';
+    content: string;
+    timestamp: Date;
+  }>;
+
   /**
    * Requirements gathered by Requirements Agent
    * Undefined until Requirements Agent completes

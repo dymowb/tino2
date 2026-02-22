@@ -19,15 +19,16 @@ import {
   Stack,
   Tooltip,
 } from '@mui/material';
-import { Security, Verified } from '@mui/icons-material';
+import { Security, Verified, CheckCircleOutline, WarningAmberOutlined } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
-import { WorkflowProviderResult } from '../../services/api';
+import { WorkflowProviderResult, ProviderAnalysis } from '../../services/api';
 
 interface AssistantProviderCardProps {
   provider: WorkflowProviderResult;
+  analysis?: ProviderAnalysis;
 }
 
-const AssistantProviderCard: React.FC<AssistantProviderCardProps> = ({ provider }) => {
+const AssistantProviderCard: React.FC<AssistantProviderCardProps> = ({ provider, analysis }) => {
   const { t } = useTranslation('assistant');
 
   return (
@@ -135,6 +136,40 @@ const AssistantProviderCard: React.FC<AssistantProviderCardProps> = ({ provider 
           <Typography variant="body2" color="text.secondary">
             {provider.location.city}, {provider.location.state}
           </Typography>
+        )}
+
+        {/* AI Analysis */}
+        {analysis && (
+          <Box sx={{ mt: 2 }}>
+            <Divider sx={{ mb: 1.5 }} />
+
+            {/* Review sentiment */}
+            <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mb: 1 }}>
+              "{analysis.reviewSentiment}"
+            </Typography>
+
+            {/* Strengths */}
+            <Stack spacing={0.5} sx={{ mb: 1 }}>
+              {analysis.strengths.map((s, i) => (
+                <Box key={i} sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
+                  <CheckCircleOutline sx={{ fontSize: 14, color: 'success.main', mt: '3px', flexShrink: 0 }} />
+                  <Typography variant="caption">{s}</Typography>
+                </Box>
+              ))}
+            </Stack>
+
+            {/* Concerns */}
+            {analysis.concerns.length > 0 && (
+              <Stack spacing={0.5}>
+                {analysis.concerns.map((c, i) => (
+                  <Box key={i} sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
+                    <WarningAmberOutlined sx={{ fontSize: 14, color: 'warning.main', mt: '3px', flexShrink: 0 }} />
+                    <Typography variant="caption" color="text.secondary">{c}</Typography>
+                  </Box>
+                ))}
+              </Stack>
+            )}
+          </Box>
         )}
       </CardContent>
 

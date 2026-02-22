@@ -31,6 +31,12 @@ export interface RequirementsAgentInput {
     timestamp: Date;
     output: any;
   }>;
+  /** Multi-turn dialog messages (agent questions + user answers) */
+  conversationMessages?: Array<{
+    role: 'user' | 'agent';
+    content: string;
+    timestamp: Date;
+  }>;
   currentTurn?: number;
 }
 
@@ -74,7 +80,7 @@ class RequirementsAgent implements Agent<RequirementsAgentInput, RequirementsAge
   readonly metadata: AgentMetadata = {
     name: 'requirements-agent',
     description: 'Gathers service requirements through conversational flow',
-    model: 'claude-3-haiku-20240307',
+    model: 'claude-haiku-4-5-20251001',
     tools: [],
     maxTokens: 1024,
     temperature: 0.7,
@@ -277,6 +283,14 @@ Analyze the conversation and respond with JSON following the format specified in
    * Build conversation context from history
    */
   private buildConversationContext(input: RequirementsAgentInput): string {
+    // Prefer the richer conversationMessages (agent questions + user answers)
+    if (input.conversationMessages && input.conversationMessages.length > 0) {
+      const dialog = input.conversationMessages
+        .map((msg) => `${msg.role === 'agent' ? 'Agent' : 'User'}: ${msg.content}`)
+        .join('\n');
+      return `Conversation so far:\n${dialog}`;
+    }
+
     if (input.conversationHistory.length === 0) {
       return 'This is the first interaction.';
     }

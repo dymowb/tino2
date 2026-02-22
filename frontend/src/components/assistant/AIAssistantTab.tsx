@@ -20,8 +20,15 @@ import {
   Paper,
   Grid,
   Stack,
+  Card,
+  CardContent,
+  Chip,
+  Rating,
+  Divider,
 } from '@mui/material';
-import { Send, Refresh, AutoAwesome } from '@mui/icons-material';
+import { CheckCircleOutline } from '@mui/icons-material';
+import { Send, Refresh, AutoAwesome, EmojiEvents, WarningAmber } from '@mui/icons-material';
+import { Recommendation } from '../../services/api';
 import { useTranslation } from 'react-i18next';
 import { useAssistantWorkflow } from '../../hooks/useAssistantWorkflow';
 import AssistantProviderCard from './AssistantProviderCard';
@@ -34,6 +41,8 @@ const AIAssistantTab: React.FC = () => {
     isProcessing,
     followUpQuestion,
     results,
+    analysisResults,
+    recommendations,
     currentStep,
     error,
     startWorkflow,
@@ -72,6 +81,8 @@ const AIAssistantTab: React.FC = () => {
         return t('status.search');
       case 'analysis':
         return t('status.analysis');
+      case 'recommendation':
+        return t('status.recommendation', 'Building your personalised recommendations…');
       default:
         return t('status.starting');
     }
@@ -214,21 +225,115 @@ const AIAssistantTab: React.FC = () => {
     </Box>
   );
 
+  const rankColors: Record<number, { border: string; badge: string }> = {
+    1: { border: '#FFD700', badge: '#FFD700' },
+    2: { border: '#C0C0C0', badge: '#C0C0C0' },
+    3: { border: '#CD7F32', badge: '#CD7F32' },
+  };
+
+  const renderRecommendationCard = (rec: Recommendation) => {
+    const colors = rankColors[rec.rank] ?? { border: '#E0E0E0', badge: '#E0E0E0' };
+    return (
+      <Card key={rec.provider.providerId} sx={{ mb: 2, border: `2px solid ${colors.border}` }}>
+        <CardContent>
+          {/* Rank + name + rating row */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <Chip
+              icon={<EmojiEvents sx={{ fontSize: 16 }} />}
+              label={`#${rec.rank}`}
+              size="small"
+              sx={{ bgcolor: colors.badge, color: 'white', fontWeight: 'bold', '& .MuiChip-icon': { color: 'white' } }}
+            />
+            <Typography variant="h6" sx={{ fontWeight: 'bold', flex: 1 }}>
+              {rec.provider.businessName}
+            </Typography>
+            <Rating value={rec.provider.rating} readOnly size="small" precision={0.5} />
+            <Typography variant="body2" color="text.secondary">
+              ({rec.provider.reviewCount})
+            </Typography>
+          </Box>
+
+          {/* Reasoning */}
+          <Typography variant="body2" sx={{ mb: 1.5, color: 'text.primary' }}>
+            {rec.reasoning}
+          </Typography>
+
+          {/* Tradeoffs */}
+          {rec.tradeoffs && rec.tradeoffs.length > 0 && (
+            <Stack spacing={0.5} sx={{ mb: 1.5 }}>
+              {rec.tradeoffs.map((t, i) => (
+                <Box key={i} sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
+                  <WarningAmber sx={{ fontSize: 14, color: 'warning.main', mt: '2px', flexShrink: 0 }} />
+                  <Typography variant="caption" color="text.secondary">{t}</Typography>
+                </Box>
+              ))}
+            </Stack>
+          )}
+
+          {/* Best for */}
+          {rec.bestFor && (
+            <Chip label={`Best for: ${rec.bestFor}`} size="small" variant="outlined" sx={{ mb: 1.5 }} />
+          )}
+
+          {/* Strengths from analysis */}
+          {rec.analysis.strengths.length > 0 && (
+            <Stack spacing={0.5}>
+              {rec.analysis.strengths.slice(0, 3).map((s, i) => (
+                <Box key={i} sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
+                  <CheckCircleOutline sx={{ fontSize: 14, color: 'success.main', mt: '2px', flexShrink: 0 }} />
+                  <Typography variant="caption">{s}</Typography>
+                </Box>
+              ))}
+            </Stack>
+          )}
+        </CardContent>
+
+        <Divider />
+        <Box sx={{ p: 1.5 }}>
+          <Stack direction="row" spacing={1}>
+            <Button fullWidth variant="outlined" size="small">
+              {t('actions.viewProfile')}
+            </Button>
+            <Button fullWidth variant="contained" size="small">
+              {t('actions.requestQuote')}
+            </Button>
+          </Stack>
+        </Box>
+      </Card>
+    );
+  };
+
   const renderResults = () => (
     <Box sx={{ py: 2 }}>
-      <Typography variant="h6" sx={{ mb: 3 }}>
-        {t('results.title')}
-      </Typography>
-      {results.length === 0 ? (
-        <Alert severity="info">{t('results.noResults')}</Alert>
+      {recommendations.length > 0 ? (
+        <>
+          <Typography variant="h6" sx={{ mb: 3 }}>
+            {t('results.recommendationsTitle', 'Your Top Recommendations')}
+          </Typography>
+          {recommendations
+            .sort((a, b) => a.rank - b.rank)
+            .map(renderRecommendationCard)}
+        </>
       ) : (
-        <Grid container spacing={3}>
-          {results.map((provider) => (
-            <Grid item xs={12} md={6} lg={4} key={provider.providerId}>
-              <AssistantProviderCard provider={provider} />
+        <>
+          <Typography variant="h6" sx={{ mb: 3 }}>
+            {t('results.title')}
+          </Typography>
+          {results.length === 0 ? (
+            <Alert severity="info">{t('results.noResults')}</Alert>
+          ) : (
+            <Grid container spacing={3}>
+              {results.map((provider) => (
+                <Grid item xs={12} md={6} lg={4} key={provider.providerId}>
+                  <AssistantProviderCard
+                    provider={provider}
+                    analysis={analysisResults.find(a => a.providerId === provider.providerId)}
+                  />
+                </Grid>
+              ))}
             </Grid>
-          ))}
-        </Grid>
+          )}
+        </>
       )}
       <Box sx={{ mt: 3, textAlign: 'center' }}>
         <Button variant="outlined" startIcon={<Refresh />} onClick={reset}>

@@ -182,6 +182,32 @@ export interface Quote {
   provider?: Provider;
 }
 
+export interface ProviderAnalysis {
+  providerId: string;
+  matchScore: number;
+  strengths: string[];
+  concerns: string[];
+  reviewSentiment: string;
+  uniqueValue?: string;
+  riskFactors?: string[];
+}
+
+export interface Recommendation {
+  rank: number;
+  provider: {
+    providerId: string;
+    businessName: string;
+    rating: number;
+    reviewCount: number;
+    services: string[];
+    pricing?: { hourlyRate?: number; currency: string } | null;
+  };
+  analysis: ProviderAnalysis;
+  reasoning: string;
+  tradeoffs?: string[];
+  bestFor?: string;
+}
+
 export interface WorkflowProviderResult {
   providerId: string;
   providerName: string;
@@ -229,6 +255,8 @@ export interface WorkflowData {
       missingInformation?: string[];
     };
     searchResults?: WorkflowProviderResult[];
+    analysisResults?: ProviderAnalysis[];
+    recommendations?: Recommendation[];
   };
   error?: {
     message: string;
@@ -848,7 +876,7 @@ class ApiService {
 
   async sendWorkflowMessage(workflowId: string, message: string): Promise<WorkflowData> {
     const response = await this.api.post<ApiResponse<{ workflow: WorkflowData }>>(
-      `/agentic-assistant/workflows/${workflowId}/message`,
+      `/agentic-assistant/workflows/${workflowId}/messages`,
       { message },
       { timeout: 30000 }
     );
