@@ -6,7 +6,7 @@
  * - Simplified layout (no distance/duration since no GPS search)
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -22,6 +22,7 @@ import {
 import { Security, Verified, CheckCircleOutline, WarningAmberOutlined } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { WorkflowProviderResult, ProviderAnalysis } from '../../services/api';
+import QuoteRequestDialog from '../quotes/QuoteRequestDialog';
 
 interface AssistantProviderCardProps {
   provider: WorkflowProviderResult;

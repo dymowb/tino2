@@ -229,6 +229,21 @@ export interface WorkflowProviderResult {
   isInsured: boolean;
 }
 
+export interface VerificationCheckResult {
+  passed: boolean;
+  notes: string;
+}
+
+export interface VerificationReport {
+  passed: boolean;
+  qualityScore: number;
+  requirementsCoverage: VerificationCheckResult;
+  recommendationQuality: VerificationCheckResult;
+  completeness: VerificationCheckResult;
+  suggestions: string[];
+  timedOut?: boolean;
+}
+
 export interface WorkflowData {
   id: string;
   userId: string;
@@ -257,6 +272,7 @@ export interface WorkflowData {
     searchResults?: WorkflowProviderResult[];
     analysisResults?: ProviderAnalysis[];
     recommendations?: Recommendation[];
+    verification?: VerificationReport;
   };
   error?: {
     message: string;

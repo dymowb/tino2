@@ -28,10 +28,11 @@ import {
 } from '@mui/material';
 import { CheckCircleOutline } from '@mui/icons-material';
 import { Send, Refresh, AutoAwesome, EmojiEvents, WarningAmber } from '@mui/icons-material';
-import { Recommendation } from '../../services/api';
+import { Recommendation, VerificationReport } from '../../services/api';
 import { useTranslation } from 'react-i18next';
 import { useAssistantWorkflow } from '../../hooks/useAssistantWorkflow';
 import AssistantProviderCard from './AssistantProviderCard';
+import QuoteRequestDialog from '../quotes/QuoteRequestDialog';
 
 const AIAssistantTab: React.FC = () => {
   const { t } = useTranslation('assistant');
@@ -43,6 +44,7 @@ const AIAssistantTab: React.FC = () => {
     results,
     analysisResults,
     recommendations,
+    verification,
     currentStep,
     error,
     startWorkflow,
@@ -55,6 +57,13 @@ const AIAssistantTab: React.FC = () => {
 
   // Input state for the text field (used for both initial message and follow-up)
   const [input, setInput] = useState('');
+
+  // Quote dialog state
+  const [quoteDialogOpen, setQuoteDialogOpen] = useState(false);
+  const [quoteServiceType, setQuoteServiceType] = useState('');
+
+  // Sort order for the "all providers" section below recommendations
+  const [providerSort, setProviderSort] = useState<'match' | 'rating' | 'price'>('match');
 
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
@@ -294,7 +303,15 @@ const AIAssistantTab: React.FC = () => {
             <Button fullWidth variant="outlined" size="small">
               {t('actions.viewProfile')}
             </Button>
-            <Button fullWidth variant="contained" size="small">
+            <Button
+              fullWidth
+              variant="contained"
+              size="small"
+              onClick={() => {
+                setQuoteServiceType(rec.provider.services[0] ?? '');
+                setQuoteDialogOpen(true);
+              }}
+            >
               {t('actions.requestQuote')}
             </Button>
           </Stack>
@@ -307,12 +324,70 @@ const AIAssistantTab: React.FC = () => {
     <Box sx={{ py: 2 }}>
       {recommendations.length > 0 ? (
         <>
-          <Typography variant="h6" sx={{ mb: 3 }}>
+          <Typography variant="h6" sx={{ mb: 2 }}>
             {t('results.recommendationsTitle', 'Your Top Recommendations')}
           </Typography>
+          {verification && !verification.timedOut && (
+            <Alert
+              severity={verification.passed ? 'success' : 'warning'}
+              icon={verification.passed ? undefined : <WarningAmber />}
+              sx={{ mb: 2 }}
+            >
+              {verification.passed
+                ? `Quality verified · Score ${verification.qualityScore}/10`
+                : `Quality score ${verification.qualityScore}/10 · ${verification.suggestions[0] ?? 'Some concerns noted'}`}
+            </Alert>
+          )}
           {recommendations
             .sort((a, b) => a.rank - b.rank)
             .map(renderRecommendationCard)}
+
+          {/* All providers found — sorted list below the curated top picks */}
+          {results.length > 0 && (() => {
+            const recommendedIds = new Set(recommendations.map(r => r.provider.providerId));
+            const remaining = results.filter(p => !recommendedIds.has(p.providerId));
+            if (remaining.length === 0) return null;
+
+            const sorted = [...remaining].sort((a, b) => {
+              if (providerSort === 'rating') return b.rating - a.rating;
+              if (providerSort === 'price') return (a.pricing?.baseRate ?? Infinity) - (b.pricing?.baseRate ?? Infinity);
+              return b.matchScore - a.matchScore; // default: match score
+            });
+
+            return (
+              <Box sx={{ mt: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                  <Typography variant="subtitle1" color="text.secondary">
+                    {remaining.length} other provider{remaining.length > 1 ? 's' : ''} found
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="body2" color="text.secondary">Sort by:</Typography>
+                    {(['match', 'rating', 'price'] as const).map(opt => (
+                      <Button
+                        key={opt}
+                        size="small"
+                        variant={providerSort === opt ? 'contained' : 'outlined'}
+                        onClick={() => setProviderSort(opt)}
+                        sx={{ minWidth: 0, px: 1.5, py: 0.5, fontSize: '0.75rem' }}
+                      >
+                        {opt === 'match' ? 'Match' : opt === 'rating' ? 'Rating' : 'Price'}
+                      </Button>
+                    ))}
+                  </Box>
+                </Box>
+                <Grid container spacing={2}>
+                  {sorted.map(provider => (
+                    <Grid item xs={12} md={6} key={provider.providerId}>
+                      <AssistantProviderCard
+                        provider={provider}
+                        analysis={analysisResults.find(a => a.providerId === provider.providerId)}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            );
+          })()}
         </>
       ) : (
         <>
@@ -368,7 +443,7 @@ const AIAssistantTab: React.FC = () => {
   const renderContent = () => {
     // YOUR CODE HERE
     if (error) return renderError();
-    if (results.length > 0) return renderResults();
+    if (recommendations.length > 0 || results.length > 0) return renderResults();
     if (followUpQuestion) return renderFollowUp();
     if (isProcessing) return renderProcessing();
 
@@ -378,6 +453,11 @@ const AIAssistantTab: React.FC = () => {
   return (
     <Box>
       {renderContent()}
+      <QuoteRequestDialog
+        open={quoteDialogOpen}
+        onClose={() => setQuoteDialogOpen(false)}
+        serviceType={quoteServiceType}
+      />
     </Box>
   );
 };

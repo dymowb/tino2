@@ -168,20 +168,24 @@ export interface Recommendation {
 }
 
 /**
+ * Individual check result from Verification Agent
+ */
+export interface CheckResult {
+  passed: boolean;
+  notes: string; // One-sentence explanation
+}
+
+/**
  * Verification Report (output from Verification Agent)
  */
 export interface VerificationReport {
-  passed: boolean;
-  qualityScore: number; // 0-10 scale
-  checks: {
-    requirementsCoverage: boolean;
-    recommendationQuality: boolean;
-    informationAccuracy: boolean;
-    userExperience: boolean;
-    completeness: boolean;
-  };
-  issues: string[];
+  passed: boolean;          // true only if ALL checks passed
+  qualityScore: number;     // 0-10 scale
+  requirementsCoverage: CheckResult;
+  recommendationQuality: CheckResult;
+  completeness: CheckResult;
   suggestions: string[];
+  timedOut?: boolean;       // true when verification was skipped due to timeout
 }
 
 /**

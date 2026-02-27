@@ -31,6 +31,7 @@ import { requirementsAgent } from './requirements.agent';
 import { searchAgent } from './search.agent';
 import { analysisAgent } from './analysis.agent';
 import { recommendationAgent } from './recommendation.agent';
+import { verificationAgent } from './verification.agent';
 
 /**
  * Agent registry
@@ -79,6 +80,9 @@ export class CoordinatorAgent {
 
     // Register recommendation agent for Phase 5
     this.registerAgent('recommendation', recommendationAgent);
+
+    // Register verification agent for Phase 6
+    this.registerAgent('verification', verificationAgent);
   }
 
   /**
@@ -229,7 +233,11 @@ export class CoordinatorAgent {
       return 'recommendation';
     }
 
-    // Step 5: Quality verification (future phase — not yet implemented)
+    // Step 5: Quality verification (Phase 6)
+    if (!context.verification) {
+      return 'verification';
+    }
+
     // All steps complete
     return null;
   }
@@ -427,7 +435,9 @@ export class CoordinatorAgent {
         contextUpdates.recommendations = result.output.recommendations;
         break;
       case 'verification':
-        contextUpdates.verification = result.output;
+        // result.output is VerificationAgentOutput { report, timedOut }
+        // context.verification only stores the VerificationReport itself
+        contextUpdates.verification = result.output.report;
         break;
       default:
         console.warn(`Unknown agent: ${agentName}, output not mapped to context`);

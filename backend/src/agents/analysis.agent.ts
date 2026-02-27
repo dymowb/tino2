@@ -87,8 +87,8 @@ interface EnrichedProviderData {
   } | null;
 }
 
-// Maximum providers to deeply analyze (cost optimization)
-const MAX_PROVIDERS_TO_ANALYZE = 5;
+// Maximum providers to deeply analyze — 3 matches our recommendation cap and keeps prompts small
+const MAX_PROVIDERS_TO_ANALYZE = 3;
 
 // ─── Agent Implementation ───────────────────────────────────────────
 
@@ -96,10 +96,10 @@ class AnalysisAgent implements Agent<AnalysisAgentInput, AnalysisAgentOutput> {
   readonly metadata: AgentMetadata = {
     name: 'analysis',
     description: 'Deeply evaluates providers using reviews, booking history, and LLM analysis',
-    model: 'claude-sonnet-4-6',
+    model: 'claude-haiku-4-5-20251001',
     tools: [],
-    maxTokens: 3000,
-    temperature: 0.5, // Analytical but flexible for nuanced insights
+    maxTokens: 2000,
+    temperature: 0.3, // Low temperature for consistent structured output
     systemPrompt: `You are a Provider Analysis Agent. Your job is to evaluate service providers
 based on their profile data, customer reviews, and booking history.
 
@@ -131,7 +131,7 @@ Return a JSON array of analysis objects.`,
 
       // Get recent reviews for sentiment analysis
       const reviewsResponse = await reviewService.getProviderReviews(providerId, {
-        limit: 5,
+        limit: 3,
         sortBy: 'createdAt',
         sortOrder: 'desc',
       });
@@ -275,7 +275,7 @@ Return a JSON array of analysis objects.`,
       )).join('\n\n')}`
 
     const response = await anthropicService.callClaude({
-      model: ClaudeModel.SONNET,
+      model: ClaudeModel.HAIKU,
       systemPrompt: this.metadata.systemPrompt,
       userMessage,
       maxTokens: this.metadata.maxTokens,
