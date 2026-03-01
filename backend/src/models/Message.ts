@@ -33,8 +33,8 @@ export class Message {
   @Column()
   senderId: string;
 
-  @Column()
-  receiverId: string;
+  @Column({ nullable: true })
+  receiverId: string | undefined;
 
   @ManyToOne(() => Conversation, (conversation) => conversation.messages, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'conversationId' })
@@ -44,7 +44,7 @@ export class Message {
   @JoinColumn({ name: 'senderId' })
   sender: User;
 
-  @ManyToOne(() => User, (user) => user.receivedMessages)
+  @ManyToOne(() => User, (user) => user.receivedMessages, { nullable: true })
   @JoinColumn({ name: 'receiverId' })
   receiver: User;
 

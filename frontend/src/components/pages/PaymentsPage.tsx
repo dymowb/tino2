@@ -445,12 +445,16 @@ const PaymentsPage: React.FC = () => {
                         />
                       </TableCell>
                       <TableCell>
-                        <Chip
-                          label={t(`payments:escrow_status.${payment.escrowStatus}`)}
-                          color={getEscrowStatusColor(payment.escrowStatus) as any}
-                          size="small"
-                          variant="outlined"
-                        />
+                        {payment.escrowStatus ? (
+                          <Chip
+                            label={t(`payments:escrow_status.${payment.escrowStatus}`)}
+                            color={getEscrowStatusColor(payment.escrowStatus) as any}
+                            size="small"
+                            variant="outlined"
+                          />
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">—</Typography>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Box>

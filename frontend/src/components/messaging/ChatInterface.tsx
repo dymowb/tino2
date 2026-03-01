@@ -104,7 +104,7 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
   });
 
   const sendMessageMutation = useMutation({
-    mutationFn: apiService.sendMessage,
+    mutationFn: (data: Parameters<typeof apiService.sendMessage>[0]) => apiService.sendMessage(data),
     onSuccess: () => {
       setMessageText('');
       setReplyToMessage(null);

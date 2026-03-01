@@ -206,9 +206,9 @@ export class MessageService {
         throw new Error('Conversation not found or access denied');
       }
 
-      // Find the receiver (for direct conversations)
+      // Find the receiver (for direct conversations; undefined for group/support chats)
       const receiverId = conversation.participants
-        .find(participant => participant.id !== senderId)?.id || '';
+        .find(participant => participant.id !== senderId)?.id;
 
       // Create message
       const message = this.messageRepository.create({

@@ -174,7 +174,7 @@ const RefundDialog: React.FC<Props> = ({
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
               <Typography variant="body2">{t('refund.provider')}</Typography>
               <Typography variant="body2">
-                {payment.booking?.provider.businessName || 'N/A'}
+                {payment.booking?.provider?.businessName || 'N/A'}
               </Typography>
             </Box>
 
@@ -182,7 +182,7 @@ const RefundDialog: React.FC<Props> = ({
               <Typography variant="body2">{t('refund.status')}</Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Chip label={payment.status} size="small" />
-                <Chip label={payment.escrowStatus} size="small" variant="outlined" />
+                {payment.escrowStatus && <Chip label={payment.escrowStatus} size="small" variant="outlined" />}
               </Box>
             </Box>
 
