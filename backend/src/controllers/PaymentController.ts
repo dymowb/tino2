@@ -4,6 +4,7 @@ import Stripe from 'stripe';
 import { Payment, PaymentStatus, PaymentMethod } from '@/models/Payment';
 import { Booking } from '@/models/Booking';
 import { User } from '@/models/User';
+import { Provider } from '@/models/Provider';
 import logger from '@/config/logger';
 import { AuthenticatedRequest } from '@/types';
 import PaymentService from '@/services/PaymentService';
@@ -19,22 +20,28 @@ class PaymentController {
       const paymentRepository = AppDataSource.getRepository(Payment);
       const { page = 1, limit = 10 } = req.query;
 
+      // Resolve Provider entity ID when user is a provider
+      // (payment.providerId stores Provider entity UUID, not User UUID)
+      let whereConditions: any[];
+      if (req.user.userType === 'provider') {
+        const providerRepository = AppDataSource.getRepository(Provider);
+        const providerEntity = await providerRepository.findOne({ where: { userId: req.user.userId } });
+        const providerEntityId = providerEntity?.id ?? req.user.userId;
+        whereConditions = [{ providerId: providerEntityId }];
+      } else {
+        whereConditions = [{ customerId: req.user.userId }];
+      }
+
       const payments = await paymentRepository.find({
-        where: [
-          { customerId: req.user.userId },
-          { providerId: req.user.userId }
-        ],
-        relations: ['customer', 'provider', 'booking'],
+        where: whereConditions,
+        relations: ['customer', 'provider', 'booking', 'booking.customer'],
         order: { createdAt: 'DESC' },
         skip: (Number(page) - 1) * Number(limit),
         take: Number(limit),
       });
 
       const total = await paymentRepository.count({
-        where: [
-          { customerId: req.user.userId },
-          { providerId: req.user.userId }
-        ],
+        where: whereConditions,
       });
 
       res.json({
@@ -72,7 +79,7 @@ class PaymentController {
           // Ensure user can only access their own payments
           ...(req.user.userType === 'customer' ? { customerId: req.user.userId } : { providerId: req.user.userId })
         },
-        relations: ['customer', 'provider', 'booking'],
+        relations: ['customer', 'provider', 'booking', 'booking.customer'],
       });
 
       if (!payment) {

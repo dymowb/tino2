@@ -175,7 +175,7 @@ const Navigation: React.FC = () => {
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <Chip
-          label={user.userType === 'customer' ? t('profile.fields.customer') : t('profile.fields.provider')}
+          label={user.userType === 'customer' ? t('profile:fields.customer') : t('profile:fields.provider')}
           size="small"
           color={user.userType === 'customer' ? 'secondary' : 'primary'}
           sx={{ color: 'white', fontWeight: 'bold' }}

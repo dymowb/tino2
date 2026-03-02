@@ -198,9 +198,9 @@ export interface Recommendation {
     providerId: string;
     businessName: string;
     rating: number;
-    reviewCount: number;
+    totalReviews: number;
     services: string[];
-    pricing?: { hourlyRate?: number; currency: string } | null;
+    pricing?: { baseRate?: number; hourlyRate?: number; currency: string; rateType?: string } | null;
   };
   analysis: ProviderAnalysis;
   reasoning: string;
@@ -479,7 +479,7 @@ class ApiService {
   }
 
   async cancelBooking(id: string, reason?: string): Promise<void> {
-    await this.api.put(`/bookings/${id}/cancel`, { reason });
+    await this.api.delete(`/bookings/${id}`, { data: { reason } });
   }
 
   // Location and GPS methods
@@ -1077,6 +1077,11 @@ class ApiService {
   async updateProviderProfile(providerId: string, data: Partial<Provider>): Promise<Provider> {
     const response = await this.api.put(`/providers/${providerId}`, data);
     return response.data;
+  }
+
+  async getServiceCatalog(): Promise<string[]> {
+    const response = await this.api.get<ApiResponse<{ services: string[] }>>('/providers/services/catalog');
+    return response.data.data?.services ?? [];
   }
 
 

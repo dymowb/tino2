@@ -431,7 +431,7 @@ export class ProviderController {
 
       // Calculate total earnings
       const totalEarnings = completedResult.bookings.reduce((sum: number, booking: any) =>
-        sum + (booking.totalPrice || 0), 0
+        sum + (booking.totalAmount || 0), 0
       );
 
       // Get provider reviews to calculate average rating
@@ -440,10 +440,13 @@ export class ProviderController {
         ? reviews.data.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.data.length
         : 0;
 
+      const total = allBookingsResult.total;
+      const completed = completedResult.total;
       const stats = {
-        totalBookings: allBookingsResult.total,
+        totalBookings: total,
         pendingBookings: pendingResult.total,
-        completedBookings: completedResult.total,
+        completedBookings: completed,
+        completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
         totalEarnings,
         averageRating: Math.round(avgRating * 10) / 10,
         totalReviews: reviews.pagination?.total || 0,
@@ -465,6 +468,17 @@ export class ProviderController {
       };
 
       res.status(500).json(response);
+    }
+  }
+
+  getServiceCatalog = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const services = await providerService.getServiceCatalog();
+      const response: ApiResponse = { success: true, data: { services } };
+      res.status(200).json(response);
+    } catch (error) {
+      logger.error('Error in getServiceCatalog controller:', error);
+      res.status(500).json({ success: false, message: 'Failed to load service catalog' });
     }
   }
 }

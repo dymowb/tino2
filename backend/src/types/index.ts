@@ -311,6 +311,8 @@ export interface ProviderSearchQuery {
   latitude?: number;
   longitude?: number;
   radius?: number;
+  city?: string;
+  state?: string;
   minRating?: number;
   isInsured?: boolean;
   isBackgroundChecked?: boolean;

@@ -122,6 +122,7 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
       apiService.updateMessage(messageId, updates),
     onSuccess: () => {
       setEditingMessage(null);
+      setMessageText('');
       queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
     },
     onError: () => {

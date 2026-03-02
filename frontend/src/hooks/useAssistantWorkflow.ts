@@ -83,26 +83,10 @@ export function useAssistantWorkflow(): AssistantWorkflowState {
   // Track conversation messages for the chat display
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
-  // ─── TODO 1: Start Workflow Mutation ──────────────────────────────
-  //
-  // Use useMutation to call apiService.startWorkflow(message)
-  //
-  // On success:
-  //   1. Set the workflowId (this triggers polling)
-  //   2. Add the user's message to the messages array
-  //
-  // Hints:
-  //   - mutationFn receives the message string
-  //   - onSuccess receives the API response { workflowId, status }
-  //   - Use setWorkflowId() and setMessages()
-  //   - Generate a message id with Date.now().toString()
-  //
   const startMutation = useMutation({
     mutationFn: (message: string) => apiService.startWorkflow(message),
     onSuccess: (data, message) => {
-      // TODO: Set workflowId from data.workflowId
       setWorkflowId(data.workflowId);
-      // TODO: Add user message to messages array
       setMessages(prev => [
         ...prev,
         {
@@ -115,22 +99,6 @@ export function useAssistantWorkflow(): AssistantWorkflowState {
     },
   });
 
-  // ─── TODO 2: Polling Query ────────────────────────────────────────
-  //
-  // Use useQuery to poll apiService.getWorkflow(workflowId)
-  //
-  // Key config:
-  //   - queryKey: ['assistant-workflow', workflowId]
-  //   - enabled: only when workflowId is not null
-  //   - refetchInterval: return 2000 (ms) while workflow is active,
-  //     return false when status is terminal (completed/failed/cancelled)
-  //     or when waiting_for_user
-  //
-  // The refetchInterval callback receives the query object.
-  // Access the current status via: query.state.data?.status
-  //
-  // Hint: Check if the status is in TERMINAL_STATUSES or is 'waiting_for_user'
-  //
   const { data: workflow } = useQuery({
     queryKey: ['assistant-workflow', workflowId],
     queryFn: () => apiService.getWorkflow(workflowId!),
@@ -147,20 +115,10 @@ export function useAssistantWorkflow(): AssistantWorkflowState {
     },
   });
 
-  // ─── TODO 3: Send Follow-up Message Mutation ──────────────────────
-  //
-  // Use useMutation to call apiService.sendWorkflowMessage(workflowId, message)
-  //
-  // On success:
-  //   1. Add the user's answer to messages
-  //   2. Invalidate the workflow query to trigger a fresh fetch
-  //      (use queryClient.invalidateQueries)
-  //
   const sendMutation = useMutation({
     mutationFn: (message: string) =>
       apiService.sendWorkflowMessage(workflowId!, message),
     onSuccess: (_data, message) => {
-      // TODO: Add user message to messages array
       setMessages(prev => [
         ...prev,
         {
@@ -170,26 +128,10 @@ export function useAssistantWorkflow(): AssistantWorkflowState {
           timestamp: new Date(),
         },
       ]);
-      // TODO: Invalidate the query to resume polling
       queryClient.invalidateQueries({ queryKey: ['assistant-workflow', workflowId] });
     },
   });
 
-  // ─── TODO 4: Derive UI State ──────────────────────────────────────
-  //
-  // Use useMemo to compute derived values from the workflow data.
-  // This avoids recomputing on every render.
-  //
-  // From workflow?.status and workflow?.context, derive:
-  //   - isProcessing: true when status is 'pending' or 'active'
-  //   - followUpQuestion: the follow-up question string when status is 'waiting_for_user'
-  //     (found at workflow?.context?.requirements?.followUpQuestion)
-  //   - results: the searchResults array (or empty array)
-  //     (found at workflow?.context?.searchResults)
-  //   - currentStep: the currentAgent name (or null)
-  //   - error: the error message if status is 'failed' (or null)
-  //     (found at workflow?.error?.message)
-  //
   const derivedState = useMemo(() => {
     return {
       isProcessing: workflow?.status === 'pending' || workflow?.status === 'active',

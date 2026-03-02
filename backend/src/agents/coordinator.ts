@@ -26,7 +26,7 @@ import {
   DEFAULT_WORKFLOW_CONFIG,
 } from './types/workflow.types';
 import { workflowStateService } from './services/state.service';
-import { mockAgent } from './mock.agent';
+import logger from '@/config/logger';
 import { requirementsAgent } from './requirements.agent';
 import { searchAgent } from './search.agent';
 import { analysisAgent } from './analysis.agent';
@@ -40,7 +40,6 @@ import { verificationAgent } from './verification.agent';
  * Coordinator uses this to look up and execute agents.
  *
  * Note: Using 'any' for now since agent interface is still evolving
- * TODO Phase 2+: Update agent.types.ts to match actual implementation
  */
 interface AgentRegistry {
   [agentName: string]: any;
@@ -66,10 +65,6 @@ export class CoordinatorAgent {
   constructor(config: Partial<WorkflowConfig> = {}) {
     this.config = { ...DEFAULT_WORKFLOW_CONFIG, ...config };
 
-    // Register mock agent for Phase 1 testing
-    this.registerAgent('mock', mockAgent);
-
-    // Register requirements agent for Phase 2
     this.registerAgent('requirements', requirementsAgent);
 
     // Register search agent for Phase 3
@@ -93,7 +88,7 @@ export class CoordinatorAgent {
    */
   registerAgent(name: string, agent: any): void {
     this.agents[name] = agent;
-    console.log(`✅ Registered agent: ${name}`);
+    logger.debug(`Registered agent: ${name}`);
   }
 
   /**
@@ -139,13 +134,13 @@ export class CoordinatorAgent {
             await workflowStateService.updateWorkflow(workflowId, () => ({
               status: WorkflowStatus.WAITING_FOR_USER,
             }));
-            console.log(`⏸️  Workflow ${workflowId} paused - waiting for user response`);
+            logger.info(`Workflow ${workflowId} paused - waiting for user response`);
             return;
           }
 
           // Otherwise, workflow is complete
           await workflowStateService.completeWorkflow(workflowId);
-          console.log(`✅ Workflow ${workflowId} completed successfully`);
+          logger.info(`Workflow ${workflowId} completed successfully`);
           return;
         }
 
@@ -180,17 +175,7 @@ export class CoordinatorAgent {
   private decideNextAgent(workflow: WorkflowState): string | null {
     const { context, agentHistory } = workflow;
 
-    // Check if last agent suggested a different route
-    // (Enables agent-driven routing for edge cases)
-    if (agentHistory.length > 0) {
-      const lastActivity = agentHistory[agentHistory.length - 1];
-
-      // TODO Phase 2+: If agent suggested something unusual, consult LLM
-      // const suggestion = lastActivity.output?.suggestedNextAgent;
-      // if (suggestion && !this.isExpectedRoute(suggestion, context)) {
-      //   return await this.llmDecideRoute(workflow, suggestion);
-      // }
-    }
+    // Phase 2+: Could use lastActivity.output?.suggestedNextAgent for LLM-driven routing
 
     // State machine: Check what's missing and route accordingly
     // Step 1: Requirements gathering
@@ -217,10 +202,8 @@ export class CoordinatorAgent {
 
     // Edge case: No providers found - end workflow early
     if (context.searchResults.length === 0) {
-      console.log(`⚠️  No providers found for workflow ${workflow.id}`);
-      // TODO Phase 2+: LLM could suggest alternative actions here
-      // return await this.llmHandleNoResults(workflow);
-      return null; // End workflow
+      logger.warn(`No providers found for workflow ${workflow.id}`);
+      return null;
     }
 
     // Step 3: Provider analysis
@@ -268,7 +251,7 @@ export class CoordinatorAgent {
       currentAgent: agentName,
     }));
 
-    console.log(`🤖 Executing agent: ${agentName} for workflow ${workflowId}`);
+    logger.info(`Executing agent: ${agentName} for workflow ${workflowId}`);
 
     try {
       // Create activity record (started)
@@ -304,9 +287,7 @@ export class CoordinatorAgent {
       // Update workflow context with agent's output
       await this.updateContextFromResult(workflowId, agentName, result);
 
-      console.log(
-        `✅ Agent ${agentName} completed in ${completedActivity.durationMs}ms`
-      );
+      logger.info(`Agent ${agentName} completed in ${completedActivity.durationMs}ms`);
     } catch (error) {
       // Agent failed
       const endTime = new Date();
@@ -339,10 +320,6 @@ export class CoordinatorAgent {
    */
   private prepareAgentInput(agentName: string, workflow: WorkflowState): any {
     switch (agentName) {
-      case 'mock':
-        // Mock agent just needs the user's message
-        return { message: workflow.context.userRequest };
-
       case 'requirements':
         // Requirements agent needs user request and any previous conversation
         return {
@@ -409,10 +386,6 @@ export class CoordinatorAgent {
     const contextUpdates: Partial<WorkflowContext> = {};
 
     switch (agentName) {
-      case 'mock':
-        // Store mock agent response for Phase 1 UAT testing
-        contextUpdates.mockResponse = result.output;
-        break;
       case 'requirements':
         contextUpdates.requirements = result.output;
         // If requirements agent asked a follow-up, record it in conversation messages
@@ -440,7 +413,7 @@ export class CoordinatorAgent {
         contextUpdates.verification = result.output.report;
         break;
       default:
-        console.warn(`Unknown agent: ${agentName}, output not mapped to context`);
+        logger.warn(`Unknown agent: ${agentName}, output not mapped to context`);
     }
 
     // Update workflow context
@@ -454,7 +427,7 @@ export class CoordinatorAgent {
    * @param error - Error that occurred
    */
   private async handleWorkflowError(workflowId: string, error: Error): Promise<void> {
-    console.error(`❌ Workflow ${workflowId} failed:`, error.message);
+    logger.error(`Workflow ${workflowId} failed: ${error.message}`);
 
     await workflowStateService.failWorkflow(workflowId, {
       message: error.message,

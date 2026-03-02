@@ -97,21 +97,6 @@ const AIAssistantTab: React.FC = () => {
     }
   };
 
-  // ─── TODO: Conditional Rendering ──────────────────────────────────
-  //
-  // Render different content based on workflow state.
-  // The logic should follow this priority (check in order):
-  //
-  // 1. If error is not null → show error state
-  // 2. If results.length > 0 (workflow completed with results) → show results
-  // 3. If followUpQuestion is not null → show follow-up question + input
-  // 4. If isProcessing → show progress indicator
-  // 5. Otherwise (no workflow) → show welcome state
-  //
-  // Each state has its JSX written below as helper functions.
-  // Your job: write the renderContent() function that picks the right one.
-  //
-
   const renderWelcome = () => (
     <Box sx={{ textAlign: 'center', py: 4 }}>
       <AutoAwesome sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
@@ -258,7 +243,7 @@ const AIAssistantTab: React.FC = () => {
             </Typography>
             <Rating value={rec.provider.rating} readOnly size="small" precision={0.5} />
             <Typography variant="body2" color="text.secondary">
-              ({rec.provider.reviewCount})
+              ({rec.provider.totalReviews})
             </Typography>
           </Box>
 
@@ -429,23 +414,12 @@ const AIAssistantTab: React.FC = () => {
     </Box>
   );
 
-  // TODO: Implement renderContent()
-  //
-  // Check the conditions in priority order (listed above) and return
-  // the appropriate render function call.
-  //
-  // Example structure:
-  //   if (someCondition) return renderSomething();
-  //   if (otherCondition) return renderOther();
-  //   ...
-  //   return renderDefault();
-  //
   const renderContent = () => {
-    // YOUR CODE HERE
     if (error) return renderError();
     if (recommendations.length > 0 || results.length > 0) return renderResults();
     if (followUpQuestion) return renderFollowUp();
     if (isProcessing) return renderProcessing();
+    if (workflow?.status === 'completed') return renderResults(); // completed but no results found
 
     return renderWelcome();
   };

@@ -53,19 +53,6 @@ const AssistantProviderCard: React.FC<AssistantProviderCardProps> = ({ provider,
             </Box>
           </Box>
 
-          {/* TODO: Match Score Badge
-           *
-           * Display the provider's matchScore as a percentage chip.
-           *
-           * Requirements:
-           * - Use a MUI Chip component
-           * - Label: use t('results.matchScore', { score: <rounded percentage> })
-           *   The matchScore is 0-1 (e.g., 0.85), multiply by 100 and round
-           * - Color: 'success' if score >= 0.7, 'warning' if >= 0.4, 'default' otherwise
-           * - Size: 'small'
-           *
-           * Hint: Math.round(provider.matchScore * 100)
-           */}
           <Chip
             label={t('results.matchScore', { score: Math.round(provider.matchScore * 100) })}
             size="small"

@@ -125,7 +125,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
     if (!formData.serviceType) {
       newErrors.serviceType = t('create.validation.service_required');
     }
-    if (!formData.scheduledDate) {
+    if (!formData.scheduledDate || isNaN(formData.scheduledDate.getTime())) {
       newErrors.scheduledDate = t('create.validation.date_required');
     }
     if (formData.estimatedDuration < 0.5) {

@@ -11,6 +11,9 @@ router.get('/test', (req, res) => {
   res.json({ message: 'Provider routes working!' });
 });
 
+// Get all distinct service types from active providers (public endpoint)
+router.get('/services/catalog', providerController.getServiceCatalog);
+
 // Search providers (public endpoint)
 router.get(
   '/',

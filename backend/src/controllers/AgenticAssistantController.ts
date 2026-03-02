@@ -17,19 +17,13 @@ class AgenticAssistantController {
    * Start a new workflow
    */
   public async startWorkflow(req: AuthenticatedRequest, res: Response): Promise<void> {
-    // Step 1: Log incoming request
-    console.log('\n🚀 ===== NEW WORKFLOW REQUEST =====');
-    console.log('📥 Request body:', JSON.stringify(req.body, null, 2));
-    console.log('👤 User ID:', req.user?.userId);
+    logger.debug('New workflow request', { body: req.body, userId: req.user?.userId });
 
     try {
       const { initialMessage } = req.body;
       const userId = req.user?.userId;
 
-      // Step 2: Validate request
-      console.log('🔍 Validating request...');
       if (!initialMessage || typeof initialMessage !== 'string') {
-        console.log('❌ Validation failed: missing initialMessage');
         res.status(400).json({
           success: false,
           error: 'initialMessage is required and must be a string'
@@ -38,34 +32,20 @@ class AgenticAssistantController {
       }
 
       if (!userId) {
-        console.log('❌ Validation failed: user not authenticated');
         res.status(401).json({
           success: false,
           error: 'User not authenticated'
         });
         return;
       }
-      console.log('✅ Validation passed');
 
-      // Step 3: Create new workflow
-      console.log('💾 Creating workflow in state service...');
       const workflow = await workflowStateService.createWorkflow(userId, initialMessage);
-      console.log('🆔 Generated workflow ID:', workflow.id);
-      console.log('✅ Workflow created in state service');
 
-      // Step 4: Start workflow execution asynchronously
-      console.log('🤖 Starting coordinator.executeWorkflow() asynchronously...');
-      console.log('⏱️  (This returns immediately - agents work in background)');
       coordinator.executeWorkflow(workflow.id).catch((error) => {
-        console.log('💥 Workflow execution failed:', error);
         logger.error(`Workflow ${workflow.id} execution failed:`, error);
       });
 
       logger.info(`Workflow ${workflow.id} started for user ${userId}`);
-
-      // Step 5: Return response to client
-      console.log('📤 Sending success response to client');
-      console.log('===== END WORKFLOW REQUEST =====\n');
 
       res.status(201).json({
         success: true,
@@ -76,7 +56,6 @@ class AgenticAssistantController {
         },
       });
     } catch (error) {
-      console.log('💥 ERROR in startWorkflow:', error);
       logger.error('Error starting workflow:', error);
       res.status(500).json({
         success: false,

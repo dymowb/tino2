@@ -134,6 +134,13 @@ const MyReviewsPage: React.FC = () => {
     enabled: user?.userType === 'customer'
   });
 
+  // Fetch ALL reviewed booking IDs (unpaginated) — used only for eligibility check
+  const { data: allCustomerReviews } = useQuery({
+    queryKey: ['all-customer-review-ids'],
+    queryFn: () => apiService.getMyCustomerReviews({ page: 1, limit: 1000 }),
+    enabled: user?.userType === 'customer'
+  });
+
   // Delete review mutation
   const deleteReviewMutation = useMutation({
     mutationFn: (reviewId: string) => apiService.deleteReview(reviewId),
@@ -188,6 +195,10 @@ const MyReviewsPage: React.FC = () => {
   };
 
   const handleEditReview = () => {
+    const bookingWithProvider = menuReview?.booking
+      ? { ...menuReview.booking, provider: menuReview.provider }
+      : null;
+    setSelectedBooking(bookingWithProvider);
     setSelectedReview(menuReview);
     setEditMode(true);
     setReviewDialogOpen(true);
@@ -221,10 +232,10 @@ const MyReviewsPage: React.FC = () => {
   };
 
   const getEligibleBookingsWithoutReviews = () => {
-    if (!eligibleBookings?.data || !customerReviews?.data) return [];
-    if (!Array.isArray(eligibleBookings.data) || !Array.isArray(customerReviews.data)) return [];
+    if (!eligibleBookings?.data || !allCustomerReviews?.data) return [];
+    if (!Array.isArray(eligibleBookings.data) || !Array.isArray(allCustomerReviews.data)) return [];
 
-    const reviewedBookingIds = customerReviews.data.map((review: any) => review.bookingId);
+    const reviewedBookingIds = allCustomerReviews.data.map((review: any) => review.bookingId);
     return eligibleBookings.data.filter((booking: any) =>
       !reviewedBookingIds.includes(booking.id)
     );
@@ -248,7 +259,7 @@ const MyReviewsPage: React.FC = () => {
                 <Typography variant="subtitle1" fontWeight="bold">
                   {showProvider
                     ? (review.provider?.businessName || t('reviews:card.provider'))
-                    : (review.isAnonymous ? t('reviews:card.anonymous') : review.customer?.firstName || t('reviews:card.customer'))
+                    : (review.isAnonymous ? t('reviews:card.anonymous') : review.customer?.firstName || user?.firstName || t('reviews:card.customer'))
                   }
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -299,7 +310,7 @@ const MyReviewsPage: React.FC = () => {
                   <Grid item xs={12} sm={6} md={2.4} key={key}>
                     <Box sx={{ textAlign: 'center' }}>
                       <Typography variant="caption" display="block" sx={{ mb: 0.5 }}>
-                        {key.charAt(0).toUpperCase() + key.slice(1)}
+                        {t(`reviews:create.${key}`, key.charAt(0).toUpperCase() + key.slice(1))}
                       </Typography>
                       <Rating value={Number(value)} size="small" readOnly />
                     </Box>

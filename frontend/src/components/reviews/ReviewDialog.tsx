@@ -49,7 +49,7 @@ interface ReviewFormData {
     timeliness: number;
     communication: number;
     professionalism: number;
-    value: number;
+    valueForMoney: number;
   };
   isAnonymous: boolean;
   photos: string[];
@@ -75,7 +75,7 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
       timeliness: 5,
       communication: 5,
       professionalism: 5,
-      value: 5
+      valueForMoney: 5
     },
     isAnonymous: false,
     photos: []
@@ -95,7 +95,7 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
           timeliness: 5,
           communication: 5,
           professionalism: 5,
-          value: 5
+          valueForMoney: 5
         },
         isAnonymous: existingReview.isAnonymous || false,
         photos: existingReview.photos || []
@@ -110,7 +110,7 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
           timeliness: 5,
           communication: 5,
           professionalism: 5,
-          value: 5
+          valueForMoney: 5
         },
         isAnonymous: false,
         photos: []
@@ -125,6 +125,9 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
       queryClient.invalidateQueries({ queryKey: ['reviews'] });
       queryClient.invalidateQueries({ queryKey: ['provider-reviews'] });
       queryClient.invalidateQueries({ queryKey: ['my-reviews'] });
+      queryClient.invalidateQueries({ queryKey: ['my-customer-reviews'] });
+      queryClient.invalidateQueries({ queryKey: ['all-customer-review-ids'] });
+      queryClient.invalidateQueries({ queryKey: ['eligible-bookings'] });
       toast.success(t('create.success'));
       onClose();
       resetForm();
@@ -160,7 +163,7 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
         timeliness: 5,
         communication: 5,
         professionalism: 5,
-        value: 5
+        valueForMoney: 5
       },
       isAnonymous: false,
       photos: []

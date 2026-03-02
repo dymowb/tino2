@@ -26,7 +26,8 @@ import {
   Paper,
   Avatar,
   Stack,
-  Badge
+  Badge,
+  Autocomplete
 } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2';
 import {
@@ -82,20 +83,11 @@ const FindProvidersPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
 
 
-  const serviceTypes = [
-    'house_cleaning',
-    'plumbing', 
-    'electrical',
-    'carpentry',
-    'painting',
-    'gardening',
-    'hvac',
-    'appliance_repair',
-    'pest_control',
-    'security_systems',
-    'home_inspection',
-    'roofing'
-  ];
+  const { data: serviceCatalog = [] } = useQuery({
+    queryKey: ['service-catalog'],
+    queryFn: () => apiService.getServiceCatalog(),
+    staleTime: 10 * 60 * 1000,
+  });
 
   // Get user's current location
   const getCurrentLocation = useCallback(() => {
@@ -287,20 +279,26 @@ const FindProvidersPage: React.FC = () => {
           <Grid container spacing={3}>
             {/* Service Types */}
             <Grid xs={12} md={6}>
-              <Typography variant="subtitle1" sx={{ mb: 1 }}>
-                {t('providers:search.service_types')}
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {serviceTypes.map(type => (
-                  <Chip
-                    key={type}
-                    label={t(`providers:services.${type}`, type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()))}
-                    onClick={() => handleServiceTypeChange(type, !searchParams.serviceTypes.includes(type))}
-                    color={searchParams.serviceTypes.includes(type) ? 'primary' : 'default'}
-                    variant={searchParams.serviceTypes.includes(type) ? 'filled' : 'outlined'}
+              <Autocomplete
+                multiple
+                options={serviceCatalog}
+                value={searchParams.serviceTypes}
+                onChange={(_, newValue) =>
+                  setSearchParams(prev => ({ ...prev, serviceTypes: newValue }))
+                }
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label={t('providers:search.service_types')}
+                    placeholder={searchParams.serviceTypes.length === 0 ? 'Type to search services...' : ''}
                   />
-                ))}
-              </Box>
+                )}
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => (
+                    <Chip label={option} size="small" {...getTagProps({ index })} key={option} />
+                  ))
+                }
+              />
             </Grid>
 
             {/* Sort and Radius */}

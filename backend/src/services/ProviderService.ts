@@ -123,6 +123,8 @@ export class ProviderService {
         latitude,
         longitude,
         radius = 25,
+        city,
+        state,
         minRating,
         isInsured,
         isBackgroundChecked,
@@ -144,16 +146,15 @@ export class ProviderService {
         const serviceParams: Record<string, string> = {};
         const serviceCondition = services.map((service, index) => {
           const paramName = `service_${index}`;
-          serviceParams[paramName] = `%"${service}"%`;
+          serviceParams[paramName] = `%${service.replace(/_/g, ' ')}%`;
           return `provider.services LIKE :${paramName}`;
         }).join(' OR ');
 
         queryBuilder = queryBuilder.andWhere(`(${serviceCondition})`, serviceParams);
       }
 
-      // Filter by location and radius (simplified for SQLite)
+      // Filter by GPS bounding box when coordinates are available
       if (latitude && longitude) {
-        // Simple distance approximation for SQLite - not perfect but functional
         const latDiff = 0.009 * radius; // roughly 1km = 0.009 degrees
         const lngDiff = 0.009 * radius;
         queryBuilder = queryBuilder.andWhere(
@@ -163,6 +164,18 @@ export class ProviderService {
           `JSON_EXTRACT(provider.location, '$.longitude') BETWEEN :minLng AND :maxLng`,
           { minLng: longitude - lngDiff, maxLng: longitude + lngDiff }
         );
+      } else if (city) {
+        // Fallback: city/state text match when GPS coordinates are not available
+        queryBuilder = queryBuilder.andWhere(
+          `LOWER(JSON_EXTRACT(provider.location, '$.city')) = LOWER(:city)`,
+          { city }
+        );
+        if (state) {
+          queryBuilder = queryBuilder.andWhere(
+            `LOWER(JSON_EXTRACT(provider.location, '$.state')) = LOWER(:state)`,
+            { state }
+          );
+        }
       }
 
       // Filter by minimum rating

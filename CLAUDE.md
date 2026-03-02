@@ -150,6 +150,22 @@ The application includes Browserbase MCP integration for automated browser testi
 ### Missing translation key: `profile.fields.customer`
 **Status**: Known, cosmetic only. Shows raw key in the nav bar after login.
 
+## Known Feature Gaps (Intentional — Learning Project Scope)
+
+These requirements exist in REQUIREMENTS.md but are **out of scope** for the current learning phase. Do not attempt to implement unless explicitly requested.
+
+| Gap | FRs | Notes |
+|-----|-----|-------|
+| Notifications system | FR-010, FR-034, FR-043 | 3 backend endpoints return stub data (empty array / 0 count). No DB table. |
+| Real-time messaging (Socket.IO) | FR-053 | Socket.IO server exists but JWT auth not wired; send fails in frontend |
+| Provider availability calendar | FR-019 | Backend model has `availableHours` JSON; no UI to manage it |
+| Email verification on register | FR-002 | Registration works without email confirmation |
+| Provider responses to reviews | FR-069 | No UI or endpoint |
+| Admin panel | FR-074–081 | Entirely absent |
+| Stripe / escrow / refunds | FR-057–063 | Payment is simulated; no real Stripe integration |
+| GPS geocoding | FR-022 | LocationService.geocodeAddress() exists but requires Google Maps API key (placeholder). Search agent uses city/state text matching as fallback. |
+| Message file attachments | FR-050 | Text-only messaging |
+
 ## Testing
 
 - Backend: Jest with Supertest for API testing

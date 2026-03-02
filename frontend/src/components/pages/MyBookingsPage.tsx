@@ -308,7 +308,7 @@ const MyBookingsPage: React.FC = () => {
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Schedule fontSize="small" color="primary" />
                               <Typography variant="body2">
-                                <strong>{t('bookings:details.duration_label')}</strong> {t('bookings:details.duration_hours', { hours: booking.estimatedDuration })}
+                                <strong>{t('bookings:details.duration_label')}</strong> {booking.estimatedDuration % 60 === 0 ? `${booking.estimatedDuration / 60} hours` : `${(booking.estimatedDuration / 60).toFixed(1)} hours`}
                               </Typography>
                             </Box>
                           </Stack>

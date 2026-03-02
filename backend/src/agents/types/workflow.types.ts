@@ -129,17 +129,26 @@ export interface ProviderSearchResult {
   providerId: string;
   businessName: string;
   rating: number;
-  reviewCount: number;
+  totalReviews: number;
   services: string[];
   distance?: number; // miles from user location
   pricing?: {
-    hourlyRate?: number;
+    baseRate?: number;
+    hourlyRate?: number; // legacy alias
     currency: string;
+    rateType?: string;
   };
-  availability: {
+  availability?: {
     emergency: boolean;
     averageResponseTime?: number; // minutes
   };
+  // Fields from search.agent.ts output
+  matchScore?: number;
+  completedJobs?: number;
+  availableHours?: Record<string, { start: string; end: string; available: boolean }>;
+  location?: { city: string; state: string; distanceFromUser?: number };
+  isBackgroundChecked?: boolean;
+  isInsured?: boolean;
 }
 
 /**

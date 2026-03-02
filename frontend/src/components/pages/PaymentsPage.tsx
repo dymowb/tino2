@@ -104,12 +104,10 @@ const PaymentsPage: React.FC = () => {
         sortOrder: 'desc' as const,
       };
 
-      if (currentTab === 0) {
+      if (currentTab === 0 || isProvider) {
         return apiService.getPayments(params);
-      } else if (currentTab === 1) {
-        return apiService.getCustomerPayments(currentUser!.id, params);
       } else {
-        return apiService.getProviderPayments(currentUser!.id, params);
+        return apiService.getCustomerPayments(currentUser!.id, params);
       }
     },
     enabled: !!currentUser,
@@ -217,7 +215,7 @@ const PaymentsPage: React.FC = () => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency,
-    }).format(amount / 100);
+    }).format(amount);
   };
 
   const renderPaymentStats = () => {

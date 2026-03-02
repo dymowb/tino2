@@ -39,21 +39,6 @@ export interface SearchAgentInput {
  * Minimal data transfer - Analysis Agent can fetch more if needed.
  */
 export interface ProviderSearchResult {
-  // TODO: Define the fields for a single search result
-  // Based on our discussion, include:
-  // - providerId (string)
-  // - businessName (string)
-  // - pricing (object with baseRate, currency, rateType)
-  // - rating (number out of 5)
-  // - totalReviews (number)
-  // - completedJobs (number)
-  // - availableHours (object)
-  // - location (object with city, state, distance from user)
-  // - isBackgroundChecked (boolean)
-  // - isInsured (boolean)
-  // - matchScore (number, 0-1)
-  // - services (string[])
-
   providerId: string;
   businessName: string;
   pricing: {
@@ -215,17 +200,15 @@ Plan your search strategy before executing queries.`,
       const serviceCatalog = await ProviderService.getServiceCatalog();
       const inferredServices = await this.inferServices(input.requirements, serviceCatalog);
 
-      // Step 2: Transform requirements into ProviderSearchQuery
+      // Step 2: Build search query — use city/state from requirements for location filtering
+      const { city, state } = input.requirements.location ?? {};
       const searchQuery = {
         services: inferredServices.length > 0 ? inferredServices : undefined,
-        // TODO: Add latitude/longitude if available (for now, skip geocoding)
-        radius: 25, // Default 25 miles
-        minRating: undefined, // TODO: Could infer from budget (high budget = high quality expectation)
-        isInsured: undefined, // TODO: Could set to true for high-risk services
-        isBackgroundChecked: undefined, // TODO: Could set to true for high-risk services
+        city: city ?? undefined,
+        state: state ?? undefined,
         page: 1,
-        limit: 20, // Get top 20, we'll return top 5 after scoring
-        sortBy: 'rating' as const, // Default sort by rating
+        limit: 20,
+        sortBy: 'rating' as const,
       };
 
       // Step 2: Call ProviderService to get matching providers
@@ -233,7 +216,6 @@ Plan your search strategy before executing queries.`,
       const searchResults = await ProviderService.searchProviders(searchQuery);
 
       // Step 3: Transform Provider entities into ProviderSearchResult objects
-      // TODO: You'll implement this mapping
       const providerResults: ProviderSearchResult[] = searchResults.providers.map(
         (provider: Provider) => ({
           providerId: provider.id,
@@ -250,7 +232,7 @@ Plan your search strategy before executing queries.`,
           location: {
             city: provider.location.city,
             state: provider.location.state,
-            distanceFromUser: 0, // TODO: Calculate based on user location
+            distanceFromUser: 0,
           },
           isBackgroundChecked: provider.isBackgroundChecked,
           isInsured: provider.isInsured,

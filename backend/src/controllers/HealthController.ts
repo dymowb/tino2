@@ -62,7 +62,7 @@ export class HealthController {
     try {
       this.cpuStart = process.cpuUsage();
     } catch (error) {
-      console.warn('CPU usage tracking not available');
+      // CPU usage tracking not available in this environment
     }
   }
 
