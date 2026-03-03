@@ -40,7 +40,7 @@ interface ConversationData {
 
 class SocketService {
   private socket: Socket | null = null;
-  private baseURL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+  private baseURL = new URL(process.env.REACT_APP_API_URL || 'http://localhost:3000').origin;
   private messageHandlers: Map<string, (data: MessageData) => void> = new Map();
   private conversationHandlers: Map<string, (data: ConversationData) => void> = new Map();
   private connectionHandlers: Set<() => void> = new Set();
@@ -85,12 +85,12 @@ class SocketService {
       this.disconnectionHandlers.forEach(handler => handler());
     });
 
-    this.socket.on('message:new', (data: MessageData) => {
-      this.messageHandlers.forEach(handler => handler(data));
+    this.socket.on('message:new', (data: { message: MessageData; conversationId: string }) => {
+      this.messageHandlers.forEach(handler => handler(data.message));
     });
 
-    this.socket.on('message:updated', (data: MessageData) => {
-      this.messageHandlers.forEach(handler => handler(data));
+    this.socket.on('message:updated', (data: { message: MessageData }) => {
+      this.messageHandlers.forEach(handler => handler(data.message));
     });
 
     this.socket.on('message:deleted', (data: { messageId: string; conversationId: string }) => {

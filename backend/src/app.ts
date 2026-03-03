@@ -24,6 +24,7 @@ import locationRoutes from '@/routes/locations';
 // import adminRoutes from '@/routes/admin';
 import agenticAssistantRoutes from '@/routes/agentic-assistant.routes';
 import messageService from '@/services/MessageService';
+import jwt from './utils/jwt';
 
 export class App {
   public app: express.Application;
@@ -159,16 +160,20 @@ export class App {
   private initializeSocketIO(): void {
     this.io.use((socket, next) => {
       const token = socket.handshake.auth.token;
-      if (token) {
-        // TODO: Add JWT verification middleware for Socket.IO
-        next();
-      } else {
-        next(new Error('Authentication error'));
+      if (!token) {
+        return next(new Error('Authentication error: token missing'));
       }
+      const decoded = jwt.verifyToken(token);
+      if (!decoded) {
+        return next(new Error('Authentication error: invalid token'));
+      }
+      socket.data.userId = decoded.userId;
+      next();
     });
 
     this.io.on('connection', (socket) => {
-      const userId = socket.handshake.auth.userId; // From JWT token
+      const userId = socket.data.userId; // From JWT token
+      socket.join(`user_${userId}`); // Join personal room for direct messages
       logger.info(`User connected: ${socket.id}, userId: ${userId}`);
 
       // Handle user connection for messaging
@@ -176,14 +181,8 @@ export class App {
         messageService.handleUserConnection(userId, socket.id);
       }
 
-      // Join user to their personal room
-      socket.on('join_user_room', (userId) => {
-        socket.join(`user_${userId}`);
-        logger.info(`User ${socket.id} joined personal room user_${userId}`);
-      });
-
       // Join conversation room
-      socket.on('join_conversation', async ({ userId, conversationId }) => {
+      socket.on('conversation:join', async ({ conversationId }) => {
         try {
           await messageService.joinConversation(userId, conversationId, socket.id);
         } catch (error) {
@@ -192,19 +191,8 @@ export class App {
       });
 
       // Leave conversation room
-      socket.on('leave_conversation', (conversationId) => {
+      socket.on('conversation:leave', ({ conversationId }) => {
         messageService.leaveConversation(conversationId, socket.id);
-      });
-
-      // Generic room join/leave (backwards compatibility)
-      socket.on('join_room', (roomId) => {
-        socket.join(roomId);
-        logger.info(`User ${socket.id} joined room ${roomId}`);
-      });
-
-      socket.on('leave_room', (roomId) => {
-        socket.leave(roomId);
-        logger.info(`User ${socket.id} left room ${roomId}`);
       });
 
       socket.on('disconnect', () => {

@@ -77,7 +77,7 @@ export class MessageService {
       // Emit to all participants
       if (this.io) {
         allParticipantIds.forEach(participantId => {
-          this.io!.to(`user_${participantId}`).emit('conversation_created', {
+          this.io!.to(`user_${participantId}`).emit('conversation:new', {
             conversation: savedConversation,
           });
         });
@@ -239,7 +239,7 @@ export class MessageService {
       // Emit real-time message to all conversation participants
       if (this.io && messageWithSender) {
         conversation.participants.forEach(participant => {
-          this.io!.to(`user_${participant.id}`).emit('new_message', {
+          this.io!.to(`user_${participant.id}`).emit('message:new', {
             message: messageWithSender,
             conversationId: messageData.conversationId,
           });
@@ -346,7 +346,7 @@ export class MessageService {
 
       // Emit real-time update
       if (this.io && affectedCount > 0) {
-        this.io.to(`user_${userId}`).emit('messages_read', {
+        this.io.to(`user_${userId}`).emit('messages:read', {
           conversationId,
           count: affectedCount,
         });
@@ -387,7 +387,7 @@ export class MessageService {
 
       // Emit real-time update
       if (this.io) {
-        this.io.to(`conversation_${message.conversationId}`).emit('message_updated', {
+        this.io.to(`conversation_${message.conversationId}`).emit('message:updated', {
           message: updatedMessage,
         });
       }
@@ -414,7 +414,7 @@ export class MessageService {
 
       // Emit real-time update
       if (this.io) {
-        this.io.to(`conversation_${message.conversationId}`).emit('message_deleted', {
+        this.io.to(`conversation_${message.conversationId}`).emit('message:deleted', {
           messageId,
           conversationId: message.conversationId,
         });
