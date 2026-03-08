@@ -5,6 +5,7 @@ import bookingService from '@/services/BookingService';
 import reviewService from '@/services/ReviewService';
 import logger from '@/config/logger';
 import { ApiResponse, AuthenticatedRequest } from '@/types';
+import { AvailabilitySchema } from '@/schemas/availability.schema';
 
 export class ProviderController {
   createProvider = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -349,6 +350,34 @@ export class ProviderController {
       res.status(500).json(response);
     }
   }
+
+  updateAvailability = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'User authentication required' });
+        return;
+      }
+
+      // Zod parse — throws ZodError with field-level details if invalid
+      const parsed = AvailabilitySchema.safeParse(req.body);
+      if (!parsed.success) {
+        const errors = parsed.error.flatten().fieldErrors;
+        res.status(400).json({ success: false, message: 'Validation failed', errors });
+        return;
+      }
+
+      const provider = await providerService.updateProviderByUserId(userId, {
+        availableHours: parsed.data,
+      });
+
+      const response: ApiResponse = { success: true, data: provider.availableHours };
+      res.status(200).json(response);
+    } catch (error) {
+      logger.error('Error updating availability:', error);
+      res.status(500).json({ success: false, message: 'Failed to update availability' });
+    }
+  };
 
   deleteProvider = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {

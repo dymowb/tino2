@@ -105,6 +105,14 @@ router.post(
   providerController.createProvider
 );
 
+// Update availability schedule (authenticated providers only)
+router.patch(
+  '/availability',
+  authenticate,
+  requireProviderRole,
+  providerController.updateAvailability
+);
+
 // Update provider profile (authenticated providers only)
 router.put(
   '/:providerId',

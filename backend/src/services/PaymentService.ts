@@ -5,6 +5,8 @@ import { Booking, BookingStatus } from '@/models/Booking';
 import { User } from '@/models/User';
 import logger from '@/config/logger';
 import config from '@/config/environment';
+import notificationService from '@/services/NotificationService';
+import { NotificationType } from '@/models/Notification';
 
 export interface CreatePaymentIntentData {
   bookingId: string;
@@ -151,6 +153,15 @@ class PaymentService {
       });
 
       const savedPayment = await this.paymentRepository.save(payment);
+
+      // Notify provider of incoming payment
+      notificationService.createNotification(booking.provider.userId, {
+        type: NotificationType.PAYMENT,
+        title: 'Payment Initiated',
+        message: `A payment of $${(data.amount / 100).toFixed(2)} has been initiated for your service`,
+        actionUrl: `/payments/${savedPayment.id}`,
+        metadata: { paymentId: savedPayment.id, bookingId: data.bookingId },
+      }).catch(err => logger.error('Failed to send payment notification:', err));
 
       logger.info(`Payment intent created: ${paymentIntent.id} for booking ${data.bookingId}`);
 

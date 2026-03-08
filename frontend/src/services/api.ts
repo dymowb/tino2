@@ -76,6 +76,15 @@ export interface Provider {
     currency: string;
     rateType: 'hourly' | 'fixed' | 'quote';
   };
+  availableHours: {
+    monday:    { start: string; end: string; available: boolean };
+    tuesday:   { start: string; end: string; available: boolean };
+    wednesday: { start: string; end: string; available: boolean };
+    thursday:  { start: string; end: string; available: boolean };
+    friday:    { start: string; end: string; available: boolean };
+    saturday:  { start: string; end: string; available: boolean };
+    sunday:    { start: string; end: string; available: boolean };
+  };
   completedJobs: number;
   responseRate: number;
   averageResponseTime: number;
@@ -627,7 +636,7 @@ class ApiService {
   }
 
   async closeQuoteRequest(requestId: string, reason?: string): Promise<QuoteRequest> {
-    const response = await this.api.put<ApiResponse<{ quoteRequest: QuoteRequest }>>(`/quotes/requests/${requestId}/close`, { reason });
+    const response = await this.api.post<ApiResponse<{ quoteRequest: QuoteRequest }>>(`/quotes/requests/${requestId}/close`, { reason });
     return response.data.data!.quoteRequest;
   }
 
@@ -643,10 +652,9 @@ class ApiService {
     longitude?: number;
     radius?: number;
   }): Promise<PaginatedResponse<QuoteRequest>> {
-    const response = await this.api.get<PaginatedResponse<QuoteRequest>>('/quotes/requests', {
-      params,
-    });
-    return response.data;
+    const response = await this.api.get<ApiResponse<{ quoteRequests: QuoteRequest[]; total: number; page: number; limit: number }>>('/quotes/requests', { params });
+    const d = response.data.data!;
+    return { success: true, data: d.quoteRequests, pagination: { page: d.page, limit: d.limit, total: d.total, pages: Math.ceil(d.total / d.limit) } };
   }
 
   // Quote methods  
@@ -691,7 +699,7 @@ class ApiService {
   }
 
   async withdrawQuote(quoteId: string): Promise<Quote> {
-    const response = await this.api.put<ApiResponse<{ quote: Quote }>>(`/quotes/${quoteId}/withdraw`);
+    const response = await this.api.delete<ApiResponse<{ quote: Quote }>>(`/quotes/${quoteId}`);
     return response.data.data!.quote;
   }
 
@@ -715,10 +723,9 @@ class ApiService {
     maxPrice?: number;
     serviceType?: string;
   }): Promise<PaginatedResponse<Quote>> {
-    const response = await this.api.get<PaginatedResponse<Quote>>('/quotes', {
-      params,
-    });
-    return response.data;
+    const response = await this.api.get<ApiResponse<{ quotes: Quote[]; total: number; page: number; limit: number }>>('/quotes', { params });
+    const d = response.data.data!;
+    return { success: true, data: d.quotes, pagination: { page: d.page, limit: d.limit, total: d.total, pages: Math.ceil(d.total / d.limit) } };
   }
 
   // Messaging methods
@@ -1077,6 +1084,11 @@ class ApiService {
   async updateProviderProfile(providerId: string, data: Partial<Provider>): Promise<Provider> {
     const response = await this.api.put(`/providers/${providerId}`, data);
     return response.data;
+  }
+
+  async updateAvailability(availability: Provider['availableHours']): Promise<Provider['availableHours']> {
+    const response = await this.api.patch<ApiResponse<Provider['availableHours']>>('/providers/availability', availability);
+    return response.data.data!;
   }
 
   async getServiceCatalog(): Promise<string[]> {

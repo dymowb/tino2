@@ -111,6 +111,14 @@ export class ProviderService {
     }
   }
 
+  async updateProviderByUserId(userId: string, updateData: Partial<Provider>): Promise<Provider> {
+    const provider = await this.providerRepository.findOne({ where: { userId } });
+    if (!provider) throw new Error('Provider not found');
+    Object.assign(provider, updateData);
+    provider.updatedAt = new Date();
+    return this.providerRepository.save(provider);
+  }
+
   async searchProviders(query: ProviderSearchQuery): Promise<{
     providers: Provider[];
     total: number;

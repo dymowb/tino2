@@ -502,9 +502,12 @@ export class QuoteService {
         queryBuilder = queryBuilder.andWhere('quote.requestId = :requestId', { requestId });
       }
 
-      // Filter by provider
+      // Filter by provider — accept either the Provider entity ID or the User ID
       if (providerId) {
-        queryBuilder = queryBuilder.andWhere('quote.providerId = :providerId', { providerId });
+        queryBuilder = queryBuilder.andWhere(
+          '(quote.providerId = :providerId OR providerUser.id = :providerId)',
+          { providerId }
+        );
       }
 
       // Filter by customer

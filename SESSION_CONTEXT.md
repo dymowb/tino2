@@ -1,9 +1,13 @@
 # Session Context - Current Work
 
-## CURRENT SESSION: Phase 9 — Notifications System
-**Date**: 2026-03-03
-**Goal**: Implement in-app notifications with Socket.IO push (FR-010, FR-034, FR-043)
-**Status**: Phase 8 complete + regression verified ✅ — Phase 9 planned, ready to implement
+## CURRENT SESSION: Phase 12 — Provider Review Responses + AI Draft Agent
+**Date**: 2026-03-08
+**Goal**: FR-069 — Providers can respond to reviews; AI agent drafts the response (few-shot prompting)
+**Status**: Phase 11 complete ✅ — Phase 12 next
+
+## Production Hardening
+Full audit saved in `PRODUCTION_HARDENING.md` — do this before first public deployment.
+~1 session of work. Keys are safe (`.env` not in git).
 
 ---
 
@@ -13,10 +17,10 @@
 | Phase | Feature | FRs | Status |
 |-------|---------|-----|--------|
 | 8 | Real-time messaging (Socket.IO JWT auth) | FR-053 | ✅ Done |
-| 9 | Notifications system (in-app + Socket.IO push) | FR-010, FR-034, FR-043 | 🔄 IN PROGRESS |
-| 10 | Quote system (My Quotes page + full flow) | FR-037 | ⏳ Pending |
-| 11 | Provider availability calendar | FR-019 | ⏳ Pending |
-| 12 | Provider responses to reviews | FR-069 | ⏳ Pending |
+| 9 | Notifications system (in-app + Socket.IO push) | FR-010, FR-034, FR-043 | ✅ Done |
+| 10 | Quote system (My Quotes page + full flow) | FR-037 | ✅ Done |
+| 11 | Provider availability calendar | FR-019 | ✅ Done |
+| 12 | Provider responses to reviews + AI draft agent | FR-069 | 🔄 IN PROGRESS |
 | 13 | Admin panel | FR-074–081 | ⏳ Pending |
 | 14 | Stripe integration (test mode) | FR-057–063 | ⏳ Pending (needs keys) |
 | 15 | Email verification on register | FR-002 | ⏳ Pending (needs SMTP) |
@@ -116,17 +120,46 @@ socketService.socket?.on('notification:new', () => {
 
 ---
 
+## Phase 12 — Provider Review Responses + AI Draft Agent
+
+### Goal
+Allow providers to reply to customer reviews. An AI agent (few-shot prompting) drafts a suggested response, which the provider can edit and post.
+
+### Implementation Plan
+
+**Step 1 — Backend: `providerResponse` field on Review entity**
+- Add `providerResponse?: string` and `providerRespondedAt?: Date` to `Review` entity
+- Add `PATCH /reviews/:reviewId/respond` endpoint (provider-only, must own the review's provider)
+- Service method: `respondToReview(reviewId, providerId, responseText)`
+
+**Step 2 — AI Draft Agent**
+- New agent: `backend/src/agents/review-response.agent.ts`
+- Uses few-shot prompting: 3 examples of review + professional response pairs
+- Input: `{ reviewText, rating, serviceName }` → Output: `{ draftResponse: string }`
+- New endpoint: `POST /reviews/:reviewId/draft-response` (provider-only)
+- Learning focus: few-shot prompt design, temperature tuning for "professional tone"
+
+**Step 3 — Frontend UI**
+- On `MyReviewsPage.tsx` (provider view): add "Respond" button under each review
+- Dialog: shows review text + rating, "Generate AI Draft" button, editable textarea, "Post Response" button
+- Show posted response inline under the review
+
+### Key Files
+- `backend/src/models/Review.ts` — add providerResponse fields
+- `backend/src/services/ReviewService.ts` — add respondToReview method
+- `backend/src/routes/reviews.ts` — add PATCH respond + POST draft-response
+- `backend/src/agents/review-response.agent.ts` — new AI agent
+- `frontend/src/components/pages/MyReviewsPage.tsx` — respond UI
+
+---
+
 ## Resume Point
 1. Backend on port 3000, frontend on port 3001
 2. DB seeded; demo password: `Demo123!`
-3. Customer login: `demo@example.com` / `Demo123!`
-4. **NEXT ACTION**: User implements Step 1 — create `backend/src/models/Notification.ts`
-   - Copy import style from `backend/src/models/Message.ts`
-   - Add enums: `NotificationType`, `NotificationPriority`
-   - Fields per plan above
-   - Add `@ManyToOne(() => User) @JoinColumn({ name: 'userId' }) user: User` relation
+3. Provider login: `provider@demo.com` / `Demo123!`
+4. **NEXT ACTION**: Start Phase 12 — Step 1: add `providerResponse` fields to Review entity
 
-### Key Files
+### Key Files (Agents)
 - **Recommendation agent**: `backend/src/agents/recommendation.agent.ts`
 - **Analysis agent**: `backend/src/agents/analysis.agent.ts`
 - **Coordinator**: `backend/src/agents/coordinator.ts`
@@ -135,6 +168,27 @@ socketService.socket?.on('notification:new', () => {
 ---
 
 ## Completed Phases
+
+### Phase 11 — Provider Availability Calendar ✅ (2026-03-08)
+- Zod schema introduced (`backend/src/schemas/availability.schema.ts`) — first Zod validation in the project
+- `PATCH /providers/availability` endpoint — Zod replaces express-validator on this route
+- `updateProviderByUserId` added to `ProviderService`
+- `updateAvailability` controller method using `safeParse` + structured field errors
+- Frontend: weekly grid dialog on Provider Dashboard (Switch per day + time inputs, seeds from DB)
+- Round-trip verified: toggle → save → re-open → persists ✅
+
+### Phase 10 — Quote System ✅ (2026-03-08)
+- Fixed `estimatedDuration` units mismatch (frontend hours → backend minutes: ×60 on submit)
+- Fixed MUI Tabs fragment bug (direct conditional children with explicit `value` props)
+- Fixed Provider UUID vs User UUID mismatch in `searchQuotes` (dual OR filter)
+- Removed redundant client-side filters (backend already scopes by user)
+- Fixed duration display (÷60 to show hours)
+- End-to-end flow verified: request → submit quote → view → accept ✅
+
+### Phase 9 — Notifications System ✅ (2026-03-03)
+- `Notification` entity, `NotificationService` CRUD, real routes replacing stubs
+- Socket.IO `notification:new` emission on booking/message/review/payment events
+- Frontend bell badge live-updates via socket listener
 
 ### Phase 8 — Real-time Messaging (Socket.IO JWT Auth) ✅ (2026-03-03)
 - JWT auth middleware wired onto Socket.IO handshake

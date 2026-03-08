@@ -4,6 +4,8 @@ import { Booking } from '@/models/Booking';
 import { User } from '@/models/User';
 import { Provider } from '@/models/Provider';
 import logger from '@/config/logger';
+import notificationService from '@/services/NotificationService';
+import { NotificationType } from '@/models/Notification';
 
 export interface CreateBookingRequest {
   providerId: string;
@@ -108,6 +110,15 @@ export class BookingService {
 
       const savedBooking = await this.bookingRepository.save(booking);
       logger.info(`Booking created`, { bookingId: savedBooking.id, customerId, providerId: bookingData.providerId });
+
+      // Notify provider of new booking request
+      notificationService.createNotification(provider.userId, {
+        type: NotificationType.BOOKING,
+        title: 'New Booking Request',
+        message: `${customer.firstName} ${customer.lastName} has requested a booking for ${bookingData.serviceType}`,
+        actionUrl: `/bookings/${savedBooking.id}`,
+        metadata: { bookingId: savedBooking.id },
+      }).catch(err => logger.error('Failed to send booking notification:', err));
 
       return savedBooking;
     } catch (error) {
@@ -235,6 +246,18 @@ export class BookingService {
 
       const updatedBooking = await this.bookingRepository.save(booking);
       logger.info(`Booking status updated`, { bookingId, newStatus, userId, userRole });
+
+      // Notify the other party about the status change
+      const notifyUserId = userRole === 'provider' ? updatedBooking.customerId : undefined;
+      if (notifyUserId) {
+        notificationService.createNotification(notifyUserId, {
+          type: NotificationType.BOOKING,
+          title: 'Booking Status Updated',
+          message: `Your booking status has been updated to: ${newStatus}`,
+          actionUrl: `/bookings/${bookingId}`,
+          metadata: { bookingId, newStatus },
+        }).catch(err => logger.error('Failed to send status notification:', err));
+      }
 
       return updatedBooking;
     } catch (error) {

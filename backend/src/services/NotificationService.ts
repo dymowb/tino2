@@ -4,6 +4,8 @@ import { AppDataSource } from '../config/database';
 import { User } from '../models/User';
 import logger from '../config/logger';
 import { Repository } from 'typeorm';
+import { Notification, NotificationType, NotificationPriority } from '../models/Notification';                                                                              
+import { Server } from 'socket.io';    
 
 export interface NotificationPreferences {
   email: {
@@ -74,9 +76,79 @@ export interface ReviewNotificationParams {
 
 export class NotificationService {
   private userRepository: Repository<User>;
+  private notificationRepository: Repository<Notification>;
+  private io: Server | null = null;
 
   constructor() {
     this.userRepository = AppDataSource.getRepository(User);
+    this.notificationRepository = AppDataSource.getRepository(Notification);
+  }
+
+  setSocketServer(io: Server): void {
+    this.io = io;
+  }
+
+  async createNotification(userId: string, data: {
+    type: NotificationType;
+    title: string;
+    message: string;
+    priority?: NotificationPriority;
+    actionUrl?: string;
+    metadata?: any;
+  }): Promise<Notification> {
+    const notification = this.notificationRepository.create({
+      userId,
+      type: data.type,
+      title: data.title,
+      message: data.message,
+      priority: data.priority ?? NotificationPriority.MEDIUM,
+      actionUrl: data.actionUrl,
+      metadata: data.metadata,
+    });
+    const saved = await this.notificationRepository.save(notification);
+    this.io?.to(`user_${userId}`).emit('notification:new', saved);
+    return saved;
+  }
+
+  async getUserNotifications(userId: string, filters: {
+    type?: NotificationType;
+    page?: number;
+    limit?: number;
+  }): Promise<{ notifications: Notification[]; total: number }> {
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 20;
+    const where: any = { userId };
+    if (filters.type) where.type = filters.type;
+
+    const [notifications, total] = await this.notificationRepository.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { notifications, total };
+  }
+
+  async getUnreadCount(userId: string): Promise<number> {
+    return this.notificationRepository.count({ where: { userId, isRead: false } });
+  }
+
+  async markAsRead(userId: string, notificationIds: string[]): Promise<void> {
+    await this.notificationRepository
+      .createQueryBuilder()
+      .update(Notification)
+      .set({ isRead: true, readAt: new Date() })
+      .where('id IN (:...ids) AND userId = :userId', { ids: notificationIds, userId })
+      .execute();
+  }
+
+  async deleteNotifications(userId: string, notificationIds: string[]): Promise<void> {
+    await this.notificationRepository
+      .createQueryBuilder()
+      .delete()
+      .from(Notification)
+      .where('id IN (:...ids) AND userId = :userId', { ids: notificationIds, userId })
+      .execute();
   }
 
   /**
@@ -91,7 +163,7 @@ export class NotificationService {
         return this.getDefaultPreferences();
       }
 
-      return user.settings.notifications;
+      return user.settings.notifications as unknown as NotificationPreferences;
     } catch (error) {
       logger.error('Failed to get user preferences:', error);
       return this.getDefaultPreferences();
@@ -111,7 +183,7 @@ export class NotificationService {
         throw new Error('User not found');
       }
 
-      const currentSettings = user.settings || {};
+      const currentSettings = (user.settings || {}) as any;
       const updatedSettings = {
         ...currentSettings,
         notifications: {

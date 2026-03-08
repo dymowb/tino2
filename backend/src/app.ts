@@ -24,6 +24,7 @@ import locationRoutes from '@/routes/locations';
 // import adminRoutes from '@/routes/admin';
 import agenticAssistantRoutes from '@/routes/agentic-assistant.routes';
 import messageService from '@/services/MessageService';
+import notificationService from '@/services/NotificationService';
 import jwt from './utils/jwt';
 
 export class App {
@@ -207,6 +208,7 @@ export class App {
   private initializeServices(): void {
     // Set Socket.IO instance in MessageService for real-time features
     messageService.setSocketServer(this.io);
+    notificationService.setSocketServer(this.io);
   }
 
   public listen(): void {

@@ -189,7 +189,7 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
       serviceType: quoteRequest.serviceType,
       description: formData.description,
       estimatedPrice: formData.estimatedPrice,
-      estimatedDuration: formData.estimatedDuration,
+      estimatedDuration: Math.round(formData.estimatedDuration * 60),
       validUntil: formData.validUntil.toISOString(),
       breakdown: formData.breakdown,
       terms: formData.terms,

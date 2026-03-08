@@ -74,9 +74,25 @@ const ProviderDashboardPage: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const queryClient = useQueryClient();
   
+  const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'] as const;
+  type Day = typeof DAYS[number];
+  type DaySlot = { start: string; end: string; available: boolean };
+  type AvailabilityForm = Record<Day, DaySlot>;
+
+  const defaultAvailability: AvailabilityForm = {
+    monday:    { start: '08:00', end: '18:00', available: true },
+    tuesday:   { start: '08:00', end: '18:00', available: true },
+    wednesday: { start: '08:00', end: '18:00', available: true },
+    thursday:  { start: '08:00', end: '18:00', available: true },
+    friday:    { start: '08:00', end: '18:00', available: true },
+    saturday:  { start: '09:00', end: '16:00', available: false },
+    sunday:    { start: '10:00', end: '15:00', available: false },
+  };
+
   const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [availabilityDialogOpen, setAvailabilityDialogOpen] = useState(false);
+  const [availability, setAvailability] = useState<AvailabilityForm>(defaultAvailability);
   const [bookingMenuAnchor, setBookingMenuAnchor] = useState<null | HTMLElement>(null);
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [bookingPage, setBookingPage] = useState(0);
@@ -114,6 +130,29 @@ const ProviderDashboardPage: React.FC = () => {
     queryFn: () => apiService.getMyProviderReviews({ page: 1, limit: 5 }),
     enabled: user?.userType === 'provider'
   });
+
+  // Update availability mutation
+  const updateAvailabilityMutation = useMutation({
+    mutationFn: (data: AvailabilityForm) => apiService.updateAvailability(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-provider-profile'] });
+      toast.success('Availability updated!');
+      setAvailabilityDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Failed to update availability');
+    },
+  });
+
+  const handleOpenAvailability = () => {
+    // Seed form from saved profile data, fall back to defaults
+    if (providerProfile?.availableHours) {
+      setAvailability(providerProfile.availableHours as AvailabilityForm);
+    } else {
+      setAvailability(defaultAvailability);
+    }
+    setAvailabilityDialogOpen(true);
+  };
 
   // Update booking status mutation
   const updateBookingMutation = useMutation({
@@ -336,7 +375,7 @@ const ProviderDashboardPage: React.FC = () => {
           <Button
             variant="outlined"
             startIcon={<EditCalendar />}
-            onClick={() => setAvailabilityDialogOpen(true)}
+            onClick={handleOpenAvailability}
           >
             {t('dashboard:provider.availability')}
           </Button>
@@ -651,23 +690,79 @@ const ProviderDashboardPage: React.FC = () => {
 
       {/* Availability Dialog */}
       <Dialog open={availabilityDialogOpen} onClose={() => setAvailabilityDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{t('dashboard:dialogs.availability_title')}</DialogTitle>
-        <DialogContent>
-          <Alert severity="info" sx={{ mb: 2 }}>
-            {t('dashboard:dialogs.availability_info')}
-          </Alert>
-          <Typography variant="body2">
-            {t('dashboard:dialogs.availability_feature_intro')}
+        <DialogTitle>Weekly Availability</DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Set your working hours for each day. Customers will only be able to book you during available hours.
           </Typography>
-          <ul>
-            <li>{t('dashboard:dialogs.availability_features.working_hours')}</li>
-            <li>{t('dashboard:dialogs.availability_features.block_dates')}</li>
-            <li>{t('dashboard:dialogs.availability_features.auto_booking')}</li>
-            <li>{t('dashboard:dialogs.availability_features.service_radius')}</li>
-          </ul>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            {DAYS.map((day) => (
+              <Box
+                key={day}
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: '120px 1fr',
+                  alignItems: 'center',
+                  gap: 2,
+                  p: 1.5,
+                  borderRadius: 1,
+                  bgcolor: availability[day].available ? 'action.hover' : 'transparent',
+                  opacity: availability[day].available ? 1 : 0.5,
+                }}
+              >
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={availability[day].available}
+                      onChange={(e) => setAvailability(prev => ({
+                        ...prev,
+                        [day]: { ...prev[day], available: e.target.checked },
+                      }))}
+                      size="small"
+                    />
+                  }
+                  label={<Typography variant="body2" sx={{ textTransform: 'capitalize', fontWeight: 500 }}>{day}</Typography>}
+                />
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  <TextField
+                    type="time"
+                    size="small"
+                    value={availability[day].start}
+                    disabled={!availability[day].available}
+                    onChange={(e) => setAvailability(prev => ({
+                      ...prev,
+                      [day]: { ...prev[day], start: e.target.value },
+                    }))}
+                    inputProps={{ step: 1800 }}
+                    sx={{ width: 120 }}
+                  />
+                  <Typography variant="body2" color="text.secondary">to</Typography>
+                  <TextField
+                    type="time"
+                    size="small"
+                    value={availability[day].end}
+                    disabled={!availability[day].available}
+                    onChange={(e) => setAvailability(prev => ({
+                      ...prev,
+                      [day]: { ...prev[day], end: e.target.value },
+                    }))}
+                    inputProps={{ step: 1800 }}
+                    sx={{ width: 120 }}
+                  />
+                </Box>
+              </Box>
+            ))}
+          </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAvailabilityDialogOpen(false)}>{t('dashboard:dialogs.close')}</Button>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setAvailabilityDialogOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={() => updateAvailabilityMutation.mutate(availability)}
+            disabled={updateAvailabilityMutation.isPending}
+          >
+            {updateAvailabilityMutation.isPending ? 'Saving...' : 'Save Availability'}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

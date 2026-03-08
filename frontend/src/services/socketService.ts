@@ -43,6 +43,7 @@ class SocketService {
   private baseURL = new URL(process.env.REACT_APP_API_URL || 'http://localhost:3000').origin;
   private messageHandlers: Map<string, (data: MessageData) => void> = new Map();
   private conversationHandlers: Map<string, (data: ConversationData) => void> = new Map();
+  private notificationHandlers: Map<string, (data: any) => void> = new Map();
   private connectionHandlers: Set<() => void> = new Set();
   private disconnectionHandlers: Set<() => void> = new Set();
 
@@ -116,6 +117,10 @@ class SocketService {
       console.log('User typing:', data);
     });
 
+    this.socket.on('notification:new', (data: any) => {
+      this.notificationHandlers.forEach(handler => handler(data));
+    });
+
     this.socket.on('connect_error', (error) => {
       console.error('Socket connection error:', error);
     });
@@ -147,6 +152,12 @@ class SocketService {
     const id = Math.random().toString(36);
     this.messageHandlers.set(id, handler);
     return () => this.messageHandlers.delete(id);
+  }
+
+  onNotification(handler: (data: any) => void): () => void {
+    const id = Math.random().toString(36);
+    this.notificationHandlers.set(id, handler);
+    return () => this.notificationHandlers.delete(id);
   }
 
   onConversationUpdate(handler: (data: ConversationData) => void): () => void {

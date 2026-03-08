@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -33,10 +33,14 @@ import {
   Message as MessageIcon,
   Payment as PaymentIcon,
   RateReview as ReviewIcon,
+  RequestQuote as QuoteIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import NotificationBadge from '../notifications/NotificationBadge';
 import LanguageSwitcher from '../common/LanguageSwitcher';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-hot-toast';
+import { socketService } from '../../services/socketService';
 
 const Navigation: React.FC = () => {
   const { t } = useTranslation();
@@ -45,9 +49,21 @@ const Navigation: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user, logout, isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const unsubscribe = socketService.onNotification(() => {
+      queryClient.invalidateQueries({ queryKey: ['notification-count'] });
+      toast('You have a new notification');
+    });
+
+    return unsubscribe;
+  }, [user, queryClient]);
 
   const handleUserMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -72,12 +88,14 @@ const Navigation: React.FC = () => {
     ...(isAuthenticated && user?.userType === 'customer' ? [
       { label: t('navigation.find_providers'), path: '/providers', icon: <SearchIcon />, public: false },
       { label: t('navigation.my_bookings'), path: '/bookings', icon: <BookingIcon />, public: false },
+      { label: 'My Quotes', path: '/quotes', icon: <QuoteIcon />, public: false },
       { label: t('navigation.messages'), path: '/messages', icon: <MessageIcon />, public: false },
       { label: t('navigation.payments'), path: '/payments', icon: <PaymentIcon />, public: false },
       { label: t('navigation.my_reviews'), path: '/reviews', icon: <ReviewIcon />, public: false },
     ] : []),
     ...(isAuthenticated && user?.userType === 'provider' ? [
       { label: t('navigation.dashboard'), path: '/dashboard', icon: <DashboardIcon />, public: false },
+      { label: 'My Quotes', path: '/quotes', icon: <QuoteIcon />, public: false },
       { label: t('navigation.messages'), path: '/messages', icon: <MessageIcon />, public: false },
       { label: t('navigation.payments'), path: '/payments', icon: <PaymentIcon />, public: false },
       { label: t('navigation.my_reviews'), path: '/reviews', icon: <ReviewIcon />, public: false },

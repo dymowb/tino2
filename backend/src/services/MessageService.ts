@@ -5,6 +5,8 @@ import { Message, MessageType } from '@/models/Message';
 import { Conversation, ConversationType } from '@/models/Conversation';
 import { User } from '@/models/User';
 import logger from '@/config/logger';
+import notificationService from '@/services/NotificationService';
+import { NotificationType } from '@/models/Notification';
 import {
   CreateConversationRequest,
   SendMessageRequest,
@@ -222,6 +224,17 @@ export class MessageService {
       });
 
       const savedMessage = await this.messageRepository.save(message);
+
+      // Notify recipient of new message
+      if (receiverId) {
+        notificationService.createNotification(receiverId, {
+          type: NotificationType.MESSAGE,
+          title: 'New Message',
+          message: messageData.message.substring(0, 100),
+          actionUrl: `/messages/${messageData.conversationId}`,
+          metadata: { conversationId: messageData.conversationId },
+        }).catch(err => logger.error('Failed to send message notification:', err));
+      }
 
       // Update conversation last message
       conversation.lastMessageId = savedMessage.id;

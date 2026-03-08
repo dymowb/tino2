@@ -4,6 +4,8 @@ import { Review } from '../models/Review';
 import { Booking, BookingStatus } from '../models/Booking';
 import { Provider } from '../models/Provider';
 import { User } from '../models/User';
+import notificationService from './NotificationService';
+import { NotificationType } from '../models/Notification';
 import { 
   CreateReviewRequest, 
   UpdateReviewRequest, 
@@ -68,6 +70,15 @@ export class ReviewService {
 
     // Update provider rating statistics
     await this.updateProviderRating(booking.providerId);
+
+    // Notify provider of new review
+    notificationService.createNotification(booking.provider.userId, {
+      type: NotificationType.REVIEW,
+      title: 'New Review Received',
+      message: `You received a ${reviewData.rating}-star review`,
+      actionUrl: `/reviews/${savedReview.id}`,
+      metadata: { reviewId: savedReview.id, rating: reviewData.rating },
+    }).catch(err => console.error('Failed to send review notification:', err));
 
     return savedReview;
   }

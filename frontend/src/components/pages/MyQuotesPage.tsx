@@ -223,18 +223,10 @@ const MyQuotesPage: React.FC = () => {
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={tabValue} onChange={handleTabChange}>
-          {user?.userType === 'customer' && (
-            <>
-              <Tab label={`My Requests (${quoteRequests?.data?.length || 0})`} />
-              <Tab label={`Received Quotes (${quotes?.data?.filter(q => q.customerId === user.id).length || 0})`} />
-            </>
-          )}
-          {user?.userType === 'provider' && (
-            <>
-              <Tab label={`Available Requests (${availableRequests?.data?.length || 0})`} />
-              <Tab label={`My Quotes (${quotes?.data?.filter(q => q.providerId === user.id).length || 0})`} />
-            </>
-          )}
+          {user?.userType === 'customer' && <Tab value={0} label={`My Requests (${quoteRequests?.data?.length || 0})`} />}
+          {user?.userType === 'customer' && <Tab value={1} label={`Received Quotes (${quotes?.data?.length || 0})`} />}
+          {user?.userType === 'provider' && <Tab value={0} label={`Available Requests (${availableRequests?.data?.length || 0})`} />}
+          {user?.userType === 'provider' && <Tab value={1} label={`My Quotes (${quotes?.data?.length || 0})`} />}
         </Tabs>
       </Box>
 
@@ -334,13 +326,13 @@ const MyQuotesPage: React.FC = () => {
 
           {/* Customer Received Quotes */}
           <TabPanel value={tabValue} index={1}>
-            {quotes?.data?.filter(q => q.customerId === user.id).length === 0 ? (
+            {quotes?.data?.length === 0 ? (
               <Alert severity="info">
                 You haven't received any quotes yet. Create some quote requests to get quotes from providers.
               </Alert>
             ) : (
               <Grid container spacing={3}>
-                {quotes?.data?.filter(q => q.customerId === user.id).map((quote) => (
+                {quotes?.data?.map((quote) => (
                   <Grid xs={12} md={6} key={quote.id}>
                     <Card>
                       <CardContent>
@@ -391,7 +383,7 @@ const MyQuotesPage: React.FC = () => {
                             ${quote.estimatedPrice}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            {quote.estimatedDuration} hours
+                            {(quote.estimatedDuration / 60).toFixed(1)} hours
                           </Typography>
                         </Box>
 
@@ -503,13 +495,13 @@ const MyQuotesPage: React.FC = () => {
 
           {/* Provider's Submitted Quotes */}
           <TabPanel value={tabValue} index={1}>
-            {quotes?.data?.filter(q => q.providerId === user.id).length === 0 ? (
+            {quotes?.data?.length === 0 ? (
               <Alert severity="info">
                 You haven't submitted any quotes yet. Look for available quote requests to get started.
               </Alert>
             ) : (
               <Grid container spacing={3}>
-                {quotes?.data?.filter(q => q.providerId === user.id).map((quote) => (
+                {quotes?.data?.map((quote) => (
                   <Grid xs={12} md={6} key={quote.id}>
                     <Card>
                       <CardContent>
@@ -541,7 +533,7 @@ const MyQuotesPage: React.FC = () => {
                             ${quote.estimatedPrice}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            {quote.estimatedDuration} hours
+                            {(quote.estimatedDuration / 60).toFixed(1)} hours
                           </Typography>
                         </Box>
 
