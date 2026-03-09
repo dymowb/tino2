@@ -3,6 +3,8 @@ import { jwtService } from '@/utils/jwt';
 import { redisClient } from '@/config/redis';
 import logger from '@/config/logger';
 import { AuthenticatedRequest } from '@/types';
+import { AppDataSource } from '@/config/database';
+import { User } from '@/models/User';
 
 export const authenticate = async (
   req: Request,
@@ -41,6 +43,26 @@ export const authenticate = async (
     }
 
     req.user = payload;
+    const userRepository = AppDataSource.getRepository(User);
+    const user = await userRepository.findOne({ where: { id: payload.userId } });
+
+    if (!user) {
+      res.status(401).json({ success: false, error: 'User not found' });
+      return;
+    }
+
+    // Lazy reactivation: suspension expired?
+    if (!user.isActive && user.suspendedUntil && new Date() > user.suspendedUntil) {
+      user.isActive = true;
+      user.suspendedUntil = null;
+      await AppDataSource.getRepository(User).save(user);
+    }
+
+    if (!user.isActive) {
+      res.status(403).json({ success: false, error: 'Account is suspended' });
+      return;
+    }
+
     next();
   } catch (error) {
     logger.error('Authentication error:', error);

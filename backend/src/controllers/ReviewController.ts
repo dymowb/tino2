@@ -7,6 +7,7 @@ import {
   ReviewSearchQuery,
   AuthenticatedRequest
 } from '../types';
+import { reviewResponseAgent } from '../agents/review-response.agent';
 
 class ReviewController {
   private reviewService: ReviewService;
@@ -127,6 +128,31 @@ class ReviewController {
       res.status(400).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to add response'
+      });
+    }
+  };
+
+  draftReviewResponse = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+
+      const review = await this.reviewService.getReviewById(id);
+      if (!review) {
+        res.status(404).json({ success: false, error: 'Review not found' });
+        return;
+      }
+
+      const draft = await reviewResponseAgent.execute({
+        reviewText: review.comment || '',
+        rating: Number(review.rating),
+        serviceName: review.booking?.serviceType?.replace(/_/g, ' ') || 'Home Service',
+      });
+
+      res.json({ success: true, data: draft });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to generate draft'
       });
     }
   };

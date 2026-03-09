@@ -212,6 +212,13 @@ router.post(
   reviewController.addProviderResponse
 );
 
+router.post(
+  '/:id/draft-response',
+  uuidParamValidation,
+  handleValidationErrors,
+  reviewController.draftReviewResponse
+);
+
 router.get(
   '/provider/my',
   authenticate,

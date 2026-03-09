@@ -338,6 +338,15 @@ class DatabaseSeeder {
         userType: UserType.PROVIDER,
         isVerified: true,
       },
+      {
+        email: 'admin@demo.com',
+        password: hashedPassword,
+        firstName: 'Demo',
+        lastName: 'Admin',
+        phone: '+15550000000',
+        userType: UserType.ADMIN,
+        isVerified: true,
+      },
     ];
 
     // Generate 48 additional users (24 customers + 24 providers)

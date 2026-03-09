@@ -21,7 +21,7 @@ import paymentRoutes from '@/routes/payments';
 import reviewRoutes from '@/routes/reviews';
 import notificationRoutes from '@/routes/notifications';
 import locationRoutes from '@/routes/locations';
-// import adminRoutes from '@/routes/admin';
+import adminRoutes from '@/routes/admin';
 import agenticAssistantRoutes from '@/routes/agentic-assistant.routes';
 import messageService from '@/services/MessageService';
 import notificationService from '@/services/NotificationService';
@@ -118,7 +118,7 @@ export class App {
     this.app.use(`/api/${config.server.apiVersion}/reviews`, reviewRoutes);
     this.app.use(`/api/${config.server.apiVersion}/locations`, locationRoutes);
     this.app.use(`/api/${config.server.apiVersion}/agentic-assistant`, agenticAssistantRoutes);
-    // this.app.use(`/api/${config.server.apiVersion}/admin`, adminRoutes);
+    this.app.use(`/api/${config.server.apiVersion}/admin`, adminRoutes);
 
     this.app.all('*', (req, res) => {
       res.status(404).json({

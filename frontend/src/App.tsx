@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -21,6 +21,12 @@ import MyReviewsPage from './components/pages/MyReviewsPage';
 import NotificationsPage from './components/pages/NotificationsPage';
 import MyQuotesPage from './components/pages/MyQuotesPage';
 import LoadingSpinner from './components/common/LoadingSpinner';
+import AdminRoute from './components/auth/AdminRoute';
+import AdminLayout from './components/admin/AdminLayout';
+import AdminDashboardPage from './components/pages/AdminDashboardPage';
+import AdminUsersPage from './components/pages/AdminUsersPage';
+import AdminProvidersPage from './components/pages/AdminProvidersPage';
+import AdminReviewsPage from './components/pages/AdminReviewsPage';
 import { Box } from '@mui/material';
 
 const queryClient = new QueryClient({
@@ -63,6 +69,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
 const AppContent: React.FC = () => {
   const { loading } = useAuth();
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
 
   if (loading) {
     return <LoadingSpinner />;
@@ -70,7 +78,7 @@ const AppContent: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <Navigation />
+      {!isAdminRoute && <Navigation />}
       <Box component="main" sx={{ flexGrow: 1 }}>
         <Routes>
           {/* Public routes */}
@@ -165,6 +173,21 @@ const AppContent: React.FC = () => {
               </ProtectedRoute>
             } 
           />
+
+          {/* Admin routes — own layout, no top Navigation */}
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <AdminLayout />
+              </AdminRoute>
+            }
+          >
+            <Route index element={<AdminDashboardPage />} />
+            <Route path="users" element={<AdminUsersPage />} />
+            <Route path="providers" element={<AdminProvidersPage />} />
+            <Route path="reviews" element={<AdminReviewsPage />} />
+          </Route>
 
           {/* Catch all route */}
           <Route path="*" element={<Navigate to="/" replace />} />

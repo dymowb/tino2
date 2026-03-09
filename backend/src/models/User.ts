@@ -66,6 +66,15 @@ export class User {
   @IsBoolean()
   isActive: boolean;
 
+  @Column({ nullable: true })
+  suspensionReason: string;   // enum values: 'policy_violation' | 'payment_issue' | 'abuse' | 'spam' | 'other'
+
+  @Column({ type: 'text', nullable: true })
+  suspensionComment: string;
+
+  @Column({ type: 'datetime', nullable: true })
+  suspendedUntil: Date;
+
   @Column({ type: 'datetime', nullable: true })
   lastLogin: Date;
 

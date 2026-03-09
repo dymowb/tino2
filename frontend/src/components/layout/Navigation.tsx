@@ -34,6 +34,7 @@ import {
   Payment as PaymentIcon,
   RateReview as ReviewIcon,
   RequestQuote as QuoteIcon,
+  AdminPanelSettings as AdminIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import NotificationBadge from '../notifications/NotificationBadge';
@@ -99,6 +100,9 @@ const Navigation: React.FC = () => {
       { label: t('navigation.messages'), path: '/messages', icon: <MessageIcon />, public: false },
       { label: t('navigation.payments'), path: '/payments', icon: <PaymentIcon />, public: false },
       { label: t('navigation.my_reviews'), path: '/reviews', icon: <ReviewIcon />, public: false },
+    ] : []),
+    ...(isAuthenticated && user?.userType === 'admin' ? [
+      { label: 'Admin Panel', path: '/admin', icon: <AdminIcon />, public: false },
     ] : []),
   ];
 

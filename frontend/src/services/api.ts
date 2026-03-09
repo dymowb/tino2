@@ -25,7 +25,7 @@ export interface User {
   lastName: string;
   phone?: string;
   profileImage?: string;
-  userType: 'customer' | 'provider';
+  userType: 'customer' | 'provider' | 'admin';
   isVerified: boolean;
   settings?: {
     notifications: {
@@ -985,6 +985,11 @@ class ApiService {
     return responseData.data.data!;
   }
 
+  async draftProviderResponse(reviewId: string): Promise<{ draftResponse: string }> {
+    const responseData = await this.api.post<ApiResponse<any>>(`/reviews/${reviewId}/draft-response`, {});
+    return responseData.data.data!;
+  }
+
   async getProviderReviews(providerId: string, params?: {
     page?: number;
     limit?: number;
@@ -1144,6 +1149,48 @@ class ApiService {
   async updateNotificationPreferences(preferences: any): Promise<any> {
     const response = await this.api.put('/notifications/preferences', preferences);
     return response.data;
+  }
+
+  // ── Admin methods ──────────────────────────────────────────────────
+
+  async getAdminDashboard(): Promise<any> {
+    const response = await this.api.get<ApiResponse<any>>('/admin/dashboard');
+    return response.data.data!;
+  }
+
+  async getAdminUsers(params?: { page?: number; limit?: number; userType?: string; isActive?: boolean; search?: string }): Promise<any> {
+    const response = await this.api.get<ApiResponse<any>>('/admin/users', { params });
+    return response.data.data!;
+  }
+
+  async updateUserStatus(userId: string, payload: {
+    isActive: boolean;
+    suspensionReason?: string;
+    suspensionComment?: string;
+    suspendedUntil?: string | null;
+  }): Promise<any> {
+    const response = await this.api.put<ApiResponse<any>>(`/admin/users/${userId}/status`, payload);
+    return response.data.data!;
+  }
+
+  async getPendingProviders(params?: { page?: number; limit?: number }): Promise<any> {
+    const response = await this.api.get<ApiResponse<any>>('/admin/providers/pending', { params });
+    return response.data.data!;
+  }
+
+  async verifyProvider(providerId: string, payload: { approved: boolean; notes?: string; isBackgroundChecked?: boolean; isInsured?: boolean }): Promise<any> {
+    const response = await this.api.post<ApiResponse<any>>(`/admin/providers/${providerId}/verify`, payload);
+    return response.data.data!;
+  }
+
+  async getFlaggedReviews(params?: { page?: number; limit?: number }): Promise<any> {
+    const response = await this.api.get<ApiResponse<any>>('/admin/reviews/flagged', { params });
+    return response.data.data!;
+  }
+
+  async moderateReview(reviewId: string, payload: { action: 'approve' | 'delete' | 'keep_flagged'; reason?: string }): Promise<any> {
+    const response = await this.api.put<ApiResponse<any>>(`/admin/reviews/${reviewId}/moderate`, payload);
+    return response.data.data!;
   }
 
   // Utility methods

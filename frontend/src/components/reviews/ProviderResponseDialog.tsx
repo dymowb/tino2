@@ -21,7 +21,8 @@ import {
   Star,
   Person,
   Close,
-  Send
+  Send,
+  AutoFixHigh
 } from '@mui/icons-material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
@@ -44,6 +45,7 @@ const ProviderResponseDialog: React.FC<ProviderResponseDialogProps> = ({
   const queryClient = useQueryClient();
   const [response, setResponse] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isDrafting, setIsDrafting] = useState(false);
 
   // Add provider response mutation
   const addResponseMutation = useMutation({
@@ -87,6 +89,19 @@ const ProviderResponseDialog: React.FC<ProviderResponseDialogProps> = ({
       reviewId: review.id,
       response: response.trim()
     });
+  };
+
+  const handleGenerateDraft = async () => {
+    if (!review) return;
+    setIsDrafting(true);
+    try {
+      const result = await apiService.draftProviderResponse(review.id);
+      setResponse(result.draftResponse);
+    } catch {
+      toast.error('Failed to generate AI draft');
+    } finally {
+      setIsDrafting(false);
+    }
   };
 
   const handleClose = () => {
@@ -194,9 +209,20 @@ const ProviderResponseDialog: React.FC<ProviderResponseDialogProps> = ({
         {/* Response Form */}
         {!review.providerResponse && (
           <Box>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              {t('provider_response.your_response_title')}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+              <Typography variant="h6">
+                {t('provider_response.your_response_title')}
+              </Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={isDrafting ? <CircularProgress size={16} /> : <AutoFixHigh />}
+                onClick={handleGenerateDraft}
+                disabled={isDrafting}
+              >
+                {isDrafting ? 'Generating...' : 'Generate AI Draft'}
+              </Button>
+            </Box>
 
             <TextField
               fullWidth

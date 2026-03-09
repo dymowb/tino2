@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { getRepository, IsNull, Not } from 'typeorm';
+import { IsNull, Not } from 'typeorm';
+import { AppDataSource } from '@/config/database';
 import { User, UserType } from '@/models/User';
 import { Provider } from '@/models/Provider';
 import { Booking, BookingStatus } from '@/models/Booking';
@@ -12,11 +13,11 @@ export class AdminController {
   // GET /api/admin/dashboard - Admin dashboard overview (FR-076)
   getDashboard = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const userRepository = getRepository(User);
-      const providerRepository = getRepository(Provider);
-      const bookingRepository = getRepository(Booking);
-      const reviewRepository = getRepository(Review);
-      const paymentRepository = getRepository(Payment);
+      const userRepository = AppDataSource.getRepository(User);
+      const providerRepository = AppDataSource.getRepository(Provider);
+      const bookingRepository = AppDataSource.getRepository(Booking);
+      const reviewRepository = AppDataSource.getRepository(Review);
+      const paymentRepository = AppDataSource.getRepository(Payment);
 
       // Get platform statistics
       const [
@@ -97,7 +98,7 @@ export class AdminController {
         search 
       } = req.query;
 
-      const userRepository = getRepository(User);
+      const userRepository = AppDataSource.getRepository(User);
       const queryBuilder = userRepository.createQueryBuilder('user');
 
       // Apply filters
@@ -152,9 +153,18 @@ export class AdminController {
   updateUserStatus = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const { isActive, reason } = req.body;
+      const { isActive, suspensionReason, suspensionComment, suspendedUntil } = req.body;
 
-      const userRepository = getRepository(User);
+      // Prevent admin from deactivating their own account
+      if (id === req.user?.userId) {
+        res.status(400).json({
+          success: false,
+          error: 'Admins cannot deactivate their own account'
+        });
+        return;
+      }
+
+      const userRepository = AppDataSource.getRepository(User);
       const user = await userRepository.findOne({ where: { id } });
 
       if (!user) {
@@ -166,16 +176,29 @@ export class AdminController {
       }
 
       user.isActive = isActive;
+
+      if (!isActive) {
+        // Suspending: record reason, comment, optional expiry
+        user.suspensionReason = suspensionReason || null;
+        user.suspensionComment = suspensionComment || null;
+        user.suspendedUntil = suspendedUntil ? new Date(suspendedUntil) : null;
+      } else {
+        // Reactivating: clear suspension fields
+        user.suspensionReason = null;
+        user.suspensionComment = null;
+        user.suspendedUntil = null;
+      }
+
       await userRepository.save(user);
 
       res.json({
         success: true,
         data: user,
-        message: `User ${isActive ? 'activated' : 'deactivated'} successfully`
+        message: `User ${isActive ? 'activated' : 'suspended'} successfully`
       });
 
       logger.info(
-        `User ${id} ${isActive ? 'activated' : 'deactivated'} by admin ${req.user?.userId}. Reason: ${reason || 'Not provided'}`
+        `User ${id} ${isActive ? 'activated' : 'suspended'} by admin ${req.user?.userId}. Reason: ${suspensionReason || 'Not provided'}. Until: ${suspendedUntil || 'permanent'}`
       );
     } catch (error) {
       logger.error('Error updating user status:', error);
@@ -191,7 +214,7 @@ export class AdminController {
     try {
       const { page = 1, limit = 20 } = req.query;
 
-      const providerRepository = getRepository(Provider);
+      const providerRepository = AppDataSource.getRepository(Provider);
 
       const providers = await providerRepository.find({
         where: { verifiedAt: IsNull() },
@@ -239,7 +262,7 @@ export class AdminController {
         isInsured 
       } = req.body;
 
-      const providerRepository = getRepository(Provider);
+      const providerRepository = AppDataSource.getRepository(Provider);
       const provider = await providerRepository.findOne({
         where: { id },
         relations: ['user']
@@ -296,7 +319,7 @@ export class AdminController {
     try {
       const { page = 1, limit = 20 } = req.query;
 
-      const reviewRepository = getRepository(Review);
+      const reviewRepository = AppDataSource.getRepository(Review);
 
       const reviews = await reviewRepository.find({
         where: { isFlagged: true },
@@ -347,7 +370,7 @@ export class AdminController {
         return;
       }
 
-      const reviewRepository = getRepository(Review);
+      const reviewRepository = AppDataSource.getRepository(Review);
       const review = await reviewRepository.findOne({
         where: { id },
         relations: ['customer', 'provider']
@@ -416,9 +439,9 @@ export class AdminController {
           dateFilter = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       }
 
-      const userRepository = getRepository(User);
-      const bookingRepository = getRepository(Booking);
-      const paymentRepository = getRepository(Payment);
+      const userRepository = AppDataSource.getRepository(User);
+      const bookingRepository = AppDataSource.getRepository(Booking);
+      const paymentRepository = AppDataSource.getRepository(Payment);
 
       // User growth
       const userGrowth = await userRepository
@@ -479,7 +502,7 @@ export class AdminController {
     try {
       const { page = 1, limit = 20, status } = req.query;
 
-      const bookingRepository = getRepository(Booking);
+      const bookingRepository = AppDataSource.getRepository(Booking);
       
       let whereClause = { isDisputed: true };
       if (status) {
@@ -533,7 +556,7 @@ export class AdminController {
         return;
       }
 
-      const bookingRepository = getRepository(Booking);
+      const bookingRepository = AppDataSource.getRepository(Booking);
       const booking = await bookingRepository.findOne({
         where: { id, isDisputed: true },
         relations: ['payments']
