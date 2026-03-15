@@ -21,7 +21,7 @@ Full audit saved in `PRODUCTION_HARDENING.md` — do this before first public de
 | 10 | Quote system (My Quotes page + full flow) | FR-037 | ✅ Done |
 | 11 | Provider availability calendar | FR-019 | ✅ Done |
 | 12 | Provider responses to reviews + AI draft agent | FR-069 | ✅ Done |
-| 13 | Admin panel | FR-074–081 | 🔄 In Progress |
+| 13 | Admin panel | FR-074–081 | ✅ Done — all 3 pages tested end-to-end incl. suspend/reactivate login flow |
 | 13b | Streaming AI provider search (SSE + Anthropic stream) | FR-025 | ⏳ Next after 13 |
 | 14 | Stripe integration (test mode) | FR-057–063 | ⏳ Pending (needs keys) |
 | 15 | Email verification on register | FR-002 | ⏳ Pending (needs SMTP) |
@@ -46,9 +46,9 @@ Full audit saved in `PRODUCTION_HARDENING.md` — do this before first public de
 - `updateUserStatus` controller: stores suspension fields, guards self-deactivation ✅
 
 ### Remaining Steps
-- **Step 6** — User Management page (`AdminUsersPage.tsx`): table + search/filter + suspension dialog (reason list, comment, duration presets + custom date)
-- **Step 7** — Provider Verification page (`AdminProvidersPage.tsx`): pending list, approve/reject dialog
-- **Step 8** — Review Moderation page (`AdminReviewsPage.tsx`): flagged reviews, approve/delete actions
+- **Step 6** — ✅ Done — `AdminUsersPage.tsx`: table + search/filter + suspension dialog
+- **Step 7** — ✅ Done — `AdminProvidersPage.tsx`: pending list, approve/reject dialog
+- **Step 8** — ✅ Done — `AdminReviewsPage.tsx`: flagged reviews, approve/delete/keep-flagged actions
 
 ### Key Files
 - `frontend/src/components/pages/AdminUsersPage.tsx` — stub, ready to implement

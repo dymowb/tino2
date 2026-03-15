@@ -189,6 +189,12 @@ Supports multiple payment methods:
 - Apple Pay and Google Pay
 - Escrow system for customer protection
 
+## Testing Protocol
+- After implementing or changing any feature, test the full end-to-end user flow for that feature — not just a visual check
+- For UI changes: navigate to the page, interact with the feature, verify the result in both UI and backend state
+- For auth/security changes: test both the blocked case and the allowed case
+- Do not consider a feature done until the happy path AND the key error paths have been verified
+
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.
 NEVER create files unless they're absolutely necessary for achieving your goal.

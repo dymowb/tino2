@@ -14,13 +14,18 @@ pkill -f "npm.*start" 2>/dev/null || true
 # Wait for cleanup to complete
 sleep 3
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 echo "📦 Starting Backend Server (Port 3000)..."
-cd backend && PORT=3000 npm run dev &
+(cd "$SCRIPT_DIR/backend" && PORT=3000 npm run dev) &
 BACKEND_PID=$!
+
+# Wait for backend to bind its port before starting frontend
+sleep 5
 
 echo "⚛️ Starting Frontend Server (Port 3001)..."
 # Suppress webpack deprecation warnings and ESLint in dev mode
-cd frontend && DISABLE_ESLINT_PLUGIN=true NODE_OPTIONS="--no-deprecation" PORT=3001 npm start &
+(cd "$SCRIPT_DIR/frontend" && DISABLE_ESLINT_PLUGIN=true NODE_OPTIONS="--no-deprecation" PORT=3001 npm start) &
 FRONTEND_PID=$!
 
 echo ""

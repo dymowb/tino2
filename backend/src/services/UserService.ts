@@ -58,7 +58,7 @@ export class UserService {
   }> {
     try {
       const user = await this.userRepository.findOne({
-        where: { email, isActive: true },
+        where: { email },
         select: [
           'id',
           'email',
@@ -75,6 +75,10 @@ export class UserService {
 
       if (!user) {
         throw new Error('Invalid credentials');
+      }
+
+      if (!user.isActive) {
+        throw new Error('Your account has been suspended. Please contact support.');
       }
 
       const isPasswordValid = await passwordService.compare(password, user.password);
