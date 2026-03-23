@@ -40,6 +40,9 @@ const AIAssistantTab: React.FC = () => {
     workflow,
     messages,
     isProcessing,
+    isStreaming,
+    progressMessage,
+    narrative,
     followUpQuestion,
     results,
     analysisResults,
@@ -134,10 +137,25 @@ const AIAssistantTab: React.FC = () => {
     <Box sx={{ textAlign: 'center', py: 4 }}>
       <CircularProgress size={48} sx={{ mb: 2 }} />
       <Typography variant="h6" sx={{ mb: 1 }}>
-        {getStatusMessage(currentStep)}
+        {isStreaming ? progressMessage : getStatusMessage(currentStep)}
       </Typography>
-      {/* Show conversation history */}
-      {messages.length > 0 && (
+
+      {/* Narrative streams in token-by-token once the recommendation stage completes */}
+      {narrative && (
+        <Paper
+          sx={{ maxWidth: 600, mx: 'auto', mt: 3, p: 2, bgcolor: 'primary.50', textAlign: 'left' }}
+          elevation={0}
+        >
+          <Typography variant="body1">
+            {narrative}
+            {/* Blinking cursor while still streaming */}
+            {isStreaming && <Box component="span" sx={{ borderRight: '2px solid', animation: 'blink 1s step-end infinite', '@keyframes blink': { '50%': { borderColor: 'transparent' } } }}>&#8203;</Box>}
+          </Typography>
+        </Paper>
+      )}
+
+      {/* Conversation history (shown when not streaming, e.g. polling follow-up) */}
+      {!isStreaming && messages.length > 0 && (
         <Box sx={{ maxWidth: 600, mx: 'auto', mt: 3, textAlign: 'left' }}>
           {messages.map((msg) => (
             <Paper
@@ -155,12 +173,8 @@ const AIAssistantTab: React.FC = () => {
           ))}
         </Box>
       )}
-      <Button
-        variant="text"
-        color="inherit"
-        onClick={cancel}
-        sx={{ mt: 2 }}
-      >
+
+      <Button variant="text" color="inherit" onClick={cancel} sx={{ mt: 2 }}>
         {t('actions.cancel')}
       </Button>
     </Box>
@@ -307,6 +321,13 @@ const AIAssistantTab: React.FC = () => {
 
   const renderResults = () => (
     <Box sx={{ py: 2 }}>
+      {/* Narrative intro generated during the stream */}
+      {narrative && (
+        <Paper sx={{ p: 2, mb: 3, bgcolor: 'primary.50' }} elevation={0}>
+          <Typography variant="body1">{narrative}</Typography>
+        </Paper>
+      )}
+
       {recommendations.length > 0 ? (
         <>
           <Typography variant="h6" sx={{ mb: 2 }}>
@@ -416,10 +437,11 @@ const AIAssistantTab: React.FC = () => {
 
   const renderContent = () => {
     if (error) return renderError();
-    if (recommendations.length > 0 || results.length > 0) return renderResults();
-    if (followUpQuestion) return renderFollowUp();
+    // Keep the spinner while the pipeline is still running — prevents a flash
+    // where the grid appears mid-pipeline before recommendations are ready.
     if (isProcessing) return renderProcessing();
-    if (workflow?.status === 'completed') return renderResults(); // completed but no results found
+    if (followUpQuestion) return renderFollowUp();
+    if (workflow?.status === 'completed') return renderResults();
 
     return renderWelcome();
   };

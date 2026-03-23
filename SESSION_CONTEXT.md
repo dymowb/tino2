@@ -1,9 +1,9 @@
 # Session Context - Current Work
 
-## CURRENT SESSION: Phase 13 — Admin Panel (in progress)
-**Date**: 2026-03-08
-**Goal**: FR-074–081 — Admin panel (user management, provider verification, booking oversight, reviews moderation)
-**Status**: Dashboard ✅ — Steps 6–8 next
+## CURRENT SESSION: Phase 13b — Streaming AI Search
+**Date**: 2026-03-22
+**Goal**: SSE streaming for AI provider search (progress events + typewriter narrative)
+**Status**: ✅ Complete and tested end-to-end
 
 ## Production Hardening
 Full audit saved in `PRODUCTION_HARDENING.md` — do this before first public deployment.
@@ -22,7 +22,7 @@ Full audit saved in `PRODUCTION_HARDENING.md` — do this before first public de
 | 11 | Provider availability calendar | FR-019 | ✅ Done |
 | 12 | Provider responses to reviews + AI draft agent | FR-069 | ✅ Done |
 | 13 | Admin panel | FR-074–081 | ✅ Done — all 3 pages tested end-to-end incl. suspend/reactivate login flow |
-| 13b | Streaming AI provider search (SSE + Anthropic stream) | FR-025 | ⏳ Next after 13 |
+| 13b | Streaming AI provider search (SSE + Anthropic stream) | FR-025 | ✅ Done — progress events + token streaming working end-to-end |
 | 14 | Stripe integration (test mode) | FR-057–063 | ⏳ Pending (needs keys) |
 | 15 | Email verification on register | FR-002 | ⏳ Pending (needs SMTP) |
 | 16 | GPS geocoding | FR-022 | ⏳ Pending (needs Maps key) |
@@ -89,8 +89,8 @@ Replace the current blocking AI provider search (full response after ~8s) with a
 ## Resume Point
 1. Backend on port 3000, frontend on port 3001
 2. DB seeded; demo password: `Demo123!`
-3. Admin login: `admin@demo.com` / `Demo123!`
-4. **NEXT ACTION**: Phase 13 Step 6 — implement `AdminUsersPage.tsx` (user table + suspension dialog)
+3. Customer login: `customer@demo.com` / `Demo123!`
+4. **NEXT ACTION**: Phase 14 — Stripe integration (test mode, needs Stripe test keys)
 
 ### Key Files (Agents)
 - **Recommendation agent**: `backend/src/agents/recommendation.agent.ts`

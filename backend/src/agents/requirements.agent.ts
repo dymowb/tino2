@@ -106,6 +106,8 @@ Your job is to extract complete service booking requirements from users through 
 **Your Response Format:**
 You must respond with a JSON object in one of two formats:
 
+If you need more information, ask no more than three focused follow-up questions. We want to balance between gathering complete requirements and avoiding overwhelming the user with too many questions at once.
+
 If you need more information:
 {
   "isComplete": false,
@@ -325,6 +327,11 @@ Analyze the conversation and respond with JSON following the format specified in
       // Validate structure
       if (typeof parsed.isComplete !== 'boolean') {
         throw new Error('Invalid response: missing isComplete field');
+      }
+
+      // Normalise: Claude sometimes returns followUpQuestions (array) instead of followUpQuestion (string)
+      if (!parsed.followUpQuestion && Array.isArray(parsed.followUpQuestions) && parsed.followUpQuestions.length > 0) {
+        parsed.followUpQuestion = parsed.followUpQuestions[0];
       }
 
       return parsed as RequirementsAgentOutput;

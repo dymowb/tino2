@@ -99,7 +99,22 @@ export class CoordinatorAgent {
    *
    * @param workflowId - Workflow to execute
    */
-  async executeWorkflow(workflowId: string): Promise<void> {
+  /**
+   * Human-readable progress messages emitted before each agent runs.
+   * Keyed by agent name so the controller can surface them over SSE.
+   */
+  static readonly STAGE_MESSAGES: Record<string, string> = {
+    requirements: 'Understanding your requirements...',
+    search: 'Searching for providers...',
+    analysis: 'Analysing provider matches...',
+    recommendation: 'Ranking results...',
+    verification: 'Verifying recommendations...',
+  };
+
+  async executeWorkflow(
+    workflowId: string,
+    onProgress?: (stage: string, message: string) => void,
+  ): Promise<void> {
     try {
       // Mark workflow as active
       await workflowStateService.updateWorkflow(workflowId, () => ({
@@ -143,6 +158,10 @@ export class CoordinatorAgent {
           logger.info(`Workflow ${workflowId} completed successfully`);
           return;
         }
+
+        // Emit progress before running the agent so the client gets immediate feedback
+        const message = CoordinatorAgent.STAGE_MESSAGES[nextAgentName] ?? `Running ${nextAgentName}...`;
+        onProgress?.(nextAgentName, message);
 
         // Execute the agent
         await this.executeAgent(workflowId, nextAgentName);

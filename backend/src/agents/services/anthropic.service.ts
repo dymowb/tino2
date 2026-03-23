@@ -162,6 +162,34 @@ class AnthropicService {
   }
 
   /**
+   * Stream Claude API response token-by-token
+   *
+   * @param request - Request parameters (same as callClaude)
+   * @yields Text chunks as they arrive from the model
+   */
+  async *stream(request: ClaudeRequest): AsyncIterable<string> {
+    if (!this.apiKey) {
+      throw new Error('ANTHROPIC_API_KEY not configured');
+    }
+
+    console.log(`🚀 Starting Claude stream ${request.model}...`);
+
+    const stream = this.client.messages.stream({
+      model: request.model,
+      system: request.systemPrompt,
+      messages: [{ role: 'user', content: request.userMessage }],
+      max_tokens: request.maxTokens || 1024,
+      temperature: request.temperature || 1.0,
+    });
+
+    for await (const event of stream) {
+      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+        yield event.delta.text;
+      }
+    }
+  }
+
+  /**
    * Check if Anthropic service is configured
    */
   isConfigured(): boolean {
@@ -169,5 +197,8 @@ class AnthropicService {
   }
 }
 
+
 // Export singleton instance
 export const anthropicService = new AnthropicService();
+
+

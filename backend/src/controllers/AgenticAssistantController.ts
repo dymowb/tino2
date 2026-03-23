@@ -7,16 +7,21 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '@/types';
 import logger from '@/config/logger';
-import { coordinator } from '@/agents/coordinator';
+import { coordinator, CoordinatorAgent } from '@/agents/coordinator';
 import { workflowStateService } from '@/agents/services/state.service';
 import { WorkflowStatus } from '@/agents/types/workflow.types';
+import { anthropicService, ClaudeModel } from '@/agents/services/anthropic.service';
 
 class AgenticAssistantController {
   /**
    * POST /api/v1/agentic-assistant/workflows
-   * Start a new workflow
+   * Start a new workflow. Supports ?stream=true for SSE streaming mode.
    */
   public async startWorkflow(req: AuthenticatedRequest, res: Response): Promise<void> {
+    if (req.query.stream === 'true') {
+      return this.startWorkflowStream(req, res);
+    }
+
     logger.debug('New workflow request', { body: req.body, userId: req.user?.userId });
 
     try {
@@ -61,6 +66,84 @@ class AgenticAssistantController {
         success: false,
         error: 'Internal server error',
       });
+    }
+  }
+
+  /**
+   * POST /api/v1/agentic-assistant/workflows?stream=true
+   * Streaming variant — runs the pipeline synchronously and emits SSE events:
+   *   { type: 'started',  workflowId }
+   *   { type: 'progress', stage, message }   ← one per agent, before it runs
+   *   { type: 'token',    text }             ← narrative chunks (typewriter effect)
+   *   { type: 'complete', workflowId, data } ← final structured result
+   *   { type: 'error',    message }          ← on failure
+   */
+  private async startWorkflowStream(req: AuthenticatedRequest, res: Response): Promise<void> {
+    const { initialMessage } = req.body;
+    const userId = req.user?.userId;
+
+    if (!initialMessage || typeof initialMessage !== 'string') {
+      res.status(400).json({ success: false, error: 'initialMessage is required and must be a string' });
+      return;
+    }
+    if (!userId) {
+      res.status(401).json({ success: false, error: 'User not authenticated' });
+      return;
+    }
+
+    // SSE headers — keep connection alive for the duration of the pipeline
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    const emit = (event: object) => {
+      res.write(`data: ${JSON.stringify(event)}\n\n`);
+    };
+
+    try {
+      const workflow = await workflowStateService.createWorkflow(userId, initialMessage);
+      emit({ type: 'started', workflowId: workflow.id });
+
+      // Run pipeline synchronously — onProgress fires before each agent
+      await coordinator.executeWorkflow(workflow.id, (stage, message) => {
+        emit({ type: 'progress', stage, message });
+      });
+
+      // Fetch final state so we can include it in the complete event and build the narrative
+      const finalWorkflow = await workflowStateService.getWorkflow(workflow.id);
+      const topRec = finalWorkflow?.context.recommendations?.[0];
+      const requirements = finalWorkflow?.context.requirements;
+
+      // Stream a short narrative intro if we have a recommendation to talk about
+      if (topRec && requirements) {
+        emit({ type: 'progress', stage: 'narrative', message: 'Writing your recommendation...' });
+
+        const narrativePrompt = `You are summarising provider search results for a customer.
+Write 2-3 warm, direct sentences introducing the top recommendation and what makes them stand out for this customer's needs.
+Do NOT list all providers. Do NOT use markdown.
+
+Customer needs: ${JSON.stringify(requirements.requirementsSummary)}
+Top recommendation: ${topRec.provider.name ?? topRec.provider.providerId} — ${topRec.reasoning}`;
+
+        for await (const chunk of anthropicService.stream({
+          model: ClaudeModel.HAIKU,
+          systemPrompt: 'You are a helpful assistant summarising service provider recommendations.',
+          userMessage: narrativePrompt,
+          maxTokens: 200,
+          temperature: 0.7,
+        })) {
+          emit({ type: 'token', text: chunk });
+        }
+      }
+
+      emit({ type: 'complete', workflowId: workflow.id, data: finalWorkflow });
+      logger.info(`Streaming workflow ${workflow.id} completed for user ${userId}`);
+    } catch (error) {
+      logger.error('Streaming workflow error:', error);
+      emit({ type: 'error', message: 'An error occurred while processing your request' });
+    } finally {
+      res.end();
     }
   }
 
