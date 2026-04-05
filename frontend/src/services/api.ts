@@ -108,7 +108,7 @@ export interface Booking {
   };
   scheduledDate: string;
   estimatedDuration: number;
-  status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'in_progress' | 'pending_completion' | 'completed' | 'in_dispute' | 'cancelled';
   totalAmount: number;
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   specialInstructions?: string;
@@ -1107,6 +1107,26 @@ class ApiService {
     return response.data;
   }
 
+  async startBooking(bookingId: string): Promise<any> {
+    const response = await this.api.post(`/bookings/${bookingId}/start`, {});
+    return response.data;
+  }
+
+  async markBookingComplete(bookingId: string): Promise<any> {
+    const response = await this.api.post(`/bookings/${bookingId}/complete`, {});
+    return response.data;
+  }
+
+  async confirmBookingCompletion(bookingId: string): Promise<any> {
+    const response = await this.api.post(`/bookings/${bookingId}/confirm-completion`, {});
+    return response.data;
+  }
+
+  async disputeBooking(bookingId: string, reason: string): Promise<any> {
+    const response = await this.api.post(`/bookings/${bookingId}/dispute`, { reason });
+    return response.data;
+  }
+
   // Notification methods
   async getUserNotifications(params: {
     type?: string;
@@ -1206,6 +1226,12 @@ class ApiService {
   setStoredUser(user: User): void {
     localStorage.setItem('user', JSON.stringify(user));
   }
+
+  // Generic HTTP methods for ad-hoc requests (admin pages, payment forms, etc.)
+  get(path: string, config?: any) { return this.api.get(path, config); }
+  post(path: string, data?: any, config?: any) { return this.api.post(path, data, config); }
+  put(path: string, data?: any, config?: any) { return this.api.put(path, data, config); }
+  delete(path: string, config?: any) { return this.api.delete(path, config); }
 }
 
 export const apiService = new ApiService();

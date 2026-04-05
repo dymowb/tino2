@@ -1,4 +1,5 @@
-import { getRepository, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
+import { AppDataSource } from '@/config/database';
 import Stripe from 'stripe';
 import { Payment, PaymentStatus, PaymentMethod } from '@/models/Payment';
 import { Booking, BookingStatus } from '@/models/Booking';
@@ -51,9 +52,9 @@ class PaymentService {
   }
 
   private initRepositories(): void {
-    this.paymentRepository = getRepository(Payment);
-    this.bookingRepository = getRepository(Booking);
-    this.userRepository = getRepository(User);
+    this.paymentRepository = AppDataSource.getRepository(Payment);
+    this.bookingRepository = AppDataSource.getRepository(Booking);
+    this.userRepository = AppDataSource.getRepository(User);
   }
 
   /**

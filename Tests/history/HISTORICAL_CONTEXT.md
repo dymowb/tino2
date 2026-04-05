@@ -2,6 +2,82 @@
 
 This document contains detailed historical information moved from SESSION_CONTEXT.md to keep the main context file lean and focused on resuming work.
 
+## Phase 14: Stripe Integration — Escrow Flow (IN PROGRESS)
+
+### Design Decisions
+- **Two-step payment**: card saved (SetupIntent) at quote acceptance; hold created (PaymentIntent manual capture) at service start
+- **Hold failure**: booking → CANCELLED, both parties notified
+- **Auto-capture**: daily cron reads `auto_capture_days` from `AppSettings` table
+- **IN_DISPUTE**: freezes capture; admin resolves
+
+### Booking State Machine
+```
+PENDING → CONFIRMED → IN_PROGRESS → PENDING_COMPLETION → COMPLETED
+                                   └─ hold fails → CANCELLED
+                    PENDING_COMPLETION → IN_DISPUTE (customer disputes)
+```
+
+### Implementation Steps
+- [x] Step 1 — Model changes: `PENDING_COMPLETION`+`IN_DISPUTE` to `BookingStatus`; `stripeCustomerId`+`stripePaymentMethodId` on `User`; `stripePaymentIntentId`+`holdPlacedAt` on `Booking`; new `AppSettings` entity
+- [x] Step 2 — Fix `PaymentService`: `getRepository` → `AppDataSource.getRepository`
+- [x] Step 3 — SetupIntent endpoints: `POST /payments/setup-intent` + `POST /payments/save-method`; quote acceptance returns `requiresPaymentSetup` flag
+- [x] Step 4 — Hold at service start: `POST /bookings/:bookingId/start` → PaymentIntent manual capture; cancel + notify both if hold fails
+- [x] Step 5 — Completion flow: `POST /bookings/:bookingId/complete` (provider); `POST /bookings/:bookingId/confirm-completion` (customer → capture); `POST /bookings/:bookingId/dispute` (customer → IN_DISPUTE)
+- [x] Step 6 — Auto-capture cron: `backend/src/jobs/autoCapture.job.ts`; daily at 02:00; reads `auto_capture_days` from `AppSettings`; seeded with default=3
+- [x] Step 7 — Admin settings page: `AdminSettingsPage.tsx`; `GET/PUT /admin/settings`; sidebar entry added
+- [x] Step 8 — Frontend: `CardSetupForm.tsx` (Stripe Elements); booking action buttons (start/complete/confirm/dispute); `Booking.status` type updated; `apiService.get/post/put` generic methods added; `REACT_APP_STRIPE_PUBLISHABLE_KEY` in .env
+- [~] Step 9 — E2E test (see TEST_REGISTRY.md section P): P1–P6, P8 PASSED; P7, P9, P10 pending
+
+### Key Stripe Test Cards
+- `4242 4242 4242 4242` — success
+- `4000000000009995` — insufficient funds (hold fails)
+- `4000002500003155` — requires 3DS authentication
+
+### Key Files
+- `backend/src/services/PaymentService.ts`
+- `backend/src/controllers/PaymentController.ts`
+- `backend/src/routes/payments.ts`
+- `backend/src/config/stripe.ts`
+- `backend/src/models/AppSettings.ts` — new
+- `backend/src/jobs/autoCapture.job.ts` — new
+- `frontend/src/components/payment/CardSetupForm.tsx` — new
+
+---
+
+## Phase 13b: Streaming AI Provider Search (COMPLETED — 2026-03-22)
+
+### What was built
+- `anthropicService.stream()` — async generator wrapping Anthropic SDK streaming
+- `GET /agentic-assistant/search/stream` — SSE endpoint
+- Coordinator emits `progress` events between pipeline stages
+- Frontend `useSSE` hook + typewriter rendering in `FindProvidersPage`
+
+### Key Files
+- `backend/src/agents/services/anthropic.service.ts`
+- `backend/src/routes/agentic-assistant.routes.ts`
+- `backend/src/agents/coordinator.ts`
+- `frontend/src/components/pages/FindProvidersPage.tsx`
+
+---
+
+## Phase 13: Admin Panel (COMPLETED — 2026-03-22)
+
+### What was built
+- `requireAdminRole` middleware
+- `AdminController` — all methods, fixed `getRepository` → `AppDataSource.getRepository`
+- Admin routes uncommented in `app.ts`
+- `AdminRoute.tsx` — route guard
+- `AdminLayout.tsx` — isolated sidebar layout
+- `AdminDashboardPage.tsx` — stats cards + recent activity
+- `AdminUsersPage.tsx` — table + search/filter + suspension dialog
+- `AdminProvidersPage.tsx` — pending list, approve/reject dialog
+- `AdminReviewsPage.tsx` — flagged reviews, approve/delete actions
+- User entity: `suspensionReason`, `suspensionComment`, `suspendedUntil`
+- `authenticate` middleware: DB lookup + lazy suspension expiry
+- Seed: `admin@demo.com / Demo123!`
+
+---
+
 ## Phase 11: Frontend/UX Real User Testing & API Validation (COMPLETED)
 
 **Objective**: Comprehensive validation of core user journeys through direct API testing and user workflow verification

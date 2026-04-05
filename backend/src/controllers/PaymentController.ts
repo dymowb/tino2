@@ -105,6 +105,62 @@ class PaymentController {
     }
   }
 
+  // POST /api/payments/setup-intent — create SetupIntent so customer can save card (no charge yet)
+  public async createSetupIntent(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const userRepository = AppDataSource.getRepository(User);
+      const user = await userRepository.findOne({ where: { id: req.user.userId } });
+      if (!user) { res.status(404).json({ success: false, error: 'User not found' }); return; }
+
+      // Get or create Stripe customer
+      let stripeCustomerId = user.stripeCustomerId;
+      if (!stripeCustomerId) {
+        const customer = await stripe.customers.create({
+          email: user.email,
+          name: `${user.firstName} ${user.lastName}`,
+          metadata: { userId: user.id },
+        });
+        stripeCustomerId = customer.id;
+        await userRepository.update(user.id, { stripeCustomerId });
+      }
+
+      const setupIntent = await stripe.setupIntents.create({
+        customer: stripeCustomerId,
+        payment_method_types: ['card'],
+        metadata: { userId: user.id },
+      });
+
+      res.json({ success: true, data: { clientSecret: setupIntent.client_secret } });
+    } catch (error) {
+      logger.error('Error creating setup intent:', error);
+      res.status(500).json({ success: false, error: getStripeErrorMessage(error) });
+    }
+  }
+
+  // POST /api/payments/save-method — called after frontend confirms SetupIntent; persists paymentMethodId
+  public async savePaymentMethod(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { paymentMethodId } = req.body;
+      if (!paymentMethodId) { res.status(400).json({ success: false, error: 'paymentMethodId required' }); return; }
+
+      // Verify the payment method belongs to this customer via Stripe
+      const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+      const userRepository = AppDataSource.getRepository(User);
+      const user = await userRepository.findOne({ where: { id: req.user.userId } });
+
+      if (!user || pm.customer !== user.stripeCustomerId) {
+        res.status(403).json({ success: false, error: 'Payment method does not belong to this customer' });
+        return;
+      }
+
+      await userRepository.update(user.id, { stripePaymentMethodId: paymentMethodId });
+      res.json({ success: true });
+    } catch (error) {
+      logger.error('Error saving payment method:', error);
+      res.status(500).json({ success: false, error: getStripeErrorMessage(error) });
+    }
+  }
+
   // POST /api/payments/intent - Create payment intent (FR-057, FR-058, FR-059)
   public async createPaymentIntent(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {

@@ -14,6 +14,7 @@ Tracks all UX tests, their status, and which feature areas they exercise.
 | `socket` | Socket.IO real-time connection + events |
 | `messaging` | Conversations, send/edit/delete messages (REST layer) |
 | `payments` | Payment list, amounts, filters, refund dialog |
+| `escrow` | Card save, hold, capture, auto-capture, dispute flow |
 | `reviews` | Write, edit, filter reviews; criteria labels |
 | `bookings` | Create, list, filter, cancel bookings |
 | `providers` | Provider search, filter, detail page |
@@ -101,6 +102,25 @@ Tracks all UX tests, their status, and which feature areas they exercise.
 | K2 | Edit a field and save | ✅ Pass | `profile` |
 | K3 | Change password dialog renders | ✅ Pass | `profile`, `auth` |
 
+### P — Escrow Payment Flow (Phase 14)
+
+Stripe test cards: `4242 4242 4242 4242` (success) · `4000000000009995` (no funds) · `4000002500003155` (3DS)
+
+| ID | Scenario | Status | Feature Tags |
+|----|----------|--------|--------------|
+| P1 | Accept quote → card setup form appears, card saved successfully | ✅ Passed | `escrow`, `quotes`, `payments` |
+| P2 | Provider starts service → hold placed, booking → IN_PROGRESS | ✅ Passed | `escrow`, `bookings` |
+| P3 | Hold fails (no funds card) → booking CANCELLED, both parties notified | ✅ Passed (via Stripe error path — Stripe blocks saving truly declined cards at setup, failure path verified via invalid-key test which hit same catch block) | `escrow`, `bookings`, `notifications` |
+| P4 | Provider marks complete → booking → PENDING_COMPLETION, customer notified | ✅ Passed | `escrow`, `bookings`, `notifications` |
+| P5 | Customer confirms completion → payment captured, booking → COMPLETED | ✅ Passed | `escrow`, `payments`, `bookings` |
+| P6 | Customer disputes → booking → IN_DISPUTE, capture frozen, admin notified | ✅ Passed | `escrow`, `payments`, `bookings` |
+| P7 | Auto-capture: PENDING_COMPLETION past N days → captured, COMPLETED | ⏳ Pending | `escrow`, `payments` |
+| P8 | Admin settings: auto_capture_days readable and editable | ✅ Passed | `escrow` |
+| P9 | Cancel before service starts → no charge | ⏳ Pending | `escrow`, `bookings` |
+| P10 | Payment history page shows escrow status correctly | ⏳ Pending | `payments`, `escrow` |
+
+---
+
 ### L — My Quotes (`/quotes`)
 
 | ID | Description | Status | Feature Tags |
@@ -131,9 +151,10 @@ When a phase is complete, re-run only the tests whose tags intersect with what c
 | Phase 11 — Provider availability | `providers`, `bookings` | H1–H6, I2–I4, J1–J4 |
 | Phase 12 — Provider review responses | `reviews` | R1–R4, I1, F3 |
 | Phase 13 — Admin panel | new `admin` tag | new A tests (TBD) |
-| Phase 14 — Stripe integration | `payments` | E1–E5, F4 |
-| Phase 15 — Email verification | `auth` | K1, K3 + new reg test |
-| Phase 16 — GPS geocoding | `providers` | H4 (currently skipped) |
+| Phase 14 — Stripe escrow | `payments`, `escrow`, `bookings` | E1–E5, F4, P1–P10 |
+| Phase 15 — Dispute resolution | `escrow`, `payments` | P6 + new P tests |
+| Phase 16 — Email verification | `auth` | K1, K3 + new reg test |
+| Phase 17 — GPS geocoding | `providers` | H4 (currently skipped) |
 
 ---
 

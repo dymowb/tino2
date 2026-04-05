@@ -103,6 +103,26 @@ router.delete(
   bookingController.cancelBooking
 );
 
+// POST /:bookingId/start — provider places hold and starts service
+router.post('/:bookingId/start', authenticate, [
+  param('bookingId').isUUID(), handleValidationErrors,
+], bookingController.startBooking);
+
+// POST /:bookingId/complete — provider marks service done
+router.post('/:bookingId/complete', authenticate, [
+  param('bookingId').isUUID(), handleValidationErrors,
+], bookingController.markBookingComplete);
+
+// POST /:bookingId/confirm-completion — customer confirms, triggers capture
+router.post('/:bookingId/confirm-completion', authenticate, [
+  param('bookingId').isUUID(), handleValidationErrors,
+], bookingController.confirmCompletion);
+
+// POST /:bookingId/dispute — customer disputes completion
+router.post('/:bookingId/dispute', authenticate, [
+  param('bookingId').isUUID(), handleValidationErrors,
+], bookingController.disputeBooking);
+
 // Get bookings for a specific customer (customers can only see their own)
 router.get(
   '/customer/:customerId',

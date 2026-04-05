@@ -8,6 +8,7 @@ import { Review } from '@/models/Review';
 import { Conversation, ConversationType } from '@/models/Conversation';
 import { Message, MessageType } from '@/models/Message';
 import { Payment, PaymentStatus, PaymentMethod } from '@/models/Payment';
+import { AppSettings } from '@/models/AppSettings';
 import { passwordService } from '@/utils/password';
 import logger from '@/config/logger';
 
@@ -953,6 +954,14 @@ async function runSeeder(): Promise<void> {
 
     const seeder = new DatabaseSeeder();
     await seeder.seed();
+
+    // Seed default app settings
+    const settingsRepo = AppDataSource.getRepository(AppSettings);
+    await settingsRepo.upsert(
+      { key: 'auto_capture_days', value: '3', description: 'Days before auto-capturing payment after provider marks service complete' },
+      ['key']
+    );
+    logger.info('App settings seeded');
 
     logger.info('Database seeding completed! 🎉');
   } catch (error) {

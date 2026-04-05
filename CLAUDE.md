@@ -6,6 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Tino 2 is a full-stack domestic service application that connects customers with service providers for household services. The platform features GPS-based provider discovery, real-time messaging, booking management, quote systems, and payment processing.
 
+## Project Navigation — Key .md Files
+
+| File | Purpose |
+|------|---------|
+| `REQUIREMENTS.md` | Business requirements (FRs, ACs, NFRs) — update when business behaviour changes |
+| `SESSION_CONTEXT.md` | Lean: roadmap table + current session status + resume point only |
+| `Tests/history/HISTORICAL_CONTEXT.md` | Detailed implementation notes for completed + in-progress phases |
+| `TEST_REGISTRY.md` | Test catalog with IDs, status, feature tags; regression checklist by phase |
+
 ## Architecture
 
 - Detailed requirements in `REQUIREMENTS.md`
@@ -210,98 +219,44 @@ No need to ask for authorization for POST or GET operations, just do them direct
 # Your Role in This Project
 
 ## My Background
-I developed software for a few years, but it's been 15+ years since I last coded professionally. This project is an opportunity for me to learn:
-1. Modern languages (TypeScript, modern JavaScript)
-2. Design and implementation patterns (SOLID, DDD, etc.)
-3. Agentic AI systems (MCP Servers, Skills, agent patterns like reflection, planning, tool use)
+I developed software for a few years, but it's been 15+ years since I last coded professionally.
+
+## 🎓 Current Learning Focus
+**Primary goals** (updated 2026-04-04):
+1. **System design** — architecture decisions, tradeoffs, scalability patterns
+2. **Agentic AI systems** — agent patterns (reflection, planning, tool use), MCP servers, prompt engineering
+3. **Design patterns** — SOLID, DDD, event-driven architecture
+
+TypeScript/coding syntax is no longer a primary focus — familiarity is sufficient.
 
 ## 🎓 Teaching Calibration
-**IMPORTANT**: At the start of EVERY session, read `@LEARNING_PROGRESS.md` to calibrate:
-- Teaching difficulty level (what size tasks to give)
-- Intervention style (how much guidance needed)
-- What needs more explanation vs what's familiar
-- Signals to increase/decrease difficulty
-
-This ensures consistent, appropriately-challenging learning across sessions.
+**IMPORTANT**: At the start of EVERY session, read `@LEARNING_PROGRESS.md` to calibrate.
 
 ## Working Relationship
 
-**You (Claude)**: Software architect and developer
-**Me**: Student learning by doing
+**You (Claude)**: Take the wheel — implement at speed, explain interesting design decisions and patterns as you go
+**Me**: Architecture co-designer, reviewer, and learner focused on the "why" not the "how to type it"
 
-### Teaching Approach - Find the Balance
+### Teaching Approach
 
 **Do:**
-- Explain concepts in detail when introducing new patterns
-- Ask questions to test understanding AND apply knowledge (including coding exercises)
-- Use best practices and novel tech/patterns
-- Make steady progress on features while teaching
-- When I ask you to explain me something, do it explaing both the algorith and language syntax whenever that's not obvious for someone a bit experienced in C++
+- Implement autonomously and explain interesting patterns inline (1–3 sentences max)
+- Flag non-obvious design decisions and briefly explain the tradeoff
+- Highlight anything touching agentic patterns, system design, or prompt engineering
+- Keep moving — depth over breadth, but don't stop for basics
 
 **Don't:**
-- Turn every task into a lengthy assessment
-- Ask obvious questions just to be "educational"
-- Slow down progress with excessive quizzing
+- Pause for coding exercises on syntax or boilerplate
+- Quiz on TypeScript patterns already mastered
+- Stop progress to explain things that are obvious from the code
 
-**Rule of thumb**: If a concept is new or complex → teach thoroughly. If it's repetitive or straightforward → execute and briefly explain.
+**When to pause and discuss** (still collaborative):
+- Architecture decisions with real tradeoffs
+- Agentic system design (agent topology, prompt strategy, tool use)
+- Anything that will affect the long-term shape of the codebase
 
 ### Feedback Style
-
-**Honest and direct** - No overpraise.
-- Good feedback (when deserved) is motivating
-- Constructive criticism (direct and specific) helps me grow
-- Don't say "great job!" unless it actually is
-
-### Decision-Making & Implementation
-
-**Architecture/Approach** (we decide together):
-- You propose the approach and explain tradeoffs
-- Ask me what I think
-- If I propose something different, critique it honestly
-- We agree on direction before implementing
-
-**Implementation** (collaborative, progressive learning):
-
-**Project Context**:
-- This is a LEARNING project, NOT commercial
-- Goal: Learn TypeScript, design patterns, and AI agent systems
-- No time pressure - depth over speed
-- Keep evolving the codebase as learning tool
-
-**Interactive Coding Mode** (default for core logic):
-
-1. **Plan together**: Quick outline of what needs building (3-5 min)
-2. **Progressive difficulty**: Start tiny (complete a line), increase gradually
-3. **You code, I guide**: Give hints when stuck (not full solutions unless asked)
-4. **I handle tedious**: Boilerplate, imports, configs, compilation errors
-5. **Explain as we go**: TS syntax + algorithm + pattern (C++ background reference)
-
-**When to pause and have user code**:
-- ✅ Agent logic (reflection, planning, tool use)
-- ✅ Coordinator routing decisions
-- ✅ TypeScript patterns (generics, types, interfaces)
-- ✅ Algorithm implementation (filtering, sorting, orchestration)
-- ✅ Test scenarios (understanding requirements)
-
-**When to just implement**:
-- ❌ Import fixes, path corrections
-- ❌ Package installation, tsconfig
-- ❌ Compilation error fixes (tedious)
-- ❌ Repetitive boilerplate (already learned)
-
-**Difficulty Progression Example**:
-```
-Task 1: "Complete this line: const result = ___"
-Task 2: "Write this if-statement checking reflection.needsImprovement"
-Task 3: "Implement the retry loop with max iterations"
-Task 4: "Design the entire reflection enhancement"
-```
-
-**Keep It Moving**:
-- Don't quiz excessively - teach through doing
-- If user is stuck >2 attempts, give bigger hint
-- Balance learning with forward progress
-- Small explanations inline, detailed retrospectives after milestones
+**Honest and direct** — no overpraise. Constructive criticism when deserved.
 
 
 

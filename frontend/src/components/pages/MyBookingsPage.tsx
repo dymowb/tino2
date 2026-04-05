@@ -56,6 +56,9 @@ const MyBookingsPage: React.FC = () => {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const [showDisputeDialog, setShowDisputeDialog] = useState(false);
+  const [disputeReason, setDisputeReason] = useState('');
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
 
   // Fetch bookings
   const {
@@ -134,7 +137,9 @@ const MyBookingsPage: React.FC = () => {
       case 'pending': return 'warning';
       case 'confirmed': return 'info';
       case 'in_progress': return 'secondary';
+      case 'pending_completion': return 'warning';
       case 'completed': return 'success';
+      case 'in_dispute': return 'error';
       case 'cancelled': return 'error';
       default: return 'default';
     }
@@ -145,9 +150,24 @@ const MyBookingsPage: React.FC = () => {
       case 'pending': return <Schedule />;
       case 'confirmed': return <CheckCircle />;
       case 'in_progress': return <PlayArrow />;
+      case 'pending_completion': return <Schedule />;
       case 'completed': return <Done />;
+      case 'in_dispute': return <Cancel />;
       case 'cancelled': return <Cancel />;
       default: return <Schedule />;
+    }
+  };
+
+  const bookingAction = async (id: string, action: () => Promise<any>, successMsg: string) => {
+    setActionLoading(p => ({ ...p, [id]: true }));
+    try {
+      await action();
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      toast.success(successMsg);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Action failed');
+    } finally {
+      setActionLoading(p => ({ ...p, [id]: false }));
     }
   };
 
@@ -175,7 +195,9 @@ const MyBookingsPage: React.FC = () => {
       'pending': user.userType === 'provider' ? ['confirmed', 'cancelled'] : ['cancelled'],
       'confirmed': user.userType === 'provider' ? ['in_progress', 'cancelled'] : ['cancelled'],
       'in_progress': user.userType === 'provider' ? ['completed'] : [],
+      'pending_completion': [],
       'completed': [],
+      'in_dispute': [],
       'cancelled': []
     };
 
@@ -219,7 +241,9 @@ const MyBookingsPage: React.FC = () => {
             <MenuItem value="pending">{t('bookings:status.pending')}</MenuItem>
             <MenuItem value="confirmed">{t('bookings:status.confirmed')}</MenuItem>
             <MenuItem value="in_progress">{t('bookings:status.in_progress')}</MenuItem>
+            <MenuItem value="pending_completion">Pending Confirmation</MenuItem>
             <MenuItem value="completed">{t('bookings:status.completed')}</MenuItem>
+            <MenuItem value="in_dispute">In Dispute</MenuItem>
             <MenuItem value="cancelled">{t('bookings:status.cancelled')}</MenuItem>
           </Select>
         </FormControl>
@@ -383,31 +407,57 @@ const MyBookingsPage: React.FC = () => {
                           </>
                         )}
 
+                        {/* Provider: start service (places Stripe hold) */}
                         {booking.status === 'confirmed' && user?.userType === 'provider' && (
                           <Button
                             variant="contained"
                             color="secondary"
-                            startIcon={<PlayArrow />}
-                            onClick={() => handleStatusUpdate(booking.id, 'in_progress')}
-                            disabled={updateStatusMutation.isPending}
+                            startIcon={actionLoading[booking.id] ? <CircularProgress size={16} /> : <PlayArrow />}
+                            onClick={() => bookingAction(booking.id, () => apiService.startBooking(booking.id), 'Service started, payment held')}
+                            disabled={actionLoading[booking.id]}
                           >
-                            {t('bookings:actions.start_service')}
+                            Start Service
                           </Button>
                         )}
 
+                        {/* Provider: mark complete */}
                         {booking.status === 'in_progress' && user?.userType === 'provider' && (
                           <Button
                             variant="contained"
                             color="success"
-                            startIcon={<Done />}
-                            onClick={() => handleStatusUpdate(booking.id, 'completed')}
-                            disabled={updateStatusMutation.isPending}
+                            startIcon={actionLoading[booking.id] ? <CircularProgress size={16} /> : <Done />}
+                            onClick={() => bookingAction(booking.id, () => apiService.markBookingComplete(booking.id), 'Marked complete — awaiting customer confirmation')}
+                            disabled={actionLoading[booking.id]}
                           >
-                            {t('bookings:actions.mark_complete')}
+                            Mark Complete
                           </Button>
                         )}
 
-                        {/* Customer Actions */}
+                        {/* Customer: confirm completion (captures payment) */}
+                        {booking.status === 'pending_completion' && user?.userType === 'customer' && (
+                          <>
+                            <Button
+                              variant="contained"
+                              color="success"
+                              startIcon={actionLoading[booking.id] ? <CircularProgress size={16} /> : <CheckCircle />}
+                              onClick={() => bookingAction(booking.id, () => apiService.confirmBookingCompletion(booking.id), 'Service confirmed, payment released')}
+                              disabled={actionLoading[booking.id]}
+                            >
+                              Confirm Complete
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              color="error"
+                              startIcon={<Cancel />}
+                              onClick={() => { setSelectedBooking(booking); setShowDisputeDialog(true); }}
+                              disabled={actionLoading[booking.id]}
+                            >
+                              Raise Dispute
+                            </Button>
+                          </>
+                        )}
+
+                        {/* Customer: leave review after completion */}
                         {booking.status === 'completed' && user?.userType === 'customer' && (
                           <Button
                             variant="outlined"
@@ -485,6 +535,43 @@ const MyBookingsPage: React.FC = () => {
             disabled={cancelBookingMutation.isPending}
           >
             {cancelBookingMutation.isPending ? t('bookings:actions.cancelling') : t('bookings:actions.cancel_booking')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dispute Dialog */}
+      <Dialog open={showDisputeDialog} onClose={() => setShowDisputeDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Raise a Dispute</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Describe why you're disputing this completion. An admin will review and contact both parties.
+          </Typography>
+          <TextField
+            fullWidth multiline rows={3}
+            label="Reason for dispute"
+            value={disputeReason}
+            onChange={(e) => setDisputeReason(e.target.value)}
+            variant="outlined"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowDisputeDialog(false)}>Cancel</Button>
+          <Button
+            onClick={() => {
+              if (selectedBooking) {
+                bookingAction(
+                  selectedBooking.id,
+                  () => apiService.disputeBooking(selectedBooking.id, disputeReason),
+                  'Dispute raised — admin has been notified'
+                );
+                setShowDisputeDialog(false);
+                setDisputeReason('');
+              }
+            }}
+            color="error" variant="contained"
+            disabled={!disputeReason.trim() || actionLoading[selectedBooking?.id || '']}
+          >
+            Submit Dispute
           </Button>
         </DialogActions>
       </Dialog>

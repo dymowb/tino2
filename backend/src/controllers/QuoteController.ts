@@ -3,6 +3,9 @@ import { validationResult } from 'express-validator';
 import quoteService from '@/services/QuoteService';
 import logger from '@/config/logger';
 import { ApiResponse, AuthenticatedRequest } from '@/types';
+import { AppDataSource } from '@/config/database';
+import { User } from '@/models/User';
+import { QuoteStatus } from '@/models/Quote';
 
 export class QuoteController {
   // Quote Request Endpoints
@@ -541,10 +544,17 @@ export class QuoteController {
         reason
       );
 
+      // When a customer accepts a quote, tell the frontend whether they still need to set up a payment method
+      let requiresPaymentSetup = false;
+      if (status === QuoteStatus.ACCEPTED) {
+        const user = await AppDataSource.getRepository(User).findOne({ where: { id: userId } });
+        requiresPaymentSetup = !user?.stripePaymentMethodId;
+      }
+
       const response: ApiResponse = {
         success: true,
         message: `Quote status updated to ${status}`,
-        data: { quote: updatedQuote },
+        data: { quote: updatedQuote, requiresPaymentSetup },
       };
 
       res.status(200).json(response);

@@ -1058,8 +1058,12 @@ GET    /api/reviews/customer/:customerId
 ### 11.5 Payment Processing
 
 #### 11.5.1 Payment Flow
-- **AC-016**: Given a customer accepts a quote, when they provide payment method, then funds should be held in escrow until service completion
-- **AC-017**: Given a service is completed, when customer confirms satisfaction, then payment should be released to provider minus platform fee
+- **AC-016**: Given a customer accepts a quote, when they provide payment method, then the card is saved and funds are held in escrow when the service starts
+- **AC-016a**: Given a service starts, when the payment hold fails (insufficient funds), then the booking is cancelled and both parties are notified
+- **AC-017**: Given a provider marks a service complete, when the customer confirms, then payment is captured and released to the provider minus platform fee
+- **AC-017a**: Given a provider marks a service complete, when the customer takes no action within the configured number of days, then payment is automatically captured
+- **AC-017b**: Given a provider marks a service complete, when the customer disputes the completion, then the booking enters IN_DISPUTE state, payment capture is frozen, and an admin is notified to mediate
+- **AC-017c**: Given a booking is IN_DISPUTE, when an admin resolves in the customer's favour, then the booking is cancelled and payment refunded; when resolved in the provider's favour, then payment is captured and released
 - **AC-018**: Given a payment fails, when the system retries, then customer should be notified and alternative payment options offered
 
 ### 11.6 Communication System

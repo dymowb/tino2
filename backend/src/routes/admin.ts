@@ -39,4 +39,7 @@ router.get('/disputes', rateLimiters.general, adminController.getDisputes);
 // PUT /api/admin/disputes/:id/resolve - Resolve dispute (FR-077)
 router.put('/disputes/:id/resolve', rateLimiters.strict, adminController.resolveDispute);
 
+router.get('/settings', rateLimiters.general, adminController.getSettings);
+router.put('/settings/:key', rateLimiters.strict, adminController.updateSetting);
+
 export default router;

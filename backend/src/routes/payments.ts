@@ -32,8 +32,20 @@ router.get('/:id',
   PaymentController.getPaymentById
 );
 
+// POST /api/payments/setup-intent - Create SetupIntent to save card (no charge)
+router.post('/setup-intent',
+  rateLimiters.general,
+  PaymentController.createSetupIntent
+);
+
+// POST /api/payments/save-method - Persist confirmed payment method ID
+router.post('/save-method',
+  rateLimiters.general,
+  PaymentController.savePaymentMethod
+);
+
 // POST /api/payments/intent - Create payment intent (FR-057, FR-058, FR-059)
-router.post('/intent', 
+router.post('/intent',
   PaymentController.createPaymentIntent
 );
 

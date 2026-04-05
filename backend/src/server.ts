@@ -9,6 +9,7 @@ import { initializeDatabase } from '@/config/database';
 import { redisClient } from '@/config/redis';
 import { mongoClient } from '@/config/mongodb';
 import logger from '@/config/logger';
+import { startAutoCaptureJob } from '@/jobs/autoCapture.job';
 
 async function bootstrap(): Promise<void> {
   try {
@@ -33,6 +34,8 @@ async function bootstrap(): Promise<void> {
 
     const app = new App();
     app.listen();
+
+    startAutoCaptureJob();
 
     const gracefulShutdown = async (): Promise<void> => {
       logger.info('Received shutdown signal. Gracefully shutting down...');

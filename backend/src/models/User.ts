@@ -75,6 +75,12 @@ export class User {
   @Column({ type: 'datetime', nullable: true })
   suspendedUntil: Date;
 
+  @Column({ nullable: true })
+  stripeCustomerId: string;
+
+  @Column({ nullable: true })
+  stripePaymentMethodId: string;
+
   @Column({ type: 'datetime', nullable: true })
   lastLogin: Date;
 

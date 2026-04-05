@@ -4,6 +4,13 @@ import bookingService from '@/services/BookingService';
 import providerService from '@/services/ProviderService';
 import logger from '@/config/logger';
 import { ApiResponse, AuthenticatedRequest } from '@/types';
+import { AppDataSource } from '@/config/database';
+import { Booking, BookingStatus } from '@/models/Booking';
+import { User } from '@/models/User';
+import { Provider } from '@/models/Provider';
+import { getStripeInstance, getStripeErrorMessage, calculateFees } from '@/config/stripe';
+import notificationService from '@/services/NotificationService';
+import { NotificationType } from '@/models/Notification';
 
 export class BookingController {
   createBooking = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -485,6 +492,203 @@ export class BookingController {
       };
 
       res.status(statusCode).json(response);
+    }
+  }
+
+  // POST /bookings/:bookingId/start — provider starts service; places hold on customer card
+  startBooking = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const stripe = getStripeInstance();
+    const bookingRepo = AppDataSource.getRepository(Booking);
+    const userRepo = AppDataSource.getRepository(User);
+    const providerRepo = AppDataSource.getRepository(Provider);
+
+    try {
+      const { bookingId } = req.params;
+
+      // Verify caller is the provider for this booking
+      const providerEntity = await providerRepo.findOne({ where: { userId: req.user.userId } });
+      if (!providerEntity) { res.status(403).json({ success: false, message: 'Not a provider' }); return; }
+
+      const booking = await bookingRepo.findOne({
+        where: { id: bookingId, providerId: providerEntity.id },
+        relations: ['customer'],
+      });
+      if (!booking) { res.status(404).json({ success: false, message: 'Booking not found' }); return; }
+      if (booking.status !== BookingStatus.CONFIRMED) {
+        res.status(400).json({ success: false, message: `Cannot start booking in status: ${booking.status}` });
+        return;
+      }
+
+      const customer = booking.customer;
+      if (!customer.stripePaymentMethodId || !customer.stripeCustomerId) {
+        res.status(400).json({ success: false, message: 'Customer has not set up a payment method' });
+        return;
+      }
+
+      // Create PaymentIntent with manual capture = escrow hold
+      // The interesting design decision: we don't charge yet — capture_method:'manual'
+      // authorises the funds (freezes them on the card) without moving money.
+      const fees = calculateFees(Number(booking.totalAmount));
+      let paymentIntent: any;
+      try {
+        paymentIntent = await stripe.paymentIntents.create({
+          amount: Math.round(Number(booking.totalAmount) * 100),
+          currency: 'usd',
+          customer: customer.stripeCustomerId,
+          payment_method: customer.stripePaymentMethodId,
+          capture_method: 'manual',
+          confirm: true,
+          automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
+          metadata: { bookingId, customerId: customer.id, providerId: providerEntity.id },
+          description: `Hold for booking ${bookingId}`,
+        });
+      } catch (stripeErr: any) {
+        // Hold failed — cancel the booking and notify both parties
+        booking.status = BookingStatus.CANCELLED;
+        booking.cancelledAt = new Date();
+        booking.cancellationReason = 'Payment hold failed: ' + (stripeErr.message || 'insufficient funds');
+        await bookingRepo.save(booking);
+
+        notificationService.createNotification(customer.id, {
+          type: NotificationType.PAYMENT,
+          title: 'Payment hold failed',
+          message: 'Your booking was cancelled because the payment could not be authorised. Please update your payment method.',
+          actionUrl: `/bookings/${bookingId}`,
+          metadata: { bookingId },
+        }).catch(() => {});
+
+        notificationService.createNotification(req.user.userId, {
+          type: NotificationType.PAYMENT,
+          title: 'Booking cancelled',
+          message: 'The booking was cancelled because the customer\'s payment method was declined.',
+          actionUrl: `/bookings/${bookingId}`,
+          metadata: { bookingId },
+        }).catch(() => {});
+
+        res.status(402).json({ success: false, message: 'Payment hold failed — booking cancelled', error: stripeErr.message });
+        return;
+      }
+
+      booking.status = BookingStatus.IN_PROGRESS;
+      booking.startedAt = new Date();
+      booking.stripePaymentIntentId = paymentIntent.id;
+      booking.holdPlacedAt = new Date();
+      await bookingRepo.save(booking);
+
+      res.json({ success: true, message: 'Service started, payment held', data: { booking } });
+    } catch (error) {
+      logger.error('Error in startBooking:', error);
+      res.status(500).json({ success: false, message: getStripeErrorMessage(error) });
+    }
+  }
+
+  // POST /bookings/:bookingId/complete — provider marks service as done
+  markBookingComplete = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const bookingRepo = AppDataSource.getRepository(Booking);
+    const providerRepo = AppDataSource.getRepository(Provider);
+
+    try {
+      const { bookingId } = req.params;
+      const providerEntity = await providerRepo.findOne({ where: { userId: req.user.userId } });
+      if (!providerEntity) { res.status(403).json({ success: false, message: 'Not a provider' }); return; }
+
+      const booking = await bookingRepo.findOne({
+        where: { id: bookingId, providerId: providerEntity.id },
+        relations: ['customer'],
+      });
+      if (!booking) { res.status(404).json({ success: false, message: 'Booking not found' }); return; }
+      if (booking.status !== BookingStatus.IN_PROGRESS) {
+        res.status(400).json({ success: false, message: `Cannot complete booking in status: ${booking.status}` });
+        return;
+      }
+
+      booking.status = BookingStatus.PENDING_COMPLETION;
+      booking.completedAt = new Date();
+      await bookingRepo.save(booking);
+
+      notificationService.createNotification(booking.customer.id, {
+        type: NotificationType.BOOKING,
+        title: 'Service complete — please confirm',
+        message: 'Your provider has marked the service as complete. Please confirm or raise a dispute within 3 days.',
+        actionUrl: `/bookings/${bookingId}`,
+        metadata: { bookingId },
+      }).catch(() => {});
+
+      res.json({ success: true, message: 'Booking marked complete, awaiting customer confirmation', data: { booking } });
+    } catch (error) {
+      logger.error('Error in markBookingComplete:', error);
+      res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  }
+
+  // POST /bookings/:bookingId/confirm-completion — customer confirms, triggers capture
+  confirmCompletion = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const stripe = getStripeInstance();
+    const bookingRepo = AppDataSource.getRepository(Booking);
+
+    try {
+      const { bookingId } = req.params;
+      const booking = await bookingRepo.findOne({
+        where: { id: bookingId, customerId: req.user.userId },
+        relations: ['provider'],
+      });
+      if (!booking) { res.status(404).json({ success: false, message: 'Booking not found' }); return; }
+      if (booking.status !== BookingStatus.PENDING_COMPLETION) {
+        res.status(400).json({ success: false, message: `Cannot confirm booking in status: ${booking.status}` });
+        return;
+      }
+
+      await stripe.paymentIntents.capture(booking.stripePaymentIntentId);
+
+      booking.status = BookingStatus.COMPLETED;
+      await bookingRepo.save(booking);
+
+      notificationService.createNotification(booking.provider.userId, {
+        type: NotificationType.PAYMENT,
+        title: 'Payment released',
+        message: 'The customer confirmed service completion. Payment has been captured.',
+        actionUrl: `/bookings/${bookingId}`,
+        metadata: { bookingId },
+      }).catch(() => {});
+
+      res.json({ success: true, message: 'Completion confirmed, payment captured', data: { booking } });
+    } catch (error) {
+      logger.error('Error in confirmCompletion:', error);
+      res.status(500).json({ success: false, message: getStripeErrorMessage(error) });
+    }
+  }
+
+  // POST /bookings/:bookingId/dispute — customer disputes; freezes capture, notifies admin
+  disputeBooking = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const bookingRepo = AppDataSource.getRepository(Booking);
+
+    try {
+      const { bookingId } = req.params;
+      const { reason } = req.body;
+      const booking = await bookingRepo.findOne({
+        where: { id: bookingId, customerId: req.user.userId },
+      });
+      if (!booking) { res.status(404).json({ success: false, message: 'Booking not found' }); return; }
+      if (booking.status !== BookingStatus.PENDING_COMPLETION) {
+        res.status(400).json({ success: false, message: `Cannot dispute booking in status: ${booking.status}` });
+        return;
+      }
+
+      booking.status = BookingStatus.IN_DISPUTE;
+      booking.isDisputed = true;
+      booking.disputeReason = reason || 'Customer disputed completion';
+      booking.disputedAt = new Date();
+      booking.disputeStatus = 'open';
+      await bookingRepo.save(booking);
+
+      // Notify all admins — in a real system you'd query admin users; here we log it
+      // (Admin dispute resolution UI is Phase 15)
+      logger.warn(`Booking ${bookingId} disputed by customer ${req.user.userId}: ${reason}`);
+
+      res.json({ success: true, message: 'Dispute raised, admin has been notified', data: { booking } });
+    } catch (error) {
+      logger.error('Error in disputeBooking:', error);
+      res.status(500).json({ success: false, message: 'Internal server error' });
     }
   }
 

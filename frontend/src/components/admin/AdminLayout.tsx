@@ -22,16 +22,18 @@ import {
   Logout,
   Menu as MenuIcon,
   AdminPanelSettings,
+  Settings,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 
 const DRAWER_WIDTH = 240;
 
 const NAV_ITEMS = [
-  { label: 'Dashboard',    path: '/admin',           icon: <Dashboard /> },
-  { label: 'Users',        path: '/admin/users',     icon: <People /> },
-  { label: 'Providers',    path: '/admin/providers', icon: <VerifiedUser /> },
-  { label: 'Reviews',      path: '/admin/reviews',   icon: <RateReview /> },
+  { label: 'Dashboard',    path: '/admin',            icon: <Dashboard /> },
+  { label: 'Users',        path: '/admin/users',      icon: <People /> },
+  { label: 'Providers',    path: '/admin/providers',  icon: <VerifiedUser /> },
+  { label: 'Reviews',      path: '/admin/reviews',    icon: <RateReview /> },
+  { label: 'Settings',     path: '/admin/settings',   icon: <Settings /> },
 ];
 
 const AdminLayout: React.FC = () => {

@@ -19,7 +19,9 @@ export enum BookingStatus {
   PENDING = 'pending',
   CONFIRMED = 'confirmed',
   IN_PROGRESS = 'in_progress',
+  PENDING_COMPLETION = 'pending_completion',
   COMPLETED = 'completed',
+  IN_DISPUTE = 'in_dispute',
   CANCELLED = 'cancelled',
 }
 
@@ -118,6 +120,12 @@ export class Booking {
 
   @Column({ type: 'datetime', nullable: true })
   completedAt: Date;
+
+  @Column({ nullable: true })
+  stripePaymentIntentId: string;
+
+  @Column({ type: 'datetime', nullable: true })
+  holdPlacedAt: Date;
 
   @Column({ type: 'datetime', nullable: true })
   cancelledAt: Date;

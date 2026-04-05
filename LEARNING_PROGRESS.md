@@ -8,17 +8,16 @@
 
 ## Current Calibration Settings
 
-### Difficulty Level: **Intermediate → Advanced**
-- Can implement full methods and classes from a brief description
-- Ready for "design this feature" tasks with architectural discussion
-- Comfortable with TypeScript generics, async patterns, interfaces
-- Can debug independently with light guidance
+### Difficulty Level: **Advanced — System Design & Agentic Focus**
+- TypeScript/coding syntax: comfortable, no longer a teaching focus
+- Primary learning areas: system design tradeoffs, agentic patterns, prompt engineering
+- Ready for architecture-level discussions and decisions
 
-### Intervention Style: **Collaborative Design + Independent Implementation**
-- Discuss approach and tradeoffs together before coding
-- User implements core logic independently
-- Claude handles boilerplate, imports, compilation fixes
-- Hints only when genuinely stuck (not preemptive scaffolding)
+### Intervention Style: **Claude takes the wheel**
+- Claude implements autonomously at speed
+- Explains interesting design decisions and patterns inline (brief)
+- User engages on architecture, agentic design, and "why" decisions
+- No coding exercises unless user explicitly asks
 
 ---
 

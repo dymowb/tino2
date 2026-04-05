@@ -6,6 +6,7 @@ import { Provider } from '@/models/Provider';
 import { Booking, BookingStatus } from '@/models/Booking';
 import { Review } from '@/models/Review';
 import { Payment } from '@/models/Payment';
+import { AppSettings } from '@/models/AppSettings';
 import logger from '@/config/logger';
 import { AuthenticatedRequest } from '@/types';
 
@@ -600,6 +601,37 @@ export class AdminController {
         success: false,
         error: 'Internal server error'
       });
+    }
+  }
+  // GET /admin/settings
+  async getSettings(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const settings = await AppDataSource.getRepository(AppSettings).find({ order: { key: 'ASC' } });
+      res.json({ success: true, data: settings });
+    } catch (error) {
+      logger.error('Error fetching settings:', error);
+      res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  }
+
+  // PUT /admin/settings/:key
+  async updateSetting(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { key } = req.params;
+      const { value } = req.body;
+      if (value === undefined || value === null) {
+        res.status(400).json({ success: false, error: 'value is required' });
+        return;
+      }
+      await AppDataSource.getRepository(AppSettings).upsert(
+        { key, value: String(value) },
+        ['key']
+      );
+      const updated = await AppDataSource.getRepository(AppSettings).findOne({ where: { key } });
+      res.json({ success: true, data: updated });
+    } catch (error) {
+      logger.error('Error updating setting:', error);
+      res.status(500).json({ success: false, error: 'Internal server error' });
     }
   }
 }

@@ -1,9 +1,9 @@
 # Session Context - Current Work
 
-## CURRENT SESSION: Phase 13b — Streaming AI Search
-**Date**: 2026-03-22
-**Goal**: SSE streaming for AI provider search (progress events + typewriter narrative)
-**Status**: ✅ Complete and tested end-to-end
+## CURRENT SESSION: Phase 14 — Stripe Integration (Escrow Flow)
+**Date**: 2026-04-04
+**Goal**: Full Stripe payment integration — card save on quote acceptance, hold at service start, capture on completion, auto-capture cron, dispute state
+**Status**: 🔄 In progress — Steps 1–8 done, E2E tests P1–P6 + P8 PASSED; P7/P9/P10 pending
 
 ## Production Hardening
 Full audit saved in `PRODUCTION_HARDENING.md` — do this before first public deployment.
@@ -23,66 +23,11 @@ Full audit saved in `PRODUCTION_HARDENING.md` — do this before first public de
 | 12 | Provider responses to reviews + AI draft agent | FR-069 | ✅ Done |
 | 13 | Admin panel | FR-074–081 | ✅ Done — all 3 pages tested end-to-end incl. suspend/reactivate login flow |
 | 13b | Streaming AI provider search (SSE + Anthropic stream) | FR-025 | ✅ Done — progress events + token streaming working end-to-end |
-| 14 | Stripe integration (test mode) | FR-057–063 | ⏳ Pending (needs keys) |
-| 15 | Email verification on register | FR-002 | ⏳ Pending (needs SMTP) |
-| 16 | GPS geocoding | FR-022 | ⏳ Pending (needs Maps key) |
-| 17 | Message file attachments | FR-050 | ⏳ Pending |
-
----
-
-## Phase 13 — Admin Panel
-
-### What's done
-- `requireAdminRole` middleware — already existed ✅
-- All backend routes + AdminController — already existed, uncommitted ✅
-- Fixed `getRepository` → `AppDataSource.getRepository` throughout AdminController ✅
-- Uncommented admin routes in `app.ts` ✅
-- `AdminRoute.tsx` — frontend route guard (redirects non-admins) ✅
-- `AdminLayout.tsx` — isolated sidebar layout (no top nav on admin routes) ✅
-- `AdminDashboardPage.tsx` — stats cards + recent activity, fully wired ✅
-- Admin user in seed: `admin@demo.com / Demo123!` ✅
-- User entity: `suspensionReason`, `suspensionComment`, `suspendedUntil` fields ✅
-- `authenticate` middleware: DB lookup on every request + lazy suspension expiry ✅
-- `updateUserStatus` controller: stores suspension fields, guards self-deactivation ✅
-
-### Remaining Steps
-- **Step 6** — ✅ Done — `AdminUsersPage.tsx`: table + search/filter + suspension dialog
-- **Step 7** — ✅ Done — `AdminProvidersPage.tsx`: pending list, approve/reject dialog
-- **Step 8** — ✅ Done — `AdminReviewsPage.tsx`: flagged reviews, approve/delete/keep-flagged actions
-
-### Key Files
-- `frontend/src/components/pages/AdminUsersPage.tsx` — stub, ready to implement
-- `frontend/src/components/pages/AdminProvidersPage.tsx` — stub, ready to implement
-- `frontend/src/components/pages/AdminReviewsPage.tsx` — stub, ready to implement
-- `backend/src/controllers/AdminController.ts` — all methods implemented
-- `backend/src/middleware/auth.ts` — DB lookup + lazy reactivation added
-
----
-
-## Phase 13b — Streaming AI Provider Search
-
-### Goal
-Replace the current blocking AI provider search (full response after ~8s) with a streaming UX:
-1. **SSE progress events** — "Searching providers… Analysing matches… Ranking results…" appear immediately as each pipeline stage completes
-2. **Text streaming** — final recommendation narrative streams token-by-token (typewriter effect)
-
-### Tech involved (new learning topics)
-- **Server-Sent Events (SSE)** on Express — `res.setHeader('Content-Type', 'text/event-stream')`, `res.write('data: ...\n\n')`
-- **Anthropic SDK streaming** — `anthropicService.stream()` instead of `callClaude()`
-- **React `EventSource`** — browser API for consuming SSE streams, wrapped in a custom hook
-
-### Implementation Plan (to be detailed at session start)
-1. Add `stream()` method to `anthropicService` using Anthropic SDK's streaming API
-2. New endpoint `GET /agentic-assistant/search/stream` — SSE response
-3. Pipeline emits progress events between agent stages
-4. Final recommendation agent streams its text output
-5. Frontend: replace current search result display with streaming-aware component
-
-### Key Files
-- `backend/src/agents/services/anthropic.service.ts` — add `stream()` method
-- `backend/src/routes/agentic-assistant.routes.ts` — add streaming endpoint
-- `backend/src/agents/coordinator.ts` — emit SSE progress events
-- `frontend/src/components/pages/FindProvidersPage.tsx` — streaming consumer
+| 14 | Stripe integration (escrow flow) | FR-057–063 | 🔄 In progress — P1–P6 + P8 tested; P7/P9/P10 remain |
+| 15 | Dispute resolution (admin-mediated) | FR-063 | ⏳ Pending — after Phase 14 |
+| 16 | Email verification on register | FR-002 | ⏳ Pending (needs SMTP) |
+| 17 | GPS geocoding | FR-022 | ⏳ Pending (needs Maps key) |
+| 18 | Message file attachments | FR-050 | ⏳ Pending |
 
 ---
 
@@ -90,7 +35,9 @@ Replace the current blocking AI provider search (full response after ~8s) with a
 1. Backend on port 3000, frontend on port 3001
 2. DB seeded; demo password: `Demo123!`
 3. Customer login: `customer@demo.com` / `Demo123!`
-4. **NEXT ACTION**: Phase 14 — Stripe integration (test mode, needs Stripe test keys)
+4. **NEXT ACTION**: Complete Phase 14 E2E testing — P7 (auto-capture cron), P9 (cancel before start), P10 (payment history UI); then Phase 15 (dispute resolution admin UI)
+5. **NOTE**: `automatic_payment_methods: { enabled: true, allow_redirects: 'never' }` required on PaymentIntent.create to avoid redirect URL error
+6. **NOTE**: Stripe blocks saving declined cards at setup (correct behavior) — P3 cancel path verified via error-path test
 
 ### Key Files (Agents)
 - **Recommendation agent**: `backend/src/agents/recommendation.agent.ts`
@@ -98,33 +45,3 @@ Replace the current blocking AI provider search (full response after ~8s) with a
 - **Coordinator**: `backend/src/agents/coordinator.ts`
 - **Verification agent**: `backend/src/agents/verification.agent.ts`
 - **Review response agent**: `backend/src/agents/review-response.agent.ts`
-
----
-
-## Completed Phases
-
-### Phase 12 — Provider Review Responses + AI Draft Agent ✅ (2026-03-08)
-- `review-response.agent.ts` — few-shot prompting (3 examples: low/mid/high rating)
-- `POST /reviews/:id/draft-response` — backend route + controller
-- "Generate AI Draft" button in `ProviderResponseDialog` — pre-fills textarea
-- `apiService.draftProviderResponse()` — frontend API method
-- End-to-end verified: click → AI generates contextual response in ~2s ✅
-
-### Phase 11 — Provider Availability Calendar ✅ (2026-03-08)
-- Zod schema introduced (`backend/src/schemas/availability.schema.ts`)
-- `PATCH /providers/availability` endpoint
-- Frontend: weekly grid dialog on Provider Dashboard
-
-### Phase 10 — Quote System ✅ (2026-03-08)
-- Fixed duration units, MUI Tabs bug, Provider UUID mismatch
-- End-to-end flow: request → submit → view → accept ✅
-
-### Phase 9 — Notifications System ✅ (2026-03-03)
-- `Notification` entity, `NotificationService` CRUD, real routes
-- Socket.IO `notification:new` emission + frontend bell badge
-
-### Phase 8 — Real-time Messaging ✅ (2026-03-03)
-- JWT auth on Socket.IO handshake, event names aligned, socket URL fixed
-
-### Phase 7 — UX Walkthrough ✅ (2026-03-01)
-- 18 bugs fixed across all customer + provider flows
