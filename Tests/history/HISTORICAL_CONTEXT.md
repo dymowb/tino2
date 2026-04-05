@@ -26,7 +26,7 @@ PENDING → CONFIRMED → IN_PROGRESS → PENDING_COMPLETION → COMPLETED
 - [x] Step 6 — Auto-capture cron: `backend/src/jobs/autoCapture.job.ts`; daily at 02:00; reads `auto_capture_days` from `AppSettings`; seeded with default=3
 - [x] Step 7 — Admin settings page: `AdminSettingsPage.tsx`; `GET/PUT /admin/settings`; sidebar entry added
 - [x] Step 8 — Frontend: `CardSetupForm.tsx` (Stripe Elements); booking action buttons (start/complete/confirm/dispute); `Booking.status` type updated; `apiService.get/post/put` generic methods added; `REACT_APP_STRIPE_PUBLISHABLE_KEY` in .env
-- [~] Step 9 — E2E test (see TEST_REGISTRY.md section P): P1–P6, P8 PASSED; P7, P9, P10 pending
+- [x] Step 9 — E2E test: all P1–P10 PASSED (+ i18n fix: pending_completion/in_dispute keys added to en/es/pt)
 
 ### Key Stripe Test Cards
 - `4242 4242 4242 4242` — success

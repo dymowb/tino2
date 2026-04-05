@@ -3,7 +3,7 @@
 ## CURRENT SESSION: Phase 14 — Stripe Integration (Escrow Flow)
 **Date**: 2026-04-04
 **Goal**: Full Stripe payment integration — card save on quote acceptance, hold at service start, capture on completion, auto-capture cron, dispute state
-**Status**: 🔄 In progress — Steps 1–8 done, E2E tests P1–P6 + P8 PASSED; P7/P9/P10 pending
+**Status**: ✅ Complete — all steps done, all P1–P10 E2E tests passed
 
 ## Production Hardening
 Full audit saved in `PRODUCTION_HARDENING.md` — do this before first public deployment.
@@ -23,7 +23,7 @@ Full audit saved in `PRODUCTION_HARDENING.md` — do this before first public de
 | 12 | Provider responses to reviews + AI draft agent | FR-069 | ✅ Done |
 | 13 | Admin panel | FR-074–081 | ✅ Done — all 3 pages tested end-to-end incl. suspend/reactivate login flow |
 | 13b | Streaming AI provider search (SSE + Anthropic stream) | FR-025 | ✅ Done — progress events + token streaming working end-to-end |
-| 14 | Stripe integration (escrow flow) | FR-057–063 | 🔄 In progress — P1–P6 + P8 tested; P7/P9/P10 remain |
+| 14 | Stripe integration (escrow flow) | FR-057–063 | ✅ Done — all P1–P10 tests passed |
 | 15 | Dispute resolution (admin-mediated) | FR-063 | ⏳ Pending — after Phase 14 |
 | 16 | Email verification on register | FR-002 | ⏳ Pending (needs SMTP) |
 | 17 | GPS geocoding | FR-022 | ⏳ Pending (needs Maps key) |
@@ -35,8 +35,8 @@ Full audit saved in `PRODUCTION_HARDENING.md` — do this before first public de
 1. Backend on port 3000, frontend on port 3001
 2. DB seeded; demo password: `Demo123!`
 3. Customer login: `customer@demo.com` / `Demo123!`
-4. **NEXT ACTION**: Complete Phase 14 E2E testing — P7 (auto-capture cron), P9 (cancel before start), P10 (payment history UI); then Phase 15 (dispute resolution admin UI)
-5. **NOTE**: `automatic_payment_methods: { enabled: true, allow_redirects: 'never' }` required on PaymentIntent.create to avoid redirect URL error
+4. **NEXT ACTION**: Phase 15 — Dispute resolution (admin-mediated): admin views IN_DISPUTE bookings, releases hold to customer or captures to provider
+5. **NOTE**: `automatic_payment_methods: { enabled: true, allow_redirects: 'never' }` required on PaymentIntent.create
 6. **NOTE**: Stripe blocks saving declined cards at setup (correct behavior) — P3 cancel path verified via error-path test
 
 ### Key Files (Agents)

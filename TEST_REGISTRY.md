@@ -114,10 +114,10 @@ Stripe test cards: `4242 4242 4242 4242` (success) · `4000000000009995` (no fun
 | P4 | Provider marks complete → booking → PENDING_COMPLETION, customer notified | ✅ Passed | `escrow`, `bookings`, `notifications` |
 | P5 | Customer confirms completion → payment captured, booking → COMPLETED | ✅ Passed | `escrow`, `payments`, `bookings` |
 | P6 | Customer disputes → booking → IN_DISPUTE, capture frozen, admin notified | ✅ Passed | `escrow`, `payments`, `bookings` |
-| P7 | Auto-capture: PENDING_COMPLETION past N days → captured, COMPLETED | ⏳ Pending | `escrow`, `payments` |
+| P7 | Auto-capture: PENDING_COMPLETION past N days → captured, COMPLETED | ✅ Passed | `escrow`, `payments` |
 | P8 | Admin settings: auto_capture_days readable and editable | ✅ Passed | `escrow` |
-| P9 | Cancel before service starts → no charge | ⏳ Pending | `escrow`, `bookings` |
-| P10 | Payment history page shows escrow status correctly | ⏳ Pending | `payments`, `escrow` |
+| P9 | Cancel before service starts → no charge | ✅ Passed | `escrow`, `bookings` |
+| P10 | Payment history page shows escrow status correctly | ✅ Passed (+ fixed missing i18n keys for pending_completion/in_dispute) | `payments`, `escrow` |
 
 ---
 

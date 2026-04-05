@@ -117,7 +117,9 @@
     "pending": "Pendente",
     "confirmed": "Confirmada",
     "in_progress": "Em Andamento",
+    "pending_completion": "Confirmação Pendente",
     "completed": "Concluída",
+    "in_dispute": "Em Disputa",
     "cancelled": "Cancelada"
   },
   "cancel": {
