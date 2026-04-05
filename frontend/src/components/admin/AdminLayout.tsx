@@ -23,6 +23,7 @@ import {
   Menu as MenuIcon,
   AdminPanelSettings,
   Settings,
+  Gavel,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -33,6 +34,7 @@ const NAV_ITEMS = [
   { label: 'Users',        path: '/admin/users',      icon: <People /> },
   { label: 'Providers',    path: '/admin/providers',  icon: <VerifiedUser /> },
   { label: 'Reviews',      path: '/admin/reviews',    icon: <RateReview /> },
+  { label: 'Disputes',     path: '/admin/disputes',   icon: <Gavel /> },
   { label: 'Settings',     path: '/admin/settings',   icon: <Settings /> },
 ];
 

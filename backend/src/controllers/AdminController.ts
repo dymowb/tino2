@@ -7,6 +7,9 @@ import { Booking, BookingStatus } from '@/models/Booking';
 import { Review } from '@/models/Review';
 import { Payment } from '@/models/Payment';
 import { AppSettings } from '@/models/AppSettings';
+import { getStripeInstance, getStripeErrorMessage } from '@/config/stripe';
+import notificationService from '@/services/NotificationService';
+import { NotificationType } from '@/models/Notification';
 import logger from '@/config/logger';
 import { AuthenticatedRequest } from '@/types';
 
@@ -498,109 +501,107 @@ export class AdminController {
     }
   }
 
-  // GET /api/admin/disputes - Handle disputes (FR-077)
+  // GET /api/admin/disputes — list IN_DISPUTE bookings (FR-077)
   getDisputes = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const { page = 1, limit = 20, status } = req.query;
-
+      const { page = 1, limit = 20, disputeStatus } = req.query;
       const bookingRepository = AppDataSource.getRepository(Booking);
-      
-      let whereClause = { isDisputed: true };
-      if (status) {
-        whereClause = { ...whereClause, disputeStatus: status };
-      }
 
-      const disputes = await bookingRepository.find({
+      // Filter: all IN_DISPUTE bookings, optionally by disputeStatus ('open' | 'resolved')
+      const whereClause: any = { status: BookingStatus.IN_DISPUTE };
+      if (disputeStatus) whereClause.disputeStatus = disputeStatus;
+
+      const [disputes, total] = await bookingRepository.findAndCount({
         where: whereClause,
-        relations: ['customer', 'provider', 'payments'],
+        relations: ['customer', 'provider', 'provider.user'],
         order: { disputedAt: 'DESC' },
         skip: (Number(page) - 1) * Number(limit),
         take: Number(limit),
       });
 
-      const total = await bookingRepository.count({ where: whereClause });
-
       res.json({
         success: true,
         data: {
           disputes,
-          pagination: {
-            page: Number(page),
-            limit: Number(limit),
-            total,
-            pages: Math.ceil(total / Number(limit))
-          }
+          pagination: { page: Number(page), limit: Number(limit), total, pages: Math.ceil(total / Number(limit)) }
         }
       });
 
-      logger.info(`Disputes accessed by admin ${req.user?.userId}`);
+      logger.info(`Admin ${req.user?.userId} fetched disputes (${total} total)`);
     } catch (error) {
       logger.error('Error retrieving disputes:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Internal server error'
-      });
+      res.status(500).json({ success: false, error: 'Internal server error' });
     }
   }
 
-  // PUT /api/admin/disputes/:id/resolve - Resolve dispute (FR-077)
+  // PUT /api/admin/disputes/:id/resolve — capture (provider wins) or cancel hold (customer wins)
+  // Design note: two clear outcomes map directly to Stripe primitives:
+  //   capture  → provider wins → money moves
+  //   refund   → customer wins → authorisation cancelled, card never charged
   resolveDispute = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const stripe = getStripeInstance();
+    const bookingRepository = AppDataSource.getRepository(Booking);
+
     try {
       const { id } = req.params;
-      const { resolution, refundAmount, notes } = req.body;
+      const { decision, adminNotes } = req.body; // decision: 'capture' | 'refund'
 
-      if (!['customer_favor', 'provider_favor', 'partial_refund', 'no_action'].includes(resolution)) {
-        res.status(400).json({
-          success: false,
-          error: 'Invalid resolution type'
-        });
+      if (!['capture', 'refund'].includes(decision)) {
+        res.status(400).json({ success: false, error: "decision must be 'capture' or 'refund'" });
         return;
       }
 
-      const bookingRepository = AppDataSource.getRepository(Booking);
       const booking = await bookingRepository.findOne({
-        where: { id, isDisputed: true },
-        relations: ['payments']
+        where: { id, status: BookingStatus.IN_DISPUTE },
+        relations: ['customer', 'provider', 'provider.user'],
       });
 
       if (!booking) {
-        res.status(404).json({
-          success: false,
-          error: 'Disputed booking not found'
-        });
+        res.status(404).json({ success: false, error: 'Disputed booking not found' });
         return;
       }
 
-      // Update dispute status
-      booking.disputeStatus = 'resolved';
-      booking.disputeResolution = resolution;
-      booking.disputeResolvedAt = new Date();
-      booking.disputeResolvedBy = req.user?.userId || '';
-      booking.adminNotes = notes;
-
-      // Handle refunds if needed
-      if (resolution === 'customer_favor' || resolution === 'partial_refund') {
-        // Process refund logic here
-        // This would integrate with the payment system
+      if (!booking.stripePaymentIntentId) {
+        res.status(400).json({ success: false, error: 'No Stripe PaymentIntent on this booking' });
+        return;
       }
 
+      if (decision === 'capture') {
+        // Provider wins: capture the held funds
+        await stripe.paymentIntents.capture(booking.stripePaymentIntentId);
+        booking.status = BookingStatus.COMPLETED;
+      } else {
+        // Customer wins: cancel the authorisation — card is never charged
+        await stripe.paymentIntents.cancel(booking.stripePaymentIntentId);
+        booking.status = BookingStatus.CANCELLED;
+        booking.cancelledAt = new Date();
+        booking.cancellationReason = 'Dispute resolved in customer favour by admin';
+      }
+
+      booking.disputeStatus = 'resolved';
+      booking.disputeResolution = decision === 'capture' ? 'provider_favor' : 'customer_favor';
+      booking.disputeResolvedAt = new Date();
+      booking.disputeResolvedBy = req.user?.userId || '';
+      booking.adminNotes = adminNotes || null;
       await bookingRepository.save(booking);
 
-      res.json({
-        success: true,
-        data: booking,
-        message: 'Dispute resolved successfully'
-      });
+      // Notify both parties
+      const providerUserId = booking.provider?.userId;
+      const outcome = decision === 'capture' ? 'in favour of the provider (payment released)' : 'in favour of the customer (payment cancelled)';
+      const title = 'Dispute Resolved';
+      const msg = `Your dispute for booking ${id} has been resolved ${outcome}.`;
+      if (booking.customerId) {
+        await notificationService.createNotification(booking.customerId, { type: NotificationType.BOOKING, title, message: msg, metadata: { bookingId: id } });
+      }
+      if (providerUserId) {
+        await notificationService.createNotification(providerUserId, { type: NotificationType.BOOKING, title, message: msg, metadata: { bookingId: id } });
+      }
 
-      logger.info(
-        `Dispute ${id} resolved by admin ${req.user?.userId}. Resolution: ${resolution}. Notes: ${notes || 'None'}`
-      );
+      res.json({ success: true, message: `Dispute resolved — ${decision === 'capture' ? 'payment captured' : 'hold cancelled'}`, data: { booking } });
+      logger.info(`Admin ${req.user?.userId} resolved dispute ${id}: ${decision}. Notes: ${adminNotes || 'none'}`);
     } catch (error) {
       logger.error('Error resolving dispute:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Internal server error'
-      });
+      res.status(500).json({ success: false, error: getStripeErrorMessage(error) });
     }
   }
   // GET /admin/settings

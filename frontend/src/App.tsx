@@ -28,6 +28,7 @@ import AdminUsersPage from './components/pages/AdminUsersPage';
 import AdminProvidersPage from './components/pages/AdminProvidersPage';
 import AdminReviewsPage from './components/pages/AdminReviewsPage';
 import AdminSettingsPage from './components/pages/AdminSettingsPage';
+import AdminDisputesPage from './components/pages/AdminDisputesPage';
 import { Box } from '@mui/material';
 
 const queryClient = new QueryClient({
@@ -188,6 +189,7 @@ const AppContent: React.FC = () => {
             <Route path="users" element={<AdminUsersPage />} />
             <Route path="providers" element={<AdminProvidersPage />} />
             <Route path="reviews" element={<AdminReviewsPage />} />
+            <Route path="disputes" element={<AdminDisputesPage />} />
             <Route path="settings" element={<AdminSettingsPage />} />
           </Route>
 

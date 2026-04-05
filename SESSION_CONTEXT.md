@@ -24,7 +24,7 @@ Full audit saved in `PRODUCTION_HARDENING.md` — do this before first public de
 | 13 | Admin panel | FR-074–081 | ✅ Done — all 3 pages tested end-to-end incl. suspend/reactivate login flow |
 | 13b | Streaming AI provider search (SSE + Anthropic stream) | FR-025 | ✅ Done — progress events + token streaming working end-to-end |
 | 14 | Stripe integration (escrow flow) | FR-057–063 | ✅ Done — all P1–P10 tests passed |
-| 15 | Dispute resolution (admin-mediated) | FR-063 | ⏳ Pending — after Phase 14 |
+| 15 | Dispute resolution (admin-mediated) | FR-063 | 🔄 In progress — backend + UI built, E2E testing pending |
 | 16 | Email verification on register | FR-002 | ⏳ Pending (needs SMTP) |
 | 17 | GPS geocoding | FR-022 | ⏳ Pending (needs Maps key) |
 | 18 | Message file attachments | FR-050 | ⏳ Pending |
@@ -35,7 +35,8 @@ Full audit saved in `PRODUCTION_HARDENING.md` — do this before first public de
 1. Backend on port 3000, frontend on port 3001
 2. DB seeded; demo password: `Demo123!`
 3. Customer login: `customer@demo.com` / `Demo123!`
-4. **NEXT ACTION**: Phase 15 — Dispute resolution (admin-mediated): admin views IN_DISPUTE bookings, releases hold to customer or captures to provider
+4. **NEXT ACTION**: Phase 15 E2E — test admin disputes UI: create dispute via booking flow, resolve via `/admin/disputes` page (capture + refund paths); then Phase 16
+5. **NOTE**: After reseed, re-run Stripe setup (setup-intent → attach PM → save-method) since stripeCustomerId/stripePaymentMethodId are cleared
 5. **NOTE**: `automatic_payment_methods: { enabled: true, allow_redirects: 'never' }` required on PaymentIntent.create
 6. **NOTE**: Stripe blocks saving declined cards at setup (correct behavior) — P3 cancel path verified via error-path test
 

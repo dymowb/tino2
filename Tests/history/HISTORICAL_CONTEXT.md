@@ -2,7 +2,27 @@
 
 This document contains detailed historical information moved from SESSION_CONTEXT.md to keep the main context file lean and focused on resuming work.
 
-## Phase 14: Stripe Integration — Escrow Flow (IN PROGRESS)
+## Phase 15: Dispute Resolution — Admin Panel (IN PROGRESS)
+
+### What was built
+- `AdminController.getDisputes`: lists `IN_DISPUTE` bookings with customer/provider/amount/reason; filterable by `disputeStatus=open|resolved`
+- `AdminController.resolveDispute`: `decision: 'capture'` → Stripe capture → COMPLETED; `decision: 'refund'` → Stripe cancel → CANCELLED; notifies both parties
+- `AdminDisputesPage.tsx`: table of disputes, filter tabs (open/resolved/all), resolve dialog with decision radio + admin notes + colour-coded action button
+- Added `Gavel` icon + Disputes nav entry to `AdminLayout.tsx`
+- Route: `/admin/disputes`
+
+### Key Files
+- `backend/src/controllers/AdminController.ts` — getDisputes + resolveDispute (replaced stubs)
+- `frontend/src/components/pages/AdminDisputesPage.tsx` — new
+- `frontend/src/components/admin/AdminLayout.tsx` — Disputes nav item
+- `frontend/src/App.tsx` — `/admin/disputes` route
+
+### Status
+- Backend API tested (refund path verified ✅); capture path and full UI E2E pending next session
+
+---
+
+## Phase 14: Stripe Integration — Escrow Flow (COMPLETED — 2026-04-04)
 
 ### Design Decisions
 - **Two-step payment**: card saved (SetupIntent) at quote acceptance; hold created (PaymentIntent manual capture) at service start
