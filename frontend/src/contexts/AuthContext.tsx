@@ -13,7 +13,7 @@ interface AuthContextType {
     lastName: string;
     phone?: string;
     userType: 'customer' | 'provider';
-  }) => Promise<void>;
+  }) => Promise<{ email: string; firstName: string }>;
   logout: () => Promise<void>;
   updateUser: (updates: Partial<User>) => Promise<void>;
 }
@@ -74,12 +74,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     lastName: string;
     phone?: string;
     userType: 'customer' | 'provider';
-  }) => {
+  }): Promise<{ email: string; firstName: string }> => {
     try {
       setLoading(true);
-      const authResponse: AuthResponse = await apiService.register(userData);
-      setUser(authResponse.user);
-      apiService.setStoredUser(authResponse.user);
+      return await apiService.register(userData);
     } catch (error) {
       throw error;
     } finally {

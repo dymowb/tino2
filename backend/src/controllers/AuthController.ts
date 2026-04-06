@@ -18,23 +18,12 @@ export class AuthController {
         userType: userType as UserType,
       });
 
-      const { accessToken, refreshToken } = await userService.authenticateUser(email, password);
-
       const response: ApiResponse = {
         success: true,
-        message: 'User registered successfully',
+        message: 'Registration successful. Please check your email to verify your account.',
         data: {
-          user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            phone: user.phone,
-            userType: user.userType,
-            isActive: user.isActive,
-          },
-          accessToken,
-          refreshToken,
+          email: user.email,
+          firstName: user.firstName,
         },
       };
 
@@ -46,6 +35,41 @@ export class AuthController {
         error: error instanceof Error ? error.message : 'Registration failed',
       };
       res.status(400).json(response);
+    }
+  }
+
+  async verifyEmail(req: Request, res: Response): Promise<void> {
+    try {
+      const { token } = req.query;
+      if (!token || typeof token !== 'string') {
+        res.status(400).json({ success: false, error: 'Verification token is required' });
+        return;
+      }
+      await userService.verifyEmail(token);
+      res.json({ success: true, message: 'Email verified successfully. You can now log in.' });
+    } catch (error) {
+      res.status(400).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Verification failed',
+      });
+    }
+  }
+
+  async resendVerification(req: Request, res: Response): Promise<void> {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        res.status(400).json({ success: false, error: 'Email is required' });
+        return;
+      }
+      await userService.resendVerification(email);
+      // Always return success to avoid leaking whether the email exists
+      res.json({ success: true, message: 'If this email is registered and unverified, a new verification link has been sent.' });
+    } catch (error) {
+      res.status(400).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to resend verification',
+      });
     }
   }
 
@@ -80,6 +104,15 @@ export class AuthController {
       res.json(response);
     } catch (error) {
       logger.error('Login error:', error);
+      if (error instanceof Error && error.message === 'EMAIL_NOT_VERIFIED') {
+        res.status(403).json({
+          success: false,
+          error: 'EMAIL_NOT_VERIFIED',
+          message: 'Please verify your email address before logging in.',
+          email: (error as any).email,
+        });
+        return;
+      }
       const response: ApiResponse = {
         success: false,
         error: error instanceof Error ? error.message : 'Login failed',

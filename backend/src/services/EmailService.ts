@@ -43,41 +43,40 @@ export class EmailService {
   private transporter: nodemailer.Transporter | null = null;
   private fromEmail: string;
   private useSendGrid: boolean;
+  private ready: Promise<void>;
 
   constructor() {
-    this.fromEmail = config.external.sendgrid.fromEmail;
-    
-    // Initialize SendGrid if API key is provided
+    this.fromEmail = config.external.sendgrid.fromEmail || 'noreply@tino.local';
+
     if (config.external.sendgrid.apiKey) {
       sgMail.setApiKey(config.external.sendgrid.apiKey);
       this.useSendGrid = true;
+      this.ready = Promise.resolve();
       logger.info('Email service initialized with SendGrid');
     } else {
-      // Fallback to SMTP with Nodemailer
-      this.initializeSmtp();
       this.useSendGrid = false;
-      logger.info('Email service initialized with SMTP');
+      this.ready = this.initializeSmtp();
     }
   }
 
-  private initializeSmtp(): void {
-    // Configure SMTP (example with Gmail)
-    this.transporter = nodemailer.createTransporter({
-      service: 'gmail',
-      auth: {
-        user: process.env.SMTP_USER || '',
-        pass: process.env.SMTP_PASS || '',
-      },
-    });
-
-    // Verify SMTP connection
-    this.transporter.verify((error) => {
-      if (error) {
-        logger.warn('SMTP connection failed:', error);
-      } else {
-        logger.info('SMTP server ready');
-      }
-    });
+  private async initializeSmtp(): Promise<void> {
+    try {
+      // Use Ethereal — a fake SMTP service that captures emails for inspection.
+      // Preview URLs are logged after each send so you can open the email in a browser.
+      const testAccount = await nodemailer.createTestAccount();
+      this.transporter = nodemailer.createTransport({
+        host: 'smtp.ethereal.email',
+        port: 587,
+        secure: false,
+        auth: {
+          user: testAccount.user,
+          pass: testAccount.pass,
+        },
+      });
+      logger.info(`Email service ready (Ethereal). Inbox: https://ethereal.email/messages`);
+    } catch (error) {
+      logger.warn('Failed to create Ethereal test account:', error);
+    }
   }
 
   /**
@@ -129,6 +128,8 @@ export class EmailService {
   }
 
   private async sendWithSmtp(message: EmailMessage): Promise<EmailResponse> {
+    await this.ready;
+
     if (!this.transporter) {
       throw new Error('SMTP transporter not configured');
     }
@@ -145,10 +146,14 @@ export class EmailService {
     };
 
     const result = await this.transporter.sendMail(mailOptions);
-    
-    logger.info(`Email sent successfully via SMTP to ${message.to}`, { 
-      messageId: result.messageId 
-    });
+
+    // Ethereal captures the email — log the preview URL so you can open it in a browser
+    const previewUrl = nodemailer.getTestMessageUrl(result);
+    if (previewUrl) {
+      logger.info(`📧 Email preview (Ethereal): ${previewUrl}`);
+    }
+
+    logger.info(`Email sent to ${message.to}`, { messageId: result.messageId });
 
     return {
       success: true,

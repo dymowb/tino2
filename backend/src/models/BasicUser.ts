@@ -51,6 +51,12 @@ export class BasicUser {
   isVerified: boolean;
 
   @Column({ nullable: true })
+  emailVerificationToken?: string;
+
+  @Column({ type: 'datetime', nullable: true })
+  emailVerificationExpiry?: Date;
+
+  @Column({ nullable: true })
   profileImage?: string;
 
   @Column({ type: 'json', nullable: true })

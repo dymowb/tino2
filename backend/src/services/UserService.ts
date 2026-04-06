@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Repository } from 'typeorm';
 import { BasicUser, UserType } from '@/models/BasicUser';
 import { AppDataSource } from '@/config/database';
@@ -6,6 +7,7 @@ import { jwtService } from '@/utils/jwt';
 import { redisClient } from '@/config/redis';
 import logger from '@/config/logger';
 import { JwtPayload } from '@/types';
+import emailService from '@/services/EmailService';
 
 export class UserService {
   private userRepository: Repository<BasicUser>;
@@ -38,8 +40,21 @@ export class UserService {
         password: hashedPassword,
       });
 
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      user.emailVerificationToken = verificationToken;
+      user.emailVerificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
       const savedUser = await this.userRepository.save(user);
       logger.info(`User created successfully: ${savedUser.id}`);
+
+      // Fire-and-forget — a broken mail server should not fail registration
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+      const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
+      emailService.sendEmailVerification(savedUser.email, {
+        name: savedUser.firstName,
+        verificationUrl,
+        code: verificationToken.slice(0, 6).toUpperCase(),
+      }).catch((err) => logger.warn('Failed to send verification email:', err));
 
       return savedUser;
     } catch (error) {
@@ -68,6 +83,7 @@ export class UserService {
           'userType',
           'phone',
           'isActive',
+          'isVerified',
           'createdAt',
           'updatedAt',
         ],
@@ -79,6 +95,12 @@ export class UserService {
 
       if (!user.isActive) {
         throw new Error('Your account has been suspended. Please contact support.');
+      }
+
+      if (!user.isVerified) {
+        const err = new Error('EMAIL_NOT_VERIFIED');
+        (err as any).email = email;
+        throw err;
       }
 
       const isPasswordValid = await passwordService.compare(password, user.password);
@@ -301,6 +323,57 @@ export class UserService {
       logger.error('Error logging out user:', error);
       throw error;
     }
+  }
+
+  async verifyEmail(token: string): Promise<void> {
+    const user = await this.userRepository.findOne({
+      where: { emailVerificationToken: token },
+    });
+
+    if (!user) {
+      throw new Error('Invalid or expired verification token');
+    }
+
+    if (user.emailVerificationExpiry && user.emailVerificationExpiry < new Date()) {
+      throw new Error('Verification token has expired. Please request a new one.');
+    }
+
+    await this.userRepository.update(user.id, {
+      isVerified: true,
+      emailVerificationToken: undefined,
+      emailVerificationExpiry: undefined,
+    });
+
+    logger.info(`Email verified for user: ${user.id}`);
+  }
+
+  async resendVerification(email: string): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { email } });
+
+    if (!user) {
+      // Don't reveal whether the email exists
+      return;
+    }
+
+    if (user.isVerified) {
+      throw new Error('Email is already verified');
+    }
+
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    await this.userRepository.update(user.id, {
+      emailVerificationToken: verificationToken,
+      emailVerificationExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    });
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+    const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
+    await emailService.sendEmailVerification(user.email, {
+      name: user.firstName,
+      verificationUrl,
+      code: verificationToken.slice(0, 6).toUpperCase(),
+    });
+
+    logger.info(`Verification email resent to: ${email}`);
   }
 
   async getUsers(options: {

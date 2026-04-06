@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Container,
@@ -21,7 +21,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
 
 const RegisterForm: React.FC = () => {
-  const navigate = useNavigate();
   const { register } = useAuth();
   const { t } = useTranslation(['auth']);
   const [formData, setFormData] = useState({
@@ -35,6 +34,7 @@ const RegisterForm: React.FC = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [registeredEmail, setRegisteredEmail] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +62,7 @@ const RegisterForm: React.FC = () => {
     }
 
     try {
-      await register({
+      const result = await register({
         email: formData.email,
         password: formData.password,
         firstName: formData.firstName,
@@ -70,7 +70,7 @@ const RegisterForm: React.FC = () => {
         userType: formData.userType,
         phone: formData.phone || undefined,
       });
-      navigate('/');
+      setRegisteredEmail(result.email);
     } catch (error: any) {
       // Enhanced error handling for better user experience
       const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || t('auth:register.error');
@@ -99,6 +99,30 @@ const RegisterForm: React.FC = () => {
       userType: e.target.value,
     });
   };
+
+  if (registeredEmail) {
+    return (
+      <Container maxWidth="sm" sx={{ mt: 8, mb: 4 }}>
+        <Paper elevation={4} sx={{ p: 4, borderRadius: 3, textAlign: 'center' }}>
+          <Typography variant="h4" gutterBottom sx={{ color: '#4CAF50' }}>
+            Check your email
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+            We sent a verification link to <strong>{registeredEmail}</strong>.
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Click the link in the email to activate your account, then come back to log in.
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Already verified?{' '}
+            <Link to="/login" style={{ color: '#1976d2', textDecoration: 'none', fontWeight: 600 }}>
+              Log in
+            </Link>
+          </Typography>
+        </Paper>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="sm" sx={{ mt: 4, mb: 4 }}>

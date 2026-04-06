@@ -13,6 +13,7 @@ import {
   Divider,
   CircularProgress,
 } from '@mui/material';
+import { apiService } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
 
@@ -26,6 +27,8 @@ const LoginForm: React.FC = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +39,13 @@ const LoginForm: React.FC = () => {
       await login(formData.email, formData.password);
       navigate('/');
     } catch (error: any) {
-      setError(error.response?.data?.error || error.message || t('auth:login.error'));
+      const data = error.response?.data;
+      if (data?.error === 'EMAIL_NOT_VERIFIED') {
+        setUnverifiedEmail(data.email || formData.email);
+        setError('');
+      } else {
+        setError(data?.error || error.message || t('auth:login.error'));
+      }
     } finally {
       setLoading(false);
     }
@@ -47,6 +56,16 @@ const LoginForm: React.FC = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
+  };
+
+  const handleResend = async () => {
+    setResendStatus('sending');
+    try {
+      await apiService.resendVerification(unverifiedEmail);
+      setResendStatus('sent');
+    } catch {
+      setResendStatus('idle');
+    }
   };
 
   const fillDemoAccount = (type: 'customer' | 'provider') => {
@@ -107,6 +126,27 @@ const LoginForm: React.FC = () => {
                 {error}
               </Alert>
             </motion.div>
+          )}
+
+          {unverifiedEmail && (
+            <Alert severity="warning" sx={{ mb: 3 }}>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                Your email <strong>{unverifiedEmail}</strong> is not verified yet.
+              </Typography>
+              {resendStatus === 'sent' ? (
+                <Typography variant="body2">Verification email sent! Check your inbox.</Typography>
+              ) : (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={handleResend}
+                  disabled={resendStatus === 'sending'}
+                  sx={{ mt: 0.5 }}
+                >
+                  {resendStatus === 'sending' ? 'Sending...' : 'Resend verification email'}
+                </Button>
+              )}
+            </Alert>
           )}
 
           <Box component="form" onSubmit={handleSubmit}>

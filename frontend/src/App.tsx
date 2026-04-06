@@ -22,6 +22,7 @@ import NotificationsPage from './components/pages/NotificationsPage';
 import MyQuotesPage from './components/pages/MyQuotesPage';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import AdminRoute from './components/auth/AdminRoute';
+import VerifyEmailPage from './components/auth/VerifyEmailPage';
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboardPage from './components/pages/AdminDashboardPage';
 import AdminUsersPage from './components/pages/AdminUsersPage';
@@ -93,8 +94,9 @@ const AppContent: React.FC = () => {
               </ProtectedRoute>
             } 
           />
-          <Route 
-            path="/register" 
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route
+            path="/register"
             element={
               <ProtectedRoute requireAuth={false}>
                 <RegisterForm />

@@ -6,6 +6,10 @@ import { rateLimiters } from '@/middleware/security';
 
 const router = Router();
 
+router.get('/verify-email', authController.verifyEmail.bind(authController));
+
+router.post('/resend-verification', rateLimiters.auth, authController.resendVerification.bind(authController));
+
 router.post(
   '/register',
   rateLimiters.auth,

@@ -372,12 +372,17 @@ class ApiService {
     lastName: string;
     phone?: string;
     userType: 'customer' | 'provider';
-  }): Promise<AuthResponse> {
-    const response = await this.api.post<ApiResponse<AuthResponse>>('/auth/register', userData);
-    const { accessToken, refreshToken } = response.data.data!;
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
+  }): Promise<{ email: string; firstName: string }> {
+    const response = await this.api.post<ApiResponse<{ email: string; firstName: string }>>('/auth/register', userData);
     return response.data.data!;
+  }
+
+  async verifyEmail(token: string): Promise<void> {
+    await this.api.get('/auth/verify-email', { params: { token } });
+  }
+
+  async resendVerification(email: string): Promise<void> {
+    await this.api.post('/auth/resend-verification', { email });
   }
 
   async login(email: string, password: string): Promise<AuthResponse> {
