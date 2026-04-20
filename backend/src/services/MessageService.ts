@@ -217,7 +217,7 @@ export class MessageService {
         conversationId: messageData.conversationId,
         senderId,
         receiverId,
-        message: messageData.message,
+        message: messageData.message || '',
         messageType: messageData.messageType || MessageType.TEXT,
         attachments: messageData.attachments || [],
         replyToMessageId: messageData.replyToMessageId,

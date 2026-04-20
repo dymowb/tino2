@@ -11,6 +11,7 @@ import {
   MenuItem,
   Divider,
   CircularProgress,
+  Tooltip,
 } from '@mui/material';
 import {
   Send as SendIcon,
@@ -19,6 +20,8 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Reply as ReplyIcon,
+  Close as CloseIcon,
+  InsertDriveFile as FileIcon,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiService from '../../services/api';
@@ -76,6 +79,8 @@ interface Props {
   onConversationUpdate?: () => void;
 }
 
+const API_BASE = process.env.REACT_APP_API_URL?.replace('/api/v1', '') || 'http://localhost:3000';
+
 const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }) => {
   const [messageText, setMessageText] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -84,7 +89,10 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [pendingAttachments, setPendingAttachments] = useState<Array<{ url: string; originalName: string; mimeType: string }>>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const currentUser = apiService.getStoredUser();
 
@@ -108,6 +116,7 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
     onSuccess: () => {
       setMessageText('');
       setReplyToMessage(null);
+      setPendingAttachments([]);
       queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
       onConversationUpdate?.();
     },
@@ -187,12 +196,18 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
   };
 
   const handleSendMessage = () => {
-    if (!messageText.trim()) return;
+    if (!messageText.trim() && pendingAttachments.length === 0) return;
+
+    const attachmentUrls = pendingAttachments.map(a => a.url);
+    const hasAttachments = attachmentUrls.length > 0;
 
     const messageData = {
       conversationId,
-      message: messageText.trim(),
-      messageType: 'text' as const,
+      message: messageText.trim() || '',
+      messageType: hasAttachments
+        ? (pendingAttachments[0].mimeType.startsWith('image/') ? 'image' as const : 'file' as const)
+        : 'text' as const,
+      attachments: hasAttachments ? attachmentUrls : undefined,
       replyToMessageId: replyToMessage?.id,
     };
 
@@ -206,10 +221,35 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
     }
   };
 
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    try {
+      const uploads = await Promise.all(
+        Array.from(files).map(file => apiService.uploadMessageAttachment(file))
+      );
+      setPendingAttachments(prev => [...prev, ...uploads]);
+    } catch (error) {
+      toast.error('Failed to upload file');
+    } finally {
+      setIsUploading(false);
+      // Reset input so the same file can be re-selected
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const removePendingAttachment = (index: number) => {
+    setPendingAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleKeyPress = (event: React.KeyboardEvent) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
-      handleSendMessage();
+      if (messageText.trim() || pendingAttachments.length > 0) {
+        handleSendMessage();
+      }
     }
   };
 
@@ -370,10 +410,59 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
                       </Box>
                     )}
                     
-                    <Typography variant="body2">
-                      {message.message}
-                    </Typography>
-                    
+                    {message.message && message.message.trim() && (
+                      <Typography variant="body2">
+                        {message.message}
+                      </Typography>
+                    )}
+
+                    {message.attachments && message.attachments.length > 0 && (
+                      <Box sx={{ mt: message.message?.trim() ? 1 : 0 }}>
+                        {message.attachments.map((url, idx) => {
+                          const isImage = /\.(jpg|jpeg|png|gif)$/i.test(url);
+                          const fullUrl = `${API_BASE}${url}`;
+                          const fileName = url.split('/').pop() || 'attachment';
+                          return isImage ? (
+                            <Box
+                              key={idx}
+                              component="img"
+                              src={fullUrl}
+                              alt="attachment"
+                              sx={{
+                                maxWidth: 200,
+                                maxHeight: 200,
+                                borderRadius: 1,
+                                display: 'block',
+                                mb: idx < message.attachments!.length - 1 ? 0.5 : 0,
+                                cursor: 'pointer',
+                              }}
+                              onClick={() => window.open(fullUrl, '_blank')}
+                            />
+                          ) : (
+                            <Box
+                              key={idx}
+                              component="a"
+                              href={fullUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                color: 'inherit',
+                                textDecoration: 'none',
+                                '&:hover': { textDecoration: 'underline' },
+                                mb: idx < message.attachments!.length - 1 ? 0.5 : 0,
+                              }}
+                            >
+                              <FileIcon fontSize="small" />
+                              <Typography variant="caption">{fileName}</Typography>
+                            </Box>
+                          );
+                        })}
+                      </Box>
+                    )}
+
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
                       <Typography variant="caption" sx={{ opacity: 0.8 }}>
                         {formatMessageTime(message.createdAt)}
@@ -421,11 +510,61 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
 
       {/* Message Input */}
       <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
+        {/* Pending attachment previews */}
+        {pendingAttachments.length > 0 && (
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+            {pendingAttachments.map((att, idx) => {
+              const isImage = att.mimeType.startsWith('image/');
+              const fullUrl = `${API_BASE}${att.url}`;
+              return (
+                <Box key={idx} sx={{ position: 'relative' }}>
+                  {isImage ? (
+                    <Box
+                      component="img"
+                      src={fullUrl}
+                      alt={att.originalName}
+                      sx={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 1 }}
+                    />
+                  ) : (
+                    <Box sx={{
+                      width: 64, height: 64, display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', justifyContent: 'center',
+                      border: 1, borderColor: 'divider', borderRadius: 1,
+                    }}>
+                      <FileIcon />
+                      <Typography variant="caption" sx={{ fontSize: 9, wordBreak: 'break-all', textAlign: 'center', px: 0.5 }}>
+                        {att.originalName.length > 12 ? att.originalName.substring(0, 10) + '…' : att.originalName}
+                      </Typography>
+                    </Box>
+                  )}
+                  <IconButton
+                    size="small"
+                    sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'background.paper', p: 0.25 }}
+                    onClick={() => removePendingAttachment(idx)}
+                  >
+                    <CloseIcon sx={{ fontSize: 14 }} />
+                  </IconButton>
+                </Box>
+              );
+            })}
+          </Box>
+        )}
+
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <IconButton>
-            <AttachFileIcon />
-          </IconButton>
-          
+          <input
+            type="file"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            multiple
+            accept="image/*,.pdf,.doc,.docx,.txt,.zip"
+            onChange={handleFileSelect}
+          />
+          <Tooltip title="Attach file">
+            <IconButton onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+              {isUploading ? <CircularProgress size={20} /> : <AttachFileIcon />}
+            </IconButton>
+          </Tooltip>
+
           <TextField
             fullWidth
             multiline
@@ -437,11 +576,11 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
             variant="outlined"
             size="small"
           />
-          
-          <IconButton 
-            color="primary" 
+
+          <IconButton
+            color="primary"
             onClick={handleSendMessage}
-            disabled={!messageText.trim() || sendMessageMutation.isPending || updateMessageMutation.isPending}
+            disabled={(!messageText.trim() && pendingAttachments.length === 0) || sendMessageMutation.isPending || updateMessageMutation.isPending}
           >
             {sendMessageMutation.isPending || updateMessageMutation.isPending ? (
               <CircularProgress size={24} />
@@ -450,15 +589,15 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
             )}
           </IconButton>
         </Box>
-        
+
         {editingMessage && (
           <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>
             <Typography variant="caption" color="text.secondary">
               Editing message
             </Typography>
-            <Typography 
-              variant="caption" 
-              color="primary" 
+            <Typography
+              variant="caption"
+              color="primary"
               sx={{ cursor: 'pointer' }}
               onClick={() => {
                 setEditingMessage(null);

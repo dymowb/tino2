@@ -221,6 +221,14 @@ const LoginForm: React.FC = () => {
 
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary">
+                <Link to="/forgot-password" style={{ color: '#1976d2', textDecoration: 'none' }}>
+                  Forgot your password?
+                </Link>
+              </Typography>
+            </Box>
+
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="body2" color="text.secondary">
                 {t('auth:login.no_account')}{' '}
                 <Link
                   to="/register"

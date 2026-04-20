@@ -144,4 +144,26 @@ const config: Config = {
   },
 };
 
+const PLACEHOLDER_JWT = 'fallback-secret-change-in-production';
+
+export function validateConfig(): void {
+  const isProduction = config.server.nodeEnv === 'production';
+
+  if (config.jwt.secret === PLACEHOLDER_JWT) {
+    if (isProduction) {
+      throw new Error('FATAL: JWT_SECRET is set to the placeholder value. Set a real secret before deploying.');
+    } else {
+      console.warn('⚠️  WARNING: JWT_SECRET is using the placeholder fallback. Set a real secret in .env.');
+    }
+  }
+
+  if (isProduction && !config.anthropic?.apiKey) {
+    throw new Error('FATAL: ANTHROPIC_API_KEY is required in production.');
+  }
+
+  if (isProduction && !config.database.url) {
+    throw new Error('FATAL: DATABASE_URL is required in production.');
+  }
+}
+
 export default config;

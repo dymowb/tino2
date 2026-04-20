@@ -48,4 +48,8 @@ router.put(
   authController.changePassword.bind(authController)
 );
 
+router.post('/forgot-password', rateLimiters.auth, authController.forgotPassword.bind(authController));
+
+router.post('/reset-password', rateLimiters.auth, authController.resetPassword.bind(authController));
+
 export default router;

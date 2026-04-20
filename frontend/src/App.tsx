@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Component, ErrorInfo } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
@@ -23,6 +23,8 @@ import MyQuotesPage from './components/pages/MyQuotesPage';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import AdminRoute from './components/auth/AdminRoute';
 import VerifyEmailPage from './components/auth/VerifyEmailPage';
+import ForgotPasswordPage from './components/pages/ForgotPasswordPage';
+import ResetPasswordPage from './components/pages/ResetPasswordPage';
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboardPage from './components/pages/AdminDashboardPage';
 import AdminUsersPage from './components/pages/AdminUsersPage';
@@ -30,7 +32,36 @@ import AdminProvidersPage from './components/pages/AdminProvidersPage';
 import AdminReviewsPage from './components/pages/AdminReviewsPage';
 import AdminSettingsPage from './components/pages/AdminSettingsPage';
 import AdminDisputesPage from './components/pages/AdminDisputesPage';
-import { Box } from '@mui/material';
+import { Box, Button, Typography } from '@mui/material';
+
+class ErrorBoundary extends Component<{ children: React.ReactNode }, { error: Error | null }> {
+  state = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('Uncaught error:', error, info);
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <Box sx={{ p: 4, textAlign: 'center' }}>
+          <Typography variant="h5" gutterBottom>Something went wrong.</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Please refresh the page. If the problem persists, contact support.
+          </Typography>
+          <Button variant="contained" onClick={() => this.setState({ error: null })}>
+            Try again
+          </Button>
+        </Box>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -95,6 +126,8 @@ const AppContent: React.FC = () => {
             } 
           />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route
             path="/register"
             element={
@@ -205,40 +238,44 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Router>
-          <AuthProvider>
-            <AppContent />
-            <Toaster
-              position="top-right"
-              toastOptions={{
-                duration: 4000,
-                style: {
-                  background: '#fff',
-                  color: '#333',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                  borderRadius: '8px',
-                },
-                success: {
-                  iconTheme: {
-                    primary: '#4CAF50',
-                    secondary: '#fff',
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <Router>
+            <AuthProvider>
+              <ErrorBoundary>
+                <AppContent />
+              </ErrorBoundary>
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  duration: 4000,
+                  style: {
+                    background: '#fff',
+                    color: '#333',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                    borderRadius: '8px',
                   },
-                },
-                error: {
-                  iconTheme: {
-                    primary: '#F44336',
-                    secondary: '#fff',
+                  success: {
+                    iconTheme: {
+                      primary: '#4CAF50',
+                      secondary: '#fff',
+                    },
                   },
-                },
-              }}
-            />
-          </AuthProvider>
-        </Router>
-      </ThemeProvider>
-    </QueryClientProvider>
+                  error: {
+                    iconTheme: {
+                      primary: '#F44336',
+                      secondary: '#fff',
+                    },
+                  },
+                }}
+              />
+            </AuthProvider>
+          </Router>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
 

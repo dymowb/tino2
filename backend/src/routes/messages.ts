@@ -107,10 +107,18 @@ router.post(
       .isUUID()
       .withMessage('Conversation ID must be a valid UUID'),
     body('message')
+      .optional({ checkFalsy: true })
       .isString()
-      .notEmpty()
       .isLength({ max: 5000 })
-      .withMessage('Message must be a non-empty string with maximum 5000 characters'),
+      .withMessage('Message must be a string with maximum 5000 characters'),
+    body().custom((value) => {
+      const hasMessage = value.message && value.message.trim().length > 0;
+      const hasAttachments = Array.isArray(value.attachments) && value.attachments.length > 0;
+      if (!hasMessage && !hasAttachments) {
+        throw new Error('Message text or at least one attachment is required');
+      }
+      return true;
+    }),
     body('messageType')
       .optional()
       .isIn(['text', 'image', 'file'])
@@ -219,5 +227,8 @@ router.delete(
 
 // Get unread message count for current user
 router.get('/messages/unread/count', messageController.getUnreadMessageCount);
+
+// Upload a file attachment for use in a message
+router.post('/messages/upload', ...messageController.uploadAttachment);
 
 export default router;

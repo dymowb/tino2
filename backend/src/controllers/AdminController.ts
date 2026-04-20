@@ -507,9 +507,11 @@ export class AdminController {
       const { page = 1, limit = 20, disputeStatus } = req.query;
       const bookingRepository = AppDataSource.getRepository(Booking);
 
-      // Filter: all IN_DISPUTE bookings, optionally by disputeStatus ('open' | 'resolved')
-      const whereClause: any = { status: BookingStatus.IN_DISPUTE };
-      if (disputeStatus) whereClause.disputeStatus = disputeStatus;
+      // Filter: all disputed bookings (open=still IN_DISPUTE, resolved=moved to cancelled/completed)
+      // isDisputed=true is the stable flag; status changes on resolution so can't be used alone.
+      const whereClause: any = { isDisputed: true };
+      if (disputeStatus === 'open') whereClause.status = BookingStatus.IN_DISPUTE;
+      else if (disputeStatus === 'resolved') whereClause.disputeStatus = 'resolved';
 
       const [disputes, total] = await bookingRepository.findAndCount({
         where: whereClause,

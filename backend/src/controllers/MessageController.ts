@@ -3,6 +3,40 @@ import { validationResult } from 'express-validator';
 import messageService from '@/services/MessageService';
 import { AuthenticatedRequest } from '@/types';
 import logger from '@/config/logger';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs/promises';
+
+// Configure multer for message file/image uploads
+const messageStorage = multer.diskStorage({
+  destination: async (req, file, cb) => {
+    const uploadPath = path.join(__dirname, '../../uploads/messages');
+    try {
+      await fs.mkdir(uploadPath, { recursive: true });
+      cb(null, uploadPath);
+    } catch (error) {
+      cb(error as Error, uploadPath);
+    }
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
+    cb(null, filename);
+  },
+});
+
+const messageUpload = multer({
+  storage: messageStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|pdf|doc|docx|txt|zip/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    if (extname) {
+      return cb(null, true);
+    }
+    cb(new Error('File type not allowed'));
+  },
+});
 
 export class MessageController {
   createConversation = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -269,6 +303,31 @@ export class MessageController {
       });
     }
   };
+
+  uploadAttachment = [
+    messageUpload.single('file'),
+    async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+      try {
+        if (!req.file) {
+          res.status(400).json({ success: false, message: 'No file uploaded' });
+          return;
+        }
+        const url = `/uploads/messages/${req.file.filename}`;
+        res.json({
+          success: true,
+          data: {
+            url,
+            originalName: req.file.originalname,
+            mimeType: req.file.mimetype,
+            size: req.file.size,
+          },
+        });
+      } catch (error) {
+        logger.error('Error uploading message attachment:', error);
+        res.status(500).json({ success: false, message: 'Failed to upload file' });
+      }
+    },
+  ];
 }
 
 export default new MessageController();

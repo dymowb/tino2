@@ -47,6 +47,7 @@
     "communication": "Comunicação",
     "professionalism": "Profissionalismo",
     "value": "Relação Custo-Benefício",
+    "valueForMoney": "Custo-Benefício",
     "review_title": "Título da Avaliação",
     "title_placeholder": "Resuma sua experiência...",
     "detailed_review": "Avaliação Detalhada",
@@ -92,7 +93,8 @@
     "timeliness": "Pontualidade",
     "communication": "Comunicação",
     "professionalism": "Profissionalismo",
-    "value": "Valor"
+    "value": "Valor",
+    "valueForMoney": "Custo-Benefício"
   },
 
   "empty": {

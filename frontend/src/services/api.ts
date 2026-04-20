@@ -385,6 +385,14 @@ class ApiService {
     await this.api.post('/auth/resend-verification', { email });
   }
 
+  async forgotPassword(email: string): Promise<void> {
+    await this.api.post('/auth/forgot-password', { email });
+  }
+
+  async resetPassword(token: string, password: string): Promise<void> {
+    await this.api.post('/auth/reset-password', { token, password });
+  }
+
   async login(email: string, password: string): Promise<AuthResponse> {
     const response = await this.api.post<ApiResponse<AuthResponse>>('/auth/login', {
       email,
@@ -526,7 +534,7 @@ class ApiService {
     page?: number;
     limit?: number;
   }): Promise<ApiResponse<{
-    providers: (Provider & { distance: number; duration: number })[];
+    providers: (Provider & { distance: number; distanceText: string; duration: number; durationText: string })[];
     totalCount: number;
     page: number;
     totalPages: number;
@@ -556,7 +564,7 @@ class ApiService {
     if (params.limit) queryParams.append('limit', params.limit.toString());
 
     const response = await this.api.get<ApiResponse<{
-      providers: (Provider & { distance: number; duration: number })[];
+      providers: (Provider & { distance: number; distanceText: string; duration: number; durationText: string })[];
       totalCount: number;
       page: number;
       totalPages: number;
@@ -760,6 +768,17 @@ class ApiService {
     };
   }): Promise<any> {
     const response = await this.api.post<ApiResponse<any>>('/messages/conversations', conversationData);
+    return response.data.data!;
+  }
+
+  async uploadMessageAttachment(file: File): Promise<{ url: string; originalName: string; mimeType: string; size: number }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await this.api.post<ApiResponse<{ url: string; originalName: string; mimeType: string; size: number }>>(
+      '/messages/messages/upload',
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
     return response.data.data!;
   }
 

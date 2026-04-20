@@ -10,8 +10,8 @@ import { AuthenticatedRequest } from '@/types';
 import PaymentService from '@/services/PaymentService';
 import { getStripeInstance, getStripeErrorMessage } from '@/config/stripe';
 
-// Initialize Stripe
-const stripe = getStripeInstance();
+// Lazy accessor — avoids crash-at-startup when STRIPE_SECRET_KEY is absent
+const stripe = () => getStripeInstance();
 
 class PaymentController {
   // GET /api/payments - Get user payments (FR-064)
@@ -115,7 +115,7 @@ class PaymentController {
       // Get or create Stripe customer
       let stripeCustomerId = user.stripeCustomerId;
       if (!stripeCustomerId) {
-        const customer = await stripe.customers.create({
+        const customer = await stripe().customers.create({
           email: user.email,
           name: `${user.firstName} ${user.lastName}`,
           metadata: { userId: user.id },
@@ -124,7 +124,7 @@ class PaymentController {
         await userRepository.update(user.id, { stripeCustomerId });
       }
 
-      const setupIntent = await stripe.setupIntents.create({
+      const setupIntent = await stripe().setupIntents.create({
         customer: stripeCustomerId,
         payment_method_types: ['card'],
         metadata: { userId: user.id },
@@ -144,7 +144,7 @@ class PaymentController {
       if (!paymentMethodId) { res.status(400).json({ success: false, error: 'paymentMethodId required' }); return; }
 
       // Verify the payment method belongs to this customer via Stripe
-      const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+      const pm = await stripe().paymentMethods.retrieve(paymentMethodId);
       const userRepository = AppDataSource.getRepository(User);
       const user = await userRepository.findOne({ where: { id: req.user.userId } });
 
@@ -384,7 +384,7 @@ class PaymentController {
 
       let event;
       try {
-        event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+        event = stripe().webhooks.constructEvent(req.body, sig, endpointSecret);
       } catch (err) {
         logger.error('Webhook signature verification failed:', err);
         res.status(400).send('Webhook signature verification failed');

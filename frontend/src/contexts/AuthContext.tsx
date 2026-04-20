@@ -55,16 +55,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const login = async (email: string, password: string) => {
-    try {
-      setLoading(true);
-      const authResponse: AuthResponse = await apiService.login(email, password);
-      setUser(authResponse.user);
-      apiService.setStoredUser(authResponse.user);
-    } catch (error) {
-      throw error;
-    } finally {
-      setLoading(false);
-    }
+    const authResponse: AuthResponse = await apiService.login(email, password);
+    setUser(authResponse.user);
+    apiService.setStoredUser(authResponse.user);
   };
 
   const register = async (userData: {
@@ -75,14 +68,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     phone?: string;
     userType: 'customer' | 'provider';
   }): Promise<{ email: string; firstName: string }> => {
-    try {
-      setLoading(true);
-      return await apiService.register(userData);
-    } catch (error) {
-      throw error;
-    } finally {
-      setLoading(false);
-    }
+    return await apiService.register(userData);
   };
 
   const logout = async () => {

@@ -293,6 +293,39 @@ export class AuthController {
       res.status(400).json(response);
     }
   }
+  async forgotPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        res.status(400).json({ success: false, error: 'Email is required' });
+        return;
+      }
+      await userService.requestPasswordReset(email);
+      // Always succeed — don't reveal whether the email exists
+      res.json({ success: true, message: 'If this email is registered, a password reset link has been sent.' });
+    } catch (error) {
+      logger.error('Forgot password error:', error);
+      res.json({ success: true, message: 'If this email is registered, a password reset link has been sent.' });
+    }
+  }
+
+  async resetPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const { token, password } = req.body;
+      if (!token || !password) {
+        res.status(400).json({ success: false, error: 'Token and new password are required' });
+        return;
+      }
+      await userService.resetPassword(token, password);
+      res.json({ success: true, message: 'Password reset successfully. You can now log in.' });
+    } catch (error) {
+      logger.error('Reset password error:', error);
+      res.status(400).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to reset password',
+      });
+    }
+  }
 }
 
 export const authController = new AuthController();

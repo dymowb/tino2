@@ -37,7 +37,7 @@ const AdminDisputesPage: React.FC = () => {
     queryFn: async () => {
       const params = filter !== 'all' ? `?disputeStatus=${filter}` : '';
       const r = await apiService.get(`/admin/disputes${params}`);
-      return r.data as { disputes: DisputeBooking[]; pagination: any };
+      return r.data.data as { disputes: DisputeBooking[]; pagination: any };
     },
   });
 

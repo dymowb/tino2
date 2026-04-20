@@ -76,6 +76,18 @@ export class User {
   suspendedUntil: Date;
 
   @Column({ nullable: true })
+  emailVerificationToken: string;
+
+  @Column({ type: 'datetime', nullable: true })
+  emailVerificationExpiry: Date;
+
+  @Column({ nullable: true })
+  passwordResetToken: string;
+
+  @Column({ type: 'datetime', nullable: true })
+  passwordResetExpiry: Date;
+
+  @Column({ nullable: true })
   stripeCustomerId: string;
 
   @Column({ nullable: true })

@@ -7,8 +7,9 @@ import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import config from '@/config/environment';
 import logger from '@/config/logger';
-import { securityMiddleware, sanitizeInput, logSuspiciousActivity, rateLimiters } from '@/middleware/security';
+import { securityMiddleware, sanitizeInput, logSuspiciousActivity, rateLimiters, allowedOrigins } from '@/middleware/security';
 
+import { AppDataSource } from '@/config/database';
 import authRoutes from '@/routes/auth';
 import userRoutes from '@/routes/users';
 import providerRoutes from '@/routes/providers';
@@ -37,7 +38,7 @@ export class App {
     this.server = createServer(this.app);
     this.io = new SocketIOServer(this.server, {
       cors: {
-        origin: ['http://localhost:3000', 'http://localhost:3001'],
+        origin: allowedOrigins,
         credentials: true,
       },
     });
@@ -97,13 +98,23 @@ export class App {
       });
     });
 
-    this.app.get('/health', (req, res) => {
-      res.json({
+    this.app.get('/health', async (req, res) => {
+      const health: Record<string, any> = {
         success: true,
         message: 'Server is running',
         timestamp: new Date().toISOString(),
         environment: config.server.nodeEnv,
-      });
+      };
+
+      try {
+        await AppDataSource.query('SELECT 1');
+        health.database = 'ok';
+      } catch {
+        health.database = 'error';
+        health.success = false;
+      }
+
+      res.status(health.success ? 200 : 503).json(health);
     });
 
     this.app.use(`/api/${config.server.apiVersion}/auth`, authRoutes);

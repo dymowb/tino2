@@ -39,16 +39,20 @@ export interface PaymentSummary {
 }
 
 class PaymentService {
-  private stripe: Stripe;
+  private stripe: Stripe | null = null;
   private paymentRepository: Repository<Payment>;
   private bookingRepository: Repository<Booking>;
   private userRepository: Repository<User>;
 
-  constructor() {
-    // Initialize Stripe
-    this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-      apiVersion: '2024-10-28.acacia',
-    });
+  private getStripe(): Stripe {
+    if (!this.stripe) {
+      const key = process.env.STRIPE_SECRET_KEY;
+      if (!key) {
+        throw new Error('STRIPE_SECRET_KEY is not configured');
+      }
+      this.stripe = new Stripe(key, { apiVersion: '2024-10-28.acacia' });
+    }
+    return this.stripe;
   }
 
   private initRepositories(): void {
@@ -99,7 +103,7 @@ class PaymentService {
       // Get or create Stripe customer
       let stripeCustomerId = booking.customer.stripeCustomerId;
       if (!stripeCustomerId) {
-        const customer = await this.stripe.customers.create({
+        const customer = await this.getStripe().customers.create({
           email: booking.customer.email,
           name: `${booking.customer.firstName} ${booking.customer.lastName}`,
           metadata: {
@@ -115,7 +119,7 @@ class PaymentService {
       }
 
       // Create payment intent with manual capture for escrow (FR-059, FR-061)
-      const paymentIntent = await this.stripe.paymentIntents.create({
+      const paymentIntent = await this.getStripe().paymentIntents.create({
         amount: Math.round(data.amount * 100), // Convert to cents
         currency: data.currency || 'usd',
         customer: stripeCustomerId,
@@ -203,7 +207,7 @@ class PaymentService {
       }
 
       // Capture the payment intent
-      const paymentIntent = await this.stripe.paymentIntents.capture(payment.stripePaymentIntentId);
+      const paymentIntent = await this.getStripe().paymentIntents.capture(payment.stripePaymentIntentId);
 
       if (paymentIntent.status === 'succeeded') {
         payment.status = PaymentStatus.SUCCEEDED;
@@ -266,7 +270,7 @@ class PaymentService {
 
       // Create refund via Stripe
       const refundAmount = data.amount ? Math.round(data.amount * 100) : undefined;
-      const refund = await this.stripe.refunds.create({
+      const refund = await this.getStripe().refunds.create({
         payment_intent: payment.stripePaymentIntentId,
         amount: refundAmount,
         reason: (data.reason as any) || 'requested_by_customer',

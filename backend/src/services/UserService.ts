@@ -376,6 +376,49 @@ export class UserService {
     logger.info(`Verification email resent to: ${email}`);
   }
 
+  async requestPasswordReset(email: string): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { email } });
+    // Always succeed silently — don't reveal whether email exists
+    if (!user) return;
+
+    const token = crypto.randomBytes(32).toString('hex');
+    await this.userRepository.update(user.id, {
+      passwordResetToken: token,
+      passwordResetExpiry: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+    });
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+    const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
+    emailService.sendPasswordResetEmail(user.email, {
+      name: user.firstName,
+      resetUrl,
+      expiryHours: 1,
+    }).catch((err) => logger.warn('Failed to send password reset email:', err));
+
+    logger.info(`Password reset requested for: ${user.id}`);
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { passwordResetToken: token } });
+
+    if (!user) {
+      throw new Error('Invalid or expired reset token');
+    }
+
+    if (!user.passwordResetExpiry || user.passwordResetExpiry < new Date()) {
+      throw new Error('Reset token has expired. Please request a new one.');
+    }
+
+    const hashedPassword = await passwordService.hash(newPassword);
+    await this.userRepository.update(user.id, {
+      password: hashedPassword,
+      passwordResetToken: undefined,
+      passwordResetExpiry: undefined,
+    });
+
+    logger.info(`Password reset successfully for: ${user.id}`);
+  }
+
   async getUsers(options: {
     page: number;
     limit: number;

@@ -5,6 +5,12 @@ import cors from 'cors';
 import config from '@/config/environment';
 import logger from '@/config/logger';
 
+export const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:3001')
+  .split(',')
+  .map((o) => o.trim());
+
+const validApiKeys = process.env.VALID_API_KEYS?.split(',') ?? [];
+
 export const securityMiddleware = [
   helmet({
     contentSecurityPolicy: {
@@ -25,14 +31,6 @@ export const securityMiddleware = [
 
   cors({
     origin: (origin, callback) => {
-      const allowedOrigins = [
-        'http://localhost:3000',
-        'http://localhost:3001',
-        'https://tino2.com',
-        'https://www.tino2.com',
-        'https://app.tino2.com',
-      ];
-
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -61,8 +59,8 @@ export const rateLimiters = {
   }),
 
   auth: rateLimit({
-    windowMs: 1 * 60 * 1000, // 1 minute (reduced for development)
-    max: 100, // 100 attempts per window (increased for development/debugging)
+    windowMs: config.server.nodeEnv === 'production' ? 15 * 60 * 1000 : 60 * 1000,
+    max: config.server.nodeEnv === 'production' ? 10 : 100,
     message: {
       success: false,
       error: 'Too many authentication attempts, please try again later',
@@ -124,7 +122,6 @@ export const rateLimiters = {
 
 export const validateApiKey = (req: Request, res: Response, next: NextFunction): void => {
   const apiKey = req.headers['x-api-key'] as string;
-  const validApiKeys = process.env.VALID_API_KEYS?.split(',') || [];
 
   if (validApiKeys.length > 0 && !validApiKeys.includes(apiKey)) {
     res.status(401).json({

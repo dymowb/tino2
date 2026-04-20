@@ -4,6 +4,15 @@ Tracks all UX tests, their status, and which feature areas they exercise.
 
 **Purpose**: differential regression — when a feature changes, only re-run tests tagged with it.
 
+## Testing Protocol
+
+**ALWAYS use automated browser tools for UI testing — never manual "navigate and look" steps.**
+
+- Preferred tool: `chrome-devtools` MCP (mcp__chrome-devtools__*)
+- Fallback: `playwright` MCP (mcp__playwright__*)
+- Use `take_screenshot` to confirm visual state, `evaluate_script` for DOM assertions, `get_network_request` / `list_network_requests` to verify API calls
+- Every test in this registry must be executable end-to-end via one of these tools without human interaction
+
 ---
 
 ## Feature Tags
@@ -118,6 +127,13 @@ Stripe test cards: `4242 4242 4242 4242` (success) · `4000000000009995` (no fun
 | P8 | Admin settings: auto_capture_days readable and editable | ✅ Passed | `escrow` |
 | P9 | Cancel before service starts → no charge | ✅ Passed | `escrow`, `bookings` |
 | P10 | Payment history page shows escrow status correctly | ✅ Passed (+ fixed missing i18n keys for pending_completion/in_dispute) | `payments`, `escrow` |
+| P11 | Admin disputes page: open tab shows IN_DISPUTE bookings | ✅ Passed (bug fix: r.data → r.data.data unwrap in AdminDisputesPage) | `escrow`, `admin` |
+| P12 | Admin disputes page: filter tabs (open/resolved/all) switch correctly | ✅ Passed | `escrow`, `admin` |
+| P13 | Resolve dialog: opens with correct amount, reason, decision radios | ✅ Passed | `escrow`, `admin` |
+| P14 | Resolve dialog: radio toggle changes button label (Release Payment ↔ Refund Customer) | ✅ Passed | `escrow`, `admin` |
+| P15 | Resolve dialog: processing spinner shown, buttons disabled during submit | ✅ Passed | `escrow`, `admin` |
+| P16 | Resolve dialog: Stripe error shown inline, dialog stays open | ✅ Passed | `escrow`, `admin` |
+| P17 | Resolved disputes move to resolved tab; show "Customer won"/"Provider won" chip | ✅ Passed (bug fix: getDisputes now queries isDisputed=true, not status=IN_DISPUTE, so resolved disputes remain visible) | `escrow`, `admin` |
 
 ---
 
@@ -137,6 +153,32 @@ Stripe test cards: `4242 4242 4242 4242` (success) · `4000000000009995` (no fun
 | R3 | Rating filter works | ✅ Pass | `reviews` |
 | R4 | Edit an existing review | ✅ Pass | `reviews` |
 
+### EV — Email Verification (Phase 16)
+
+| ID | Description | Status | Feature Tags |
+|----|-------------|--------|-------------|
+| EV1 | Seeded demo user logs in without email verification gate | ✅ Pass | `auth` |
+| EV2 | Register new user → confirmation screen shown; login attempt returns EMAIL_NOT_VERIFIED warning with resend button | ✅ Pass (2 bugs fixed: `register()` and `login()` in AuthContext were toggling global `loading`, causing ProtectedRoute to remount the form and reset local state before it could render) | `auth` |
+| EV3 | Extract token from backend log → navigate to /verify-email?token=... → "Email verified!" → login succeeds | ✅ Pass | `auth` |
+| EV4 | Resend verification email button → "Verification email sent! Check your inbox." confirmation | ✅ Pass | `auth` |
+| EV5 | /verify-email?token=bogustoken → "Verification failed / Invalid or expired verification token" | ✅ Pass | `auth` |
+
+### GPS — GPS Geocoding (Phase 17)
+
+| ID | Description | Status | Feature Tags |
+|----|-------------|--------|-------------|
+| GPS1 | Type address in search box → geocodes → provider list updates to new city | ✅ Pass (bug fixed: `handleAddressSearch` was reading `result.latitude` and `result.formatted_address` but API returns `result.location.latitude` and `result.formattedAddress`) | `providers` |
+| GPS2 | Use My Location button → browser geolocation → search re-runs with new coords | ✅ Pass | `providers` |
+| GPS3 | Provider cards show correct distance and duration chips (e.g. "6.18 km / 17 min") | ✅ Pass (2 bugs fixed: `formatDistance` assumed meters but API returns km; `formatDuration` assumed seconds but API returns minutes — fixed by using `distanceText`/`durationText` from API) | `providers` |
+| GPS4 | Invalid/nonsense address → 400 from geocoding API → error toast, location unchanged | ✅ Pass | `providers` |
+
+### FA — File Attachments in Messages (Phase 18)
+
+| ID | Description | Status | Feature Tags |
+|----|-------------|--------|--------------|
+| FA1 | Attach image + text → upload 200 → preview thumbnail shown → send → image renders inline in bubble | ✅ Pass | `messaging` |
+| FA2 | Attach non-image file (txt) with no text → upload 200 → file icon preview shown → send (attachment-only) → file link renders in bubble | ✅ Pass (bug fixed: route validator required non-empty `message`; made `message` optional with cross-field validator requiring message OR attachments) | `messaging` |
+
 ---
 
 ## Regression Checklist by Phase
@@ -152,9 +194,10 @@ When a phase is complete, re-run only the tests whose tags intersect with what c
 | Phase 12 — Provider review responses | `reviews` | R1–R4, I1, F3 |
 | Phase 13 — Admin panel | new `admin` tag | new A tests (TBD) |
 | Phase 14 — Stripe escrow | `payments`, `escrow`, `bookings` | E1–E5, F4, P1–P10 |
-| Phase 15 — Dispute resolution | `escrow`, `payments` | P6 + new P tests |
-| Phase 16 — Email verification | `auth` | K1, K3 + new reg test |
-| Phase 17 — GPS geocoding | `providers` | H4 (currently skipped) |
+| Phase 15 — Dispute resolution | `escrow`, `payments`, `admin` | P6, P11–P17 |
+| Phase 16 — Email verification | `auth` | K1, K3, EV1–EV5 |
+| Phase 17 — GPS geocoding | `providers` | GPS1–GPS4 |
+| Phase 18 — File attachments | `messaging` | FA1–FA2 |
 
 ---
 

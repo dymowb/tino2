@@ -57,6 +57,12 @@ export class BasicUser {
   emailVerificationExpiry?: Date;
 
   @Column({ nullable: true })
+  passwordResetToken?: string;
+
+  @Column({ type: 'datetime', nullable: true })
+  passwordResetExpiry?: Date;
+
+  @Column({ nullable: true })
   profileImage?: string;
 
   @Column({ type: 'json', nullable: true })

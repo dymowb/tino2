@@ -54,7 +54,9 @@ import AIAssistantTab from '../assistant/AIAssistantTab';
 
 interface ExtendedProvider extends Provider {
   distance?: number;
+  distanceText?: string;
   duration?: number;
+  durationText?: string;
 }
 
 const FindProvidersPage: React.FC = () => {
@@ -123,13 +125,13 @@ const FindProvidersPage: React.FC = () => {
 
     try {
       const result = await apiService.geocodeAddress(addressSearch);
-      if (result && result.latitude && result.longitude) {
+      if (result && result.location?.latitude && result.location?.longitude) {
         setSearchParams(prev => ({
           ...prev,
-          latitude: result.latitude,
-          longitude: result.longitude
+          latitude: result.location.latitude,
+          longitude: result.location.longitude
         }));
-        toast.success(t('providers:messages.location_set', { address: result.formatted_address || addressSearch }));
+        toast.success(t('providers:messages.location_set', { address: result.formattedAddress || addressSearch }));
       }
     } catch (error) {
       toast.error(t('providers:messages.location_failed'));
@@ -455,20 +457,20 @@ const FindProvidersPage: React.FC = () => {
                           </Box>
                         </Box>
 
-                        {provider.distance && (
+                        {(provider.distanceText || provider.distance) && (
                           <Box sx={{ textAlign: 'right' }}>
-                            <Chip 
-                              icon={<Route />} 
-                              label={formatDistance(provider.distance)}
-                              size="small" 
-                              color="primary" 
+                            <Chip
+                              icon={<Route />}
+                              label={provider.distanceText || formatDistance(provider.distance!)}
+                              size="small"
+                              color="primary"
                               variant="outlined"
                             />
-                            {provider.duration && (
-                              <Chip 
-                                icon={<Timer />} 
-                                label={formatDuration(provider.duration)}
-                                size="small" 
+                            {(provider.durationText || provider.duration) && (
+                              <Chip
+                                icon={<Timer />}
+                                label={provider.durationText || formatDuration(provider.duration!)}
+                                size="small"
                                 sx={{ ml: 1 }}
                                 variant="outlined"
                               />

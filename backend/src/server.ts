@@ -10,9 +10,11 @@ import { redisClient } from '@/config/redis';
 import { mongoClient } from '@/config/mongodb';
 import logger from '@/config/logger';
 import { startAutoCaptureJob } from '@/jobs/autoCapture.job';
+import { validateConfig } from '@/config/environment';
 
 async function bootstrap(): Promise<void> {
   try {
+    validateConfig();
     logger.info('Starting Tino 2 Backend Server...');
 
     await initializeDatabase();
