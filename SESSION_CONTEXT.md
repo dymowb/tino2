@@ -1,9 +1,35 @@
 # Session Context - Current Work
 
-## CURRENT SESSION: Phase 22 — Full i18n coverage (remove all hardcoded strings)
+## CURRENT SESSION: Phase 23 — Production Hardening Round 2
 **Date**: 2026-04-22
-**Goal**: Audit and move every hardcoded user-visible string into i18n translation files
-**Status**: ✅ Complete — admin.json namespace created (pt+en), all 6 admin pages + AdminLayout rewritten, auth/messages/notifications/nav/reviews/bookings locales updated, role chips fixed, committed & pushed
+**Goal**: Close all meaningful security and resilience gaps before prod deployment
+**Status**: 🔲 Not started — audit complete, waiting on 2 architecture questions before implementing
+
+### Blocked on user input:
+1. **Deployment target** — Railway, Render, AWS, VPS, Docker? Affects secrets mgmt, PM2 vs platform process manager, nginx, migrations strategy
+2. **JWT httpOnly cookies scope** — biggest architectural change (touches AuthContext, all API calls, CORS). Proceed or defer?
+
+### Phase 23 — Ordered work list
+
+**P0 — Must fix before any real users:**
+1. Rotate live secrets committed in `backend/.env` (ANTHROPIC_API_KEY, BROWSERBASE_API_KEY, GOOGLE_MAPS_API_KEY) + add `.env` to `.gitignore` if not already
+2. Move JWT from `localStorage` to `httpOnly` cookies (touches `frontend/src/services/api.ts`, `AuthContext.tsx`, backend CORS + cookie middleware)
+3. `validateConfig()` must throw (not warn) when JWT_SECRET is placeholder in prod — `backend/src/config/environment.ts:147-158`
+4. TypeORM migrations framework — replace `synchronize: true` dev-only with proper migrations; `backend/src/config/database.ts`
+5. Seed script idempotency guard — `backend/src/scripts/seedDatabase.ts` destroys all data if run; add NODE_ENV check + `--seed` flag pattern
+
+**P1 — Before real users:**
+6. `ALLOWED_ORIGINS` must fail hard if unset in prod — `backend/src/middleware/security.ts:8`
+7. Verify `ecosystem.config.js` exists and has restart policy + log rotation (Phase 20 claimed to add it)
+8. PostgreSQL connection pool config — explicit maxConnections, pool size in `backend/src/config/database.ts`
+9. Strip `console.log` from agents; route through Winston logger — `backend/src/agents/`
+10. Sentry integration (backend + frontend) for error tracking
+11. `REACT_APP_API_URL` must warn/fail if unset — `frontend/src/services/api.ts:298`
+
+**P2 — Post-launch polish:**
+12. Express static serving for React build OR document nginx config
+13. Health check to probe Redis/MongoDB/Stripe
+14. Structured logging + request correlation IDs
 
 ---
 
