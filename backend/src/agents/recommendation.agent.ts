@@ -88,6 +88,7 @@ class RecommendationAgent implements Agent<RecommendationAgentInput, Recommendat
     temperature: 0.4, // Fairly deterministic — we want consistent ranking logic
     systemPrompt: `You are a Provider Recommendation Agent. Your job is to rank service providers
 and explain your reasoning in a way that helps the customer make a confident decision.
+Respond ONLY in Brazilian Portuguese (pt-BR). All reasoning, descriptions, and bestFor text must be in Portuguese.
 
 You will receive:
 - The customer's requirements (what they need, where, when, budget)

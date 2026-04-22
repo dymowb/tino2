@@ -89,20 +89,20 @@ const Navigation: React.FC = () => {
     ...(isAuthenticated && user?.userType === 'customer' ? [
       { label: t('navigation.find_providers'), path: '/providers', icon: <SearchIcon />, public: false },
       { label: t('navigation.my_bookings'), path: '/bookings', icon: <BookingIcon />, public: false },
-      { label: 'My Quotes', path: '/quotes', icon: <QuoteIcon />, public: false },
+      { label: t('navigation.my_quotes'), path: '/quotes', icon: <QuoteIcon />, public: false },
       { label: t('navigation.messages'), path: '/messages', icon: <MessageIcon />, public: false },
       { label: t('navigation.payments'), path: '/payments', icon: <PaymentIcon />, public: false },
       { label: t('navigation.my_reviews'), path: '/reviews', icon: <ReviewIcon />, public: false },
     ] : []),
     ...(isAuthenticated && user?.userType === 'provider' ? [
       { label: t('navigation.dashboard'), path: '/dashboard', icon: <DashboardIcon />, public: false },
-      { label: 'My Quotes', path: '/quotes', icon: <QuoteIcon />, public: false },
+      { label: t('navigation.my_quotes'), path: '/quotes', icon: <QuoteIcon />, public: false },
       { label: t('navigation.messages'), path: '/messages', icon: <MessageIcon />, public: false },
       { label: t('navigation.payments'), path: '/payments', icon: <PaymentIcon />, public: false },
       { label: t('navigation.my_reviews'), path: '/reviews', icon: <ReviewIcon />, public: false },
     ] : []),
     ...(isAuthenticated && user?.userType === 'admin' ? [
-      { label: 'Admin Panel', path: '/admin', icon: <AdminIcon />, public: false },
+      { label: t('navigation.admin_panel'), path: '/admin', icon: <AdminIcon />, public: false },
     ] : []),
   ];
 

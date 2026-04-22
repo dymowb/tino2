@@ -541,28 +541,28 @@ const MyBookingsPage: React.FC = () => {
 
       {/* Dispute Dialog */}
       <Dialog open={showDisputeDialog} onClose={() => setShowDisputeDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Raise a Dispute</DialogTitle>
+        <DialogTitle>{t('bookings:dispute.title')}</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Describe why you're disputing this completion. An admin will review and contact both parties.
+            {t('bookings:dispute.description')}
           </Typography>
           <TextField
             fullWidth multiline rows={3}
-            label="Reason for dispute"
+            label={t('bookings:dispute.reason_label')}
             value={disputeReason}
             onChange={(e) => setDisputeReason(e.target.value)}
             variant="outlined"
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowDisputeDialog(false)}>Cancel</Button>
+          <Button onClick={() => setShowDisputeDialog(false)}>{t('bookings:dispute.cancel')}</Button>
           <Button
             onClick={() => {
               if (selectedBooking) {
                 bookingAction(
                   selectedBooking.id,
                   () => apiService.disputeBooking(selectedBooking.id, disputeReason),
-                  'Dispute raised — admin has been notified'
+                  t('bookings:dispute.success')
                 );
                 setShowDisputeDialog(false);
                 setDisputeReason('');
@@ -571,7 +571,7 @@ const MyBookingsPage: React.FC = () => {
             color="error" variant="contained"
             disabled={!disputeReason.trim() || actionLoading[selectedBooking?.id || '']}
           >
-            Submit Dispute
+            {t('bookings:dispute.submit')}
           </Button>
         </DialogActions>
       </Dialog>

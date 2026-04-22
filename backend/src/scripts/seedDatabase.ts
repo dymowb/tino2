@@ -13,209 +13,208 @@ import { passwordService } from '@/utils/password';
 import logger from '@/config/logger';
 
 const SERVICES = [
-  'House Cleaning', 'Deep Cleaning', 'Move-in/Move-out Cleaning', 'Post-Construction Cleaning',
-  'Office Cleaning', 'Carpet Cleaning', 'Upholstery Cleaning', 'Window Cleaning',
-  'Plumbing Repair', 'Drain Cleaning', 'Pipe Installation', 'Water Heater Repair',
-  'Leak Detection', 'Bathroom Plumbing', 'Kitchen Plumbing', 'Emergency Plumbing',
-  'Electrical Repair', 'Wiring Installation', 'Lighting Installation', 'Ceiling Fan Installation',
-  'Outlet Installation', 'Circuit Breaker Repair', 'Electrical Inspection', 'Smart Home Setup',
-  'Lawn Mowing', 'Garden Design', 'Tree Trimming', 'Hedge Trimming',
-  'Irrigation Installation', 'Landscaping', 'Pest Control', 'Fertilization',
-  'Interior Painting', 'Exterior Painting', 'Cabinet Painting', 'Pressure Washing',
-  'Wallpaper Removal', 'Drywall Repair', 'Trim Work', 'Color Consultation',
-  'Appliance Repair', 'Refrigerator Repair', 'Dishwasher Repair', 'Washer/Dryer Repair',
-  'Oven Repair', 'Microwave Repair', 'HVAC Repair', 'Air Conditioning Service',
-  'Furniture Assembly', 'TV Mounting', 'Shelf Installation', 'Door Installation',
-  'Cabinet Installation', 'Tile Installation', 'Flooring Installation', 'Deck Building',
-  'Roofing Repair', 'Gutter Cleaning', 'Fence Installation', 'Pool Maintenance',
-  'Hot Tub Service', 'Garage Door Repair', 'Locksmith Services', 'Security System Installation',
-  'Home Inspection', 'Mold Remediation', 'Water Damage Restoration', 'Fire Damage Restoration',
-  'Moving Services', 'Junk Removal', 'Storage Solutions', 'Packing Services',
-  'Pet Sitting', 'Dog Walking', 'Pet Grooming', 'Aquarium Maintenance',
-  'Personal Training', 'Yoga Instruction', 'Massage Therapy', 'Nutrition Consulting',
-  'Tutoring Services', 'Music Lessons', 'Language Lessons', 'Computer Repair',
-  'Photography', 'Videography', 'Event Planning', 'Catering Services',
-  'Auto Detailing', 'Car Wash', 'Oil Change', 'Tire Service',
-  'Snow Removal', 'Driveway Sealing', 'Sidewalk Repair', 'Chimney Cleaning',
-  'Solar Panel Installation', 'Energy Audit', 'Insulation Installation', 'Storm Door Installation'
+  'Limpeza Residencial', 'Limpeza Profunda', 'Limpeza Pós-Obra', 'Limpeza Pós-Mudança',
+  'Limpeza Comercial', 'Limpeza de Estofados', 'Limpeza de Vidros', 'Higienização de Colchão',
+  'Conserto Hidráulico', 'Desentupimento', 'Instalação de Canos', 'Conserto de Chuveiro Elétrico',
+  'Detecção de Vazamento', 'Encanamento de Banheiro', 'Encanamento de Cozinha', 'Emergência Hidráulica',
+  'Conserto Elétrico', 'Instalação de Fiação', 'Instalação de Iluminação', 'Instalação de Ventilador de Teto',
+  'Instalação de Tomadas', 'Conserto de Quadro de Luz', 'Vistoria Elétrica', 'Automação Residencial',
+  'Corte de Grama', 'Paisagismo', 'Poda de Árvores', 'Poda de Cerca Viva',
+  'Instalação de Irrigação', 'Jardinagem', 'Controle de Pragas', 'Adubação',
+  'Pintura Interna', 'Pintura Externa', 'Pintura de Móveis', 'Lavagem a Pressão',
+  'Remoção de Papel de Parede', 'Conserto de Drywall', 'Acabamento', 'Consultoria de Cores',
+  'Conserto de Eletrodomésticos', 'Conserto de Geladeira', 'Conserto de Máquina de Lavar', 'Conserto de Fogão',
+  'Conserto de Micro-ondas', 'Conserto de Ar-Condicionado', 'Instalação de Ar-Condicionado', 'Manutenção de Ar-Condicionado',
+  'Montagem de Móveis', 'Instalação de TV na Parede', 'Instalação de Prateleiras', 'Instalação de Portas',
+  'Instalação de Armários', 'Assentamento de Porcelanato', 'Instalação de Piso', 'Construção de Deck',
+  'Conserto de Telhado', 'Impermeabilização', 'Instalação de Grades', 'Manutenção de Piscina',
+  'Conserto de Portão', 'Serviços de Chaveiro', 'Instalação de Câmeras de Segurança', 'Alarme Residencial',
+  'Vistoria Imobiliária', 'Tratamento de Mofo', 'Restauração por Danos de Água', 'Dedetização',
+  'Serviços de Mudança', 'Recolha de Entulho', 'Guarda-Móveis', 'Embalagem para Mudança',
+  'Cuidado de Animais', 'Passeio com Cães', 'Banho e Tosa', 'Manutenção de Aquário',
+  'Personal Trainer', 'Aulas de Yoga', 'Massagem Terapêutica', 'Consultoria Nutricional',
+  'Aulas Particulares', 'Aulas de Música', 'Aulas de Idiomas', 'Conserto de Computador',
+  'Fotografia', 'Filmagem', 'Organização de Eventos', 'Serviços de Buffet',
+  'Polimento de Veículos', 'Lavagem de Carro', 'Troca de Óleo', 'Serviço de Pneus',
+  'Instalação de Energia Solar', 'Auditoria Energética', 'Isolamento Térmico', 'Instalação de Telas'
 ];
 
 const LOCATIONS = [
-  { city: 'Los Angeles', state: 'CA', lat: 34.0522, lng: -118.2437 },
-  { city: 'New York', state: 'NY', lat: 40.7128, lng: -74.006 },
-  { city: 'Chicago', state: 'IL', lat: 41.8781, lng: -87.6298 },
-  { city: 'Houston', state: 'TX', lat: 29.7604, lng: -95.3698 },
-  { city: 'Phoenix', state: 'AZ', lat: 33.4484, lng: -112.074 },
-  { city: 'Philadelphia', state: 'PA', lat: 39.9526, lng: -75.1652 },
-  { city: 'San Antonio', state: 'TX', lat: 29.4241, lng: -98.4936 },
-  { city: 'San Diego', state: 'CA', lat: 32.7157, lng: -117.1611 },
-  { city: 'Dallas', state: 'TX', lat: 32.7767, lng: -96.797 },
-  { city: 'San Jose', state: 'CA', lat: 37.3382, lng: -121.8863 },
-  { city: 'Austin', state: 'TX', lat: 30.2672, lng: -97.7431 },
-  { city: 'Jacksonville', state: 'FL', lat: 30.3322, lng: -81.6557 },
-  { city: 'Fort Worth', state: 'TX', lat: 32.7555, lng: -97.3308 },
-  { city: 'Columbus', state: 'OH', lat: 39.9612, lng: -82.9988 },
-  { city: 'San Francisco', state: 'CA', lat: 37.7749, lng: -122.4194 },
-  { city: 'Charlotte', state: 'NC', lat: 35.2271, lng: -80.8431 },
-  { city: 'Indianapolis', state: 'IN', lat: 39.7684, lng: -86.158 },
-  { city: 'Seattle', state: 'WA', lat: 47.6062, lng: -122.3321 },
-  { city: 'Denver', state: 'CO', lat: 39.7392, lng: -104.9903 },
-  { city: 'Boston', state: 'MA', lat: 42.3601, lng: -71.0589 }
+  { city: 'Centro', state: 'SC', lat: -27.5954, lng: -48.5480 },
+  { city: 'Trindade', state: 'SC', lat: -27.5998, lng: -48.5243 },
+  { city: 'Lagoa da Conceição', state: 'SC', lat: -27.6013, lng: -48.4599 },
+  { city: 'Ingleses', state: 'SC', lat: -27.4370, lng: -48.3960 },
+  { city: 'Jurerê Internacional', state: 'SC', lat: -27.4333, lng: -48.5001 },
+  { city: 'Canasvieiras', state: 'SC', lat: -27.4287, lng: -48.4680 },
+  { city: 'Campeche', state: 'SC', lat: -27.6830, lng: -48.4780 },
+  { city: 'Ribeirão da Ilha', state: 'SC', lat: -27.7636, lng: -48.5442 },
+  { city: 'Santo Antônio de Lisboa', state: 'SC', lat: -27.5108, lng: -48.5257 },
+  { city: 'Pantanal', state: 'SC', lat: -27.6127, lng: -48.5163 },
+  { city: 'Córrego Grande', state: 'SC', lat: -27.6054, lng: -48.5085 },
+  { city: 'Itacorubi', state: 'SC', lat: -27.5826, lng: -48.5042 },
+  { city: 'Agronômica', state: 'SC', lat: -27.5890, lng: -48.5327 },
+  { city: 'Saco dos Limões', state: 'SC', lat: -27.6201, lng: -48.5406 },
+  { city: 'Coqueiros', state: 'SC', lat: -27.5862, lng: -48.5718 },
+  { city: 'Estreito', state: 'SC', lat: -27.5807, lng: -48.5825 },
+  { city: 'Balneário', state: 'SC', lat: -27.5747, lng: -48.5712 },
+  { city: 'Cachoeira do Bom Jesus', state: 'SC', lat: -27.4553, lng: -48.4577 },
+  { city: 'Pântano do Sul', state: 'SC', lat: -27.7830, lng: -48.5110 },
+  { city: 'Ratones', state: 'SC', lat: -27.4894, lng: -48.5010 },
 ];
 
 const FIRST_NAMES = [
-  'James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda',
-  'David', 'Elizabeth', 'William', 'Barbara', 'Richard', 'Susan', 'Joseph', 'Jessica',
-  'Thomas', 'Sarah', 'Charles', 'Karen', 'Christopher', 'Lisa', 'Daniel', 'Nancy',
-  'Matthew', 'Betty', 'Anthony', 'Helen', 'Mark', 'Sandra', 'Donald', 'Donna',
-  'Steven', 'Carol', 'Paul', 'Ruth', 'Andrew', 'Sharon', 'Joshua', 'Michelle',
-  'Kenneth', 'Laura', 'Kevin', 'Sarah', 'Brian', 'Kimberly', 'George', 'Deborah',
-  'Timothy', 'Dorothy', 'Ronald', 'Lisa', 'Jason', 'Nancy', 'Edward', 'Karen'
+  'João', 'Maria', 'Pedro', 'Ana', 'Carlos', 'Juliana', 'Lucas', 'Fernanda',
+  'Rafael', 'Camila', 'Gustavo', 'Beatriz', 'Felipe', 'Larissa', 'Rodrigo', 'Mariana',
+  'Bruno', 'Gabriela', 'Thiago', 'Amanda', 'Diego', 'Natalia', 'Henrique', 'Leticia',
+  'Mateus', 'Renata', 'Alexandre', 'Vanessa', 'Eduardo', 'Priscila', 'André', 'Aline',
+  'Leonardo', 'Patrícia', 'Fábio', 'Claudia', 'Vinícius', 'Tatiane', 'Marcelo', 'Simone',
+  'Paulo', 'Sandra', 'Ricardo', 'Elaine', 'Daniel', 'Carina', 'Leandro', 'Mônica',
+  'Sérgio', 'Roberta', 'Márcio', 'Cristiane', 'Tiago', 'Débora', 'Flávio', 'Silvana'
 ];
 
 const LAST_NAMES = [
-  'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis',
-  'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzales', 'Wilson', 'Anderson', 'Thomas',
-  'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee', 'Perez', 'Thompson', 'White',
-  'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson', 'Walker', 'Young',
-  'Allen', 'King', 'Wright', 'Scott', 'Torres', 'Nguyen', 'Hill', 'Flores',
-  'Green', 'Adams', 'Nelson', 'Baker', 'Hall', 'Rivera', 'Campbell', 'Mitchell'
+  'Silva', 'Santos', 'Oliveira', 'Souza', 'Lima', 'Pereira', 'Costa', 'Ferreira',
+  'Rodrigues', 'Almeida', 'Nascimento', 'Carvalho', 'Araújo', 'Fernandes', 'Gomes', 'Martins',
+  'Rocha', 'Ribeiro', 'Machado', 'Barbosa', 'Freitas', 'Cardoso', 'Correia', 'Mendes',
+  'Castro', 'Moreira', 'Moraes', 'Teixeira', 'Nunes', 'Dias', 'Vieira', 'Pinto',
+  'Cunha', 'Medeiros', 'Azevedo', 'Cavalcante', 'Andrade', 'Lopes', 'Rezende', 'Borges',
+  'Ramos', 'Neves', 'Miranda', 'Magalhães', 'Brito', 'Campos', 'Duarte', 'Monteiro'
 ];
 
 const MESSAGE_TEMPLATES = {
   customerInitial: [
-    "Hi! I'm interested in your {service} service. Could you provide a quote?",
-    "Hello, I saw your profile and would like to schedule {service}. Are you available this week?",
-    "Good morning! I need {service} done. What's your availability and pricing?",
-    "Hi there! Could you help me with {service}? I'd like to discuss the details.",
-    "Hello! I'm looking for someone to do {service}. Can we discuss timing and cost?",
-    "Hi! I need {service} service urgently. Are you available tomorrow?",
-    "Good afternoon! Could you provide an estimate for {service}?",
-    "Hello! I found your profile and need {service}. What's your rate?",
-    "Hi! Could you help me with {service}? When would be a good time to discuss?",
-    "Good morning! I'm interested in booking {service}. What information do you need?"
+    "Olá! Tenho interesse no seu serviço de {service}. Poderia me passar um orçamento?",
+    "Oi, vi seu perfil e gostaria de agendar {service}. Tem disponibilidade essa semana?",
+    "Bom dia! Preciso de {service}. Qual sua disponibilidade e valores?",
+    "Olá! Poderia me ajudar com {service}? Gostaria de conversar sobre os detalhes.",
+    "Oi! Estou procurando alguém para fazer {service}. Podemos combinar prazo e valor?",
+    "Olá! Preciso de {service} com urgência. Tem disponibilidade amanhã?",
+    "Boa tarde! Poderia me passar um orçamento para {service}?",
+    "Olá! Encontrei seu perfil e preciso de {service}. Qual o seu valor?",
+    "Oi! Poderia me ajudar com {service}? Quando seria um bom momento para conversarmos?",
+    "Bom dia! Tenho interesse em contratar {service}. Que informações você precisa?"
   ],
   providerResponse: [
-    "Hello! I'd be happy to help with {service}. Could you tell me more about the scope of work?",
-    "Hi there! Thanks for reaching out. I'm available for {service}. What's your timeline?",
-    "Good to hear from you! I specialize in {service}. Could you share more details about your needs?",
-    "Hello! I can definitely help with {service}. What's the size of the area/project?",
-    "Hi! I'd love to work on your {service} project. When would you like to schedule it?",
-    "Thank you for contacting me! I have experience with {service}. What's your budget range?",
-    "Hello! I'm available for {service}. Could you send me some photos of the space?",
-    "Hi! {service} is one of my specialties. What date works best for you?",
-    "Good to meet you! I can provide {service}. Would you like to schedule a consultation?",
-    "Hello! I'd be happy to quote your {service} project. What are the specific requirements?"
+    "Olá! Ficaria feliz em ajudar com {service}. Poderia me contar mais sobre o escopo do trabalho?",
+    "Oi! Obrigado pelo contato. Tenho disponibilidade para {service}. Qual é o seu prazo?",
+    "Que bom que entrou em contato! Sou especialista em {service}. Pode me passar mais detalhes?",
+    "Olá! Consigo ajudar com {service}. Qual é o tamanho do espaço ou projeto?",
+    "Oi! Adoraria trabalhar no seu projeto de {service}. Quando gostaria de agendar?",
+    "Obrigado pelo contato! Tenho experiência em {service}. Qual é o seu orçamento?",
+    "Olá! Tenho disponibilidade para {service}. Poderia me mandar algumas fotos do local?",
+    "Oi! {service} é uma das minhas especialidades. Qual data funciona melhor para você?",
+    "Olá! Posso fazer {service}. Gostaria de agendar uma visita para orçamento?",
+    "Olá! Ficaria feliz em orçar seu projeto de {service}. Quais são os requisitos específicos?"
   ],
   customerDetails: [
-    "The area is about 1200 sq ft. I'm flexible with timing, preferably weekends.",
-    "It's a 2-bedroom apartment. I can be available weekday evenings or weekends.",
-    "Medium-sized project, roughly 800 sq ft. I'd like it done within the next two weeks.",
-    "It's a standard 3-bedroom house. Budget is around $200-400. Is that reasonable?",
-    "Small to medium job, probably 2-3 hours of work. Morning times work best for me.",
-    "The space is about 1000 sq ft. I need it done before next Friday if possible.",
-    "It's a one-bedroom condo. I'm looking for quality work, budget is flexible.",
-    "Average sized home, 1500 sq ft. I can work around your schedule.",
-    "It's urgent - needed within 3 days. The area is approximately 600 sq ft.",
-    "Standard residential project. I'm available most days after 3 PM."
+    "O espaço tem cerca de 80 m². Tenho flexibilidade de horário, prefiro fins de semana.",
+    "É um apartamento de 2 quartos. Posso receber à noite durante a semana ou no fim de semana.",
+    "Projeto de tamanho médio, cerca de 60 m². Gostaria que fosse feito nas próximas duas semanas.",
+    "É uma casa de 3 quartos. Orçamento em torno de R$ 400-800. Isso é razoável?",
+    "Serviço pequeno a médio, uns 2-3 horas de trabalho. Manhã é melhor para mim.",
+    "O espaço tem cerca de 70 m². Preciso que seja feito antes de sexta-feira se possível.",
+    "É um apartamento de 1 quarto. Busco qualidade no trabalho, orçamento flexível.",
+    "Casa de tamanho médio, 100 m². Posso me adaptar ao seu horário.",
+    "É urgente — preciso em até 3 dias. A área é de aproximadamente 50 m².",
+    "Projeto residencial padrão. Estou disponível na maioria dos dias após as 15h."
   ],
   providerQuote: [
-    "Based on your description, I can do this for $250. Includes all materials and cleanup.",
-    "For a job this size, my rate would be $180. I can start this weekend if that works.",
-    "I'd quote $320 for this project, which includes a 1-year warranty on the work.",
-    "My estimate is $150 for this. I'm available Tuesday or Wednesday this week.",
-    "I can do this for $275. That covers everything - materials, labor, and cleanup.",
-    "For your project, I'd charge $200. I can schedule it for next Monday.",
-    "My quote is $160. I use high-quality materials and guarantee satisfaction.",
-    "I'd estimate $290 for this job. Includes preparation, work, and final inspection.",
-    "For this size project, $220 seems fair. I can fit you in this Thursday.",
-    "My rate for this would be $195. I'm flexible on timing to work around your schedule."
+    "Com base na sua descrição, consigo fazer por R$ 350. Inclui materiais e limpeza.",
+    "Para um trabalho desse porte, meu valor seria R$ 280. Posso começar no fim de semana.",
+    "Orçamento de R$ 480 para este projeto, incluindo garantia de 1 ano no serviço.",
+    "Minha estimativa é R$ 220. Tenho disponibilidade terça ou quarta desta semana.",
+    "Consigo fazer por R$ 400. Isso cobre tudo — materiais, mão de obra e limpeza.",
+    "Para o seu projeto, cobrarei R$ 320. Posso agendar para segunda-feira.",
+    "Meu orçamento é R$ 260. Uso materiais de qualidade e garanto satisfação.",
+    "Estimo R$ 440 para este serviço. Inclui preparação, execução e vistoria final.",
+    "Para um projeto desse tamanho, R$ 360 parece justo. Consigo encaixar na quinta.",
+    "Meu valor seria R$ 300. Sou flexível com horários para se adequar à sua rotina."
   ],
   customerAcceptance: [
-    "That sounds perfect! When can we schedule it?",
-    "Great price! I'd like to book you. What's the next step?",
-    "Excellent! I accept your quote. How do we proceed?",
-    "That works for me! Can we set up a time?",
-    "Perfect! I'm ready to move forward. What do you need from me?",
-    "Sounds good! When is your earliest availability?",
-    "I'm happy with that quote. Let's schedule the work.",
-    "Great! I'd like to book this service. What's your process?",
-    "That's reasonable! Can we arrange a start date?",
-    "Wonderful! I accept. How soon can you begin?"
+    "Perfeito! Quando podemos agendar?",
+    "Ótimo valor! Gostaria de fechar com você. Qual é o próximo passo?",
+    "Excelente! Aceito o orçamento. Como prosseguimos?",
+    "Ficou bom para mim! Podemos combinar um horário?",
+    "Perfeito! Estou pronto para avançar. O que você precisa de mim?",
+    "Tá bom! Qual é a sua disponibilidade mais próxima?",
+    "Estou satisfeito com o orçamento. Vamos agendar o serviço.",
+    "Ótimo! Gostaria de contratar esse serviço. Como funciona?",
+    "Combinado! Podemos marcar uma data de início?",
+    "Maravilha! Aceito. Quando você pode começar?"
   ],
   scheduling: [
-    "I can start Monday at 9 AM. Does that work for you?",
-    "How about Wednesday morning? I typically start around 8:30 AM.",
-    "I have availability Friday afternoon. Would 2 PM be good?",
-    "This Thursday at 10 AM works for me. Is that convenient?",
-    "I can fit you in Tuesday morning. Shall we say 9:30 AM?",
-    "Monday works perfectly! 9 AM it is. I'll be there promptly.",
-    "Wednesday at 2 PM is perfect. I'll plan for about 3 hours of work.",
-    "Friday morning works great! I'll arrive at 9 AM with all the equipment.",
-    "Tuesday at 10 AM sounds good. I'll send you a confirmation text.",
-    "Thursday is perfect! I'll be there at 2 PM sharp. Looking forward to it!"
+    "Posso começar segunda-feira às 9h. Fica bom para você?",
+    "Que tal quarta-feira de manhã? Costumo começar por volta das 8h30.",
+    "Tenho disponibilidade sexta-feira à tarde. As 14h seria bom?",
+    "Quinta-feira às 10h me funciona. Seria conveniente para você?",
+    "Consigo encaixar na terça de manhã. Combinamos às 9h30?",
+    "Segunda-feira está ótimo! 9h confirmado. Estarei lá pontualmente.",
+    "Quarta às 14h perfeito. Planejo cerca de 3 horas de trabalho.",
+    "Sexta de manhã funciona! Chego às 9h com todo o equipamento.",
+    "Terça às 10h ótimo. Vou te mandar uma confirmação por mensagem.",
+    "Quinta perfeito! Estarei lá às 14h em ponto. Estou animado para começar!"
   ],
   workUpdates: [
-    "Just arrived and getting set up. Everything looks good!",
-    "About 50% complete. So far everything is going smoothly.",
-    "Work is progressing well. Should be finished within the estimated time.",
-    "Almost done! Just doing final touches. You'll love the results.",
-    "Completed! Everything looks great. Ready for your inspection.",
-    "Starting the prep work now. Weather conditions are perfect.",
-    "Taking a short break. Work is on schedule and looking excellent.",
-    "Halfway through! The quality is turning out even better than expected.",
-    "Just finished the main work. Now doing cleanup and final details.",
-    "All set! Work is complete and area is cleaned up. Please take a look!"
+    "Acabei de chegar e estou me organizando. Tudo está bem!",
+    "Cerca de 50% concluído. Está tudo indo tranquilamente.",
+    "O trabalho está progredindo bem. Devo terminar dentro do prazo estimado.",
+    "Quase pronto! Só os retoques finais. Vai ficar lindo.",
+    "Concluído! Ficou muito bom. Pode vir vistoriar.",
+    "Iniciando a preparação agora. Condições perfeitas para trabalhar.",
+    "Pausa rápida. O serviço está no prazo e com ótima qualidade.",
+    "Metade feita! A qualidade está ficando ainda melhor do que esperado.",
+    "Acabei a parte principal. Agora estou fazendo limpeza e detalhes finais.",
+    "Tudo certo! Serviço concluído e local limpo. Dá uma olhada!"
   ],
   completion: [
-    "Work is all done! Very pleased with how it turned out. Thank you!",
-    "Looks fantastic! Thank you for the excellent service.",
-    "Perfect! Exactly what I was hoping for. Will definitely recommend you.",
-    "Amazing work! So happy with the results. Worth every penny.",
-    "Excellent job! Thank you for being professional and thorough.",
-    "Wonderful! You exceeded my expectations. Will hire you again.",
-    "Thank you for the great work! The quality is outstanding.",
-    "Perfect! Thanks for completing it on time and on budget.",
-    "Fantastic results! I'm very satisfied with your service.",
-    "Excellent work! Thank you for your attention to detail."
+    "Serviço concluído! Muito satisfeito com o resultado. Obrigado!",
+    "Ficou fantástico! Obrigado pelo excelente trabalho.",
+    "Perfeito! Exatamente o que eu esperava. Com certeza vou recomendar.",
+    "Trabalho incrível! Muito feliz com o resultado. Valeu cada centavo.",
+    "Excelente serviço! Obrigado por ser profissional e cuidadoso.",
+    "Maravilhoso! Superou minhas expectativas. Vou contratar novamente.",
+    "Obrigado pelo ótimo trabalho! A qualidade é excepcional.",
+    "Perfeito! Obrigado por concluir no prazo e dentro do orçamento.",
+    "Resultado fantástico! Estou muito satisfeito com o serviço.",
+    "Excelente trabalho! Obrigado pela atenção aos detalhes."
   ]
 };
 
 const REVIEW_TEMPLATES = {
   5: [
-    'Exceptional service! {firstName} exceeded all expectations. The {service} was completed perfectly and on time. Highly recommend!',
-    'Outstanding work from {firstName}! Professional, courteous, and delivered exactly what was promised. Will definitely book again.',
-    'Absolutely amazing! {firstName} was punctual, thorough, and the quality of {service} was top-notch. 5 stars well deserved!',
-    'Perfect experience from start to finish! {firstName} was professional and the {service} results were fantastic.',
-    'Couldn\'t be happier! {firstName} did an incredible job with {service}. Clean, efficient, and reasonably priced.'
+    'Serviço excepcional! {firstName} superou todas as expectativas. O serviço de {service} foi concluído com perfeição e no prazo. Super recomendo!',
+    'Trabalho incrível de {firstName}! Profissional, atencioso e entregou exatamente o prometido. Com certeza vou contratar novamente.',
+    'Simplesmente fantástico! {firstName} foi pontual, cuidadoso e a qualidade do {service} foi impecável. 5 estrelas mais do que merecidas!',
+    'Experiência perfeita do início ao fim! {firstName} foi muito profissional e o resultado do {service} ficou excelente.',
+    'Não poderia estar mais feliz! {firstName} fez um trabalho incrível com {service}. Caprichado, eficiente e bom preço.'
   ],
   4: [
-    'Great service from {firstName}! The {service} was done well, minor issues but overall very satisfied.',
-    'Good job overall. {firstName} was professional and the {service} met our expectations. Would recommend.',
-    'Very pleased with the work. {firstName} was on time and did quality {service}. Small room for improvement but good experience.',
-    'Solid work from {firstName}. The {service} was completed as requested with good attention to detail.',
-    'Happy with the service. {firstName} was reliable and the {service} quality was good. Worth the price.'
+    'Ótimo serviço de {firstName}! O {service} foi bem feito, pequenos detalhes mas no geral muito satisfeito.',
+    'Bom trabalho no geral. {firstName} foi profissional e o {service} atendeu nossas expectativas. Recomendo.',
+    'Muito satisfeito com o trabalho. {firstName} foi pontual e fez um {service} de qualidade. Pequena margem de melhora mas boa experiência.',
+    'Trabalho sólido de {firstName}. O {service} foi concluído conforme solicitado com bom nível de atenção.',
+    'Satisfeito com o serviço. {firstName} foi confiável e a qualidade do {service} foi boa. Valeu o investimento.'
   ],
   3: [
-    'Decent service. {firstName} completed the {service} adequately but nothing exceptional. Average experience.',
-    'Okay job with {service}. {firstName} was punctual but the work quality was just satisfactory.',
-    'Fair service from {firstName}. The {service} was completed but had some minor issues that needed attention.',
-    'Average experience. {firstName} did the {service} as requested but could have been more thorough.',
-    'Acceptable work. {firstName} was professional but the {service} quality was just okay for the price.'
+    'Serviço razoável. {firstName} concluiu o {service} adequadamente mas sem nada excepcional. Experiência mediana.',
+    'Trabalho OK com {service}. {firstName} foi pontual mas a qualidade ficou apenas satisfatória.',
+    'Serviço regular de {firstName}. O {service} foi concluído mas com alguns pontos que precisaram de atenção.',
+    'Experiência mediana. {firstName} fez o {service} conforme pedido mas poderia ter sido mais cuidadoso.',
+    'Trabalho aceitável. {firstName} foi profissional mas a qualidade do {service} ficou apenas razoável pelo valor.'
   ],
   2: [
-    'Below expectations. {firstName} completed {service} but quality was poor and took longer than expected.',
-    'Disappointing service. {firstName} was late and the {service} had several issues that needed fixing.',
-    'Not satisfied with the work. {firstName} rushed through {service} and left several areas incomplete.',
-    'Poor communication from {firstName}. The {service} was eventually completed but with multiple problems.',
-    'Subpar experience. {firstName} did not follow instructions properly and {service} quality was lacking.'
+    'Abaixo do esperado. {firstName} concluiu {service} mas a qualidade foi ruim e demorou mais que o previsto.',
+    'Serviço decepcionante. {firstName} atrasou e o {service} teve vários problemas que precisaram de correção.',
+    'Não fiquei satisfeito com o trabalho. {firstName} correu no {service} e deixou várias áreas incompletas.',
+    'Comunicação fraca de {firstName}. O {service} foi concluído eventualmente mas com múltiplos problemas.',
+    'Experiência abaixo da média. {firstName} não seguiu as instruções direito e a qualidade do {service} deixou a desejar.'
   ],
   1: [
-    'Terrible experience! {firstName} was unprofessional and the {service} was completely unsatisfactory.',
-    'Worst service ever. {firstName} caused damage and did not complete {service} properly. Avoid at all costs!',
-    'Completely disappointed. {firstName} was late, rude, and the {service} was poorly executed.',
-    'Unacceptable work from {firstName}. The {service} was left unfinished and created more problems.',
-    'Do not recommend! {firstName} was unreliable and the {service} quality was absolutely terrible.'
+    'Experiência péssima! {firstName} foi pouco profissional e o {service} foi completamente insatisfatório.',
+    'O pior serviço que já contratei. {firstName} causou danos e não concluiu {service} direito. Evite!',
+    'Totalmente decepcionado. {firstName} atrasou, foi grosseiro e o {service} foi mal executado.',
+    'Trabalho inaceitável de {firstName}. O {service} ficou inacabado e gerou mais problemas.',
+    'Não recomendo! {firstName} foi irresponsável e a qualidade do {service} foi absolutamente horrível.'
   ]
 };
 
@@ -326,7 +325,7 @@ class DatabaseSeeder {
         password: hashedPassword,
         firstName: 'Demo',
         lastName: 'Customer',
-        phone: '+15551234567',
+        phone: '+5548991234567',
         userType: UserType.CUSTOMER,
         isVerified: true,
       },
@@ -335,7 +334,7 @@ class DatabaseSeeder {
         password: hashedPassword,
         firstName: 'Demo',
         lastName: 'Provider',
-        phone: '+15559876543',
+        phone: '+5548999876543',
         userType: UserType.PROVIDER,
         isVerified: true,
       },
@@ -344,7 +343,7 @@ class DatabaseSeeder {
         password: hashedPassword,
         firstName: 'Demo',
         lastName: 'Admin',
-        phone: '+15550000000',
+        phone: '+5548990000000',
         userType: UserType.ADMIN,
         isVerified: true,
       },
@@ -356,7 +355,7 @@ class DatabaseSeeder {
       const lastName = getRandomItem(LAST_NAMES);
       const userType = i < 24 ? UserType.CUSTOMER : UserType.PROVIDER;
       const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${i}@test.com`;
-      const phone = `+1555${String(Math.floor(Math.random() * 9000000) + 1000000)}`;
+      const phone = `+5548${String(Math.floor(Math.random() * 900000000) + 900000000)}`;
 
       demoUsers.push({
         email,
@@ -390,25 +389,25 @@ class DatabaseSeeder {
 
         const provider = providerRepository.create({
           userId: savedUser.id,
-          businessName: `${savedUser.firstName} ${savedUser.lastName} Services`,
-          description: `Professional ${services.slice(0, 3).join(', ')} and more. Serving ${location.city} area with quality workmanship.`,
+          businessName: `${savedUser.firstName} ${savedUser.lastName} Serviços`,
+          description: `Profissional especializado em ${services.slice(0, 3).join(', ')} e muito mais. Atendendo ${location.city} e região com qualidade e dedicação.`,
           services,
           location: {
-            latitude: location.lat + (Math.random() - 0.5) * 0.1, // Add slight variation
+            latitude: location.lat + (Math.random() - 0.5) * 0.1,
             longitude: location.lng + (Math.random() - 0.5) * 0.1,
-            address: `${Math.floor(Math.random() * 9999) + 1} ${getRandomItem(['Main', 'Oak', 'Pine', 'Elm', 'Maple'])} Street`,
+            address: `Rua ${getRandomItem(['das Flores', 'dos Açores', 'Principal', 'do Comércio', 'das Acácias'])}, ${Math.floor(Math.random() * 999) + 1}`,
             city: location.city,
             state: location.state,
-            zipCode: String(Math.floor(Math.random() * 90000) + 10000),
-            country: 'USA',
+            zipCode: `880${String(Math.floor(Math.random() * 90) + 10).padStart(2, '0')}-${String(Math.floor(Math.random() * 900) + 100)}`,
+            country: 'Brasil',
           },
-          serviceRadius: Math.floor(Math.random() * 30) + 15, // 15-45 miles
-          rating: Math.round((Math.random() * 2 + 3) * 10) / 10, // 3.0-5.0
-          totalReviews: Math.floor(Math.random() * 100) + 5, // 5-105 reviews
+          serviceRadius: Math.floor(Math.random() * 20) + 5, // 5-25 km
+          rating: Math.round((Math.random() * 2 + 3) * 10) / 10,
+          totalReviews: Math.floor(Math.random() * 100) + 5,
           portfolioImages: [],
-          isBackgroundChecked: Math.random() > 0.2, // 80% background checked
-          isInsured: Math.random() > 0.3, // 70% insured
-          isActive: Math.random() > 0.1, // 90% active
+          isBackgroundChecked: Math.random() > 0.2,
+          isInsured: Math.random() > 0.3,
+          isActive: Math.random() > 0.1,
           availableHours: {
             monday: { start: '08:00', end: '18:00', available: Math.random() > 0.1 },
             tuesday: { start: '08:00', end: '18:00', available: Math.random() > 0.1 },
@@ -419,13 +418,13 @@ class DatabaseSeeder {
             sunday: { start: '10:00', end: '15:00', available: Math.random() > 0.6 },
           },
           pricing: {
-            baseRate: Math.floor(Math.random() * 100) + 50, // $50-150/hour
-            currency: 'USD',
+            baseRate: Math.floor(Math.random() * 150) + 80, // R$80-230/hour
+            currency: 'BRL',
             rateType: Math.random() > 0.7 ? 'fixed' : 'hourly',
           },
-          completedJobs: Math.floor(Math.random() * 200) + 10, // 10-210 jobs
-          responseRate: Math.floor(Math.random() * 30) + 70, // 70-100%
-          averageResponseTime: Math.floor(Math.random() * 120) + 15, // 15-135 minutes
+          completedJobs: Math.floor(Math.random() * 200) + 10,
+          responseRate: Math.floor(Math.random() * 30) + 70,
+          averageResponseTime: Math.floor(Math.random() * 120) + 15,
         });
 
         const savedProvider = await providerRepository.save(provider);
@@ -479,19 +478,19 @@ class DatabaseSeeder {
         customerId: customer.id,
         providerId: provider.id,
         serviceType: service,
-        description: `Professional ${service.toLowerCase()} service requested for ${location.city} area.`,
+        description: `Serviço de ${service.toLowerCase()} solicitado para a região de ${location.city}.`,
         location: {
           latitude: location.lat + (Math.random() - 0.5) * 0.02,
           longitude: location.lng + (Math.random() - 0.5) * 0.02,
-          address: `${Math.floor(Math.random() * 9999) + 1} ${getRandomItem(['Main', 'Oak', 'Pine', 'Elm', 'Maple'])} Street`,
+          address: `Rua ${getRandomItem(['das Flores', 'dos Açores', 'Principal', 'do Comércio', 'das Acácias'])}, ${Math.floor(Math.random() * 999) + 1}`,
           city: location.city,
           state: location.state,
-          zipCode: String(Math.floor(Math.random() * 90000) + 10000),
+          zipCode: `880${String(Math.floor(Math.random() * 90) + 10).padStart(2, '0')}-${String(Math.floor(Math.random() * 900) + 100)}`,
         },
         scheduledDate,
-        estimatedDuration: Math.floor(Math.random() * 180) + 60, // 1-4 hours
+        estimatedDuration: Math.floor(Math.random() * 180) + 60,
         status,
-        totalAmount: Math.floor(Math.random() * 300) + 50, // $50-350
+        totalAmount: Math.floor(Math.random() * 600) + 150, // R$150-750
         paymentStatus: status === BookingStatus.COMPLETED ? BookingPaymentStatus.PAID :
                       status === BookingStatus.CANCELLED ? BookingPaymentStatus.REFUNDED :
                       BookingPaymentStatus.PENDING,
@@ -538,19 +537,19 @@ class DatabaseSeeder {
           customerId: demoCustomer.id,
           providerId: provider.id,
           serviceType: service,
-          description: `Professional ${service.toLowerCase()} service requested for ${location.city} area.`,
+          description: `Serviço de ${service.toLowerCase()} solicitado para a região de ${location.city}.`,
           location: {
             latitude: location.lat + (Math.random() - 0.5) * 0.1,
             longitude: location.lng + (Math.random() - 0.5) * 0.1,
-            address: `${Math.floor(Math.random() * 9999) + 1000} ${getRandomItem(['Main Street', 'Oak Street', 'Elm Street', 'Maple Street'])}`,
+            address: `Rua ${getRandomItem(['das Flores', 'dos Açores', 'Principal', 'do Comércio', 'das Acácias'])}, ${Math.floor(Math.random() * 999) + 1}`,
             city: location.city,
             state: location.state,
-            zipCode: String(Math.floor(Math.random() * 90000) + 10000),
+            zipCode: `880${String(Math.floor(Math.random() * 90) + 10).padStart(2, '0')}-${String(Math.floor(Math.random() * 900) + 100)}`,
           },
-          scheduledDate: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000), // Random past dates
+          scheduledDate: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000),
           estimatedDuration: Math.floor(Math.random() * 300) + 60,
           status,
-          totalAmount: Math.floor(Math.random() * 400) + 100,
+          totalAmount: Math.floor(Math.random() * 700) + 150, // R$150-850
           paymentStatus: status === BookingStatus.COMPLETED ? BookingPaymentStatus.PAID : BookingPaymentStatus.PENDING,
           confirmedAt: status !== BookingStatus.PENDING ? new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000) : null,
           startedAt: status === BookingStatus.COMPLETED || status === BookingStatus.IN_PROGRESS ? new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000) : null,
@@ -594,19 +593,19 @@ class DatabaseSeeder {
           customerId: customer.id,
           providerId: demoProvider.id,
           serviceType: service,
-          description: `Professional ${service.toLowerCase()} service requested for ${location.city} area.`,
+          description: `Serviço de ${service.toLowerCase()} solicitado para a região de ${location.city}.`,
           location: {
             latitude: location.lat + (Math.random() - 0.5) * 0.1,
             longitude: location.lng + (Math.random() - 0.5) * 0.1,
-            address: `${Math.floor(Math.random() * 9999) + 1000} ${getRandomItem(['Main Street', 'Oak Street', 'Elm Street', 'Maple Street'])}`,
+            address: `Rua ${getRandomItem(['das Flores', 'dos Açores', 'Principal', 'do Comércio', 'das Acácias'])}, ${Math.floor(Math.random() * 999) + 1}`,
             city: location.city,
             state: location.state,
-            zipCode: String(Math.floor(Math.random() * 90000) + 10000),
+            zipCode: `880${String(Math.floor(Math.random() * 90) + 10).padStart(2, '0')}-${String(Math.floor(Math.random() * 900) + 100)}`,
           },
           scheduledDate: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000),
           estimatedDuration: Math.floor(Math.random() * 300) + 60,
           status,
-          totalAmount: Math.floor(Math.random() * 400) + 100,
+          totalAmount: Math.floor(Math.random() * 700) + 150, // R$150-850
           paymentStatus: status === BookingStatus.COMPLETED ? BookingPaymentStatus.PAID : BookingPaymentStatus.PENDING,
           confirmedAt: status !== BookingStatus.PENDING ? new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000) : null,
           startedAt: status === BookingStatus.COMPLETED || status === BookingStatus.IN_PROGRESS ? new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000) : null,
@@ -705,7 +704,7 @@ class DatabaseSeeder {
         platformFee,
         processingFee,
         providerAmount,
-        currency: 'USD',
+        currency: 'BRL',
         paymentMethod,
         stripePaymentIntentId: `pi_${Math.random().toString(36).substring(2, 15)}`,
         stripeChargeId: paymentStatus === PaymentStatus.SUCCEEDED ? `ch_${Math.random().toString(36).substring(2, 15)}` : null,

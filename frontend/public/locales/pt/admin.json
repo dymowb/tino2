@@ -1,0 +1,203 @@
+{
+  "dashboard": {
+    "title": "Painel",
+    "error": "Falha ao carregar dados do painel.",
+    "stats": {
+      "total_users": "Total de Usuários",
+      "verified_providers": "Prestadores Verificados",
+      "total_bookings": "Total de Reservas",
+      "flagged_reviews": "Avaliações Sinalizadas",
+      "pending_providers": "Prestadores Pendentes",
+      "active_bookings": "Reservas Ativas",
+      "platform_revenue": "Receita da Plataforma"
+    },
+    "recent_users": "Usuários Recentes",
+    "recent_bookings": "Reservas Recentes"
+  },
+  "providers": {
+    "title": "Verificação de Prestadores",
+    "applications_awaiting_one": "{{count}} candidatura aguardando revisão",
+    "applications_awaiting_other": "{{count}} candidaturas aguardando revisão",
+    "empty": "Nenhuma candidatura pendente — tudo em dia!",
+    "yes": "Sim",
+    "no": "Não",
+    "approve_tooltip": "Aprovar",
+    "reject_tooltip": "Rejeitar",
+    "table": {
+      "business": "Empresa",
+      "owner": "Proprietário",
+      "location": "Localização",
+      "services": "Serviços",
+      "background": "Antecedentes",
+      "insured": "Segurado",
+      "applied": "Aplicado",
+      "actions": "Ações"
+    },
+    "approve_dialog": {
+      "title": "Aprovar {{name}}",
+      "confirm_text": "Confirme o status de verificação deste prestador:",
+      "background_check": "Verificação de antecedentes concluída",
+      "insurance_verified": "Seguro verificado",
+      "admin_notes": "Notas do administrador (opcional)",
+      "cancel": "Cancelar",
+      "approve": "Aprovar Prestador",
+      "approving": "Aprovando…"
+    },
+    "reject_dialog": {
+      "title": "Rejeitar {{name}}",
+      "reason_text": "Forneça um motivo — isso será armazenado no registro do prestador.",
+      "reason_label": "Motivo da rejeição",
+      "reason_required": "Obrigatório",
+      "cancel": "Cancelar",
+      "reject": "Rejeitar Candidatura",
+      "rejecting": "Rejeitando…"
+    },
+    "error": "Falha ao carregar prestadores pendentes."
+  },
+  "users": {
+    "title": "Gestão de Usuários",
+    "search_placeholder": "Pesquisar nome ou e-mail",
+    "role_label": "Função",
+    "all_roles": "Todas as funções",
+    "customer": "Cliente",
+    "provider": "Prestador",
+    "admin": "Admin",
+    "status_label": "Status",
+    "all_statuses": "Todos os status",
+    "active": "Ativo",
+    "suspended": "Suspenso",
+    "suspend_tooltip": "Suspender usuário",
+    "reactivate_tooltip": "Reativar usuário",
+    "table": {
+      "name": "Nome",
+      "email": "E-mail",
+      "role": "Função",
+      "status": "Status",
+      "joined": "Ingressou",
+      "actions": "Ações"
+    },
+    "suspend_dialog": {
+      "title": "Suspender {{name}}",
+      "reason_label": "Motivo",
+      "comment_label": "Comentário adicional",
+      "comment_required_helper": "Obrigatório para \"Outro\"",
+      "comment_optional_helper": "Opcional",
+      "duration_label": "Duração",
+      "custom_date_label": "Suspender até",
+      "cancel": "Cancelar",
+      "confirm": "Confirmar Suspensão",
+      "confirming": "Suspendendo…",
+      "reasons": {
+        "fraud": "Tentativa de fraude ou golpe",
+        "harassment": "Assédio ou comportamento ameaçador",
+        "fake_reviews": "Avaliações falsas / manipulação de classificações",
+        "payment_abuse": "Disputas de pagamento / abuso de estorno",
+        "tos_violation": "Violação dos termos de serviço",
+        "other": "Outro (requer comentário)"
+      },
+      "durations": {
+        "1d": "1 dia",
+        "7d": "7 dias",
+        "30d": "30 dias",
+        "permanent": "Permanente",
+        "custom": "Data personalizada"
+      }
+    },
+    "error": "Falha ao carregar usuários."
+  },
+  "reviews": {
+    "title": "Moderação de Avaliações",
+    "flagged_awaiting_one": "{{count}} avaliação sinalizada aguardando moderação",
+    "flagged_awaiting_other": "{{count}} avaliações sinalizadas aguardando moderação",
+    "empty": "Nenhuma avaliação sinalizada — tudo limpo!",
+    "no_comment": "Sem comentário",
+    "approve_tooltip": "Aprovar (remover sinalização)",
+    "delete_tooltip": "Excluir avaliação",
+    "keep_flagged_tooltip": "Manter sinalizada",
+    "table": {
+      "customer": "Cliente",
+      "provider": "Prestador",
+      "rating": "Classificação",
+      "review": "Avaliação",
+      "flag_reason": "Motivo da Sinalização",
+      "date": "Data",
+      "actions": "Ações"
+    },
+    "dialog": {
+      "by": "por",
+      "reason_required_label": "Motivo (obrigatório)",
+      "reason_optional_label": "Motivo (opcional)",
+      "reason_audit_helper": "O motivo será registrado para fins de auditoria",
+      "reason_review_helper": "Descreva por que esta avaliação permanece em análise",
+      "reason_optional_helper": "Nota opcional",
+      "cancel": "Cancelar",
+      "processing": "Processando…"
+    },
+    "actions": {
+      "approve": "Aprovar",
+      "approve_review": "Aprovar Avaliação",
+      "delete": "Excluir",
+      "delete_review": "Excluir Avaliação",
+      "keep_flagged": "Manter Sinalizada",
+      "keep_flagged_confirm": "Manter Sinalizada"
+    },
+    "error": "Falha ao carregar avaliações sinalizadas."
+  },
+  "disputes": {
+    "title": "Resolução de Disputas",
+    "total_label": "{{count}} total",
+    "filter": {
+      "open": "Aberta",
+      "resolved": "Resolvida",
+      "all": "Todas"
+    },
+    "no_disputes": "Nenhuma disputa {{filter}}.",
+    "table": {
+      "booking": "Reserva",
+      "service": "Serviço",
+      "amount": "Valor",
+      "customer": "Cliente",
+      "provider": "Prestador",
+      "dispute_reason": "Motivo da Disputa",
+      "raised": "Levantada",
+      "status": "Status",
+      "action": "Ação"
+    },
+    "status": {
+      "open": "Aberta",
+      "provider_won": "Prestador venceu",
+      "customer_won": "Cliente venceu"
+    },
+    "resolve_button": "Resolver",
+    "resolved_label": "Resolvida",
+    "no_notes": "Sem notas",
+    "resolve_dialog": {
+      "title": "Resolver Disputa",
+      "hold_amount": "Valor retido: R${{amount}} para {{service}}",
+      "dispute_reason_label": "Motivo da disputa",
+      "no_reason": "Nenhum motivo fornecido",
+      "decision_label": "Decisão",
+      "capture_label": "Liberar ao prestador — capturar os fundos retidos, reserva marcada como CONCLUÍDA",
+      "refund_label": "Reembolsar ao cliente — cancelar a retenção, cartão nunca cobrado, reserva CANCELADA",
+      "admin_notes_label": "Notas do administrador (opcional)",
+      "admin_notes_placeholder": "Motivo da decisão, evidências analisadas...",
+      "cancel": "Cancelar",
+      "processing": "Processando…",
+      "release_payment": "Liberar Pagamento",
+      "refund_customer": "Reembolsar Cliente"
+    }
+  },
+  "settings": {
+    "title": "Configurações da Plataforma",
+    "description": "Essas configurações controlam o comportamento da plataforma. As alterações entram em vigor imediatamente.",
+    "table": {
+      "setting": "Configuração",
+      "description": "Descrição",
+      "value": "Valor"
+    },
+    "saved": "Salvo",
+    "save": "Salvar",
+    "error_load": "Falha ao carregar configurações",
+    "error_save": "Falha ao salvar {{key}}"
+  }
+}

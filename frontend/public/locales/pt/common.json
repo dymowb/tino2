@@ -39,8 +39,11 @@
     "settings": "Configurações",
     "logout": "Sair",
     "login": "Entrar",
-    "register": "Registrar"
+    "register": "Registrar",
+    "admin_panel": "Painel Admin"
   },
+
+  "change_language": "Mudar Idioma",
 
   "status": {
     "pending": "Pendente",

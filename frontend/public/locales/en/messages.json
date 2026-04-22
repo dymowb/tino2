@@ -16,16 +16,31 @@
 
   "conversation": {
     "type_message": "Type a message...",
+    "edit_message_placeholder": "Edit message...",
     "send": "Send",
-    "attach_file": "Attach File",
+    "attach_file": "Attach file",
     "send_image": "Send Image",
-    "no_messages": "No messages yet",
+    "no_messages": "No messages yet. Start the conversation!",
     "start_conversation_text": "Start the conversation by sending a message",
     "online": "Online",
     "offline": "Offline",
     "typing": "typing...",
     "participants": "{{count}} participant",
-    "participants_plural": "{{count}} participants"
+    "participants_plural": "{{count}} participants",
+    "replying_to": "Replying to {{name}}",
+    "edited": "(edited)",
+    "editing": "Editing message",
+    "cancel_edit": "Cancel",
+    "reply": "Reply",
+    "edit": "Edit",
+    "delete": "Delete",
+    "conversation_fallback": "Conversation"
+  },
+  "errors": {
+    "send_failed": "Failed to send message",
+    "update_failed": "Failed to update message",
+    "delete_failed": "Failed to delete message",
+    "upload_failed": "Failed to upload file"
   },
 
   "new": {

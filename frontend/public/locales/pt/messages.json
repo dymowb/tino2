@@ -15,16 +15,31 @@
   "select_conversation_desc": "Escolha uma conversa da lista para ver e enviar mensagens",
   "conversation": {
     "type_message": "Digite uma mensagem...",
+    "edit_message_placeholder": "Editar mensagem...",
     "send": "Enviar",
-    "attach_file": "Anexar Arquivo",
+    "attach_file": "Anexar arquivo",
     "send_image": "Enviar Imagem",
-    "no_messages": "Ainda não há mensagens",
+    "no_messages": "Ainda não há mensagens. Inicie a conversa!",
     "start_conversation_text": "Comece a conversa enviando uma mensagem",
     "online": "Online",
     "offline": "Offline",
     "typing": "digitando...",
     "participants": "{{count}} participante",
-    "participants_plural": "{{count}} participantes"
+    "participants_plural": "{{count}} participantes",
+    "replying_to": "Respondendo a {{name}}",
+    "edited": "(editado)",
+    "editing": "Editando mensagem",
+    "cancel_edit": "Cancelar",
+    "reply": "Responder",
+    "edit": "Editar",
+    "delete": "Excluir",
+    "conversation_fallback": "Conversa"
+  },
+  "errors": {
+    "send_failed": "Falha ao enviar mensagem",
+    "update_failed": "Falha ao atualizar mensagem",
+    "delete_failed": "Falha ao excluir mensagem",
+    "upload_failed": "Falha ao enviar arquivo"
   },
   "new": {
     "title": "Iniciar Nova Conversa",

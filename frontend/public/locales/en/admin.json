@@ -1,0 +1,203 @@
+{
+  "dashboard": {
+    "title": "Dashboard",
+    "error": "Failed to load dashboard data.",
+    "stats": {
+      "total_users": "Total Users",
+      "verified_providers": "Verified Providers",
+      "total_bookings": "Total Bookings",
+      "flagged_reviews": "Flagged Reviews",
+      "pending_providers": "Pending Providers",
+      "active_bookings": "Active Bookings",
+      "platform_revenue": "Platform Revenue"
+    },
+    "recent_users": "Recent Users",
+    "recent_bookings": "Recent Bookings"
+  },
+  "providers": {
+    "title": "Provider Verification",
+    "applications_awaiting_one": "{{count}} application awaiting review",
+    "applications_awaiting_other": "{{count}} applications awaiting review",
+    "empty": "No pending applications — all caught up!",
+    "yes": "Yes",
+    "no": "No",
+    "approve_tooltip": "Approve",
+    "reject_tooltip": "Reject",
+    "table": {
+      "business": "Business",
+      "owner": "Owner",
+      "location": "Location",
+      "services": "Services",
+      "background": "Background",
+      "insured": "Insured",
+      "applied": "Applied",
+      "actions": "Actions"
+    },
+    "approve_dialog": {
+      "title": "Approve {{name}}",
+      "confirm_text": "Confirm verification status for this provider:",
+      "background_check": "Background check completed",
+      "insurance_verified": "Insurance verified",
+      "admin_notes": "Admin notes (optional)",
+      "cancel": "Cancel",
+      "approve": "Approve Provider",
+      "approving": "Approving…"
+    },
+    "reject_dialog": {
+      "title": "Reject {{name}}",
+      "reason_text": "Provide a reason — this will be stored in the provider's record.",
+      "reason_label": "Rejection reason",
+      "reason_required": "Required",
+      "cancel": "Cancel",
+      "reject": "Reject Application",
+      "rejecting": "Rejecting…"
+    },
+    "error": "Failed to load pending providers."
+  },
+  "users": {
+    "title": "User Management",
+    "search_placeholder": "Search name or email",
+    "role_label": "Role",
+    "all_roles": "All roles",
+    "customer": "Customer",
+    "provider": "Provider",
+    "admin": "Admin",
+    "status_label": "Status",
+    "all_statuses": "All statuses",
+    "active": "Active",
+    "suspended": "Suspended",
+    "suspend_tooltip": "Suspend user",
+    "reactivate_tooltip": "Reactivate user",
+    "table": {
+      "name": "Name",
+      "email": "Email",
+      "role": "Role",
+      "status": "Status",
+      "joined": "Joined",
+      "actions": "Actions"
+    },
+    "suspend_dialog": {
+      "title": "Suspend {{name}}",
+      "reason_label": "Reason",
+      "comment_label": "Additional comment",
+      "comment_required_helper": "Required for \"Other\"",
+      "comment_optional_helper": "Optional",
+      "duration_label": "Duration",
+      "custom_date_label": "Suspend until",
+      "cancel": "Cancel",
+      "confirm": "Confirm Suspension",
+      "confirming": "Suspending…",
+      "reasons": {
+        "fraud": "Fraud or scam attempt",
+        "harassment": "Harassment or threatening behavior",
+        "fake_reviews": "Fake reviews / ratings manipulation",
+        "payment_abuse": "Payment disputes / chargeback abuse",
+        "tos_violation": "Terms of service violation",
+        "other": "Other (requires comment)"
+      },
+      "durations": {
+        "1d": "1 day",
+        "7d": "7 days",
+        "30d": "30 days",
+        "permanent": "Permanent",
+        "custom": "Custom date"
+      }
+    },
+    "error": "Failed to load users."
+  },
+  "reviews": {
+    "title": "Review Moderation",
+    "flagged_awaiting_one": "{{count}} flagged review awaiting moderation",
+    "flagged_awaiting_other": "{{count}} flagged reviews awaiting moderation",
+    "empty": "No flagged reviews — all clear!",
+    "no_comment": "No comment",
+    "approve_tooltip": "Approve (unflag)",
+    "delete_tooltip": "Delete review",
+    "keep_flagged_tooltip": "Keep flagged",
+    "table": {
+      "customer": "Customer",
+      "provider": "Provider",
+      "rating": "Rating",
+      "review": "Review",
+      "flag_reason": "Flag Reason",
+      "date": "Date",
+      "actions": "Actions"
+    },
+    "dialog": {
+      "by": "by",
+      "reason_required_label": "Reason (required)",
+      "reason_optional_label": "Reason (optional)",
+      "reason_audit_helper": "Reason will be logged for audit purposes",
+      "reason_review_helper": "Describe why this review remains under review",
+      "reason_optional_helper": "Optional note",
+      "cancel": "Cancel",
+      "processing": "Processing…"
+    },
+    "actions": {
+      "approve": "Approve",
+      "approve_review": "Approve Review",
+      "delete": "Delete",
+      "delete_review": "Delete Review",
+      "keep_flagged": "Keep Flagged",
+      "keep_flagged_confirm": "Keep Flagged"
+    },
+    "error": "Failed to load flagged reviews."
+  },
+  "disputes": {
+    "title": "Dispute Resolution",
+    "total_label": "{{count}} total",
+    "filter": {
+      "open": "Open",
+      "resolved": "Resolved",
+      "all": "All"
+    },
+    "no_disputes": "No {{filter}} disputes.",
+    "table": {
+      "booking": "Booking",
+      "service": "Service",
+      "amount": "Amount",
+      "customer": "Customer",
+      "provider": "Provider",
+      "dispute_reason": "Dispute Reason",
+      "raised": "Raised",
+      "status": "Status",
+      "action": "Action"
+    },
+    "status": {
+      "open": "Open",
+      "provider_won": "Provider won",
+      "customer_won": "Customer won"
+    },
+    "resolve_button": "Resolve",
+    "resolved_label": "Resolved",
+    "no_notes": "No notes",
+    "resolve_dialog": {
+      "title": "Resolve Dispute",
+      "hold_amount": "Hold amount: ${{amount}} for {{service}}",
+      "dispute_reason_label": "Dispute reason",
+      "no_reason": "No reason provided",
+      "decision_label": "Decision",
+      "capture_label": "Release to provider — capture the held funds, booking marked COMPLETED",
+      "refund_label": "Refund to customer — cancel the hold, card never charged, booking CANCELLED",
+      "admin_notes_label": "Admin notes (optional)",
+      "admin_notes_placeholder": "Reason for decision, evidence reviewed...",
+      "cancel": "Cancel",
+      "processing": "Processing…",
+      "release_payment": "Release Payment",
+      "refund_customer": "Refund Customer"
+    }
+  },
+  "settings": {
+    "title": "Platform Settings",
+    "description": "These settings control platform behaviour. Changes take effect immediately.",
+    "table": {
+      "setting": "Setting",
+      "description": "Description",
+      "value": "Value"
+    },
+    "saved": "Saved",
+    "save": "Save",
+    "error_load": "Failed to load settings",
+    "error_save": "Failed to save {{key}}"
+  }
+}

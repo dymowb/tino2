@@ -26,7 +26,7 @@ const languages: Language[] = [
 ];
 
 const LanguageSwitcher: React.FC = () => {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation('common');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
@@ -47,7 +47,7 @@ const LanguageSwitcher: React.FC = () => {
 
   return (
     <>
-      <Tooltip title="Change Language">
+      <Tooltip title={t('change_language')}>
         <IconButton
           onClick={handleClick}
           size="small"

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -46,6 +47,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
   showFilters = true,
   maxHeight
 }) => {
+  const { t } = useTranslation('reviews');
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -159,7 +161,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
               )}
               {review.isVerified && (
                 <Chip
-                  label="Verified"
+                  label={t('verified')}
                   size="small"
                   color="success"
                   icon={<CheckCircle />}
@@ -274,7 +276,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
             <Grid xs={12} md={6}>
               <TextField
                 fullWidth
-                placeholder="Search reviews..."
+                placeholder={t('filters.search_placeholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 InputProps={{
@@ -289,32 +291,32 @@ const ReviewList: React.FC<ReviewListProps> = ({
             </Grid>
             <Grid xs={6} md={3}>
               <FormControl fullWidth size="small">
-                <InputLabel>Rating</InputLabel>
+                <InputLabel>{t('filters.rating')}</InputLabel>
                 <Select
                   value={ratingFilter}
                   onChange={(e) => setRatingFilter(e.target.value as number | "")}
-                  label="Rating"
+                  label={t('filters.rating')}
                 >
-                  <MenuItem value="">All Ratings</MenuItem>
-                  <MenuItem value={5}>5 Stars</MenuItem>
-                  <MenuItem value={4}>4 Stars</MenuItem>
-                  <MenuItem value={3}>3 Stars</MenuItem>
-                  <MenuItem value={2}>2 Stars</MenuItem>
-                  <MenuItem value={1}>1 Star</MenuItem>
+                  <MenuItem value="">{t('filters.all_ratings')}</MenuItem>
+                  <MenuItem value={5}>{t('filters.5_stars')}</MenuItem>
+                  <MenuItem value={4}>{t('filters.4_stars')}</MenuItem>
+                  <MenuItem value={3}>{t('filters.3_stars')}</MenuItem>
+                  <MenuItem value={2}>{t('filters.2_stars')}</MenuItem>
+                  <MenuItem value={1}>{t('filters.1_star')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
             <Grid xs={6} md={3}>
               <FormControl fullWidth size="small">
-                <InputLabel>Sort By</InputLabel>
+                <InputLabel>{t('filters.sort_by')}</InputLabel>
                 <Select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  label="Sort By"
+                  label={t('filters.sort_by')}
                 >
-                  <MenuItem value="createdAt">Newest First</MenuItem>
-                  <MenuItem value="rating">Highest Rated</MenuItem>
-                  <MenuItem value="helpful">Most Helpful</MenuItem>
+                  <MenuItem value="createdAt">{t('filters.newest_first')}</MenuItem>
+                  <MenuItem value="rating">{t('filters.highest_rated')}</MenuItem>
+                  <MenuItem value="helpful">{t('filters.most_helpful')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -326,15 +328,15 @@ const ReviewList: React.FC<ReviewListProps> = ({
       <Box sx={maxHeight ? { maxHeight, overflowY: 'auto' } : {}}>
         {error ? (
           <Alert severity="error">
-            Failed to load reviews. Please try again.
+            {t('error')}
           </Alert>
         ) : isLoading ? (
           <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Typography>Loading reviews...</Typography>
+            <Typography>{t('loading')}</Typography>
           </Box>
         ) : !reviews?.data?.length ? (
           <Alert severity="info">
-            No reviews yet. Be the first to leave a review!
+            {t('no_reviews')}
           </Alert>
         ) : (
           <>
@@ -345,7 +347,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <TrendingUp color="success" />
                     <Typography variant="h6">
-                      {reviews.pagination?.total || 0} Reviews
+                      {reviews.pagination?.total || 0} {t('title').toLowerCase()}
                     </Typography>
                   </Box>
                 </Grid>
@@ -353,7 +355,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Star sx={{ color: 'gold' }} />
                     <Typography variant="h6">
-                      {analytics?.averageRating?.toFixed(1) || 'N/A'} Average
+                      {analytics?.averageRating?.toFixed(1) || 'N/A'} {t('analytics.average')}
                     </Typography>
                   </Box>
                 </Grid>

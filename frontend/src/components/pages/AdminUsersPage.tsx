@@ -8,6 +8,7 @@ import {
 } from '@mui/material';
 import { Block, CheckCircle } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { apiService, User } from '../../services/api';
 
 // ── Extended user type with admin-only fields ─────────────────────────
@@ -18,28 +19,13 @@ interface AdminUser extends User {
   suspendedUntil: string | null;
 }
 
-// ── Suspension reasons ────────────────────────────────────────────────
-const SUSPENSION_REASONS = [
-  { key: 'fraud',          label: 'Fraud or scam attempt' },
-  { key: 'harassment',     label: 'Harassment or threatening behavior' },
-  { key: 'fake_reviews',   label: 'Fake reviews / ratings manipulation' },
-  { key: 'payment_abuse',  label: 'Payment disputes / chargeback abuse' },
-  { key: 'tos_violation',  label: 'Terms of service violation' },
-  { key: 'other',          label: 'Other (requires comment)' },
-] as const;
+// ── Suspension reason keys ────────────────────────────────────────────
+const SUSPENSION_REASON_KEYS = ['fraud', 'harassment', 'fake_reviews', 'payment_abuse', 'tos_violation', 'other'] as const;
+type SuspensionReasonKey = typeof SUSPENSION_REASON_KEYS[number];
 
-type SuspensionReasonKey = typeof SUSPENSION_REASONS[number]['key'];
-
-// ── Duration presets ──────────────────────────────────────────────────
-const DURATION_PRESETS = [
-  { value: '1d',        label: '1 day' },
-  { value: '7d',        label: '7 days' },
-  { value: '30d',       label: '30 days' },
-  { value: 'permanent', label: 'Permanent' },
-  { value: 'custom',    label: 'Custom date' },
-] as const;
-
-type DurationPreset = typeof DURATION_PRESETS[number]['value'];
+// ── Duration preset keys ──────────────────────────────────────────────
+const DURATION_PRESET_KEYS = ['1d', '7d', '30d', 'permanent', 'custom'] as const;
+type DurationPreset = typeof DURATION_PRESET_KEYS[number];
 
 function presetToDate(preset: DurationPreset): string | null {
   const now = new Date();
@@ -47,7 +33,7 @@ function presetToDate(preset: DurationPreset): string | null {
   if (preset === '1d')  { now.setDate(now.getDate() + 1);  return now.toISOString(); }
   if (preset === '7d')  { now.setDate(now.getDate() + 7);  return now.toISOString(); }
   if (preset === '30d') { now.setDate(now.getDate() + 30); return now.toISOString(); }
-  return null; // 'custom' — caller provides date separately
+  return null;
 }
 
 // ── State interfaces ──────────────────────────────────────────────────
@@ -62,7 +48,7 @@ interface SuspendDialogState {
   reason: SuspensionReasonKey | '';
   comment: string;
   duration: DurationPreset;
-  customDate: string; // ISO date string for custom picker
+  customDate: string;
 }
 
 const INITIAL_SUSPEND_DIALOG: SuspendDialogState = {
@@ -79,58 +65,68 @@ interface SuspendDialogProps {
 }
 
 const SuspensionDialog: React.FC<SuspendDialogProps> = ({ state, onChange, onConfirm, onClose, isLoading }) => {
+  const { t } = useTranslation('admin');
   const isValid = state.reason !== '' && (state.reason !== 'other' || state.comment.trim() !== '');
 
   return (
     <Dialog open={state.open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        Suspend {state.user?.firstName} {state.user?.lastName}
+        {t('users.suspend_dialog.title', { name: `${state.user?.firstName} ${state.user?.lastName}` })}
       </DialogTitle>
 
       <DialogContent>
         <Stack spacing={3} sx={{ mt: 1 }}>
           {/* Reason */}
           <FormControl fullWidth>
-            <InputLabel>Reason</InputLabel>
+            <InputLabel>{t('users.suspend_dialog.reason_label')}</InputLabel>
             <Select
               value={state.reason}
-              label="Reason"
+              label={t('users.suspend_dialog.reason_label')}
               onChange={e => onChange({ reason: e.target.value as SuspensionReasonKey })}
             >
-              {SUSPENSION_REASONS.map(r => (
-                <MenuItem key={r.key} value={r.key}>{r.label}</MenuItem>
+              {SUSPENSION_REASON_KEYS.map(key => (
+                <MenuItem key={key} value={key}>{t(`users.suspend_dialog.reasons.${key}`)}</MenuItem>
               ))}
             </Select>
           </FormControl>
 
           {/* Comment */}
           <TextField
-            label="Additional comment"
+            label={t('users.suspend_dialog.comment_label')}
             multiline
             rows={3}
             value={state.comment}
             onChange={e => onChange({ comment: e.target.value })}
             required={state.reason === 'other'}
-            helperText={state.reason === 'other' ? 'Required for "Other"' : 'Optional'}
+            helperText={state.reason === 'other'
+              ? t('users.suspend_dialog.comment_required_helper')
+              : t('users.suspend_dialog.comment_optional_helper')}
           />
 
           {/* Duration */}
           <Box>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Duration</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              {t('users.suspend_dialog.duration_label')}
+            </Typography>
             <RadioGroup
               row
               value={state.duration}
               onChange={e => onChange({ duration: e.target.value as DurationPreset })}
             >
-              {DURATION_PRESETS.map(p => (
-                <FormControlLabel key={p.value} value={p.value} control={<Radio size="small" />} label={p.label} />
+              {DURATION_PRESET_KEYS.map(key => (
+                <FormControlLabel
+                  key={key}
+                  value={key}
+                  control={<Radio size="small" />}
+                  label={t(`users.suspend_dialog.durations.${key}`)}
+                />
               ))}
             </RadioGroup>
 
             {state.duration === 'custom' && (
               <TextField
                 type="date"
-                label="Suspend until"
+                label={t('users.suspend_dialog.custom_date_label')}
                 value={state.customDate}
                 onChange={e => onChange({ customDate: e.target.value })}
                 InputLabelProps={{ shrink: true }}
@@ -144,14 +140,14 @@ const SuspensionDialog: React.FC<SuspendDialogProps> = ({ state, onChange, onCon
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={onClose}>{t('users.suspend_dialog.cancel')}</Button>
         <Button
           variant="contained"
           color="error"
           onClick={onConfirm}
           disabled={!isValid || isLoading}
         >
-          {isLoading ? 'Suspending…' : 'Confirm Suspension'}
+          {isLoading ? t('users.suspend_dialog.confirming') : t('users.suspend_dialog.confirm')}
         </Button>
       </DialogActions>
     </Dialog>
@@ -160,9 +156,10 @@ const SuspensionDialog: React.FC<SuspendDialogProps> = ({ state, onChange, onCon
 
 // ── Page ──────────────────────────────────────────────────────────────
 const AdminUsersPage: React.FC = () => {
+  const { t } = useTranslation('admin');
   const queryClient = useQueryClient();
 
-  const [page, setPage]         = useState(0); // MUI TablePagination is 0-indexed
+  const [page, setPage]         = useState(0);
   const [search, setSearch]     = useState('');
   const [filters, setFilters]   = useState<UserFilters>({ userType: '', isActive: null });
   const [suspendDialog, setSuspendDialog] = useState<SuspendDialogState>(INITIAL_SUSPEND_DIALOG);
@@ -171,7 +168,7 @@ const AdminUsersPage: React.FC = () => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin-users', page, search, filters],
     queryFn: () => apiService.getAdminUsers({
-      page: page + 1, // API is 1-indexed
+      page: page + 1,
       limit: 20,
       search: search || undefined,
       userType: filters.userType || undefined,
@@ -218,16 +215,16 @@ const AdminUsersPage: React.FC = () => {
   };
 
   // ── Render ────────────────────────────────────────────────────────
-  if (error) return <Alert severity="error">Failed to load users.</Alert>;
+  if (error) return <Alert severity="error">{t('users.error')}</Alert>;
 
   return (
     <Box>
-      <Typography variant="h4" fontWeight="bold" sx={{ mb: 3 }}>User Management</Typography>
+      <Typography variant="h4" fontWeight="bold" sx={{ mb: 3 }}>{t('users.title')}</Typography>
 
       {/* ── Filters ── */}
       <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
         <TextField
-          label="Search name or email"
+          label={t('users.search_placeholder')}
           size="small"
           value={search}
           onChange={e => { setSearch(e.target.value); setPage(0); }}
@@ -235,33 +232,33 @@ const AdminUsersPage: React.FC = () => {
         />
 
         <FormControl size="small" sx={{ width: 160 }}>
-          <InputLabel>Role</InputLabel>
+          <InputLabel>{t('users.role_label')}</InputLabel>
           <Select
             value={filters.userType}
-            label="Role"
+            label={t('users.role_label')}
             onChange={e => { setFilters(f => ({ ...f, userType: e.target.value as UserFilters['userType'] })); setPage(0); }}
           >
-            <MenuItem value="">All roles</MenuItem>
-            <MenuItem value="customer">Customer</MenuItem>
-            <MenuItem value="provider">Provider</MenuItem>
-            <MenuItem value="admin">Admin</MenuItem>
+            <MenuItem value="">{t('users.all_roles')}</MenuItem>
+            <MenuItem value="customer">{t('users.customer')}</MenuItem>
+            <MenuItem value="provider">{t('users.provider')}</MenuItem>
+            <MenuItem value="admin">{t('users.admin')}</MenuItem>
           </Select>
         </FormControl>
 
         <FormControl size="small" sx={{ width: 160 }}>
-          <InputLabel>Status</InputLabel>
+          <InputLabel>{t('users.status_label')}</InputLabel>
           <Select
             value={filters.isActive === null ? '' : String(filters.isActive)}
-            label="Status"
+            label={t('users.status_label')}
             onChange={e => {
               const v = e.target.value;
               setFilters(f => ({ ...f, isActive: v === '' ? null : v === 'true' }));
               setPage(0);
             }}
           >
-            <MenuItem value="">All statuses</MenuItem>
-            <MenuItem value="true">Active</MenuItem>
-            <MenuItem value="false">Suspended</MenuItem>
+            <MenuItem value="">{t('users.all_statuses')}</MenuItem>
+            <MenuItem value="true">{t('users.active')}</MenuItem>
+            <MenuItem value="false">{t('users.suspended')}</MenuItem>
           </Select>
         </FormControl>
       </Stack>
@@ -271,12 +268,12 @@ const AdminUsersPage: React.FC = () => {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Role</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Joined</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell>{t('users.table.name')}</TableCell>
+              <TableCell>{t('users.table.email')}</TableCell>
+              <TableCell>{t('users.table.role')}</TableCell>
+              <TableCell>{t('users.table.status')}</TableCell>
+              <TableCell>{t('users.table.joined')}</TableCell>
+              <TableCell align="right">{t('users.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
 
@@ -292,18 +289,18 @@ const AdminUsersPage: React.FC = () => {
                 <TableCell>{user.firstName} {user.lastName}</TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>
-                  <Chip label={user.userType} size="small" variant="outlined" />
+                  <Chip label={t(`users.${user.userType}`, user.userType)} size="small" variant="outlined" />
                 </TableCell>
                 <TableCell>
                   {user.isActive
-                    ? <Chip label="Active"    size="small" color="success" />
-                    : <Chip label="Suspended" size="small" color="error"   />
+                    ? <Chip label={t('users.active')}    size="small" color="success" />
+                    : <Chip label={t('users.suspended')} size="small" color="error"   />
                   }
                 </TableCell>
                 <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
                 <TableCell align="right">
                   {user.isActive ? (
-                    <Tooltip title="Suspend user">
+                    <Tooltip title={t('users.suspend_tooltip')}>
                       <IconButton
                         size="small"
                         color="error"
@@ -313,7 +310,7 @@ const AdminUsersPage: React.FC = () => {
                       </IconButton>
                     </Tooltip>
                   ) : (
-                    <Tooltip title="Reactivate user">
+                    <Tooltip title={t('users.reactivate_tooltip')}>
                       <IconButton
                         size="small"
                         color="success"

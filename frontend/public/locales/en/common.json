@@ -39,8 +39,11 @@
     "settings": "Settings",
     "logout": "Logout",
     "login": "Login",
-    "register": "Register"
+    "register": "Register",
+    "admin_panel": "Admin Panel"
   },
+
+  "change_language": "Change Language",
 
   "status": {
     "pending": "Pending",

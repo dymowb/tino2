@@ -105,18 +105,18 @@ const RegisterForm: React.FC = () => {
       <Container maxWidth="sm" sx={{ mt: 8, mb: 4 }}>
         <Paper elevation={4} sx={{ p: 4, borderRadius: 3, textAlign: 'center' }}>
           <Typography variant="h4" gutterBottom sx={{ color: '#4CAF50' }}>
-            Check your email
+            {t('auth:register.check_email_title')}
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-            We sent a verification link to <strong>{registeredEmail}</strong>.
+            {t('auth:register.verification_sent_to', { email: registeredEmail })}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Click the link in the email to activate your account, then come back to log in.
+            {t('auth:register.activate_instructions')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Already verified?{' '}
+            {t('auth:register.already_verified')}{' '}
             <Link to="/login" style={{ color: '#1976d2', textDecoration: 'none', fontWeight: 600 }}>
-              Log in
+              {t('auth:register.login_here')}
             </Link>
           </Typography>
         </Paper>

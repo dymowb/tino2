@@ -8,6 +8,7 @@ import {
   People, Store, BookOnline, Flag, HourglassEmpty, TrendingUp,
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { apiService } from '../../services/api';
 
 // ── Stat card component ──────────────────────────────────────────────
@@ -34,42 +35,43 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, icon, color }) => (
 
 // ── Page ─────────────────────────────────────────────────────────────
 const AdminDashboardPage: React.FC = () => {
+  const { t } = useTranslation('admin');
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin-dashboard'],
     queryFn: () => apiService.getAdminDashboard(),
   });
 
   if (isLoading) return <Box sx={{ display: 'flex', justifyContent: 'center', pt: 8 }}><CircularProgress /></Box>;
-  if (error) return <Alert severity="error">Failed to load dashboard data.</Alert>;
+  if (error) return <Alert severity="error">{t('dashboard.error')}</Alert>;
 
   const stats = data?.statistics;
   const recent = data?.recentActivities;
 
   return (
     <Box>
-      <Typography variant="h4" fontWeight="bold" sx={{ mb: 3 }}>Dashboard</Typography>
+      <Typography variant="h4" fontWeight="bold" sx={{ mb: 3 }}>{t('dashboard.title')}</Typography>
 
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard label="Total Users" value={stats?.totalUsers ?? '—'} icon={<People fontSize="large" />} color="primary.main" />
+          <StatCard label={t('dashboard.stats.total_users')} value={stats?.totalUsers ?? '—'} icon={<People fontSize="large" />} color="primary.main" />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard label="Verified Providers" value={stats?.totalProviders ?? '—'} icon={<Store fontSize="large" />} color="success.main" />
+          <StatCard label={t('dashboard.stats.verified_providers')} value={stats?.totalProviders ?? '—'} icon={<Store fontSize="large" />} color="success.main" />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard label="Total Bookings" value={stats?.totalBookings ?? '—'} icon={<BookOnline fontSize="large" />} color="info.main" />
+          <StatCard label={t('dashboard.stats.total_bookings')} value={stats?.totalBookings ?? '—'} icon={<BookOnline fontSize="large" />} color="info.main" />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard label="Flagged Reviews" value={stats?.flaggedReviews ?? '—'} icon={<Flag fontSize="large" />} color="error.main" />
+          <StatCard label={t('dashboard.stats.flagged_reviews')} value={stats?.flaggedReviews ?? '—'} icon={<Flag fontSize="large" />} color="error.main" />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard label="Pending Providers" value={stats?.pendingProviders ?? '—'} icon={<HourglassEmpty fontSize="large" />} color="warning.main" />
+          <StatCard label={t('dashboard.stats.pending_providers')} value={stats?.pendingProviders ?? '—'} icon={<HourglassEmpty fontSize="large" />} color="warning.main" />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard label="Active Bookings" value={stats?.activeBookings ?? '—'} icon={<TrendingUp fontSize="large" />} color="secondary.main" />
+          <StatCard label={t('dashboard.stats.active_bookings')} value={stats?.activeBookings ?? '—'} icon={<TrendingUp fontSize="large" />} color="secondary.main" />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard label="Platform Revenue" value={stats?.totalRevenue != null ? `$${stats.totalRevenue.toFixed(2)}` : '—'} icon={<TrendingUp fontSize="large" />} color="success.dark" />
+          <StatCard label={t('dashboard.stats.platform_revenue')} value={stats?.totalRevenue != null ? `R$${stats.totalRevenue.toFixed(2)}` : '—'} icon={<TrendingUp fontSize="large" />} color="success.dark" />
         </Grid>
       </Grid>
 
@@ -78,7 +80,7 @@ const AdminDashboardPage: React.FC = () => {
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
-              <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>Recent Users</Typography>
+              <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>{t('dashboard.recent_users')}</Typography>
               <Divider sx={{ mb: 1 }} />
               <List dense>
                 {recent?.users?.map((u: any) => (
@@ -98,7 +100,7 @@ const AdminDashboardPage: React.FC = () => {
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
-              <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>Recent Bookings</Typography>
+              <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>{t('dashboard.recent_bookings')}</Typography>
               <Divider sx={{ mb: 1 }} />
               <List dense>
                 {recent?.bookings?.map((b: any) => (

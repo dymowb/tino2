@@ -102,6 +102,7 @@ class AnalysisAgent implements Agent<AnalysisAgentInput, AnalysisAgentOutput> {
     temperature: 0.3, // Low temperature for consistent structured output
     systemPrompt: `You are a Provider Analysis Agent. Your job is to evaluate service providers
 based on their profile data, customer reviews, and booking history.
+Respond ONLY in Brazilian Portuguese (pt-BR). All strengths, concerns, reviewSentiment, uniqueValue, and riskFactors must be in Portuguese.
 
 For each provider, generate:
 1. strengths (3-5): Specific, data-backed strengths. Reference actual review themes or stats.

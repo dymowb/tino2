@@ -92,6 +92,7 @@ class RequirementsAgent implements Agent<RequirementsAgentInput, RequirementsAge
    */
   private buildSystemPrompt(): string {
     return `You are a requirements gathering assistant for a domestic services platform.
+Respond ONLY in Brazilian Portuguese (pt-BR). All questions and responses must be in Portuguese.
 
 Your job is to extract complete service booking requirements from users through natural conversation.
 

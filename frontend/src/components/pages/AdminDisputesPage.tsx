@@ -7,6 +7,7 @@ import {
   CircularProgress, Alert, Tooltip,
 } from '@mui/material';
 import { Gavel, Person, Business, AttachMoney } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import apiService from '../../services/api';
 
 interface DisputeBooking {
@@ -24,6 +25,7 @@ interface DisputeBooking {
 }
 
 const AdminDisputesPage: React.FC = () => {
+  const { t } = useTranslation('admin');
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<DisputeBooking | null>(null);
   const [decision, setDecision] = useState<'capture' | 'refund'>('capture');
@@ -69,16 +71,16 @@ const AdminDisputesPage: React.FC = () => {
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
         <Gavel />
-        <Typography variant="h4">Dispute Resolution</Typography>
-        <Chip label={`${data?.pagination?.total ?? 0} total`} sx={{ ml: 1 }} />
+        <Typography variant="h4">{t('disputes.title')}</Typography>
+        <Chip label={t('disputes.total_label', { count: data?.pagination?.total ?? 0 })} sx={{ ml: 1 }} />
       </Box>
 
       {/* Filter tabs */}
       <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
         {(['open', 'resolved', 'all'] as const).map(f => (
           <Button key={f} variant={filter === f ? 'contained' : 'outlined'} size="small"
-            onClick={() => setFilter(f)} sx={{ textTransform: 'capitalize' }}>
-            {f}
+            onClick={() => setFilter(f)}>
+            {t(`disputes.filter.${f}`)}
           </Button>
         ))}
       </Box>
@@ -86,21 +88,23 @@ const AdminDisputesPage: React.FC = () => {
       {isLoading ? (
         <CircularProgress />
       ) : disputes.length === 0 ? (
-        <Alert severity="success">No {filter !== 'all' ? filter : ''} disputes.</Alert>
+        <Alert severity="success">
+          {t('disputes.no_disputes', { filter: filter !== 'all' ? t(`disputes.filter.${filter}`).toLowerCase() : '' })}
+        </Alert>
       ) : (
         <Paper>
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>Booking</TableCell>
-                <TableCell>Service</TableCell>
-                <TableCell>Amount</TableCell>
-                <TableCell>Customer</TableCell>
-                <TableCell>Provider</TableCell>
-                <TableCell>Dispute Reason</TableCell>
-                <TableCell>Raised</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Action</TableCell>
+                <TableCell>{t('disputes.table.booking')}</TableCell>
+                <TableCell>{t('disputes.table.service')}</TableCell>
+                <TableCell>{t('disputes.table.amount')}</TableCell>
+                <TableCell>{t('disputes.table.customer')}</TableCell>
+                <TableCell>{t('disputes.table.provider')}</TableCell>
+                <TableCell>{t('disputes.table.dispute_reason')}</TableCell>
+                <TableCell>{t('disputes.table.raised')}</TableCell>
+                <TableCell>{t('disputes.table.status')}</TableCell>
+                <TableCell>{t('disputes.table.action')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -108,7 +112,7 @@ const AdminDisputesPage: React.FC = () => {
                 <TableRow key={d.id} hover>
                   <TableCell sx={{ fontFamily: 'monospace', fontSize: 11 }}>{d.id.slice(0, 8)}…</TableCell>
                   <TableCell>{d.serviceType}</TableCell>
-                  <TableCell>${Number(d.totalAmount).toFixed(2)}</TableCell>
+                  <TableCell>R${Number(d.totalAmount).toFixed(2)}</TableCell>
                   <TableCell>
                     <Tooltip title={d.customer?.email}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -132,8 +136,10 @@ const AdminDisputesPage: React.FC = () => {
                   <TableCell>
                     <Chip
                       label={d.disputeStatus === 'resolved'
-                        ? (d.disputeResolution === 'provider_favor' ? 'Provider won' : 'Customer won')
-                        : 'Open'}
+                        ? (d.disputeResolution === 'provider_favor'
+                            ? t('disputes.status.provider_won')
+                            : t('disputes.status.customer_won'))
+                        : t('disputes.status.open')}
                       color={d.disputeStatus === 'resolved' ? 'default' : 'error'}
                       size="small"
                     />
@@ -142,11 +148,11 @@ const AdminDisputesPage: React.FC = () => {
                     {d.disputeStatus === 'open' ? (
                       <Button size="small" variant="contained" color="warning"
                         startIcon={<Gavel />} onClick={() => openResolve(d)}>
-                        Resolve
+                        {t('disputes.resolve_button')}
                       </Button>
                     ) : (
-                      <Tooltip title={d.adminNotes || 'No notes'}>
-                        <Typography variant="caption" color="text.secondary">Resolved</Typography>
+                      <Tooltip title={d.adminNotes || t('disputes.no_notes')}>
+                        <Typography variant="caption" color="text.secondary">{t('disputes.resolved_label')}</Typography>
                       </Tooltip>
                     )}
                   </TableCell>
@@ -160,42 +166,56 @@ const AdminDisputesPage: React.FC = () => {
       {/* Resolve dialog */}
       <Dialog open={!!selected} onClose={() => setSelected(null)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Gavel /> Resolve Dispute
+          <Gavel /> {t('disputes.resolve_dialog.title')}
         </DialogTitle>
         <DialogContent>
           {selected && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
               <Alert severity="warning" icon={<AttachMoney />}>
-                Hold amount: <strong>${Number(selected.totalAmount).toFixed(2)}</strong> for {selected.serviceType}
+                {t('disputes.resolve_dialog.hold_amount', {
+                  amount: Number(selected.totalAmount).toFixed(2),
+                  service: selected.serviceType,
+                })}
               </Alert>
 
               <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                <Typography variant="caption" color="text.secondary">Dispute reason</Typography>
-                <Typography>{selected.disputeReason || 'No reason provided'}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {t('disputes.resolve_dialog.dispute_reason_label')}
+                </Typography>
+                <Typography>{selected.disputeReason || t('disputes.resolve_dialog.no_reason')}</Typography>
               </Box>
 
-              <FormLabel>Decision</FormLabel>
+              <FormLabel>{t('disputes.resolve_dialog.decision_label')}</FormLabel>
               <RadioGroup value={decision} onChange={e => setDecision(e.target.value as any)}>
                 <FormControlLabel value="capture" control={<Radio />}
-                  label={<Box><strong>Release to provider</strong> — capture the held funds, booking marked COMPLETED</Box>} />
+                  label={t('disputes.resolve_dialog.capture_label')} />
                 <FormControlLabel value="refund" control={<Radio />}
-                  label={<Box><strong>Refund to customer</strong> — cancel the hold, card never charged, booking CANCELLED</Box>} />
+                  label={t('disputes.resolve_dialog.refund_label')} />
               </RadioGroup>
 
-              <TextField label="Admin notes (optional)" multiline rows={3} fullWidth
+              <TextField
+                label={t('disputes.resolve_dialog.admin_notes_label')}
+                multiline rows={3} fullWidth
                 value={adminNotes} onChange={e => setAdminNotes(e.target.value)}
-                placeholder="Reason for decision, evidence reviewed..." />
+                placeholder={t('disputes.resolve_dialog.admin_notes_placeholder')}
+              />
 
               {error && <Alert severity="error">{error}</Alert>}
             </Box>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setSelected(null)} disabled={resolving}>Cancel</Button>
+          <Button onClick={() => setSelected(null)} disabled={resolving}>
+            {t('disputes.resolve_dialog.cancel')}
+          </Button>
           <Button variant="contained" color={decision === 'capture' ? 'success' : 'error'}
             onClick={handleResolve} disabled={resolving}
             startIcon={resolving ? <CircularProgress size={16} /> : <Gavel />}>
-            {resolving ? 'Processing…' : decision === 'capture' ? 'Release Payment' : 'Refund Customer'}
+            {resolving
+              ? t('disputes.resolve_dialog.processing')
+              : decision === 'capture'
+                ? t('disputes.resolve_dialog.release_payment')
+                : t('disputes.resolve_dialog.refund_customer')}
           </Button>
         </DialogActions>
       </Dialog>

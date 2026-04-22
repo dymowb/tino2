@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -120,6 +121,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
   compact = false
 }) => {
   const { user } = useAuth();
+  const { t } = useTranslation('notifications');
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const queryClient = useQueryClient();
@@ -154,11 +156,11 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
       apiService.markNotificationsRead(notificationIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      toast.success('Notifications marked as read');
+      toast.success(t('mark_all_read'));
       setSelectedNotifications([]);
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || 'Failed to mark notifications as read');
+      toast.error(error?.response?.data?.error || t('preferences.error'));
     },
   });
 
@@ -182,7 +184,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
       apiService.updateNotificationPreferences(prefs),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
-      toast.success('Notification preferences updated');
+      toast.success(t('preferences.success'));
     },
     onError: (error: any) => {
       toast.error(error?.response?.data?.error || 'Failed to update preferences');
@@ -266,7 +268,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
     if (error) {
       return (
         <Alert severity="error" sx={{ m: 2 }}>
-          Failed to load notifications. Please try again.
+          {t('preferences.error')}
         </Alert>
       );
     }
@@ -276,10 +278,10 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
         <Box sx={{ p: 3, textAlign: 'center' }}>
           <NotificationsOff sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
           <Typography variant="h6" color="text.secondary">
-            No notifications
+            {t('no_notifications')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            You're all caught up!
+            {t('empty_message')}
           </Typography>
         </Box>
       );
@@ -495,12 +497,12 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
             onChange={(_, newValue) => setSelectedTab(newValue)}
             variant="scrollable"
           >
-            <Tab label="All" />
-            <Tab label="Unread" />
-            <Tab label="Bookings" />
-            <Tab label="Payments" />
-            <Tab label="Reviews" />
-            <Tab label="Messages" />
+            <Tab label={t('types.all')} />
+            <Tab label={t('unread')} />
+            <Tab label={t('types.bookings')} />
+            <Tab label={t('types.payments')} />
+            <Tab label={t('types.reviews')} />
+            <Tab label={t('types.messages')} />
           </Tabs>
         </Box>
 
@@ -511,7 +513,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
             onClick={handleMarkAllRead}
             disabled={markAsReadMutation.isPending}
           >
-            Mark All Read
+            {t('mark_all_read')}
           </Button>
           {selectedNotifications.length > 0 && (
             <Button
@@ -521,17 +523,17 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
               disabled={deleteNotificationsMutation.isPending}
               color="error"
             >
-              Delete Selected ({selectedNotifications.length})
+              {t('delete')} ({selectedNotifications.length})
             </Button>
           )}
           <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
             <Chip
-              label={`${notifications?.pagination?.total || 0} total`}
+              label={`${notifications?.pagination?.total || 0} ${t('history.title').toLowerCase()}`}
               size="small"
               variant="outlined"
             />
             <Chip
-              label={`${notifications?.data?.filter((n: Notification) => !n.isRead).length || 0} unread`}
+              label={`${notifications?.data?.filter((n: Notification) => !n.isRead).length || 0} ${t('unread').toLowerCase()}`}
               size="small"
               color="primary"
             />

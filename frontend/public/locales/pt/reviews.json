@@ -8,6 +8,11 @@
   "services_to_review": "Serviços Prontos para Avaliar",
   "loading": "Carregando avaliações...",
   "error": "Falha ao carregar avaliações. Por favor, tente novamente.",
+  "no_reviews": "Ainda não há avaliações. Seja o primeiro a avaliar!",
+  "verified": "Verificado",
+  "analytics": {
+    "average": "Média"
+  },
 
   "tabs": {
     "reviews_written": "Avaliações que Escrevi",
@@ -27,7 +32,10 @@
     "rating_sort": "Avaliação",
     "title_sort": "Título",
     "search_placeholder": "Pesquisar avaliações...",
-    "clear_filters": "Limpar Filtros"
+    "clear_filters": "Limpar Filtros",
+    "newest_first": "Mais Recentes",
+    "highest_rated": "Melhor Avaliados",
+    "most_helpful": "Mais Úteis"
   },
 
   "create": {

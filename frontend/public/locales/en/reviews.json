@@ -8,6 +8,11 @@
   "services_to_review": "Services Ready to Review",
   "loading": "Loading reviews...",
   "error": "Failed to load reviews. Please try again.",
+  "no_reviews": "No reviews yet. Be the first to leave a review!",
+  "verified": "Verified",
+  "analytics": {
+    "average": "Average"
+  },
 
   "tabs": {
     "reviews_written": "Reviews I've Written",
@@ -27,7 +32,10 @@
     "rating_sort": "Rating",
     "title_sort": "Title",
     "search_placeholder": "Search reviews...",
-    "clear_filters": "Clear Filters"
+    "clear_filters": "Clear Filters",
+    "newest_first": "Newest First",
+    "highest_rated": "Highest Rated",
+    "most_helpful": "Most Helpful"
   },
 
   "create": {

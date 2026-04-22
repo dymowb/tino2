@@ -131,10 +131,10 @@ const LoginForm: React.FC = () => {
           {unverifiedEmail && (
             <Alert severity="warning" sx={{ mb: 3 }}>
               <Typography variant="body2" sx={{ mb: 1 }}>
-                Your email <strong>{unverifiedEmail}</strong> is not verified yet.
+                {t('auth:login.email_not_verified', { email: unverifiedEmail })}
               </Typography>
               {resendStatus === 'sent' ? (
-                <Typography variant="body2">Verification email sent! Check your inbox.</Typography>
+                <Typography variant="body2">{t('auth:login.verification_sent')}</Typography>
               ) : (
                 <Button
                   size="small"
@@ -143,7 +143,7 @@ const LoginForm: React.FC = () => {
                   disabled={resendStatus === 'sending'}
                   sx={{ mt: 0.5 }}
                 >
-                  {resendStatus === 'sending' ? 'Sending...' : 'Resend verification email'}
+                  {resendStatus === 'sending' ? t('auth:login.sending') : t('auth:login.resend_verification')}
                 </Button>
               )}
             </Alert>
@@ -222,7 +222,7 @@ const LoginForm: React.FC = () => {
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary">
                 <Link to="/forgot-password" style={{ color: '#1976d2', textDecoration: 'none' }}>
-                  Forgot your password?
+                  {t('auth:login.forgot_password')}
                 </Link>
               </Typography>
             </Box>

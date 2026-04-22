@@ -4,6 +4,7 @@ import {
   TextField, Button, CircularProgress, Alert, Chip,
 } from '@mui/material';
 import { Save } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import apiService from '../../services/api';
 
 interface Setting {
@@ -14,6 +15,7 @@ interface Setting {
 }
 
 const AdminSettingsPage: React.FC = () => {
+  const { t } = useTranslation('admin');
   const [settings, setSettings] = useState<Setting[]>([]);
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<Record<string, boolean>>({});
@@ -29,9 +31,9 @@ const AdminSettingsPage: React.FC = () => {
         res.data.data.forEach((s: Setting) => { initial[s.key] = s.value; });
         setEdits(initial);
       })
-      .catch(() => setError('Failed to load settings'))
+      .catch(() => setError(t('settings.error_load')))
       .finally(() => setLoading(false));
-  }, []);
+  }, [t]);
 
   const handleSave = async (key: string) => {
     setSaving(p => ({ ...p, [key]: true }));
@@ -41,7 +43,7 @@ const AdminSettingsPage: React.FC = () => {
       setTimeout(() => setSaved(p => ({ ...p, [key]: false })), 2000);
       setSettings(p => p.map(s => s.key === key ? { ...s, value: edits[key] } : s));
     } catch {
-      setError(`Failed to save ${key}`);
+      setError(t('settings.error_save', { key }));
     } finally {
       setSaving(p => ({ ...p, [key]: false }));
     }
@@ -51,9 +53,9 @@ const AdminSettingsPage: React.FC = () => {
 
   return (
     <Box sx={{ p: 3, maxWidth: 800 }}>
-      <Typography variant="h5" fontWeight="bold" gutterBottom>Platform Settings</Typography>
+      <Typography variant="h5" fontWeight="bold" gutterBottom>{t('settings.title')}</Typography>
       <Typography variant="body2" color="text.secondary" mb={3}>
-        These settings control platform behaviour. Changes take effect immediately.
+        {t('settings.description')}
       </Typography>
 
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
@@ -62,9 +64,9 @@ const AdminSettingsPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell><b>Setting</b></TableCell>
-              <TableCell><b>Description</b></TableCell>
-              <TableCell width={160}><b>Value</b></TableCell>
+              <TableCell><b>{t('settings.table.setting')}</b></TableCell>
+              <TableCell><b>{t('settings.table.description')}</b></TableCell>
+              <TableCell width={160}><b>{t('settings.table.value')}</b></TableCell>
               <TableCell width={100}></TableCell>
             </TableRow>
           </TableHead>
@@ -87,7 +89,7 @@ const AdminSettingsPage: React.FC = () => {
                 </TableCell>
                 <TableCell>
                   {saved[s.key]
-                    ? <Chip label="Saved" color="success" size="small" />
+                    ? <Chip label={t('settings.saved')} color="success" size="small" />
                     : (
                       <Button
                         size="small"
@@ -96,7 +98,7 @@ const AdminSettingsPage: React.FC = () => {
                         onClick={() => handleSave(s.key)}
                         disabled={saving[s.key] || edits[s.key] === s.value}
                       >
-                        Save
+                        {t('settings.save')}
                       </Button>
                     )
                   }

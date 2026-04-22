@@ -7,6 +7,7 @@ import {
 } from '@mui/material';
 import { CheckCircle, Delete, Flag } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { apiService, User, Provider } from '../../services/api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -33,15 +34,9 @@ const INITIAL_DIALOG: ActionDialogState = {
   open: false, review: null, action: null, reason: '',
 };
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-const ACTION_CONFIG: Record<ModerationAction, { label: string; color: 'success' | 'error' | 'warning'; confirmLabel: string }> = {
-  approve:      { label: 'Approve',       color: 'success', confirmLabel: 'Approve Review' },
-  delete:       { label: 'Delete',        color: 'error',   confirmLabel: 'Delete Review' },
-  keep_flagged: { label: 'Keep Flagged',  color: 'warning', confirmLabel: 'Keep Flagged' },
-};
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 const AdminReviewsPage: React.FC = () => {
+  const { t } = useTranslation('admin');
   const queryClient = useQueryClient();
   const [page, setPage]           = useState(0);
   const [dialog, setDialog]       = useState<ActionDialogState>(INITIAL_DIALOG);
@@ -80,30 +75,46 @@ const AdminReviewsPage: React.FC = () => {
     });
   };
 
-  const actionCfg = dialog.action ? ACTION_CONFIG[dialog.action] : null;
   const reasonRequired = dialog.action === 'keep_flagged';
 
+  const getActionColor = (action: ModerationAction | null): 'success' | 'error' | 'warning' | 'primary' => {
+    if (action === 'approve') return 'success';
+    if (action === 'delete') return 'error';
+    if (action === 'keep_flagged') return 'warning';
+    return 'primary';
+  };
+
+  const getConfirmLabel = (action: ModerationAction | null): string => {
+    if (!action) return '';
+    return t(`reviews.actions.${action === 'approve' ? 'approve_review' : action === 'delete' ? 'delete_review' : 'keep_flagged_confirm'}`);
+  };
+
+  const getDialogTitle = (action: ModerationAction | null): string => {
+    if (!action) return '';
+    return t(`reviews.actions.${action}`);
+  };
+
   // ── Render ─────────────────────────────────────────────────────────────────
-  if (error) return <Alert severity="error">Failed to load flagged reviews.</Alert>;
+  if (error) return <Alert severity="error">{t('reviews.error')}</Alert>;
 
   return (
     <Box>
-      <Typography variant="h4" fontWeight="bold" sx={{ mb: 1 }}>Review Moderation</Typography>
+      <Typography variant="h4" fontWeight="bold" sx={{ mb: 1 }}>{t('reviews.title')}</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        {total} flagged review{total !== 1 ? 's' : ''} awaiting moderation
+        {t('reviews.flagged_awaiting', { count: total })}
       </Typography>
 
       <TableContainer component={Paper}>
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>Customer</TableCell>
-              <TableCell>Provider</TableCell>
-              <TableCell align="center">Rating</TableCell>
-              <TableCell sx={{ maxWidth: 300 }}>Review</TableCell>
-              <TableCell>Flag Reason</TableCell>
-              <TableCell>Date</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell>{t('reviews.table.customer')}</TableCell>
+              <TableCell>{t('reviews.table.provider')}</TableCell>
+              <TableCell align="center">{t('reviews.table.rating')}</TableCell>
+              <TableCell sx={{ maxWidth: 300 }}>{t('reviews.table.review')}</TableCell>
+              <TableCell>{t('reviews.table.flag_reason')}</TableCell>
+              <TableCell>{t('reviews.table.date')}</TableCell>
+              <TableCell align="right">{t('reviews.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
 
@@ -117,7 +128,7 @@ const AdminReviewsPage: React.FC = () => {
             ) : reviews.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                  No flagged reviews — all clear!
+                  {t('reviews.empty')}
                 </TableCell>
               </TableRow>
             ) : reviews.map(r => (
@@ -134,7 +145,7 @@ const AdminReviewsPage: React.FC = () => {
                 </TableCell>
                 <TableCell sx={{ maxWidth: 300 }}>
                   <Typography variant="body2" sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 280 }}>
-                    {r.comment || <em>No comment</em>}
+                    {r.comment || <em>{t('reviews.no_comment')}</em>}
                   </Typography>
                 </TableCell>
                 <TableCell>
@@ -146,17 +157,17 @@ const AdminReviewsPage: React.FC = () => {
                 <TableCell>{new Date(r.createdAt).toLocaleDateString()}</TableCell>
                 <TableCell align="right">
                   <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                    <Tooltip title="Approve (unflag)">
+                    <Tooltip title={t('reviews.approve_tooltip')}>
                       <IconButton size="small" color="success" onClick={() => openDialog(r, 'approve')}>
                         <CheckCircle fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="Delete review">
+                    <Tooltip title={t('reviews.delete_tooltip')}>
                       <IconButton size="small" color="error" onClick={() => openDialog(r, 'delete')}>
                         <Delete fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="Keep flagged">
+                    <Tooltip title={t('reviews.keep_flagged_tooltip')}>
                       <IconButton size="small" color="warning" onClick={() => openDialog(r, 'keep_flagged')}>
                         <Flag fontSize="small" />
                       </IconButton>
@@ -181,7 +192,7 @@ const AdminReviewsPage: React.FC = () => {
       {/* ── Moderation dialog ── */}
       <Dialog open={dialog.open} onClose={() => setDialog(INITIAL_DIALOG)} maxWidth="sm" fullWidth>
         <DialogTitle>
-          {actionCfg?.label} Review
+          {getDialogTitle(dialog.action)}
         </DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
@@ -190,37 +201,37 @@ const AdminReviewsPage: React.FC = () => {
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
                   <Rating value={dialog.review.rating} readOnly size="small" />
                   <Typography variant="caption" color="text.secondary">
-                    by {dialog.review.customer?.firstName} {dialog.review.customer?.lastName}
+                    {t('reviews.dialog.by')} {dialog.review.customer?.firstName} {dialog.review.customer?.lastName}
                   </Typography>
                 </Stack>
-                <Typography variant="body2">{dialog.review.comment || <em>No comment</em>}</Typography>
+                <Typography variant="body2">{dialog.review.comment || <em>{t('reviews.no_comment')}</em>}</Typography>
               </Box>
             )}
 
             <TextField
-              label={reasonRequired ? 'Reason (required)' : 'Reason (optional)'}
+              label={reasonRequired ? t('reviews.dialog.reason_required_label') : t('reviews.dialog.reason_optional_label')}
               multiline
               rows={2}
               required={reasonRequired}
               value={dialog.reason}
               onChange={e => setDialog(s => ({ ...s, reason: e.target.value }))}
               helperText={
-                dialog.action === 'delete'       ? 'Reason will be logged for audit purposes' :
-                dialog.action === 'keep_flagged' ? 'Describe why this review remains under review' :
-                'Optional note'
+                dialog.action === 'delete'       ? t('reviews.dialog.reason_audit_helper') :
+                dialog.action === 'keep_flagged' ? t('reviews.dialog.reason_review_helper') :
+                t('reviews.dialog.reason_optional_helper')
               }
             />
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialog(INITIAL_DIALOG)}>Cancel</Button>
+          <Button onClick={() => setDialog(INITIAL_DIALOG)}>{t('reviews.dialog.cancel')}</Button>
           <Button
             variant="contained"
-            color={actionCfg?.color ?? 'primary'}
+            color={getActionColor(dialog.action)}
             onClick={handleConfirm}
             disabled={(reasonRequired && !dialog.reason.trim()) || moderateMutation.isPending}
           >
-            {moderateMutation.isPending ? 'Processing…' : actionCfg?.confirmLabel}
+            {moderateMutation.isPending ? t('reviews.dialog.processing') : getConfirmLabel(dialog.action)}
           </Button>
         </DialogActions>
       </Dialog>

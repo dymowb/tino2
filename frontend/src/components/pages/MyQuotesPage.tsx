@@ -46,6 +46,7 @@ import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
 import { apiService, QuoteRequest, Quote } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 import QuoteRequestDialog from '../quotes/QuoteRequestDialog';
 import QuoteSubmissionDialog from '../quotes/QuoteSubmissionDialog';
 
@@ -65,6 +66,7 @@ function TabPanel({ children, value, index }: TabPanelProps) {
 
 const MyQuotesPage: React.FC = () => {
   const { user } = useAuth();
+  const { t } = useTranslation('quotes');
   const queryClient = useQueryClient();
   const [tabValue, setTabValue] = useState(0);
   const [selectedRequest, setSelectedRequest] = useState<QuoteRequest | null>(null);
@@ -236,7 +238,7 @@ const MyQuotesPage: React.FC = () => {
           <TabPanel value={tabValue} index={0}>
             {quoteRequests?.data?.length === 0 ? (
               <Alert severity="info">
-                You haven't created any quote requests yet. Click "Request New Quote" to get started.
+                {t('list.empty_cta', 'Você ainda não criou solicitações de cotação. Clique em "Solicitar Nova Cotação" para começar.')}
               </Alert>
             ) : (
               <Grid container spacing={3}>

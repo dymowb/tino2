@@ -26,22 +26,24 @@ import {
   Gavel,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 const DRAWER_WIDTH = 240;
 
-const NAV_ITEMS = [
-  { label: 'Dashboard',    path: '/admin',            icon: <Dashboard /> },
-  { label: 'Users',        path: '/admin/users',      icon: <People /> },
-  { label: 'Providers',    path: '/admin/providers',  icon: <VerifiedUser /> },
-  { label: 'Reviews',      path: '/admin/reviews',    icon: <RateReview /> },
-  { label: 'Disputes',     path: '/admin/disputes',   icon: <Gavel /> },
-  { label: 'Settings',     path: '/admin/settings',   icon: <Settings /> },
-];
-
 const AdminLayout: React.FC = () => {
   const { user, logout } = useAuth();
+  const { t } = useTranslation(['admin', 'common']);
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const navItems = [
+    { label: t('admin:dashboard.title'), path: '/admin',           icon: <Dashboard /> },
+    { label: t('admin:users.title'),     path: '/admin/users',     icon: <People /> },
+    { label: t('admin:providers.title'), path: '/admin/providers', icon: <VerifiedUser /> },
+    { label: t('admin:reviews.title'),   path: '/admin/reviews',   icon: <RateReview /> },
+    { label: t('admin:disputes.title'),  path: '/admin/disputes',  icon: <Gavel /> },
+    { label: t('admin:settings.title'),  path: '/admin/settings',  icon: <Settings /> },
+  ];
 
   const handleLogout = async () => {
     await logout();
@@ -54,14 +56,14 @@ const AdminLayout: React.FC = () => {
       <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
         <AdminPanelSettings color="primary" />
         <Typography variant="h6" fontWeight="bold" color="primary">
-          Admin Panel
+          {t('common:navigation.admin_panel')}
         </Typography>
       </Box>
       <Divider />
 
       {/* Nav links */}
       <List sx={{ flexGrow: 1, pt: 1 }}>
-        {NAV_ITEMS.map(({ label, path, icon }) => (
+        {navItems.map(({ label, path, icon }) => (
           <ListItem key={path} disablePadding>
             <ListItemButton
               component={NavLink}
@@ -98,7 +100,7 @@ const AdminLayout: React.FC = () => {
             {user?.email}
           </Typography>
         </Box>
-        <Tooltip title="Logout">
+        <Tooltip title={t('common:navigation.logout')}>
           <IconButton size="small" onClick={handleLogout}>
             <Logout fontSize="small" />
           </IconButton>

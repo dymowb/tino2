@@ -7,6 +7,7 @@ import {
 } from '@mui/material';
 import { CheckCircle, Cancel } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { apiService, Provider, User } from '../../services/api';
 
 // ── Extended types (backend includes fields not in the frontend Provider type) ──
@@ -48,6 +49,7 @@ function providerLocation(provider: PendingProvider): string {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 const AdminProvidersPage: React.FC = () => {
+  const { t } = useTranslation('admin');
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
   const [approveDialog, setApproveDialog] = useState<ApproveDialogState>(INITIAL_APPROVE);
@@ -68,7 +70,7 @@ const AdminProvidersPage: React.FC = () => {
       apiService.verifyProvider(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-pending-providers'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] }); // refresh dashboard counts
+      queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] });
       setApproveDialog(INITIAL_APPROVE);
       setRejectDialog(INITIAL_REJECT);
     },
@@ -96,27 +98,27 @@ const AdminProvidersPage: React.FC = () => {
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
-  if (error) return <Alert severity="error">Failed to load pending providers.</Alert>;
+  if (error) return <Alert severity="error">{t('providers.error')}</Alert>;
 
   return (
     <Box>
-      <Typography variant="h4" fontWeight="bold" sx={{ mb: 1 }}>Provider Verification</Typography>
+      <Typography variant="h4" fontWeight="bold" sx={{ mb: 1 }}>{t('providers.title')}</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        {total} application{total !== 1 ? 's' : ''} awaiting review
+        {t('providers.applications_awaiting', { count: total })}
       </Typography>
 
       <TableContainer component={Paper}>
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>Business</TableCell>
-              <TableCell>Owner</TableCell>
-              <TableCell>Location</TableCell>
-              <TableCell>Services</TableCell>
-              <TableCell align="center">Background</TableCell>
-              <TableCell align="center">Insured</TableCell>
-              <TableCell>Applied</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell>{t('providers.table.business')}</TableCell>
+              <TableCell>{t('providers.table.owner')}</TableCell>
+              <TableCell>{t('providers.table.location')}</TableCell>
+              <TableCell>{t('providers.table.services')}</TableCell>
+              <TableCell align="center">{t('providers.table.background')}</TableCell>
+              <TableCell align="center">{t('providers.table.insured')}</TableCell>
+              <TableCell>{t('providers.table.applied')}</TableCell>
+              <TableCell align="right">{t('providers.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
 
@@ -130,7 +132,7 @@ const AdminProvidersPage: React.FC = () => {
             ) : providers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                  No pending applications — all caught up!
+                  {t('providers.empty')}
                 </TableCell>
               </TableRow>
             ) : providers.map(p => (
@@ -155,18 +157,18 @@ const AdminProvidersPage: React.FC = () => {
                 </TableCell>
                 <TableCell align="center">
                   {p.isBackgroundChecked
-                    ? <Chip label="Yes" size="small" color="success" />
-                    : <Chip label="No"  size="small" variant="outlined" />}
+                    ? <Chip label={t('providers.yes')} size="small" color="success" />
+                    : <Chip label={t('providers.no')}  size="small" variant="outlined" />}
                 </TableCell>
                 <TableCell align="center">
                   {p.isInsured
-                    ? <Chip label="Yes" size="small" color="success" />
-                    : <Chip label="No"  size="small" variant="outlined" />}
+                    ? <Chip label={t('providers.yes')} size="small" color="success" />
+                    : <Chip label={t('providers.no')}  size="small" variant="outlined" />}
                 </TableCell>
                 <TableCell>{new Date(p.createdAt).toLocaleDateString()}</TableCell>
                 <TableCell align="right">
                   <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                    <Tooltip title="Approve">
+                    <Tooltip title={t('providers.approve_tooltip')}>
                       <IconButton
                         size="small"
                         color="success"
@@ -175,7 +177,7 @@ const AdminProvidersPage: React.FC = () => {
                         <CheckCircle fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="Reject">
+                    <Tooltip title={t('providers.reject_tooltip')}>
                       <IconButton
                         size="small"
                         color="error"
@@ -203,11 +205,11 @@ const AdminProvidersPage: React.FC = () => {
 
       {/* ── Approve dialog ── */}
       <Dialog open={approveDialog.open} onClose={() => setApproveDialog(INITIAL_APPROVE)} maxWidth="sm" fullWidth>
-        <DialogTitle>Approve {approveDialog.provider?.businessName}</DialogTitle>
+        <DialogTitle>{t('providers.approve_dialog.title', { name: approveDialog.provider?.businessName })}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Typography variant="body2" color="text.secondary">
-              Confirm verification status for this provider:
+              {t('providers.approve_dialog.confirm_text')}
             </Typography>
             <FormControlLabel
               control={
@@ -216,7 +218,7 @@ const AdminProvidersPage: React.FC = () => {
                   onChange={e => setApproveDialog(s => ({ ...s, isBackgroundChecked: e.target.checked }))}
                 />
               }
-              label="Background check completed"
+              label={t('providers.approve_dialog.background_check')}
             />
             <FormControlLabel
               control={
@@ -225,10 +227,10 @@ const AdminProvidersPage: React.FC = () => {
                   onChange={e => setApproveDialog(s => ({ ...s, isInsured: e.target.checked }))}
                 />
               }
-              label="Insurance verified"
+              label={t('providers.approve_dialog.insurance_verified')}
             />
             <TextField
-              label="Admin notes (optional)"
+              label={t('providers.approve_dialog.admin_notes')}
               multiline
               rows={2}
               value={approveDialog.notes}
@@ -237,46 +239,46 @@ const AdminProvidersPage: React.FC = () => {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setApproveDialog(INITIAL_APPROVE)}>Cancel</Button>
+          <Button onClick={() => setApproveDialog(INITIAL_APPROVE)}>{t('providers.approve_dialog.cancel')}</Button>
           <Button
             variant="contained"
             color="success"
             onClick={handleApprove}
             disabled={verifyMutation.isPending}
           >
-            {verifyMutation.isPending ? 'Approving…' : 'Approve Provider'}
+            {verifyMutation.isPending ? t('providers.approve_dialog.approving') : t('providers.approve_dialog.approve')}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* ── Reject dialog ── */}
       <Dialog open={rejectDialog.open} onClose={() => setRejectDialog(INITIAL_REJECT)} maxWidth="sm" fullWidth>
-        <DialogTitle>Reject {rejectDialog.provider?.businessName}</DialogTitle>
+        <DialogTitle>{t('providers.reject_dialog.title', { name: rejectDialog.provider?.businessName })}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Typography variant="body2" color="text.secondary">
-              Provide a reason — this will be stored in the provider's record.
+              {t('providers.reject_dialog.reason_text')}
             </Typography>
             <TextField
-              label="Rejection reason"
+              label={t('providers.reject_dialog.reason_label')}
               multiline
               rows={3}
               required
               value={rejectDialog.notes}
               onChange={e => setRejectDialog(s => ({ ...s, notes: e.target.value }))}
-              helperText="Required"
+              helperText={t('providers.reject_dialog.reason_required')}
             />
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setRejectDialog(INITIAL_REJECT)}>Cancel</Button>
+          <Button onClick={() => setRejectDialog(INITIAL_REJECT)}>{t('providers.reject_dialog.cancel')}</Button>
           <Button
             variant="contained"
             color="error"
             onClick={handleReject}
             disabled={!rejectDialog.notes.trim() || verifyMutation.isPending}
           >
-            {verifyMutation.isPending ? 'Rejecting…' : 'Reject Application'}
+            {verifyMutation.isPending ? t('providers.reject_dialog.rejecting') : t('providers.reject_dialog.reject')}
           </Button>
         </DialogActions>
       </Dialog>

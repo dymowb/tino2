@@ -1,9 +1,9 @@
 # Session Context - Current Work
 
-## CURRENT SESSION: Phase 19 — Password Change & Recovery (E2E Test)
-**Date**: 2026-04-19
-**Goal**: Verify password change/recovery works end-to-end; then harden for beta; then Florianópolis seed + PT_BR
-**Status**: ✅ Phase 19 & 20 complete. Phase 21 in progress — PT translations 99% done (1 key fixed in reviews.json); seed rewrite not started
+## CURRENT SESSION: Phase 21 — Florianópolis seed + PT_BR locale
+**Date**: 2026-04-21
+**Goal**: Florianópolis seed data + PT_BR as default locale
+**Status**: ✅ Phase 21 complete — i18n default→pt, seed rewritten, DB reseeded, UI smoke-tested
 
 ---
 
@@ -25,18 +25,15 @@
 | 18 | Message file attachments | FR-050 | ✅ Done — multer upload endpoint; image/file preview + send + render; FA1–FA2 tested |
 | 19 | Password change & recovery | FR-004 | ✅ Done — PW1–PW4 passed; bug fixed (BasicUser missing passwordResetToken/Expiry columns) |
 | 20 | Production hardening | — | ✅ Done — P0 #1–5, P1 #6–8, P2 #9–11 all implemented |
-| 21 | Florianópolis seed data + PT_BR default locale | — | 🔄 In progress — PT translations complete; need: i18n default→pt, seed rewrite, SERVICES→PT |
+| 21 | Florianópolis seed data + PT_BR default locale | — | ✅ Done — i18n fallback→pt, localStorage seeded on first visit; seedDatabase.ts fully rewritten (PT services/names/messages/reviews, Florianópolis bairros, BRL pricing); hardcoded "Forgot your password?" fixed |
 
 ---
 
 ## Resume Point
 1. Backend on port 3000, frontend on port 3001
-2. DB seeded; demo password: `Demo123!`
+2. DB seeded with Florianópolis data; demo password: `Demo123!`
 3. Customer login: `customer@demo.com` / `Demo123!`
-4. **NEXT ACTION**: Phase 21 — Three remaining tasks:
-   - (a) Change i18n.ts `fallbackLng: 'en'` → `'pt'` and add `'pt'` as first in `supportedLngs`
-   - (b) Rewrite `backend/src/scripts/seedDatabase.ts` — replace SERVICES (English→PT), LOCATIONS (US cities→Florianópolis bairros, lat -27.59/lng -48.55), FIRST_NAMES/LAST_NAMES (→Brazilian), MESSAGE_TEMPLATES and REVIEW_TEMPLATES (→PT), pricing in BRL
-   - (c) Reseed DB and smoke-test the app in PT
+4. **ALL PHASES COMPLETE** — app is ready for beta. Next: define new feature phases or begin beta testing.
 5. **NOTE**: Phase 19 bug — BasicUser entity was missing `passwordResetToken` and `passwordResetExpiry` columns; added to fix forgot-password flow
 6. **NOTE**: Phase 20 hardening — CORS now reads ALLOWED_ORIGINS env var; auth rate limit is 10/15min in prod, 100/1min in dev; health check includes DB ping; database.ts auto-selects SQLite (dev) or PostgreSQL (prod) via NODE_ENV; startup validateConfig() rejects placeholder JWT in prod; React ErrorBoundary wraps AppContent; ecosystem.config.js added for PM2
 5. **NOTE**: Phase 18 bug: route validator required `message.notEmpty()` — attachment-only messages failed 400. Fixed by making `message` optional with a cross-field validator requiring message OR attachments.

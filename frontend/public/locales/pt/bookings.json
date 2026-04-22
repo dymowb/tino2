@@ -150,6 +150,14 @@
     "success": "Reserva reagendada com sucesso",
     "error": "Falha ao reagendar reserva"
   },
+  "dispute": {
+    "title": "Abrir uma Disputa",
+    "description": "Descreva o motivo da disputa. Um administrador irá revisar e entrar em contato com ambas as partes.",
+    "reason_label": "Motivo da disputa",
+    "submit": "Enviar Disputa",
+    "cancel": "Cancelar",
+    "success": "Disputa aberta — o administrador foi notificado"
+  },
   "status_messages": {
     "pending": "Sua solicitação de reserva está pendente de confirmação",
     "confirmed": "Sua reserva foi confirmada",

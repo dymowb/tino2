@@ -28,6 +28,7 @@ import apiService from '../../services/api';
 import socketService from '../../services/socketService';
 import { format, isToday, isYesterday } from 'date-fns';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 
 interface Message {
   id: string;
@@ -82,6 +83,7 @@ interface Props {
 const API_BASE = process.env.REACT_APP_API_URL?.replace('/api/v1', '') || 'http://localhost:3000';
 
 const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }) => {
+  const { t } = useTranslation('messages');
   const [messageText, setMessageText] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
@@ -121,7 +123,7 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
       onConversationUpdate?.();
     },
     onError: (error) => {
-      toast.error('Failed to send message');
+      toast.error(t('errors.send_failed'));
       console.error('Send message error:', error);
     },
   });
@@ -135,7 +137,7 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
       queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
     },
     onError: () => {
-      toast.error('Failed to update message');
+      toast.error(t('errors.update_failed'));
     },
   });
 
@@ -147,7 +149,7 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
       queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
     },
     onError: () => {
-      toast.error('Failed to delete message');
+      toast.error(t('errors.delete_failed'));
     },
   });
 
@@ -232,7 +234,7 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
       );
       setPendingAttachments(prev => [...prev, ...uploads]);
     } catch (error) {
-      toast.error('Failed to upload file');
+      toast.error(t('errors.upload_failed'));
     } finally {
       setIsUploading(false);
       // Reset input so the same file can be re-selected
@@ -313,7 +315,7 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
       }
     }
     
-    return 'Conversation';
+    return t('conversation.conversation_fallback');
   };
 
   const canEditOrDelete = (message: Message): boolean => {
@@ -338,7 +340,7 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
             )}
           </Box>
           <Typography variant="body2" color="text.secondary">
-            {conversationData.participants.length} participants
+            {t('conversation.participants', { count: conversationData.participants.length })}
           </Typography>
         </Box>
       )}
@@ -352,7 +354,7 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
         ) : messages.length === 0 ? (
           <Box sx={{ textAlign: 'center', p: 4 }}>
             <Typography variant="body2" color="text.secondary">
-              No messages yet. Start the conversation!
+              {t('conversation.no_messages')}
             </Typography>
           </Box>
         ) : (
@@ -399,7 +401,7 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
                         }}
                       >
                         <Typography variant="caption" color="inherit">
-                          Replying to {message.replyToMessage.sender.firstName}
+                          {t('conversation.replying_to', { name: message.replyToMessage.sender.firstName })}
                         </Typography>
                         <Typography variant="body2" color="inherit">
                           {message.replyToMessage.message.length > 50
@@ -466,7 +468,7 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
                       <Typography variant="caption" sx={{ opacity: 0.8 }}>
                         {formatMessageTime(message.createdAt)}
-                        {message.isEdited && ' (edited)'}
+                        {message.isEdited && ` ${t('conversation.edited')}`}
                       </Typography>
                       
                       <IconButton
@@ -492,7 +494,7 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Box>
               <Typography variant="caption" color="primary">
-                Replying to {replyToMessage.sender.firstName}
+                {t('conversation.replying_to', { name: replyToMessage.sender.firstName })}
               </Typography>
               <Typography variant="body2">
                 {replyToMessage.message.length > 100
@@ -559,7 +561,7 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
             accept="image/*,.pdf,.doc,.docx,.txt,.zip"
             onChange={handleFileSelect}
           />
-          <Tooltip title="Attach file">
+          <Tooltip title={t('conversation.attach_file')}>
             <IconButton onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
               {isUploading ? <CircularProgress size={20} /> : <AttachFileIcon />}
             </IconButton>
@@ -569,7 +571,7 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
             fullWidth
             multiline
             maxRows={4}
-            placeholder={editingMessage ? 'Edit message...' : 'Type a message...'}
+            placeholder={editingMessage ? t('conversation.edit_message_placeholder') : t('conversation.type_message')}
             value={messageText}
             onChange={(e) => handleTyping(e.target.value)}
             onKeyPress={handleKeyPress}
@@ -593,7 +595,7 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
         {editingMessage && (
           <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>
             <Typography variant="caption" color="text.secondary">
-              Editing message
+              {t('conversation.editing')}
             </Typography>
             <Typography
               variant="caption"
@@ -604,7 +606,7 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
                 setMessageText('');
               }}
             >
-              Cancel
+              {t('conversation.cancel_edit')}
             </Typography>
           </Box>
         )}
@@ -618,18 +620,18 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }
       >
         <MenuItem onClick={() => handleReplyToMessage(selectedMessage!)}>
           <ReplyIcon sx={{ mr: 1 }} fontSize="small" />
-          Reply
+          {t('conversation.reply')}
         </MenuItem>
         {selectedMessage && canEditOrDelete(selectedMessage) && (
           <>
             <MenuItem onClick={handleEditMessage}>
               <EditIcon sx={{ mr: 1 }} fontSize="small" />
-              Edit
+              {t('conversation.edit')}
             </MenuItem>
             <Divider />
             <MenuItem onClick={handleDeleteMessage} sx={{ color: 'error.main' }}>
               <DeleteIcon sx={{ mr: 1 }} fontSize="small" />
-              Delete
+              {t('conversation.delete')}
             </MenuItem>
           </>
         )}

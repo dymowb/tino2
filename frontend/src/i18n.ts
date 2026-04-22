@@ -3,13 +3,19 @@ import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import HttpBackend from 'i18next-http-backend';
 
+// Default new visitors to Portuguese — the detector reads localStorage first,
+// so this is overridden by any explicit language switch the user makes.
+if (typeof window !== 'undefined' && !window.localStorage.getItem('i18nextLng')) {
+  window.localStorage.setItem('i18nextLng', 'pt');
+}
+
 i18n
   .use(HttpBackend)
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    supportedLngs: ['en', 'es', 'pt'],
-    fallbackLng: 'en',
+    supportedLngs: ['pt', 'en', 'es'],
+    fallbackLng: 'pt',
     defaultNS: 'common',
     ns: [
       'common',
@@ -24,6 +30,7 @@ i18n
       'notifications',
       'dashboard',
       'assistant',
+      'admin',
     ],
     backend: {
       loadPath: '/locales/{{lng}}/{{ns}}.json',
