@@ -1,9 +1,9 @@
 # Session Context - Current Work
 
-## CURRENT SESSION: Phase 21 — Florianópolis seed + PT_BR locale
-**Date**: 2026-04-21
-**Goal**: Florianópolis seed data + PT_BR as default locale
-**Status**: ✅ Phase 21 complete — i18n default→pt, seed rewritten, DB reseeded, UI smoke-tested
+## CURRENT SESSION: Phase 22 — Full i18n coverage (remove all hardcoded strings)
+**Date**: 2026-04-22
+**Goal**: Audit and move every hardcoded user-visible string into i18n translation files
+**Status**: ✅ Complete — admin.json namespace created (pt+en), all 6 admin pages + AdminLayout rewritten, auth/messages/notifications/nav/reviews/bookings locales updated, role chips fixed, committed & pushed
 
 ---
 
@@ -26,6 +26,7 @@
 | 19 | Password change & recovery | FR-004 | ✅ Done — PW1–PW4 passed; bug fixed (BasicUser missing passwordResetToken/Expiry columns) |
 | 20 | Production hardening | — | ✅ Done — P0 #1–5, P1 #6–8, P2 #9–11 all implemented |
 | 21 | Florianópolis seed data + PT_BR default locale | — | ✅ Done — i18n fallback→pt, localStorage seeded on first visit; seedDatabase.ts fully rewritten (PT services/names/messages/reviews, Florianópolis bairros, BRL pricing); hardcoded "Forgot your password?" fixed |
+| 22 | Full i18n coverage — remove all hardcoded strings | — | ✅ Done — admin.json namespace (pt+en) created; all 6 admin pages + AdminLayout, auth flows, messaging, notifications, nav all wired to i18n; role chips fixed (Prestador/Cliente) |
 
 ---
 
@@ -34,6 +35,7 @@
 2. DB seeded with Florianópolis data; demo password: `Demo123!`
 3. Customer login: `customer@demo.com` / `Demo123!`
 4. **ALL PHASES COMPLETE** — app is ready for beta. Next: define new feature phases or begin beta testing.
+5. **NOTE**: Phase 22 — No new bugs. admin.json is the only new locale file; all other namespaces extended. Key pattern for enum-like arrays: use `as const` key arrays and resolve labels via `t()` at render time (not at module init).
 5. **NOTE**: Phase 19 bug — BasicUser entity was missing `passwordResetToken` and `passwordResetExpiry` columns; added to fix forgot-password flow
 6. **NOTE**: Phase 20 hardening — CORS now reads ALLOWED_ORIGINS env var; auth rate limit is 10/15min in prod, 100/1min in dev; health check includes DB ping; database.ts auto-selects SQLite (dev) or PostgreSQL (prod) via NODE_ENV; startup validateConfig() rejects placeholder JWT in prod; React ErrorBoundary wraps AppContent; ecosystem.config.js added for PM2
 5. **NOTE**: Phase 18 bug: route validator required `message.notEmpty()` — attachment-only messages failed 400. Fixed by making `message` optional with a cross-field validator requiring message OR attachments.
