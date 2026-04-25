@@ -148,14 +148,13 @@ export class ProviderService {
         .where('provider.isActive = :isActive', { isActive: true })
         .andWhere('user.isActive = :userIsActive', { userIsActive: true });
 
-      // Filter by services (SQLite compatible - simple JSON search)
-      // Uses named parameters to avoid TypeORM positional/named parameter mixing issues
+      // Filter by services — cast jsonb to text then use ILIKE (PostgreSQL-compatible)
       if (services && services.length > 0) {
         const serviceParams: Record<string, string> = {};
         const serviceCondition = services.map((service, index) => {
           const paramName = `service_${index}`;
           serviceParams[paramName] = `%${service.replace(/_/g, ' ')}%`;
-          return `provider.services LIKE :${paramName}`;
+          return `provider.services::text ILIKE :${paramName}`;
         }).join(' OR ');
 
         queryBuilder = queryBuilder.andWhere(`(${serviceCondition})`, serviceParams);
@@ -166,21 +165,21 @@ export class ProviderService {
         const latDiff = 0.009 * radius; // roughly 1km = 0.009 degrees
         const lngDiff = 0.009 * radius;
         queryBuilder = queryBuilder.andWhere(
-          `JSON_EXTRACT(provider.location, '$.latitude') BETWEEN :minLat AND :maxLat`,
+          `CAST(provider.location->>'latitude' AS float) BETWEEN :minLat AND :maxLat`,
           { minLat: latitude - latDiff, maxLat: latitude + latDiff }
         ).andWhere(
-          `JSON_EXTRACT(provider.location, '$.longitude') BETWEEN :minLng AND :maxLng`,
+          `CAST(provider.location->>'longitude' AS float) BETWEEN :minLng AND :maxLng`,
           { minLng: longitude - lngDiff, maxLng: longitude + lngDiff }
         );
       } else if (city) {
         // Fallback: city/state text match when GPS coordinates are not available
         queryBuilder = queryBuilder.andWhere(
-          `LOWER(JSON_EXTRACT(provider.location, '$.city')) = LOWER(:city)`,
+          `LOWER(provider.location->>'city') = LOWER(:city)`,
           { city }
         );
         if (state) {
           queryBuilder = queryBuilder.andWhere(
-            `LOWER(JSON_EXTRACT(provider.location, '$.state')) = LOWER(:state)`,
+            `LOWER(provider.location->>'state') = LOWER(:state)`,
             { state }
           );
         }
@@ -210,12 +209,10 @@ export class ProviderService {
           queryBuilder = queryBuilder.orderBy('provider.rating', 'DESC');
           break;
         case 'price':
-          queryBuilder = queryBuilder.orderBy('JSON_EXTRACT(provider.pricing, "$.baseRate")', 'ASC');
+          queryBuilder = queryBuilder.orderBy(`CAST(provider.pricing->>'baseRate' AS float)`, 'ASC');
           break;
         case 'distance':
         default:
-          // For SQLite, we'll sort by rating if location sorting is requested
-          // In a production app with PostreSQL, proper distance calculation would be used
           queryBuilder = queryBuilder.orderBy('provider.rating', 'DESC');
           break;
       }

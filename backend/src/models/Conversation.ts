@@ -52,13 +52,13 @@ export class Conversation {
   @Column({ nullable: true })
   lastMessageId: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   lastMessageAt: Date;
 
   @Column({ default: true })
   isActive: boolean;
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   metadata: {
     bookingId?: string;
     quoteRequestId?: string;

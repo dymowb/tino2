@@ -11,6 +11,8 @@ import { coordinator, CoordinatorAgent } from '@/agents/coordinator';
 import { workflowStateService } from '@/agents/services/state.service';
 import { WorkflowStatus } from '@/agents/types/workflow.types';
 import { anthropicService, ClaudeModel } from '@/agents/services/anthropic.service';
+import { memoryRetriever } from '@/services/memory/MemoryRetriever';
+import { contextInjector } from '@/services/memory/ContextInjector';
 
 class AgenticAssistantController {
   /**
@@ -360,6 +362,49 @@ Top recommendation: ${topRec.provider.name ?? topRec.provider.providerId} — ${
         success: false,
         error: 'Internal server error',
       });
+    }
+  }
+
+  /**
+   * GET /api/v1/agentic-assistant/memory-debug?query=...
+   * Dev-only: show the memory block that would be injected for this user + query.
+   * Returns structured memories, the formatted <memory> XML block, and a preview
+   * of the full system prompt that the requirements agent would receive.
+   */
+  public async memoryDebug(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) { res.status(401).json({ success: false, error: 'Not authenticated' }); return; }
+
+      const query = typeof req.query.query === 'string' && req.query.query.trim()
+        ? req.query.query.trim()
+        : 'Preciso de uma faxineira';
+
+      const memories = await memoryRetriever.retrieve(query, userId, 'debug');
+      const memoryBlock = contextInjector.format(memories);
+
+      const BASE_PROMPT_EXCERPT = `You are a requirements gathering assistant for a domestic services platform.\nRespond ONLY in Brazilian Portuguese (pt-BR).\n[...full base prompt omitted for brevity...]`;
+
+      res.json({
+        success: true,
+        data: {
+          query,
+          userId,
+          memories: {
+            semantic: memories.semantic.map(m => ({ content: m.content, score: m.score.toFixed(4) })),
+            episodic: memories.episodic.map(e => ({ summary: e.summary, occurredAt: e.occurredAt, score: e.score.toFixed(4) })),
+            procedural: memories.procedural.map(p => ({ promptFragment: p.promptFragment, confidence: p.confidence })),
+          },
+          memoryBlock: memoryBlock ?? '(no memories — empty)',
+          fullSystemPromptPreview: memoryBlock
+            ? `${memoryBlock}\n\n${BASE_PROMPT_EXCERPT}`
+            : BASE_PROMPT_EXCERPT,
+          hasMemory: memories.hasAny,
+        },
+      });
+    } catch (error) {
+      logger.error('Error in memory-debug:', error);
+      res.status(500).json({ success: false, error: 'Internal server error' });
     }
   }
 

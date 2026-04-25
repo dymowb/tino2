@@ -60,21 +60,21 @@ export class Message {
   @IsEnum(MessageType)
   messageType: MessageType;
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   attachments: string[];
 
   @Column({ default: false })
   @IsBoolean()
   isRead: boolean;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   readAt: Date;
 
   @Column({ default: false })
   @IsBoolean()
   isDelivered: boolean;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   deliveredAt: Date;
 
   @Column({ nullable: true })
@@ -88,7 +88,7 @@ export class Message {
   @IsBoolean()
   isEdited: boolean;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   editedAt: Date;
 
   @CreateDateColumn()

@@ -107,7 +107,7 @@ export class Payment {
   @IsEnum(PaymentStatus)
   status: PaymentStatus;
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   metadata: {
     last4?: string;
     cardBrand?: string;
@@ -123,16 +123,16 @@ export class Payment {
     [key: string]: any; // Allow additional properties
   };
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   paidAt: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   completedAt: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   failedAt: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   refundedAt: Date;
 
   @Column({ type: 'numeric', precision: 10, scale: 2, default: 0 })

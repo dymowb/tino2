@@ -49,13 +49,13 @@ export class Notification {
   @Column({ nullable: true })
   actionUrl: string;
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   metadata: any;
 
   @CreateDateColumn()
   createdAt: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   readAt: Date;
 
   @ManyToOne(() => User)

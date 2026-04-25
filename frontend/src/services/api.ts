@@ -293,6 +293,10 @@ export interface WorkflowData {
   completedAt?: string;
 }
 
+if (process.env.NODE_ENV === 'production' && !process.env.REACT_APP_API_URL) {
+  console.warn('WARNING: REACT_APP_API_URL is not set. API calls will target localhost — this is wrong in production.');
+}
+
 class ApiService {
   private api: AxiosInstance;
   private baseURL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api/v1';

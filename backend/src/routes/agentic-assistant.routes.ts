@@ -53,6 +53,15 @@ router.delete(
 );
 
 /**
+ * GET /api/v1/agentic-assistant/memory-debug?query=...
+ * Dev: show the <memory> block + scored memories that would be injected for this user
+ */
+router.get(
+  '/memory-debug',
+  AgenticAssistantController.memoryDebug.bind(AgenticAssistantController)
+);
+
+/**
  * GET /api/v1/agentic-assistant/stats
  * Get system statistics
  */

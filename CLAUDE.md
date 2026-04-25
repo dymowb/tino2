@@ -122,8 +122,8 @@ The application includes Browserbase MCP integration for automated browser testi
 2. Get your API key and project ID from the dashboard
 3. Add credentials to `.env`:
    ```
-   BROWSERBASE_API_KEY=bb_live_vrmnWlqL665ASF4nar3sJPGn0xI
-   BROWSERBASE_PROJECT_ID=1306cde6-e21f-48e5-9b33-786fef649698
+   BROWSERBASE_API_KEY=<your-browserbase-api-key>
+   BROWSERBASE_PROJECT_ID=<your-browserbase-project-id>
    BROWSERBASE_SESSION_TIMEOUT=300000
    BROWSERBASE_MAX_SESSIONS=10
    ```

@@ -53,19 +53,19 @@ export class BasicUser {
   @Column({ nullable: true })
   emailVerificationToken?: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   emailVerificationExpiry?: Date;
 
   @Column({ nullable: true })
   passwordResetToken?: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   passwordResetExpiry?: Date;
 
   @Column({ nullable: true })
   profileImage?: string;
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   settings?: {
     notifications?: {
       email?: boolean;

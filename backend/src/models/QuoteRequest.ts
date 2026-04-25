@@ -49,7 +49,7 @@ export class QuoteRequest {
   @IsString()
   description: string;
 
-  @Column({ type: 'json' })
+  @Column({ type: 'jsonb' })
   location: {
     latitude: number;
     longitude: number;
@@ -59,18 +59,18 @@ export class QuoteRequest {
     zipCode: string;
   };
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   @IsDate()
   preferredDate: Date;
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   budget: {
     min: number;
     max: number;
     currency: string;
   };
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   images: string[];
 
   @Column({ type: 'varchar', enum: UrgencyLevel, default: UrgencyLevel.MEDIUM })
@@ -81,14 +81,14 @@ export class QuoteRequest {
   @IsEnum(QuoteRequestStatus)
   status: QuoteRequestStatus;
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   requirements: Array<{
     category: string;
     requirement: string;
     mandatory: boolean;
   }>;
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   availability: Array<{
     date: Date;
     timeSlots: Array<{
@@ -100,13 +100,13 @@ export class QuoteRequest {
   @Column({ type: 'numeric', precision: 10, scale: 2, default: 25.0 })
   searchRadius: number;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   expiresAt: Date;
 
   @Column({ default: 0 })
   quotesReceived: number;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   closedAt: Date;
 
   @Column({ nullable: true })

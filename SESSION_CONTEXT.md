@@ -1,32 +1,99 @@
 # Session Context - Current Work
 
-## CURRENT SESSION: Phase 23 — Production Hardening Round 2
-**Date**: 2026-04-22
-**Goal**: Close all meaningful security and resilience gaps before prod deployment
-**Status**: 🔲 Not started — audit complete, waiting on 2 architecture questions before implementing
+## CURRENT SESSION: Phase 24 — Agentic Memory System + PostgreSQL migration
+**Date**: 2026-04-25
+**Goal**: Add per-user memory layer to the agentic assistant (semantic + episodic + procedural)
+**Status**: ✅ Phase 1 done ✅ Phase 2 done ✅ Phase 3 done ✅ Phase 4 done ✅ PostgreSQL migration done ✅ Bugfixes complete — full read+write cycle verified
+**ADR:** `docs/adr/0001-agentic-memory.md` — full design, data model, scoring formula, prompt template, phase plan
 
-### Blocked on user input:
-1. **Deployment target** — Railway, Render, AWS, VPS, Docker? Affects secrets mgmt, PM2 vs platform process manager, nginx, migrations strategy
-2. **JWT httpOnly cookies scope** — biggest architectural change (touches AuthContext, all API calls, CORS). Proceed or defer?
+---
 
-### Phase 23 — Ordered work list
+## ⚠️ FIRST THING NEXT SESSION
+Docker auto-starts via `restart: unless-stopped`. Start servers: `bash start-servers.sh` from repo root.
 
-**P0 — Must fix before any real users:**
-1. Rotate live secrets committed in `backend/.env` (ANTHROPIC_API_KEY, BROWSERBASE_API_KEY, GOOGLE_MAPS_API_KEY) + add `.env` to `.gitignore` if not already
-2. Move JWT from `localStorage` to `httpOnly` cookies (touches `frontend/src/services/api.ts`, `AuthContext.tsx`, backend CORS + cookie middleware)
-3. `validateConfig()` must throw (not warn) when JWT_SECRET is placeholder in prod — `backend/src/config/environment.ts:147-158`
-4. TypeORM migrations framework — replace `synchronize: true` dev-only with proper migrations; `backend/src/config/database.ts`
-5. Seed script idempotency guard — `backend/src/scripts/seedDatabase.ts` destroys all data if run; add NODE_ENV check + `--seed` flag pattern
+### Memory system status (end of session 2026-04-25)
+- 5 semantic memories in DB for customer@demo.com (Lagoa, Florianópolis, cats, R$200 budget, Saturday mornings)
+- 1 episodic summary in DB
+- Memory injected on every new workflow — confirmed in server logs
+- Debug endpoint: `GET /api/v1/agentic-assistant/memory-debug?query=...` — shows scored memories + exact `<memory>` block Claude receives
+- Next: Phase 5 (Reflection job), Phase 6 (Procedural rules), or UX work to surface memories to the user
 
-**P1 — Before real users:**
-6. `ALLOWED_ORIGINS` must fail hard if unset in prod — `backend/src/middleware/security.ts:8`
-7. Verify `ecosystem.config.js` exists and has restart policy + log rotation (Phase 20 claimed to add it)
-8. PostgreSQL connection pool config — explicit maxConnections, pool size in `backend/src/config/database.ts`
-9. Strip `console.log` from agents; route through Winston logger — `backend/src/agents/`
-10. Sentry integration (backend + frontend) for error tracking
-11. `REACT_APP_API_URL` must warn/fail if unset — `frontend/src/services/api.ts:298`
+---
 
-**P2 — Post-launch polish:**
+### PostgreSQL Migration — Done (this session, code complete, DB setup pending)
+The app was on SQLite (dev) / PostgreSQL (prod). Now **PostgreSQL everywhere** via Docker.
+
+**What changed:**
+- `docker-compose.yml` — added `postgres-app` (postgres:16) on port 5432; Adminer now depends on both
+- `backend/src/config/database.ts` — dropped SQLite branch; always PostgreSQL from `DATABASE_URL`
+- `backend/src/config/typeorm.data-source.ts` — dropped SQLite branch
+- `backend/.env` — `DATABASE_URL=postgresql://tino:tino@localhost:5432/tino_app`
+- `backend/src/scripts/seedDatabase.ts` — `PRAGMA foreign_keys` → `SET session_replication_role = replica`
+- `backend/src/services/ProviderService.ts` + `QuoteService.ts` — `JSON_EXTRACT()` → PostgreSQL `->>` operator
+- All main models — `type: 'json'` → `type: 'jsonb'`, `type: 'datetime'` → `type: 'timestamp'`
+- `backend/src/server.ts` — removed stale "SQLite initialized" log
+
+**No initial migration exists yet** — `npm run migration:generate` will create it from the entities against the fresh empty DB.
+
+---
+
+### Phase 1 — Done
+- `docker-compose.yml` — pgvector/pgvector:pg16 on port 5433 + Adminer on 8080
+- 5 TypeORM entities: SemanticMemory, EpisodicMemory, ProceduralRule, MemoryRetrievalLog, MemoryWriteLog
+- `src/config/memoryDatabase.ts` — separate DataSource (always PostgreSQL, graceful no-op if MEMORY_DATABASE_URL unset)
+- `src/config/memory.ts` — all tunable params (weights, TTLs, thresholds) as env-var-backed config
+- `src/services/memory/EmbeddingService.ts` — EmbeddingProvider interface + VoyageAIClient impl + cosineSimilarity util + formatEmbeddingForPg
+- `src/migrations/memory/1777161600000-MemoryTables.ts` — manual migration: 5 tables + HNSW indexes on all vector columns + pgvector extension
+- `src/config/memory.data-source.ts` — CLI data source for memory migrations
+- npm scripts: `memory:migration:run`, `memory:migration:revert`, `memory:migration:show`
+- `backend/.env` — memory vars added (MEMORY_DATABASE_URL, VOYAGE_API_KEY, etc.)
+
+### Phase 2 — Done (semantic write path)
+- `src/services/memory/PiiScrubber.ts` — regex scrubber for phone/CPF/email/card/address; returns `{ text, detected, types }`
+- `src/services/memory/Deduper.ts` — embeds candidate → cosine ANN search via pgvector → merge (sim≥0.92) / create / discard (conf<0.50); logs every decision to `memory_write_log`
+- `src/agents/memory/ExtractionAgent.ts` — Claude Haiku extraction from last 20 turns → structured JSON → PII scrub → Deduper → DB; hooked into coordinator async post-completion
+- `src/agents/coordinator.ts` — fires `extractionAgent.extractAndWrite()` async (non-blocking) after `completeWorkflow()`
+- `src/models/memory/MemoryWriteLog.ts` — `dedupDecision` type relaxed to `Record<string, unknown>`
+
+### Phase 3 — Next (semantic read path)
+Files to build: `src/services/memory/MemoryRetriever.ts` + `src/services/memory/ContextInjector.ts`
+- MemoryRetriever: hybrid scoring (sim·0.55 + recency·0.15 + importance·0.20 + access·0.10), top-5 semantic + top-3 episodic + all active procedural rules
+- ContextInjector: formats retrieved memories into the `<memory>` block template (see ADR §Context Injection)
+- Wire into coordinator: inject memory context before requirements agent runs (read path must be blocking — context must be ready before Haiku starts)
+
+**Key architecture note:** embedding column is NOT in TypeORM entity mapping. All vector ops (insert embedding, cosine search) use `MemoryDataSource.query()` raw SQL. TypeORM manages all other columns normally.
+
+### Key Decisions (summary — full details in ADR)
+- Framework: direct implementation (no Mem0, no LangGraph)
+- Embeddings: Voyage AI `voyage-3` (1024-dim), `voyage-3-lite` for dev
+- Vector store: pgvector on PostgreSQL (same instance as prod DB)
+- Memory scope: per-user, customers first, providers later
+- Procedural rule approval: tiered confidence (≥0.85 auto-approve, 0.65–0.84 queued, <0.65 discarded)
+- PII: opt-out, scrubbing on write
+- 8 implementation phases: Semantic write → Semantic read → Episodic → Reflection → Procedural → UI → Eval
+
+### Previous Session: Phase 23 — Production Hardening Round 2
+**Status**: ✅ P0 + P1 done — P2 remaining + Browserbase key rotation needed
+**Decisions**: AWS (EC2 + PM2), JWT cookies deferred to post-beta
+
+### Phase 23 — Work list
+
+**P0 — Done:**
+1. ✅ CLAUDE.md Browserbase key redacted (was `bb_live_vrmnWlqL665ASF4nar3sJPGn0xI`) — **USER MUST ROTATE** in Browserbase dashboard
+2. ✅ JWT httpOnly cookies — DEFERRED to post-beta (XSS risk acceptable for small known beta audience)
+3. ✅ `validateConfig()` already throws in prod for JWT_SECRET (Phase 20)
+4. ✅ TypeORM migrations framework — `typeorm.data-source.ts` added; npm scripts: `migration:generate/run/revert/show`; `database.ts` has pool config
+5. ✅ Seed script idempotency — refuses to run in prod without `--seed` flag
+
+**P1 — Done:**
+6. ✅ `ALLOWED_ORIGINS` throws at startup if unset in prod — `backend/src/middleware/security.ts:8`
+7. ✅ `ecosystem.config.js` — added `exp_backoff_restart_delay`, `min_uptime`, `merge_logs`
+8. ✅ PostgreSQL pool config — `poolSize: 20`, `max: 20`, `min: 2`, `connectionTimeoutMillis: 10000`
+9. ✅ `console.log` → Winston in all agents (anthropic.service, requirements.agent, mock.agent, state.service)
+10. ✅ Sentry — `@sentry/node` backend + `@sentry/react` frontend; gated on `SENTRY_DSN` / `REACT_APP_SENTRY_DSN` env vars
+11. ✅ `REACT_APP_API_URL` warns to console in prod if unset — `frontend/src/services/api.ts:299`
+
+**P2 — Post-launch polish (not yet done):**
 12. Express static serving for React build OR document nginx config
 13. Health check to probe Redis/MongoDB/Stripe
 14. Structured logging + request correlation IDs

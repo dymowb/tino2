@@ -88,6 +88,12 @@ export interface WorkflowContext {
   verification?: VerificationReport;
 
   /**
+   * Formatted <memory> block injected into agent system prompts.
+   * Retrieved once at workflow start; undefined if memory system is disabled or user has no memories.
+   */
+  memoryContext?: string;
+
+  /**
    * Mock response for Phase 1 UAT testing
    * Undefined until Mock Agent completes (Phase 1 only)
    */

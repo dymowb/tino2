@@ -32,6 +32,9 @@ import { searchAgent } from './search.agent';
 import { analysisAgent } from './analysis.agent';
 import { recommendationAgent } from './recommendation.agent';
 import { verificationAgent } from './verification.agent';
+import { extractionAgent } from './memory/ExtractionAgent';
+import { memoryRetriever } from '../services/memory/MemoryRetriever';
+import { contextInjector } from '../services/memory/ContextInjector';
 
 /**
  * Agent registry
@@ -121,6 +124,20 @@ export class CoordinatorAgent {
         status: WorkflowStatus.ACTIVE,
       }));
 
+      // Retrieve memories before the agent loop — blocking so context is ready for the
+      // requirements agent on its first turn. Failures are swallowed and return empty.
+      const initWorkflow = await workflowStateService.getWorkflow(workflowId);
+      if (!initWorkflow) throw new Error(`Workflow ${workflowId} not found`);
+      const memories = await memoryRetriever.retrieve(
+        initWorkflow.context.userRequest,
+        initWorkflow.userId,
+        workflowId,
+      );
+      const memoryBlock = contextInjector.format(memories);
+      if (memoryBlock) {
+        await workflowStateService.updateContext(workflowId, { memoryContext: memoryBlock });
+      }
+
       // Execute agents in sequence until done
       let iterations = 0;
       const maxIterations = 20; // Prevent infinite loops
@@ -156,6 +173,26 @@ export class CoordinatorAgent {
           // Otherwise, workflow is complete
           await workflowStateService.completeWorkflow(workflowId);
           logger.info(`Workflow ${workflowId} completed successfully`);
+
+          // Fire memory extraction async — non-blocking, must not delay the user response.
+          // The extraction runs after the workflow state is marked complete so it
+          // never blocks the SSE stream. Any error is swallowed (logged).
+          // Always include userRequest as the first turn — conversationMessages only holds
+          // multi-turn follow-ups and would be empty for single-turn completions.
+          const turns = [
+            { role: 'user' as const, content: workflow.context.userRequest, timestamp: workflow.context.createdAt },
+            ...(workflow.context.conversationMessages ?? []).map(m => ({
+              role: m.role as 'user' | 'agent',
+              content: m.content,
+              timestamp: m.timestamp,
+            })),
+          ];
+          extractionAgent
+            .extractAndWrite(turns, workflow.userId, workflowId)
+            .catch(err =>
+              logger.error(`[ExtractionAgent] async write failed workflow=${workflowId}`, err),
+            );
+
           return;
         }
 
@@ -340,7 +377,6 @@ export class CoordinatorAgent {
   private prepareAgentInput(agentName: string, workflow: WorkflowState): any {
     switch (agentName) {
       case 'requirements':
-        // Requirements agent needs user request and any previous conversation
         return {
           userRequest: workflow.context.userRequest,
           conversationHistory: workflow.agentHistory.map(activity => ({
@@ -349,6 +385,7 @@ export class CoordinatorAgent {
             output: activity.output,
           })),
           conversationMessages: workflow.context.conversationMessages,
+          memoryContext: workflow.context.memoryContext,
         };
 
       case 'search':

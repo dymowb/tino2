@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  postgres-app:
+    image: postgres:16
+    container_name: tino2-app-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tino
+      POSTGRES_PASSWORD: tino
+      POSTGRES_DB: tino_app
+    ports:
+      - '5432:5432'
+    volumes:
+      - app-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tino -d tino_app']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-memory:
+    image: pgvector/pgvector:pg16
+    container_name: tino2-memory-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tino
+      POSTGRES_PASSWORD: tino
+      POSTGRES_DB: tino_memory
+    ports:
+      - '5433:5432'
+    volumes:
+      - memory-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tino -d tino_memory']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  adminer:
+    image: adminer
+    container_name: tino2-adminer
+    ports:
+      - '8080:8080'
+    depends_on:
+      - postgres-app
+      - postgres-memory
+
+volumes:
+  app-pgdata:
+  memory-pgdata:

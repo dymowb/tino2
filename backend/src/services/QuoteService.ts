@@ -219,28 +219,27 @@ export class QuoteService {
 
       if (maxBudget) {
         queryBuilder = queryBuilder.andWhere(
-          'JSON_EXTRACT(quoteRequest.budget, "$.min") <= :maxBudget', 
+          `CAST(quoteRequest.budget->>'min' AS float) <= :maxBudget`,
           { maxBudget }
         );
       }
 
-      // Filter by location (simplified for SQLite)
       if (latitude && longitude) {
         const latDiff = 0.009 * radius;
         const lngDiff = 0.009 * radius;
         queryBuilder = queryBuilder.andWhere(
-          'JSON_EXTRACT(quoteRequest.location, "$.latitude") BETWEEN :minLat AND :maxLat',
+          `CAST(quoteRequest.location->>'latitude' AS float) BETWEEN :minLat AND :maxLat`,
           { minLat: latitude - latDiff, maxLat: latitude + latDiff }
         ).andWhere(
-          'JSON_EXTRACT(quoteRequest.location, "$.longitude") BETWEEN :minLng AND :maxLng',
+          `CAST(quoteRequest.location->>'longitude' AS float) BETWEEN :minLng AND :maxLng`,
           { minLng: longitude - lngDiff, maxLng: longitude + lngDiff }
         );
       }
 
       // Apply sorting
-      const sortField = 
+      const sortField =
         sortBy === 'date' ? 'quoteRequest.preferredDate' :
-        sortBy === 'budget' ? 'JSON_EXTRACT(quoteRequest.budget, "$.max")' :
+        sortBy === 'budget' ? `CAST(quoteRequest.budget->>'max' AS float)` :
         sortBy === 'urgency' ? 'quoteRequest.urgency' :
         'quoteRequest.createdAt';
 

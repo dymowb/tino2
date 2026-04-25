@@ -22,6 +22,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { WorkflowState, WorkflowStatus, WorkflowContext } from '../types/workflow.types';
 import { AgentActivity } from '../types/agent.types';
+import logger from '../../config/logger';
 
 /**
  * Configuration for workflow lifecycle
@@ -266,7 +267,7 @@ export class WorkflowStateService {
     // Cleanup task will remove it after the TTL expires
 
     if (this.config.logCleanup) {
-      console.log(`✅ Workflow ${workflowId} completed (will be cleaned up after ${this.config.completedTtl / 1000}s)`);
+      logger.info(`Workflow ${workflowId} completed (will be cleaned up after ${this.config.completedTtl / 1000}s)`);
     }
   }
 
@@ -290,7 +291,7 @@ export class WorkflowStateService {
     // Keep in memory for completedTtl so frontend can poll for error details
 
     if (this.config.logCleanup) {
-      console.log(`❌ Workflow ${workflowId} failed: ${error.message} (will be cleaned up after ${this.config.completedTtl / 1000}s)`);
+      logger.error(`Workflow ${workflowId} failed: ${error.message} (will be cleaned up after ${this.config.completedTtl / 1000}s)`);
     }
   }
 
@@ -309,7 +310,7 @@ export class WorkflowStateService {
     // Keep in memory briefly so frontend gets the cancelled status
 
     if (this.config.logCleanup) {
-      console.log(`🚫 Workflow ${workflowId} cancelled by user (will be cleaned up after ${this.config.completedTtl / 1000}s)`);
+      logger.info(`Workflow ${workflowId} cancelled by user (will be cleaned up after ${this.config.completedTtl / 1000}s)`);
     }
   }
 
@@ -437,12 +438,12 @@ export class WorkflowStateService {
       this.workflows.delete(id);
 
       if (this.config.logCleanup) {
-        console.log(`🧹 Cleaned up workflow ${id}`);
+        logger.debug(`Cleaned up workflow ${id}`);
       }
     }
 
     if (toDelete.length > 0 && this.config.logCleanup) {
-      console.log(`🧹 Cleanup complete: removed ${toDelete.length} workflows`);
+      logger.debug(`Cleanup complete: removed ${toDelete.length} workflows`);
     }
   }
 
@@ -474,7 +475,7 @@ export class WorkflowStateService {
 
     this.clearAll();
 
-    console.log('✅ WorkflowStateService shut down gracefully');
+    logger.info('WorkflowStateService shut down gracefully');
   }
 }
 

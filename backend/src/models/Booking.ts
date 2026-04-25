@@ -63,7 +63,7 @@ export class Booking {
   @IsString()
   description: string;
 
-  @Column({ type: 'json' })
+  @Column({ type: 'jsonb' })
   location: {
     latitude: number;
     longitude: number;
@@ -73,7 +73,7 @@ export class Booking {
     zipCode: string;
   };
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamp' })
   @IsDate()
   scheduledDate: Date;
 
@@ -98,36 +98,36 @@ export class Booking {
   @Column({ type: 'text', nullable: true })
   specialInstructions: string;
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   additionalServices: Array<{
     name: string;
     price: number;
     approved: boolean;
   }>;
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   timeline: Array<{
     status: BookingStatus;
     datetime: Date;
     note?: string;
   }>;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   confirmedAt: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   startedAt: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   completedAt: Date;
 
   @Column({ nullable: true })
   stripePaymentIntentId: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   holdPlacedAt: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   cancelledAt: Date;
 
   @Column({ nullable: true })
@@ -142,13 +142,13 @@ export class Booking {
   @Column({ nullable: true })
   disputeReason: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   disputedAt: Date;
 
   @Column({ nullable: true })
   disputeResolution: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   disputeResolvedAt: Date;
 
   @Column({ nullable: true })

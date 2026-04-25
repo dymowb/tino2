@@ -7,6 +7,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import config from '../../config/environment';
+import logger from '../../config/logger';
 
 /**
  * Claude Model Options
@@ -54,7 +55,7 @@ class AnthropicService {
     this.apiKey = config.anthropic?.apiKey || process.env.ANTHROPIC_API_KEY || '';
 
     if (!this.apiKey) {
-      console.warn('⚠️  ANTHROPIC_API_KEY not configured - Claude features will not work');
+      logger.warn('ANTHROPIC_API_KEY not configured - Claude features will not work');
     }
 
     // Initialize Anthropic client
@@ -62,7 +63,7 @@ class AnthropicService {
       apiKey: this.apiKey,
     });
 
-    console.log('✅ Anthropic service initialized');
+    logger.info('Anthropic service initialized');
   }
 
   /**
@@ -76,9 +77,9 @@ class AnthropicService {
       throw new Error('ANTHROPIC_API_KEY not configured');
     }
 
-    console.log(`🤖 Calling Claude ${request.model}...`);
-    console.log(`📝 System prompt: ${request.systemPrompt.substring(0, 100)}...`);
-    console.log(`💬 User message: ${request.userMessage.substring(0, 100)}...`);
+    logger.debug(`Calling Claude ${request.model}...`);
+    logger.debug(`System prompt: ${request.systemPrompt.substring(0, 100)}...`);
+    logger.debug(`User message: ${request.userMessage.substring(0, 100)}...`);
 
     try {
       const startTime = Date.now();
@@ -113,13 +114,13 @@ class AnthropicService {
         },
       };
 
-      console.log(`✅ Claude responded in ${duration}ms`);
-      console.log(`📊 Tokens: ${result.usage.inputTokens} in, ${result.usage.outputTokens} out`);
-      console.log(`💰 Estimated cost: $${this.estimateCost(result.usage, request.model)}`);
+      logger.info(`Claude responded in ${duration}ms`);
+      logger.info(`Tokens: ${result.usage.inputTokens} in, ${result.usage.outputTokens} out`);
+      logger.info(`Estimated cost: $${this.estimateCost(result.usage, request.model)}`);
 
       return result;
     } catch (error) {
-      console.error('❌ Claude API error:', error);
+      logger.error('Claude API error:', error);
       throw error;
     }
   }
@@ -172,7 +173,7 @@ class AnthropicService {
       throw new Error('ANTHROPIC_API_KEY not configured');
     }
 
-    console.log(`🚀 Starting Claude stream ${request.model}...`);
+    logger.debug(`Starting Claude stream ${request.model}...`);
 
     const stream = this.client.messages.stream({
       model: request.model,

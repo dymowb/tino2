@@ -5,6 +5,10 @@ import cors from 'cors';
 import config from '@/config/environment';
 import logger from '@/config/logger';
 
+if (process.env.NODE_ENV === 'production' && !process.env.ALLOWED_ORIGINS) {
+  throw new Error('FATAL: ALLOWED_ORIGINS env var is required in production.');
+}
+
 export const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:3001')
   .split(',')
   .map((o) => o.trim());

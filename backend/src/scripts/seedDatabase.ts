@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import '@/config/environment'; // must be first — loads dotenv before any DataSource is constructed
 import { AppDataSource } from '@/config/database';
 import { mongoClient } from '@/config/mongodb';
 import { User, UserType } from '@/models/User';
@@ -282,33 +283,13 @@ class DatabaseSeeder {
 
   private async clearDatabase(): Promise<void> {
     logger.info('Clearing existing data...');
-
-    // Temporarily disable foreign key constraints for SQLite
-    await AppDataSource.query('PRAGMA foreign_keys = OFF');
-
-    try {
-      const userRepository = AppDataSource.getRepository(User);
-      const providerRepository = AppDataSource.getRepository(Provider);
-      const bookingRepository = AppDataSource.getRepository(Booking);
-      const paymentRepository = AppDataSource.getRepository(Payment);
-      const reviewRepository = AppDataSource.getRepository(Review);
-      const messageRepository = AppDataSource.getRepository(Message);
-      const conversationRepository = AppDataSource.getRepository(Conversation);
-
-      // Clear all tables (order matters due to foreign keys)
-      await reviewRepository.clear();
-      await messageRepository.clear();
-      await conversationRepository.clear();
-      await paymentRepository.clear();
-      await bookingRepository.clear();
-      await providerRepository.clear();
-      await userRepository.clear();
-
-      logger.info('Database cleared successfully');
-    } finally {
-      // Re-enable foreign key constraints
-      await AppDataSource.query('PRAGMA foreign_keys = ON');
-    }
+    // Single statement with CASCADE handles FK ordering automatically.
+    // session_replication_role approach fails because SET applies to the
+    // session that issues it, but TypeORM pool may use a different connection.
+    await AppDataSource.query(
+      `TRUNCATE TABLE reviews, messages, conversations, payments, bookings, providers, users CASCADE`,
+    );
+    logger.info('Database cleared successfully');
   }
 
   private async seedUsers(): Promise<void> {
@@ -982,6 +963,10 @@ async function runSeeder(): Promise<void> {
 }
 
 if (require.main === module) {
+  if (process.env.NODE_ENV === 'production' && !process.argv.includes('--seed')) {
+    console.error('ERROR: Refusing to seed in production without --seed flag. Run: npm run seed -- --seed');
+    process.exit(1);
+  }
   runSeeder();
 }
 

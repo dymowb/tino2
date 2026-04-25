@@ -4,8 +4,18 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+import * as Sentry from '@sentry/node';
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+  });
+}
+
 import { App } from '@/app';
 import { initializeDatabase } from '@/config/database';
+import { initializeMemoryDatabase } from '@/config/memoryDatabase';
 import { redisClient } from '@/config/redis';
 import { mongoClient } from '@/config/mongodb';
 import logger from '@/config/logger';
@@ -18,7 +28,8 @@ async function bootstrap(): Promise<void> {
     logger.info('Starting Tino 2 Backend Server...');
 
     await initializeDatabase();
-    logger.info('SQLite database initialized');
+
+    await initializeMemoryDatabase();
 
     if (process.env.REDIS_ENABLED === 'true') {
       await redisClient.connect();

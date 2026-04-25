@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import * as Sentry from '@sentry/node';
 import express from 'express';
 import morgan from 'morgan';
 import compression from 'compression';
@@ -140,6 +141,10 @@ export class App {
   }
 
   private initializeErrorHandling(): void {
+    if (process.env.SENTRY_DSN) {
+      Sentry.setupExpressErrorHandler(this.app);
+    }
+
     this.app.use((error: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
       logger.error('Unhandled error:', {
         error: error.message,

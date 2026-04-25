@@ -20,6 +20,7 @@ import {
 import { WorkflowContext } from './types/workflow.types';
 import { anthropicService, ClaudeModel } from './services/anthropic.service';
 import response from 'twilio/lib/http/response';
+import logger from '../config/logger';
 
 /**
  * Input for Requirements Agent
@@ -37,6 +38,8 @@ export interface RequirementsAgentInput {
     content: string;
     timestamp: Date;
   }>;
+  /** Formatted <memory> block from ContextInjector, prepended to system prompt when present */
+  memoryContext?: string;
   currentTurn?: number;
 }
 
@@ -152,7 +155,7 @@ If you have all required information:
     input: RequirementsAgentInput,
     context: WorkflowContext
   ): Promise<AgentResult<RequirementsAgentOutput>> {
-    console.log(`📋 RequirementsAgent.process() called (turn ${input.currentTurn || 1})`);
+    logger.info(`RequirementsAgent.process() called (turn ${input.currentTurn || 1})`);
     const startTime = Date.now();
     const MAX_REFLECTION_ITERATIONS = 3;
 
@@ -171,10 +174,18 @@ Analyze the conversation and respond with JSON following the format specified in
       let bestOutput: RequirementsAgentOutput | null = null;
       let totalTokensUsed = 0;
       let finalExecutionTimeMs = 0;
-      while (iterationCount < MAX_REFLECTION_ITERATIONS) {  
+      while (iterationCount < MAX_REFLECTION_ITERATIONS) {
+        const systemPrompt = input.memoryContext
+          ? `${input.memoryContext}\n\n${this.buildSystemPrompt()}`
+          : this.metadata.systemPrompt;
+
+        if (input.memoryContext && iterationCount === 0) {
+          logger.info(`[RequirementsAgent] Memory injected into system prompt:\n${input.memoryContext}`);
+        }
+
         const response = await anthropicService.callClaude({
           model: ClaudeModel.HAIKU,
-          systemPrompt: this.metadata.systemPrompt,
+          systemPrompt,
           userMessage,
           maxTokens: this.metadata.maxTokens,
           temperature: this.metadata.temperature,
@@ -187,15 +198,15 @@ Analyze the conversation and respond with JSON following the format specified in
         totalTokensUsed += response.usage.inputTokens + response.usage.outputTokens;  // ← Add
         finalExecutionTimeMs = executionTimeMs;  // ← Add
         const reflection = await this.reflect(output, input);
-        console.log(`🤔 Reflection: needsImprovement=${reflection.needsImprovement}, confidence=${reflection.confidence}`);
+        logger.debug(`Reflection: needsImprovement=${reflection.needsImprovement}, confidence=${reflection.confidence}`);
         // If output is good enough, we're done
         if (!reflection.needsImprovement) {
-          console.log('✅ Reflection satisfied - breaking early');
+          logger.debug('Reflection satisfied - breaking early');
           break;
         }
 
         // Otherwise, log that we're retrying
-        console.log(`🔄 Reflection suggests improvements (attempt ${iterationCount + 1}/${MAX_REFLECTION_ITERATIONS})`);
+        logger.debug(`Reflection suggests improvements (attempt ${iterationCount + 1}/${MAX_REFLECTION_ITERATIONS})`);
         iterationCount++;
      }
      
@@ -211,7 +222,7 @@ Analyze the conversation and respond with JSON following the format specified in
         suggestedNextAgent: bestOutput!.isComplete ? 'search' : null, // Continue to search if complete
       };
     } catch (error: any) {
-      console.error('❌ RequirementsAgent error:', error.message);
+      logger.error('RequirementsAgent error:', error.message);
 
       return {
         success: false,
@@ -236,7 +247,7 @@ Analyze the conversation and respond with JSON following the format specified in
     output: RequirementsAgentOutput,
     input: RequirementsAgentInput
   ): Promise<ReflectionResult> {
-    console.log('🔍 RequirementsAgent.reflect() called');
+    logger.debug('RequirementsAgent.reflect() called');
 
     // If requirements are incomplete, no need to reflect deeply
     if (!output.isComplete) {
@@ -337,7 +348,7 @@ Analyze the conversation and respond with JSON following the format specified in
 
       return parsed as RequirementsAgentOutput;
     } catch (error: any) {
-      console.error('❌ Failed to parse Claude response:', text);
+      logger.error('Failed to parse Claude response:', text);
       throw new Error(`JSON parsing failed: ${error.message}`);
     }
   }

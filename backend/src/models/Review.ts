@@ -53,10 +53,10 @@ export class Review {
   @IsString()
   comment: string;
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   images: string[];
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   criteria: {
     quality: number;
     timeliness: number;
@@ -68,7 +68,7 @@ export class Review {
   @Column({ type: 'text', nullable: true })
   response: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   respondedAt: Date;
 
   @Column({ default: false })

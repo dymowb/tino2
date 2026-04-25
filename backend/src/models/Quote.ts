@@ -69,7 +69,7 @@ export class Quote {
   @Min(15)
   estimatedDuration: number;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamp' })
   @IsDate()
   validUntil: Date;
 
@@ -77,7 +77,7 @@ export class Quote {
   @IsEnum(QuoteStatus)
   status: QuoteStatus;
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   breakdown: {
     labor: number;
     materials: number;
@@ -86,7 +86,7 @@ export class Quote {
     tax: number;
   };
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   terms: Array<{
     item: string;
     description: string;
@@ -95,13 +95,13 @@ export class Quote {
   @Column({ type: 'text', nullable: true })
   notes: string;
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   attachments: string[];
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   acceptedAt: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   rejectedAt: Date;
 
   @Column({ nullable: true })

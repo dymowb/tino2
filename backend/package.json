@@ -20,13 +20,21 @@
     "typecheck": "tsc --noEmit",
     "seed": "ts-node src/scripts/seedDatabase.ts",
     "migrate": "ts-node src/scripts/runMigrations.ts",
-    "db:reset": "ts-node src/scripts/resetDatabase.ts"
+    "db:reset": "ts-node src/scripts/resetDatabase.ts",
+    "migration:generate": "typeorm-ts-node-commonjs -d src/config/typeorm.data-source.ts migration:generate",
+    "migration:run": "typeorm-ts-node-commonjs -d src/config/typeorm.data-source.ts migration:run",
+    "migration:revert": "typeorm-ts-node-commonjs -d src/config/typeorm.data-source.ts migration:revert",
+    "migration:show": "typeorm-ts-node-commonjs -d src/config/typeorm.data-source.ts migration:show",
+    "memory:migration:run": "typeorm-ts-node-commonjs -d src/config/memory.data-source.ts migration:run",
+    "memory:migration:revert": "typeorm-ts-node-commonjs -d src/config/memory.data-source.ts migration:revert",
+    "memory:migration:show": "typeorm-ts-node-commonjs -d src/config/memory.data-source.ts migration:show"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
     "@browserbasehq/mcp-server-browserbase": "^2.0.1",
     "@googlemaps/google-maps-services-js": "^3.4.2",
     "@sendgrid/mail": "^8.1.5",
+    "@sentry/node": "^10.49.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/cookie-parser": "^1.4.9",
     "@types/cors": "^2.8.17",
@@ -66,6 +74,7 @@
     "twilio": "^5.9.0",
     "typeorm": "^0.3.20",
     "uuid": "^10.0.0",
+    "voyageai": "^0.2.1",
     "winston": "^3.13.1",
     "zod": "^3.25.67"
   },

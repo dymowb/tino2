@@ -7,6 +7,7 @@
 
 import { Agent, AgentResult, AgentMetadata, ReflectionResult } from './types/agent.types';
 import { WorkflowContext } from './types/workflow.types';
+import logger from '../config/logger';
 
 /**
  * Input: User message as string
@@ -47,7 +48,7 @@ export class MockAgent implements Agent<MockAgentInput, MockAgentOutput> {
     input: MockAgentInput,
     context: WorkflowContext
   ): Promise<AgentResult<MockAgentOutput>> {
-    console.log('🧪 MockAgent.process() called with:', input);
+    logger.debug('MockAgent.process() called with:', input);
 
     // Simulate some processing time (50ms)
     await new Promise(resolve => setTimeout(resolve, 50));
@@ -59,7 +60,7 @@ export class MockAgent implements Agent<MockAgentInput, MockAgentOutput> {
       inputLength: input.message.length
     };
 
-    console.log('🧪 MockAgent returning response:', response);
+    logger.debug('MockAgent returning response:', response);
 
     return {
       success: true,
@@ -85,7 +86,7 @@ export class MockAgent implements Agent<MockAgentInput, MockAgentOutput> {
     output: MockAgentOutput,
     input: MockAgentInput
   ): Promise<ReflectionResult> {
-    console.log('🧪 MockAgent.reflect() called');
+    logger.debug('MockAgent.reflect() called');
 
     // Mock agent always produces perfect results (for testing)
     return {

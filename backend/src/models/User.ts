@@ -72,19 +72,19 @@ export class User {
   @Column({ type: 'text', nullable: true })
   suspensionComment: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   suspendedUntil: Date;
 
   @Column({ nullable: true })
   emailVerificationToken: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   emailVerificationExpiry: Date;
 
   @Column({ nullable: true })
   passwordResetToken: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   passwordResetExpiry: Date;
 
   @Column({ nullable: true })
@@ -93,10 +93,10 @@ export class User {
   @Column({ nullable: true })
   stripePaymentMethodId: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   lastLogin: Date;
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   settings: {
     notifications: {
       email: boolean;

@@ -37,11 +37,11 @@ export class Provider {
   @IsString()
   description: string;
 
-  @Column({ type: 'json' })
+  @Column({ type: 'jsonb' })
   @IsArray()
   services: string[];
 
-  @Column({ type: 'json' })
+  @Column({ type: 'jsonb' })
   location: {
     latitude: number;
     longitude: number;
@@ -69,7 +69,7 @@ export class Provider {
   @Min(0)
   totalReviews: number;
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   portfolioImages: string[];
 
   @Column({ default: false })
@@ -84,7 +84,7 @@ export class Provider {
   @IsBoolean()
   isActive: boolean;
 
-  @Column({ type: 'json' })
+  @Column({ type: 'jsonb' })
   availableHours: {
     monday: { start: string; end: string; available: boolean };
     tuesday: { start: string; end: string; available: boolean };
@@ -95,14 +95,14 @@ export class Provider {
     sunday: { start: string; end: string; available: boolean };
   };
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   pricing: {
     baseRate: number;
     currency: string;
     rateType: 'hourly' | 'fixed' | 'quote';
   };
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   certifications: Array<{
     name: string;
     issuer: string;
@@ -111,7 +111,7 @@ export class Provider {
     documentUrl?: string;
   }>;
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   insurance: {
     provider: string;
     policyNumber: string;
@@ -136,13 +136,13 @@ export class Provider {
   @Min(0)
   averageResponseTime: number;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   verifiedAt: Date;
 
   @Column({ nullable: true })
   verifiedBy: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   rejectedAt: Date;
 
   @Column({ nullable: true })
