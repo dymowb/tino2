@@ -136,6 +136,9 @@ export class CoordinatorAgent {
       const memoryBlock = contextInjector.format(memories);
       if (memoryBlock) {
         await workflowStateService.updateContext(workflowId, { memoryContext: memoryBlock });
+        logger.info(`[Coordinator] Memory injected for workflow ${workflowId}: ${memories.semantic.length}s ${memories.episodic.length}e ${memories.procedural.length}p`);
+      } else {
+        logger.warn(`[Coordinator] No memory context for workflow ${workflowId} (hasAny=${memories.hasAny})`);
       }
 
       // Execute agents in sequence until done
