@@ -3,18 +3,20 @@
 ## CURRENT SESSION: Phase 24 — Agentic Memory System + PostgreSQL migration
 **Date**: 2026-04-25
 **Goal**: Add per-user memory layer to the agentic assistant (semantic + episodic + procedural)
-**Status**: ✅ Phase 1 done ✅ Phase 2 done ✅ Phase 3 done ✅ Phase 4 done ✅ PostgreSQL migration done ✅ Bugfixes complete — full read+write cycle verified
+**Status**: ✅ Phase 1 done ✅ Phase 2 done ✅ Phase 3 done ✅ Phase 4 done ✅ PostgreSQL migration done ✅ Bugfixes complete ✅ Live demo verified end-to-end
 **ADR:** `docs/adr/0001-agentic-memory.md` — full design, data model, scoring formula, prompt template, phase plan
 
 ---
 
 ## ⚠️ FIRST THING NEXT SESSION
-Docker auto-starts via `restart: unless-stopped`. Start servers: `bash start-servers.sh` from repo root.
+Docker auto-starts via `restart: unless-stopped`. Start backend: `cd backend && npm run dev` (port 3000). Start frontend: `cd frontend && npm start` (port 3001).
 
-### Memory system status (end of session 2026-04-25)
-- 5 semantic memories in DB for customer@demo.com (Lagoa, Florianópolis, cats, R$200 budget, Saturday mornings)
+### Memory system status (end of session 2026-04-26)
+- 5 semantic memories in DB for customer@demo.com (Lagoa da Conceição, Florianópolis, cats, R$200 budget, Saturday mornings)
 - 1 episodic summary in DB
-- Memory injected on every new workflow — confirmed in server logs
+- Memory injected on every new workflow — confirmed live via Playwright demo
+- **Prompt engineering fix**: `requirements.agent.ts` now has explicit "Memory Usage" section instructing Claude to treat <memory> facts as pre-filled — agent skips asking about known location/budget/timing
+- **Live demo result**: user typed "Preciso de uma faxineira" → agent replied knowing Lagoa da Conceição + sábado 9h from memory; then asked about date only; then confirmed R$200 from memory; full pipeline ran to completion in 3 turns
 - Debug endpoint: `GET /api/v1/agentic-assistant/memory-debug?query=...` — shows scored memories + exact `<memory>` block Claude receives
 - Next: Phase 5 (Reflection job), Phase 6 (Procedural rules), or UX work to surface memories to the user
 
