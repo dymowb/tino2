@@ -1,102 +1,127 @@
 # Tino 2
 
-A comprehensive platform connecting customers with qualified service providers for household services.
-
-## Features
-
-- **GPS-Based Discovery**: Find nearby service providers using real-time location
-- **Dual User System**: Separate interfaces for customers and service providers
-- **Real-time Messaging**: In-app chat with image sharing capabilities
-- **Quote System**: Request and compare multiple service quotes
-- **Booking Management**: Complete booking lifecycle from request to completion
-- **Payment Integration**: Secure payment processing with multiple methods
-- **Review System**: Two-way rating and review system
-- **Location Services**: GPS integration for service provider discovery
+A full-stack platform connecting customers with service providers for household services (cleaning, plumbing, electrical, etc.). Built as a commercial-grade learning project with a Node/React/PostgreSQL stack and an agentic AI assistant.
 
 ## Tech Stack
 
-- **Backend**: Node.js, Express.js, Socket.IO
-- **Frontend**: React.js with TypeScript
-- **Databases**: PostgreSQL, Redis, MongoDB
-- **Authentication**: JWT tokens
-- **Real-time**: WebSocket connections
-- **Payment**: Stripe, PayPal integration
-- **Maps**: Google Maps API
+- **Backend**: Node.js 22, Express, TypeScript, TypeORM
+- **Frontend**: React 18, TypeScript (Create React App)
+- **Databases**: PostgreSQL 16 (app data) + PostgreSQL/pgvector (agentic memory) — both via Docker
+- **AI**: Anthropic Claude API, Voyage AI embeddings, pgvector semantic search
+- **Auth**: JWT, bcrypt
+- **Payments**: Stripe
+- **Real-time**: Socket.IO
 
-## Getting Started
+## Prerequisites
 
-### Prerequisites
+- **Node.js 22** — use `nvm` and run `./use-node22.sh`, or install directly
+- **Docker Desktop** — all databases run in containers
 
-- Node.js 18+
-- PostgreSQL
-- Redis
-- MongoDB
+## First-Time Setup
 
-### Installation
-
-1. Clone the repository
 ```bash
+# 1. Clone and enter the repo
 git clone <repository-url>
-cd tino-2
-```
+cd tino2
 
-2. Install backend dependencies
-```bash
-cd backend
-npm install
-```
+# 2. Copy and fill in environment variables
+cp backend/.env.example backend/.env
+# Open backend/.env and add your API keys (see Required API Keys below)
 
-3. Install frontend dependencies
-```bash
-cd ../frontend
-npm install
-```
+# 3. Start databases
+docker compose up -d
+# Starts: postgres-app (5432), postgres-memory/pgvector (5433), adminer (8080)
 
-4. Set up environment variables
-```bash
+# 4. Install dependencies
+cd backend && npm install
+cd ../frontend && npm install
+
+# 5. Run database migrations
 cd ../backend
-cp .env.example .env
-# Edit .env with your configuration
+npm run migration:run          # main app schema
+npm run memory:migration:run   # pgvector memory schema
+
+# 6. Seed demo data (Florianópolis service providers, users, bookings)
+npm run seed
+
+# 7. Start the servers
+cd ..
+bash start-servers.sh
+# Backend: http://localhost:3000
+# Frontend: http://localhost:3001
 ```
 
-5. Start the services
+## Required API Keys
+
+| Key | Where | Required for |
+|-----|-------|-------------|
+| `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com) | Agentic assistant |
+| `VOYAGE_API_KEY` | [voyageai.com](https://www.voyageai.com) | Memory system (semantic search) |
+| `STRIPE_SECRET_KEY` + `STRIPE_PUBLISHABLE_KEY` | [dashboard.stripe.com](https://dashboard.stripe.com) | Payments |
+| `GOOGLE_MAPS_API_KEY` | Google Cloud Console | GPS features (degrades gracefully without it) |
+| `BROWSERBASE_API_KEY` + `BROWSERBASE_PROJECT_ID` | [browserbase.com](https://browserbase.com) | Browser automation only — optional |
+
+## Demo Accounts
+
+After seeding, these accounts are ready to use (password: `Demo123!`):
+
+| Role | Email |
+|------|-------|
+| Customer | customer@demo.com |
+| Provider | provider@demo.com |
+| Admin | admin@demo.com |
+
+## Daily Development
+
 ```bash
-# Terminal 1 - Backend
-cd backend
-npm run dev
+# Start databases (if not already running)
+docker compose up -d
 
-# Terminal 2 - Frontend  
-cd frontend
-npm start
+# Start servers (kills ports 3000/3001 first, then starts both)
+bash start-servers.sh
+
+# Or start manually in two terminals:
+cd backend && npm run dev      # port 3000
+cd frontend && npm start       # port 3001
 ```
 
-## API Documentation
+## Key npm Scripts (backend)
 
-The API provides RESTful endpoints for:
-- Authentication (`/api/auth`)
-- User management (`/api/users`)
-- Provider operations (`/api/providers`)
-- Booking system (`/api/bookings`)
-- Quote management (`/api/quotes`)
-- Messaging (`/api/messages`)
-- Payment processing (`/api/payments`)
-- Reviews (`/api/reviews`)
+```bash
+npm run dev                    # development server (nodemon)
+npm run build                  # TypeScript compile
+npm run seed                   # seed demo data
+npm run migration:run          # apply main DB migrations
+npm run migration:generate     # generate migration from entity changes
+npm run memory:migration:run   # apply pgvector memory migrations
+npm test                       # Jest
+npm run lint                   # ESLint
+```
 
-## Real-time Features
+## Project Documentation
 
-- Private messaging between users
-- Live location updates for service providers
-- Booking status notifications
-- Quote submission alerts
+| File | Contents |
+|------|----------|
+| `CLAUDE.md` | AI assistant instructions, architecture notes, known issues |
+| `REQUIREMENTS.md` | Full business requirements (FRs, ACs, NFRs) |
+| `SESSION_CONTEXT.md` | Current phase, resume point, per-phase notes |
+| `LEARNING_PROGRESS.md` | Learning goals and progress tracker |
+| `TEST_REGISTRY.md` | Test catalog by phase |
+| `Tests/history/HISTORICAL_CONTEXT.md` | Detailed implementation notes per phase |
+| `docs/adr/0001-agentic-memory.md` | Architecture Decision Record for the memory system |
 
-## Contributing
+## Architecture Highlights
 
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+- **Agentic assistant**: multi-agent pipeline (coordinator → requirements → recommendation → verification) with per-user semantic memory (pgvector) and episodic summaries
+- **Streaming AI search**: SSE-based provider search with live token streaming from Claude
+- **Real-time messaging**: Socket.IO with JWT auth
+- **Stripe escrow flow**: hold on booking → capture on completion → refund on dispute
+- **Admin panel**: user/provider management, dispute resolution, platform settings
+- **i18n**: full pt-BR / en-US coverage via react-i18next
 
-## License
+## Database Admin
 
-This project is licensed under the ISC License.
+Adminer is available at **http://localhost:8080** once Docker is running.
+
+- App DB: server `postgres-app`, user `tino`, password `tino`, database `tino_app`
+- Memory DB: server `postgres-memory`, user `tino`, password `tino`, database `tino_memory`
