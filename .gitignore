@@ -124,3 +124,9 @@ dump.rdb
 
 # ESLint cache
 .eslintcache
+
+# Playwright MCP session artifacts
+.playwright-mcp/
+
+# Claude Code local settings (machine-specific)
+.claude/settings.local.json
