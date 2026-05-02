@@ -6,6 +6,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Tino 2 is a full-stack domestic service application that connects customers with service providers for household services. The platform features GPS-based provider discovery, real-time messaging, booking management, quote systems, and payment processing.
 
+## Project Memory (fresh clone setup)
+
+Memory files are committed to `.claude/memory/`. On a new machine, seed Claude Code's memory store before starting work:
+
+```bash
+# find your project memory path (run from repo root)
+PROJ_KEY=$(pwd | sed 's|[/\\]|-|g' | sed 's|^-||')
+DEST="$HOME/.claude/projects/$PROJ_KEY/memory"
+mkdir -p "$DEST" && cp .claude/memory/*.md "$DEST/"
+```
+
+After that, Claude will have full context on user preferences, feedback patterns, and phase history without needing to re-establish it.
+
 ## Project Navigation — Key .md Files
 
 | File | Purpose |
