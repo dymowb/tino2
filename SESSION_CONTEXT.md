@@ -3,7 +3,7 @@
 ## CURRENT SESSION: Phase 24 — Agentic Memory System + PostgreSQL migration
 **Date**: 2026-04-25
 **Goal**: Add per-user memory layer to the agentic assistant (semantic + episodic + procedural)
-**Status**: ✅ Phase 1 done ✅ Phase 2 done ✅ Phase 3 done ✅ Phase 4 done ✅ PostgreSQL migration done ✅ Bugfixes complete ✅ Live demo verified end-to-end
+**Status**: ✅ Phase 1 done ✅ Phase 2 done ✅ Phase 3 done ✅ Phase 4 done ✅ Phase 5 done ✅ PostgreSQL migration done ✅ Bugfixes complete ✅ Live demo verified end-to-end
 **ADR:** `docs/adr/0001-agentic-memory.md` — full design, data model, scoring formula, prompt template, phase plan
 
 ---
@@ -11,14 +11,19 @@
 ## ⚠️ FIRST THING NEXT SESSION
 Docker auto-starts via `restart: unless-stopped`. Start backend: `cd backend && npm run dev` (port 3000). Start frontend: `cd frontend && npm start` (port 3001).
 
-### Memory system status (end of session 2026-04-26)
-- 5 semantic memories in DB for customer@demo.com (Lagoa da Conceição, Florianópolis, cats, R$200 budget, Saturday mornings)
-- 1 episodic summary in DB
-- Memory injected on every new workflow — confirmed live via Playwright demo
-- **Prompt engineering fix**: `requirements.agent.ts` now has explicit "Memory Usage" section instructing Claude to treat <memory> facts as pre-filled — agent skips asking about known location/budget/timing
-- **Live demo result**: user typed "Preciso de uma faxineira" → agent replied knowing Lagoa da Conceição + sábado 9h from memory; then asked about date only; then confirmed R$200 from memory; full pipeline ran to completion in 3 turns
-- Debug endpoint: `GET /api/v1/agentic-assistant/memory-debug?query=...` — shows scored memories + exact `<memory>` block Claude receives
-- Next: Phase 5 (Reflection job), Phase 6 (Procedural rules), or UX work to surface memories to the user
+### Memory system status (end of session 2026-05-23)
+- Phase 5 (Reflection job) complete and verified end-to-end
+- **Reflection pipeline**: nightly cron (3am) + on-demand `POST /api/v1/agentic-assistant/reflection/run`
+- **Verified result**: 4 test episodes → Sonnet extracted 3 semantic facts + 2 auto-approved procedural rules
+  - Rules: "default to cleaning category" (conf=0.95) + "suggest Saturday mornings" (conf=0.90)
+  - Facts: Lagoa da Conceição location, 2 cats, R$200-300 budget
+- **Idempotency**: episodes stamped with `reflected_at` after processing — safe to re-run; partial failures re-process on next run
+- **Procedural rule dedup**: embedding similarity check (threshold 0.88) before inserting new rules
+- **Tiered approval**: conf ≥ 0.85 → `active` (auto-approved); 0.65–0.84 → `pending` queue; < 0.65 → discarded
+- **Bug found + fixed**: `maxTokens: 1500` too low for Sonnet's JSON output — bumped to 2500
+- **Key files**: `src/agents/memory/ReflectionAgent.ts`, `src/jobs/reflection.job.ts`, `src/migrations/memory/1777161601000-AddReflectedAt.ts`
+- **Procedural rules NOT yet injected into agent prompts** — that is Phase 6 work
+- Next: Phase 6 (wire procedural rules into ContextInjector + requirements agent prompt), or Phase 7 (user-facing API to view/edit memories)
 
 ---
 

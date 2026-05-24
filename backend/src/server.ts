@@ -20,6 +20,7 @@ import { redisClient } from '@/config/redis';
 import { mongoClient } from '@/config/mongodb';
 import logger from '@/config/logger';
 import { startAutoCaptureJob } from '@/jobs/autoCapture.job';
+import { startReflectionJob } from '@/jobs/reflection.job';
 import { validateConfig } from '@/config/environment';
 
 async function bootstrap(): Promise<void> {
@@ -49,6 +50,7 @@ async function bootstrap(): Promise<void> {
     app.listen();
 
     startAutoCaptureJob();
+    startReflectionJob();
 
     const gracefulShutdown = async (): Promise<void> => {
       logger.info('Received shutdown signal. Gracefully shutting down...');

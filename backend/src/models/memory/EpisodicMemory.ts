@@ -42,6 +42,9 @@ export class EpisodicMemory {
   @Column('boolean', { default: true })
   isActive: boolean;
 
+  @Column('timestamp with time zone', { nullable: true })
+  reflectedAt: Date | null;
+
   @Column('jsonb', { nullable: true })
   metadata: Record<string, any> | null;
 }

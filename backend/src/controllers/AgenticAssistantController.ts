@@ -13,6 +13,7 @@ import { WorkflowStatus } from '@/agents/types/workflow.types';
 import { anthropicService, ClaudeModel } from '@/agents/services/anthropic.service';
 import { memoryRetriever } from '@/services/memory/MemoryRetriever';
 import { contextInjector } from '@/services/memory/ContextInjector';
+import { runReflectionForUser } from '@/jobs/reflection.job';
 
 class AgenticAssistantController {
   /**
@@ -404,6 +405,24 @@ Top recommendation: ${topRec.provider.name ?? topRec.provider.providerId} — ${
       });
     } catch (error) {
       logger.error('Error in memory-debug:', error);
+      res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  }
+
+  /**
+   * POST /api/v1/agentic-assistant/reflection/run
+   * Trigger the reflection job for the current user (dev / on-demand).
+   */
+  public async runReflection(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) { res.status(401).json({ success: false, error: 'Not authenticated' }); return; }
+
+      const result = await runReflectionForUser(userId);
+
+      res.json({ success: true, data: result });
+    } catch (error) {
+      logger.error('Error in reflection run:', error);
       res.status(500).json({ success: false, error: 'Internal server error' });
     }
   }

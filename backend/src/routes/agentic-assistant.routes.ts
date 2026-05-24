@@ -62,6 +62,15 @@ router.get(
 );
 
 /**
+ * POST /api/v1/agentic-assistant/reflection/run
+ * Trigger reflection for the current user (on-demand)
+ */
+router.post(
+  '/reflection/run',
+  AgenticAssistantController.runReflection.bind(AgenticAssistantController)
+);
+
+/**
  * GET /api/v1/agentic-assistant/stats
  * Get system statistics
  */
