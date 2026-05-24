@@ -1,9 +1,9 @@
 # Session Context - Current Work
 
-## CURRENT SESSION: Post-Phase 24 — Full E2E Regression + Bug Fixes
+## CURRENT SESSION: Post-Phase 24 — Booking Flow E2E + Bug Fixes (Round 2)
 **Date**: 2026-05-24
-**Goal**: E2E test both customer and provider roles after PostgreSQL migration; fix regressions
-**Status**: ✅ All bugs fixed ✅ Both roles tested end-to-end ✅ TEST_REGISTRY.md updated
+**Goal**: Complete booking creation + escrow E2E test; fix remaining regressions
+**Status**: ✅ Booking creation fixed ✅ Provider accept fixed ✅ Stripe hang fixed
 
 ---
 
@@ -11,6 +11,14 @@
 Docker auto-starts via `restart: unless-stopped`. Start backend: `cd backend && npm run dev` (port 3000). Start frontend: `cd frontend && npm start` (port 3001).
 
 ### Memory system status (end of session 2026-05-23)
+### Booking flow bugs fixed (2026-05-24 session 2)
+- **BookingService.checkScheduleConflict**: SQLite `datetime()` syntax never updated for PostgreSQL — replaced with `booking.scheduledDate + (booking.estimatedDuration * interval '1 minute')`. This caused 500 on every booking creation.
+- **BookingService.updateBookingStatus**: `isOwner = booking.customerId === userId` always false for providers — fixed to `booking.customerId === userId || booking.provider?.userId === userId`. Providers could not accept/confirm bookings.
+- **MyBookingsPage**: `updateStatusMutation` called `apiService.updateBooking` (customer-only PUT /:id) instead of `apiService.updateBookingStatus` (PUT /:id/status). Provider "Aceitar" button returned 403.
+- **BookingController.startBooking + confirmCompletion**: `getStripeInstance()` called outside try/catch — throws when STRIPE_SECRET_KEY unset, causing hanging requests. Moved inside try block so Express returns proper 500.
+- **FindProvidersPage**: `<Rating value={provider.rating}>` got string instead of number — fixed with `Number(provider.rating)`.
+- **Escrow flow status**: Requires STRIPE_SECRET_KEY + customer.stripePaymentMethodId. Both absent in dev env without Stripe setup. Booking creation → provider accept ✅ tested; start service → escrow hold requires real Stripe credentials.
+
 ### PostgreSQL numeric string bugs fixed (2026-05-24)
 All PostgreSQL `numeric`/`decimal` columns return as strings via the `pg` library. This caused crashes and NaN throughout the UI. Fixed:
 - **ProviderDashboardPage**: crash on `rating.toFixed()` — fixed with `Number(rating).toFixed()`

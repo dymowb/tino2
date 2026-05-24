@@ -89,8 +89,8 @@ const MyBookingsPage: React.FC = () => {
 
   // Update booking status mutation
   const updateStatusMutation = useMutation({
-    mutationFn: ({ bookingId, updates }: { bookingId: string; updates: Partial<Booking> }) =>
-      apiService.updateBooking(bookingId, updates),
+    mutationFn: ({ bookingId, status }: { bookingId: string; status: string }) =>
+      apiService.updateBookingStatus(bookingId, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
       toast.success(t('bookings:messages.status_updated_success'));
@@ -117,10 +117,7 @@ const MyBookingsPage: React.FC = () => {
   });
 
   const handleStatusUpdate = (bookingId: string, newStatus: Booking['status']) => {
-    updateStatusMutation.mutate({
-      bookingId,
-      updates: { status: newStatus }
-    });
+    updateStatusMutation.mutate({ bookingId, status: newStatus });
   };
 
   const handleCancelBooking = () => {

@@ -505,12 +505,12 @@ export class BookingController {
 
   // POST /bookings/:bookingId/start — provider starts service; places hold on customer card
   startBooking = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const stripe = getStripeInstance();
     const bookingRepo = AppDataSource.getRepository(Booking);
     const userRepo = AppDataSource.getRepository(User);
     const providerRepo = AppDataSource.getRepository(Provider);
 
     try {
+      const stripe = getStripeInstance();
       const { bookingId } = req.params;
 
       // Verify caller is the provider for this booking
@@ -631,10 +631,10 @@ export class BookingController {
 
   // POST /bookings/:bookingId/confirm-completion — customer confirms, triggers capture
   confirmCompletion = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const stripe = getStripeInstance();
     const bookingRepo = AppDataSource.getRepository(Booking);
 
     try {
+      const stripe = getStripeInstance();
       const { bookingId } = req.params;
       const booking = await bookingRepo.findOne({
         where: { id: bookingId, customerId: req.user.userId },

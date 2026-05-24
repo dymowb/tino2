@@ -450,7 +450,7 @@ const FindProvidersPage: React.FC = () => {
                           </Typography>
                           
                           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                            <Rating value={provider.rating} readOnly size="small" />
+                            <Rating value={Number(provider.rating)} readOnly size="small" />
                             <Typography variant="body2" sx={{ ml: 1 }}>
                               {provider.rating} ({provider.totalReviews} {t('providers:card.reviews')})
                             </Typography>

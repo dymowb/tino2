@@ -225,11 +225,12 @@ export class BookingService {
       }
 
       // Validate status transitions
+      const isParticipant = booking.customerId === userId || booking.provider?.userId === userId;
       const isValidTransition = this.validateStatusTransition(
         booking.status,
         newStatus,
         userRole,
-        booking.customerId === userId
+        isParticipant
       );
 
       if (!isValidTransition) {
@@ -405,7 +406,7 @@ export class BookingService {
         activeStatuses: ['pending', 'confirmed', 'in_progress'] 
       })
       .andWhere(
-        '(booking.scheduledDate < :endTime AND datetime(booking.scheduledDate, "+" || booking.estimatedDuration || " minutes") > :startTime)',
+        '(booking.scheduledDate < :endTime AND booking.scheduledDate + (booking.estimatedDuration * interval \'1 minute\') > :startTime)',
         { startTime, endTime }
       );
 
