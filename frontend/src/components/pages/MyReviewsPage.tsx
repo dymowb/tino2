@@ -263,7 +263,7 @@ const MyReviewsPage: React.FC = () => {
                   }
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Rating value={review.rating} readOnly size="small" />
+                  <Rating value={Number(review.rating)} readOnly size="small" />
                   <Typography variant="body2" color="text.secondary">
                     ({review.rating})
                   </Typography>
@@ -373,7 +373,7 @@ const MyReviewsPage: React.FC = () => {
         </Typography>
         <Grid container spacing={2}>
           {eligibleBookingsData.map((booking: any) => (
-            <Grid xs={12} md={6} key={booking.id}>
+            <Grid item xs={12} md={6} key={booking.id}>
               <Card sx={{ height: '100%' }}>
                 <CardContent>
                   <Box sx={{ display: 'flex', justify: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -483,7 +483,7 @@ const MyReviewsPage: React.FC = () => {
         {/* Filter and Search Bar */}
         <Paper sx={{ p: 2, mb: 3 }}>
           <Grid container spacing={2} alignItems="center">
-            <Grid xs={12} md={4}>
+            <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
                 placeholder={t('reviews:filters.search_placeholder')}
@@ -499,7 +499,7 @@ const MyReviewsPage: React.FC = () => {
                 size="small"
               />
             </Grid>
-            <Grid xs={6} md={2}>
+            <Grid item xs={6} md={2}>
               <FormControl fullWidth size="small">
                 <InputLabel>{t('reviews:filters.rating')}</InputLabel>
                 <Select
@@ -516,7 +516,7 @@ const MyReviewsPage: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid xs={6} md={2}>
+            <Grid item xs={6} md={2}>
               <FormControl fullWidth size="small">
                 <InputLabel>{t('reviews:filters.sort_by')}</InputLabel>
                 <Select
@@ -530,7 +530,7 @@ const MyReviewsPage: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid xs={12} md={4}>
+            <Grid item xs={12} md={4}>
               <Button
                 variant="outlined"
                 startIcon={<FilterList />}

@@ -3,7 +3,7 @@
 ## CURRENT SESSION: Post-Phase 24 — Booking Flow E2E + Bug Fixes (Round 2)
 **Date**: 2026-05-24
 **Goal**: Complete booking creation + escrow E2E test; fix remaining regressions
-**Status**: ✅ Booking creation fixed ✅ Provider accept fixed ✅ Stripe hang fixed
+**Status**: ✅ Booking creation fixed ✅ Provider accept fixed ✅ Stripe hang fixed ✅ Reviews E2E tested ✅ Carina booking verified
 
 ---
 
@@ -17,7 +17,15 @@ Docker auto-starts via `restart: unless-stopped`. Start backend: `cd backend && 
 - **MyBookingsPage**: `updateStatusMutation` called `apiService.updateBooking` (customer-only PUT /:id) instead of `apiService.updateBookingStatus` (PUT /:id/status). Provider "Aceitar" button returned 403.
 - **BookingController.startBooking + confirmCompletion**: `getStripeInstance()` called outside try/catch — throws when STRIPE_SECRET_KEY unset, causing hanging requests. Moved inside try block so Express returns proper 500.
 - **FindProvidersPage**: `<Rating value={provider.rating}>` got string instead of number — fixed with `Number(provider.rating)`.
+- **MyReviewsPage**: `<Rating value={review.rating}>` string + Grid missing `item` prop — fixed with `Number()` coercion and sed patch for item props.
 - **Escrow flow status**: Requires STRIPE_SECRET_KEY + customer.stripePaymentMethodId. Both absent in dev env without Stripe setup. Booking creation → provider accept ✅ tested; start service → escrow hold requires real Stripe credentials.
+
+### E2E tests completed (2026-05-24 session 2)
+- ✅ Customer creates booking via browser UI (Consultoria Nutricional / Carina Pereira Serviços) → dialog closes, booking saved
+- ✅ Carina Pereira logs in, sees pending booking, clicks Aceitar → status changes to Confirmada
+- ✅ Customer sees completed booking ("Limpeza Residencial" advanced to completed via status API) → "Deixar Avaliação" shown
+- ✅ Review submitted via API (rating 5, comment) → appears in provider's "Avaliações Sobre Meus Serviços" tab with 0 console errors
+- ✅ UI review stub: "Deixar Avaliação" button shows tooltip "Em breve na Tarefa 6" — not a full dialog; review write path is API-only for now
 
 ### PostgreSQL numeric string bugs fixed (2026-05-24)
 All PostgreSQL `numeric`/`decimal` columns return as strings via the `pg` library. This caused crashes and NaN throughout the UI. Fixed:
