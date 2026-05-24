@@ -415,7 +415,7 @@ const ProviderDashboardPage: React.FC = () => {
 
       {/* Statistics Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid xs={12} sm={6} md={4} lg={2}>
+        <Grid item xs={12} sm={6} md={4} lg={2}>
           {renderStatCard(
             t('dashboard:provider.total_bookings'),
             dashboardStats?.totalBookings || 0,
@@ -427,7 +427,7 @@ const ProviderDashboardPage: React.FC = () => {
             })
           )}
         </Grid>
-        <Grid xs={12} sm={6} md={4} lg={2}>
+        <Grid item xs={12} sm={6} md={4} lg={2}>
           {renderStatCard(
             t('dashboard:provider.pending_requests'),
             dashboardStats?.pendingBookings || 0,
@@ -436,7 +436,7 @@ const ProviderDashboardPage: React.FC = () => {
             t('dashboard:provider.requires_attention')
           )}
         </Grid>
-        <Grid xs={12} sm={6} md={4} lg={2}>
+        <Grid item xs={12} sm={6} md={4} lg={2}>
           {renderStatCard(
             t('dashboard:provider.completed_jobs'),
             dashboardStats?.completedBookings || 0,
@@ -445,7 +445,7 @@ const ProviderDashboardPage: React.FC = () => {
             t('dashboard:provider.completion_rate', { rate: dashboardStats?.completionRate || 0 })
           )}
         </Grid>
-        <Grid xs={12} sm={6} md={4} lg={2}>
+        <Grid item xs={12} sm={6} md={4} lg={2}>
           {renderStatCard(
             t('dashboard:provider.total_earnings'),
             `$${dashboardStats?.totalEarnings || 0}`,
@@ -457,7 +457,7 @@ const ProviderDashboardPage: React.FC = () => {
             })
           )}
         </Grid>
-        <Grid xs={12} sm={6} md={4} lg={2}>
+        <Grid item xs={12} sm={6} md={4} lg={2}>
           {renderStatCard(
             t('dashboard:provider.average_rating'),
             `${dashboardStats?.averageRating || providerProfile?.rating || 0}`,
@@ -466,7 +466,7 @@ const ProviderDashboardPage: React.FC = () => {
             t('dashboard:provider.based_on_reviews', { count: reviews?.pagination?.total || 0 })
           )}
         </Grid>
-        <Grid xs={12} sm={6} md={4} lg={2}>
+        <Grid item xs={12} sm={6} md={4} lg={2}>
           {renderStatCard(
             t('dashboard:provider.response_rate'),
             `${dashboardStats?.responseRate || 95}%`,
@@ -479,7 +479,7 @@ const ProviderDashboardPage: React.FC = () => {
 
       <Grid container spacing={3}>
         {/* Recent Bookings */}
-        <Grid xs={12} lg={8}>
+        <Grid item xs={12} lg={8}>
           <Card sx={{ height: 'fit-content' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
@@ -511,10 +511,10 @@ const ProviderDashboardPage: React.FC = () => {
         </Grid>
 
         {/* Provider Profile Summary & Quick Actions */}
-        <Grid xs={12} lg={4}>
+        <Grid item xs={12} lg={4}>
           <Grid container spacing={3}>
             {/* Profile Summary */}
-            <Grid xs={12}>
+            <Grid item xs={12}>
               <Card>
                 <CardContent>
                   <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
@@ -537,7 +537,7 @@ const ProviderDashboardPage: React.FC = () => {
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
                         <Star sx={{ fontSize: 16, color: 'gold' }} />
                         <Typography variant="body2">
-                          {providerProfile?.rating?.toFixed(1) || t('dashboard:provider.no_rating')}
+                          {providerProfile?.rating ? Number(providerProfile.rating).toFixed(1) : t('dashboard:provider.no_rating')}
                         </Typography>
                       </Box>
                     </Box>
@@ -592,7 +592,7 @@ const ProviderDashboardPage: React.FC = () => {
             </Grid>
 
             {/* Recent Reviews */}
-            <Grid xs={12}>
+            <Grid item xs={12}>
               <Card>
                 <CardContent>
                   <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>

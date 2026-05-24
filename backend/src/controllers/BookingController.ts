@@ -292,8 +292,16 @@ export class BookingController {
       if (userType === 'customer') {
         query.customerId = userId;
       } else if (userType === 'provider') {
-        // Find provider ID for this user
-        query.providerId = userId; // This might need adjustment based on your provider model
+        // booking.providerId references providers.id (not users.id) — look it up
+        const providerProfile = await AppDataSource.getRepository(Provider)
+          .findOne({ where: { userId, isActive: true } });
+        if (providerProfile) {
+          query.providerId = providerProfile.id;
+        } else {
+          // No provider profile — return empty
+          res.json({ success: true, data: [], pagination: { page: 1, limit: 20, total: 0, pages: 0 } });
+          return;
+        }
       }
 
       const result = await bookingService.searchBookings(query);

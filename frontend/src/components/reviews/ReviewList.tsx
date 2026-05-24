@@ -91,9 +91,9 @@ const ReviewList: React.FC<ReviewListProps> = ({
           <Grid xs={12} md={4}>
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="h2" color="primary" sx={{ fontWeight: 'bold' }}>
-                {analytics.averageRating?.toFixed(1) || '0.0'}
+                {analytics.averageRating != null ? Number(analytics.averageRating).toFixed(1) : '0.0'}
               </Typography>
-              <Rating value={analytics.averageRating || 0} readOnly size="large" sx={{ mb: 1 }} />
+              <Rating value={Number(analytics.averageRating) || 0} readOnly size="large" sx={{ mb: 1 }} />
               <Typography variant="body2" color="text.secondary">
                 Based on {totalReviews} reviews
               </Typography>
@@ -355,7 +355,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Star sx={{ color: 'gold' }} />
                     <Typography variant="h6">
-                      {analytics?.averageRating?.toFixed(1) || 'N/A'} {t('analytics.average')}
+                      {analytics?.averageRating != null ? Number(analytics.averageRating).toFixed(1) : 'N/A'} {t('analytics.average')}
                     </Typography>
                   </Box>
                 </Grid>

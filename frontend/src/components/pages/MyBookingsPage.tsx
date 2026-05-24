@@ -181,11 +181,11 @@ const MyBookingsPage: React.FC = () => {
     });
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+  const formatCurrency = (amount: number | string) => {
+    return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'USD'
-    }).format(amount);
+      currency: 'BRL'
+    }).format(Number(amount));
   };
 
   const canUpdateStatus = (booking: Booking, newStatus: Booking['status']) => {

@@ -460,14 +460,14 @@ export class ProviderController {
 
       // Calculate total earnings
       const totalEarnings = completedResult.bookings.reduce((sum: number, booking: any) =>
-        sum + (booking.totalAmount || 0), 0
+        sum + parseFloat(booking.totalAmount || 0), 0
       );
 
       // Get provider reviews to calculate average rating
       const reviews = await reviewService.getProviderReviews(provider.id, { page: 1, limit: 1000 });
       const avgRating = reviews.data && reviews.data.length > 0
-        ? reviews.data.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.data.length
-        : 0;
+        ? reviews.data.reduce((sum: number, r: any) => sum + parseFloat(r.rating || 0), 0) / reviews.data.length
+        : null;
 
       const total = allBookingsResult.total;
       const completed = completedResult.total;
@@ -477,7 +477,7 @@ export class ProviderController {
         completedBookings: completed,
         completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
         totalEarnings,
-        averageRating: Math.round(avgRating * 10) / 10,
+        averageRating: avgRating !== null ? Math.round(avgRating * 10) / 10 : null,
         totalReviews: reviews.pagination?.total || 0,
         responseRate: 95 // Placeholder
       };

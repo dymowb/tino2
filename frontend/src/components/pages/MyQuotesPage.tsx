@@ -104,12 +104,12 @@ const MyQuotesPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
       queryClient.invalidateQueries({ queryKey: ['quote-requests'] });
-      toast.success('Quote status updated successfully!');
+      toast.success(t('page.status_updated'));
       setAnchorEl(null);
       setSelectedQuote(null);
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || 'Failed to update quote status');
+      toast.error(error?.response?.data?.error || t('page.status_update_failed'));
     },
   });
 
@@ -119,10 +119,10 @@ const MyQuotesPage: React.FC = () => {
       apiService.closeQuoteRequest(requestId, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quote-requests'] });
-      toast.success('Quote request closed successfully!');
+      toast.success(t('page.request_closed'));
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || 'Failed to close quote request');
+      toast.error(error?.response?.data?.error || t('page.request_close_failed'));
     },
   });
 
@@ -210,7 +210,7 @@ const MyQuotesPage: React.FC = () => {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Typography variant="h4" component="h1" sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <RequestQuote />
-          My Quotes
+          {user?.userType === 'provider' ? t('page.provider_title') : t('page.customer_title')}
         </Typography>
         {user?.userType === 'customer' && (
           <Button
@@ -218,17 +218,17 @@ const MyQuotesPage: React.FC = () => {
             startIcon={<RequestQuote />}
             onClick={() => setShowRequestDialog(true)}
           >
-            Request New Quote
+            {t('page.request_btn')}
           </Button>
         )}
       </Box>
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={tabValue} onChange={handleTabChange}>
-          {user?.userType === 'customer' && <Tab value={0} label={`My Requests (${quoteRequests?.data?.length || 0})`} />}
-          {user?.userType === 'customer' && <Tab value={1} label={`Received Quotes (${quotes?.data?.length || 0})`} />}
-          {user?.userType === 'provider' && <Tab value={0} label={`Available Requests (${availableRequests?.data?.length || 0})`} />}
-          {user?.userType === 'provider' && <Tab value={1} label={`My Quotes (${quotes?.data?.length || 0})`} />}
+          {user?.userType === 'customer' && <Tab value={0} label={t('page.my_requests_tab', { count: quoteRequests?.data?.length || 0 })} />}
+          {user?.userType === 'customer' && <Tab value={1} label={t('page.received_quotes_tab', { count: quotes?.data?.length || 0 })} />}
+          {user?.userType === 'provider' && <Tab value={0} label={t('page.available_requests_tab', { count: availableRequests?.data?.length || 0 })} />}
+          {user?.userType === 'provider' && <Tab value={1} label={t('page.my_quotes_tab', { count: quotes?.data?.length || 0 })} />}
         </Tabs>
       </Box>
 
@@ -238,7 +238,7 @@ const MyQuotesPage: React.FC = () => {
           <TabPanel value={tabValue} index={0}>
             {quoteRequests?.data?.length === 0 ? (
               <Alert severity="info">
-                {t('list.empty_cta', 'Você ainda não criou solicitações de cotação. Clique em "Solicitar Nova Cotação" para começar.')}
+                {t('page.empty_cta')}
               </Alert>
             ) : (
               <Grid container spacing={3}>
@@ -279,7 +279,7 @@ const MyQuotesPage: React.FC = () => {
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                             <AttachMoney sx={{ fontSize: 'small' }} />
                             <Typography variant="body2">
-                              Budget: ${request.budget.min} - ${request.budget.max}
+                              {t('request.budget_display', { min: request.budget.min, max: request.budget.max })}
                             </Typography>
                           </Box>
                         )}
@@ -287,12 +287,12 @@ const MyQuotesPage: React.FC = () => {
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                           <Schedule sx={{ fontSize: 'small' }} />
                           <Typography variant="body2">
-                            Created: {format(new Date(request.createdAt), 'MMM dd, yyyy')}
+                            {t('page.created', { date: format(new Date(request.createdAt), 'dd/MM/yyyy') })}
                           </Typography>
                         </Box>
 
                         <Typography variant="body2" sx={{ mb: 2 }}>
-                          <strong>Quotes Received: {request.quotesReceived}</strong>
+                          <strong>{t('page.quotes_received_count', { count: request.quotesReceived })}</strong>
                         </Typography>
 
                         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -303,7 +303,7 @@ const MyQuotesPage: React.FC = () => {
                               startIcon={<Compare />}
                               onClick={() => handleCompareQuotes(request.id)}
                             >
-                              Compare Quotes
+                              {t('actions.compare')}
                             </Button>
                           )}
                           {request.status === 'open' && (
@@ -314,7 +314,7 @@ const MyQuotesPage: React.FC = () => {
                               startIcon={<Cancel />}
                               onClick={() => closeQuoteRequestMutation.mutate({ requestId: request.id, reason: 'Customer cancelled' })}
                             >
-                              Close Request
+                              {t('page.close_request')}
                             </Button>
                           )}
                         </Box>
@@ -330,7 +330,7 @@ const MyQuotesPage: React.FC = () => {
           <TabPanel value={tabValue} index={1}>
             {quotes?.data?.length === 0 ? (
               <Alert severity="info">
-                You haven't received any quotes yet. Create some quote requests to get quotes from providers.
+                {t('page.no_quotes_received')}
               </Alert>
             ) : (
               <Grid container spacing={3}>
@@ -385,12 +385,12 @@ const MyQuotesPage: React.FC = () => {
                             ${quote.estimatedPrice}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            {(quote.estimatedDuration / 60).toFixed(1)} hours
+                            {(quote.estimatedDuration / 60).toFixed(1)} {t('submission.hours')}
                           </Typography>
                         </Box>
 
                         <Typography variant="body2" sx={{ mb: 2 }}>
-                          Valid until: {format(new Date(quote.validUntil), 'MMM dd, yyyy')}
+                          {t('page.valid_until', { date: format(new Date(quote.validUntil), 'dd/MM/yyyy') })}
                         </Typography>
 
                         {quote.status === 'pending' && (
@@ -403,7 +403,7 @@ const MyQuotesPage: React.FC = () => {
                               onClick={() => handleAcceptQuote(quote)}
                               disabled={updateQuoteStatusMutation.isPending}
                             >
-                              Accept
+                              {t('page.accept')}
                             </Button>
                             <Button
                               size="small"
@@ -413,7 +413,7 @@ const MyQuotesPage: React.FC = () => {
                               onClick={() => handleRejectQuote(quote)}
                               disabled={updateQuoteStatusMutation.isPending}
                             >
-                              Reject
+                              {t('page.reject')}
                             </Button>
                           </Box>
                         )}
@@ -433,7 +433,7 @@ const MyQuotesPage: React.FC = () => {
           <TabPanel value={tabValue} index={0}>
             {availableRequests?.data?.length === 0 ? (
               <Alert severity="info">
-                No available quote requests at the moment. Check back later for new opportunities.
+                {t('page.no_available_requests')}
               </Alert>
             ) : (
               <Grid container spacing={3}>
@@ -467,13 +467,13 @@ const MyQuotesPage: React.FC = () => {
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                             <AttachMoney sx={{ fontSize: 'small' }} />
                             <Typography variant="body2">
-                              Budget: ${request.budget.min} - ${request.budget.max}
+                              {t('request.budget_display', { min: request.budget.min, max: request.budget.max })}
                             </Typography>
                           </Box>
                         )}
 
                         <Typography variant="body2" sx={{ mb: 2 }}>
-                          Quotes received: {request.quotesReceived}
+                          {t('page.quotes_received_count', { count: request.quotesReceived })}
                         </Typography>
 
                         <Button
@@ -485,7 +485,7 @@ const MyQuotesPage: React.FC = () => {
                           }}
                           fullWidth
                         >
-                          Submit Quote
+                          {t('page.submit_quote')}
                         </Button>
                       </CardContent>
                     </Card>
@@ -499,7 +499,7 @@ const MyQuotesPage: React.FC = () => {
           <TabPanel value={tabValue} index={1}>
             {quotes?.data?.length === 0 ? (
               <Alert severity="info">
-                You haven't submitted any quotes yet. Look for available quote requests to get started.
+                {t('page.no_submitted_quotes')}
               </Alert>
             ) : (
               <Grid container spacing={3}>
@@ -535,16 +535,16 @@ const MyQuotesPage: React.FC = () => {
                             ${quote.estimatedPrice}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            {(quote.estimatedDuration / 60).toFixed(1)} hours
+                            {(quote.estimatedDuration / 60).toFixed(1)} {t('submission.hours')}
                           </Typography>
                         </Box>
 
                         <Typography variant="body2" sx={{ mb: 2 }}>
-                          Submitted: {format(new Date(quote.createdAt), 'MMM dd, yyyy')}
+                          {t('page.submitted', { date: format(new Date(quote.createdAt), 'dd/MM/yyyy') })}
                         </Typography>
 
                         <Typography variant="body2">
-                          Valid until: {format(new Date(quote.validUntil), 'MMM dd, yyyy')}
+                          {t('page.valid_until', { date: format(new Date(quote.validUntil), 'dd/MM/yyyy') })}
                         </Typography>
 
                         {quote.status === 'pending' && (
@@ -557,7 +557,7 @@ const MyQuotesPage: React.FC = () => {
                             disabled={updateQuoteStatusMutation.isPending}
                             sx={{ mt: 2 }}
                           >
-                            Withdraw Quote
+                            {t('page.withdraw')}
                           </Button>
                         )}
                       </CardContent>
@@ -576,14 +576,14 @@ const MyQuotesPage: React.FC = () => {
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
-        <MenuItem onClick={() => { /* View details */ handleMenuClose(); }}>
+        <MenuItem onClick={() => { handleMenuClose(); }}>
           <Visibility sx={{ mr: 1 }} />
-          View Details
+          {t('page.view_details')}
         </MenuItem>
         {selectedQuote?.status === 'pending' && user?.userType === 'provider' && (
           <MenuItem onClick={() => { handleWithdrawQuote(selectedQuote); }}>
             <Delete sx={{ mr: 1 }} />
-            Withdraw Quote
+            {t('page.withdraw')}
           </MenuItem>
         )}
       </Menu>
@@ -595,7 +595,7 @@ const MyQuotesPage: React.FC = () => {
         maxWidth="lg"
         fullWidth
       >
-        <DialogTitle>Compare Quotes</DialogTitle>
+        <DialogTitle>{t('actions.compare')}</DialogTitle>
         <DialogContent>
           <Grid container spacing={2}>
             {quotesToCompare.map((quote) => (
@@ -611,7 +611,7 @@ const MyQuotesPage: React.FC = () => {
                     </Typography>
                     
                     <Typography variant="body2" sx={{ mb: 2 }}>
-                      {quote.estimatedDuration} hours • ${(quote.estimatedPrice / quote.estimatedDuration).toFixed(2)}/hour
+                      {quote.estimatedDuration} {t('submission.hours')} • R${(Number(quote.estimatedPrice) / Number(quote.estimatedDuration)).toFixed(2)}{t('submission.per_hour')}
                     </Typography>
 
                     {quote.provider && (
@@ -638,7 +638,7 @@ const MyQuotesPage: React.FC = () => {
                           }}
                           fullWidth
                         >
-                          Accept
+                          {t('page.accept')}
                         </Button>
                         <Button
                           size="small"
@@ -650,7 +650,7 @@ const MyQuotesPage: React.FC = () => {
                           }}
                           fullWidth
                         >
-                          Reject
+                          {t('page.reject')}
                         </Button>
                       </Box>
                     )}
@@ -661,7 +661,7 @@ const MyQuotesPage: React.FC = () => {
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowCompareDialog(false)}>Close</Button>
+          <Button onClick={() => setShowCompareDialog(false)}>{t('request.cancel')}</Button>
         </DialogActions>
       </Dialog>
 

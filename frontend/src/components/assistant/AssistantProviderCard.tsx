@@ -43,10 +43,10 @@ const AssistantProviderCard: React.FC<AssistantProviderCardProps> = ({ provider,
             </Typography>
 
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <Rating value={provider.rating} readOnly size="small" precision={0.5} />
+              <Rating value={Number(provider.rating)} readOnly size="small" precision={0.5} />
               <Typography variant="body2" sx={{ ml: 1 }}>
                 {t('results.rating', {
-                  rating: provider.rating.toFixed(1),
+                  rating: Number(provider.rating).toFixed(1),
                   count: provider.totalReviews,
                 })}
               </Typography>

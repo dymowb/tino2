@@ -137,5 +137,33 @@
     "decline_confirm": "Recusar esta cotação?",
     "cancel_request": "Cancelar Solicitação",
     "edit_request": "Editar Solicitação"
+  },
+
+  "page": {
+    "customer_title": "Minhas Cotações",
+    "provider_title": "Solicitações de Cotação",
+    "request_btn": "Solicitar Nova Cotação",
+    "my_requests_tab": "Minhas Solicitações ({{count}})",
+    "received_quotes_tab": "Cotações Recebidas ({{count}})",
+    "available_requests_tab": "Solicitações Disponíveis ({{count}})",
+    "my_quotes_tab": "Minhas Cotações ({{count}})",
+    "created": "Criado: {{date}}",
+    "valid_until": "Válido até: {{date}}",
+    "submitted": "Enviado: {{date}}",
+    "quotes_received_count": "Cotações Recebidas: {{count}}",
+    "close_request": "Fechar Solicitação",
+    "submit_quote": "Enviar Cotação",
+    "accept": "Aceitar",
+    "reject": "Recusar",
+    "withdraw": "Retirar Cotação",
+    "view_details": "Ver Detalhes",
+    "empty_cta": "Você ainda não criou solicitações de cotação. Clique em \"Solicitar Nova Cotação\" para começar.",
+    "no_quotes_received": "Você ainda não recebeu nenhuma cotação. Crie solicitações de cotação para receber propostas dos prestadores.",
+    "no_available_requests": "Não há solicitações de cotação disponíveis no momento. Volte mais tarde para novas oportunidades.",
+    "no_submitted_quotes": "Você ainda não enviou nenhuma cotação. Procure solicitações disponíveis para começar.",
+    "status_updated": "Status da cotação atualizado com sucesso!",
+    "status_update_failed": "Falha ao atualizar status da cotação",
+    "request_closed": "Solicitação de cotação fechada com sucesso!",
+    "request_close_failed": "Falha ao fechar solicitação de cotação"
   }
 }

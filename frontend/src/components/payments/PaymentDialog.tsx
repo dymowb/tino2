@@ -201,7 +201,7 @@ const PaymentForm: React.FC<{
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                 <Typography variant="h6">{t('new_payment.total_amount')}</Typography>
                 <Typography variant="h6" color="primary">
-                  ${selectedBooking.totalAmount.toFixed(2)}
+                  ${Number(selectedBooking.totalAmount).toFixed(2)}
                 </Typography>
               </Box>
             </CardContent>
@@ -250,7 +250,7 @@ const PaymentForm: React.FC<{
           disabled={!stripe || processing || !clientSecret}
           startIcon={processing ? <CircularProgress size={16} /> : <PaymentIcon />}
         >
-          {processing ? t('new_payment.processing') : t('new_payment.pay_amount', { amount: selectedBooking?.totalAmount.toFixed(2) || '0.00' })}
+          {processing ? t('new_payment.processing') : t('new_payment.pay_amount', { amount: selectedBooking ? Number(selectedBooking.totalAmount).toFixed(2) : '0.00' })}
         </Button>
       </DialogActions>
     </Box>
@@ -368,7 +368,7 @@ const PaymentDialog: React.FC<Props> = ({
                           </Box>
                         </Box>
                         <Typography variant="h6" color="primary">
-                          ${booking.totalAmount.toFixed(2)}
+                          ${Number(booking.totalAmount).toFixed(2)}
                         </Typography>
                       </Box>
                     </CardContent>

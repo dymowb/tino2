@@ -1,10 +1,9 @@
 # Session Context - Current Work
 
-## CURRENT SESSION: Phase 24 — Agentic Memory System + PostgreSQL migration
-**Date**: 2026-04-25
-**Goal**: Add per-user memory layer to the agentic assistant (semantic + episodic + procedural)
-**Status**: ✅ Phase 1 done ✅ Phase 2 done ✅ Phase 3 done ✅ Phase 4 done ✅ Phase 5 done ✅ PostgreSQL migration done ✅ Bugfixes complete ✅ Live demo verified end-to-end
-**ADR:** `docs/adr/0001-agentic-memory.md` — full design, data model, scoring formula, prompt template, phase plan
+## CURRENT SESSION: Post-Phase 24 — Full E2E Regression + Bug Fixes
+**Date**: 2026-05-24
+**Goal**: E2E test both customer and provider roles after PostgreSQL migration; fix regressions
+**Status**: ✅ All bugs fixed ✅ Both roles tested end-to-end ✅ TEST_REGISTRY.md updated
 
 ---
 
@@ -12,18 +11,22 @@
 Docker auto-starts via `restart: unless-stopped`. Start backend: `cd backend && npm run dev` (port 3000). Start frontend: `cd frontend && npm start` (port 3001).
 
 ### Memory system status (end of session 2026-05-23)
-- Phase 5 (Reflection job) complete and verified end-to-end
-- **Reflection pipeline**: nightly cron (3am) + on-demand `POST /api/v1/agentic-assistant/reflection/run`
-- **Verified result**: 4 test episodes → Sonnet extracted 3 semantic facts + 2 auto-approved procedural rules
-  - Rules: "default to cleaning category" (conf=0.95) + "suggest Saturday mornings" (conf=0.90)
-  - Facts: Lagoa da Conceição location, 2 cats, R$200-300 budget
-- **Idempotency**: episodes stamped with `reflected_at` after processing — safe to re-run; partial failures re-process on next run
-- **Procedural rule dedup**: embedding similarity check (threshold 0.88) before inserting new rules
-- **Tiered approval**: conf ≥ 0.85 → `active` (auto-approved); 0.65–0.84 → `pending` queue; < 0.65 → discarded
-- **Bug found + fixed**: `maxTokens: 1500` too low for Sonnet's JSON output — bumped to 2500
-- **Key files**: `src/agents/memory/ReflectionAgent.ts`, `src/jobs/reflection.job.ts`, `src/migrations/memory/1777161601000-AddReflectedAt.ts`
-- **Procedural rules NOT yet injected into agent prompts** — that is Phase 6 work
-- Next: Phase 6 (wire procedural rules into ContextInjector + requirements agent prompt), or Phase 7 (user-facing API to view/edit memories)
+### PostgreSQL numeric string bugs fixed (2026-05-24)
+All PostgreSQL `numeric`/`decimal` columns return as strings via the `pg` library. This caused crashes and NaN throughout the UI. Fixed:
+- **ProviderDashboardPage**: crash on `rating.toFixed()` — fixed with `Number(rating).toFixed()`
+- **PaymentsPage**: NaN totals from string concat in `.reduce()` — fixed with `Number(amount)` in accumulator
+- **BookingController**: provider bookings returning 0 — `query.providerId` was set to `users.id` instead of `providers.id`; fixed by looking up provider profile first
+- **ProviderController dashboard stats**: `totalEarnings` was string-concatenated — fixed with `parseFloat()`; `averageRating` was NaN → null — fixed
+- **MyQuotesPage**: all English strings — added `page` section to both locale files; component fully wired to `t()`
+- **AssistantProviderCard, ReviewList, PaymentDialog, AdminDashboardPage**: similar `toFixed` on string fields — all fixed with `Number()` guards
+- **MyBookingsPage**: `formatCurrency` now uses `Number()` coercion and `pt-BR`/`BRL` locale
+
+### Pattern to remember
+Any field typed as `numeric(p,s)` or `decimal` in the DB comes back as a string from PostgreSQL via `pg`. Always wrap with `Number()` or `parseFloat()` before arithmetic or `.toFixed()`. The TypeORM entity type annotation (`number`) doesn't prevent this.
+
+### Phase 24 Agentic Memory — Phase 5 done (previous session)
+- Reflection job complete, procedural rules auto-approved at conf ≥ 0.85
+- Next phases: Phase 6 (wire procedural rules into requirements agent), Phase 7 (UI to view/edit memories)
 
 ---
 

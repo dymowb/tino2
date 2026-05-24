@@ -71,7 +71,7 @@ const AdminDashboardPage: React.FC = () => {
           <StatCard label={t('dashboard.stats.active_bookings')} value={stats?.activeBookings ?? '—'} icon={<TrendingUp fontSize="large" />} color="secondary.main" />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard label={t('dashboard.stats.platform_revenue')} value={stats?.totalRevenue != null ? `R$${stats.totalRevenue.toFixed(2)}` : '—'} icon={<TrendingUp fontSize="large" />} color="success.dark" />
+          <StatCard label={t('dashboard.stats.platform_revenue')} value={stats?.totalRevenue != null ? `R$${Number(stats.totalRevenue).toFixed(2)}` : '—'} icon={<TrendingUp fontSize="large" />} color="success.dark" />
         </Grid>
       </Grid>
 

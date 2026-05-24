@@ -53,7 +53,7 @@ Tracks all UX tests, their status, and which feature areas they exercise.
 |----|-------------|--------|-------------|
 | E1 | Customer payment list loads | ✅ Pass | `payments` |
 | E2 | Provider earnings tab loads | ✅ Pass | `payments` |
-| E3 | Payment amounts display correctly | ✅ Pass | `payments` |
+| E3 | Payment amounts display correctly (customer + provider totals, no NaN) | ✅ Pass | `payments` |
 | E4 | Status filter works | ✅ Pass | `payments` |
 | E5 | Escrow column shows "—" when undefined | ✅ Pass | `payments` |
 
@@ -61,7 +61,7 @@ Tracks all UX tests, their status, and which feature areas they exercise.
 
 | ID | Description | Status | Feature Tags |
 |----|-------------|--------|-------------|
-| F1 | Provider dashboard loads (earnings, completion rate) | ✅ Pass | `providers`, `bookings` |
+| F1 | Provider dashboard loads (earnings, completion rate, no crash) | ✅ Pass | `providers`, `bookings` |
 | F2 | Provider messages page loads and works | ✅ Pass | `messaging`, `socket`, `providers` |
 | F3 | Reviews about provider renders | ✅ Pass | `reviews`, `providers` |
 | F4 | Provider payments page loads and shows earnings | ✅ Pass | `payments`, `providers` |
@@ -141,8 +141,9 @@ Stripe test cards: `4242 4242 4242 4242` (success) · `4000000000009995` (no fun
 
 | ID | Description | Status | Feature Tags |
 |----|-------------|--------|-------------|
-| L1 | Page loads and renders | ❌ No route | `quotes` — FR-037, Phase 10 |
-| L2 | Quote request list renders | ❌ No route | `quotes` — FR-037, Phase 10 |
+| L1 | Customer: page loads with "Minhas Cotações" title and tabs in Portuguese | ✅ Pass | `quotes` |
+| L2 | Customer: empty state shows PT copy, "Solicitar Nova Cotação" button works | ✅ Pass | `quotes` |
+| L3 | Provider: page loads with "Solicitações de Cotação" title and correct tabs | ✅ Pass | `quotes`, `providers` |
 
 ### R — My Reviews (`/reviews`)
 
@@ -179,6 +180,43 @@ Stripe test cards: `4242 4242 4242 4242` (success) · `4000000000009995` (no fun
 | FA1 | Attach image + text → upload 200 → preview thumbnail shown → send → image renders inline in bubble | ✅ Pass | `messaging` |
 | FA2 | Attach non-image file (txt) with no text → upload 200 → file icon preview shown → send (attachment-only) → file link renders in bubble | ✅ Pass (bug fixed: route validator required non-empty `message`; made `message` optional with cross-field validator requiring message OR attachments) | `messaging` |
 
+### N — Notifications (Phase 9)
+
+| ID | Description | Status | Feature Tags |
+|----|-------------|--------|-------------|
+| N1 | Notification bell shows unread count badge | ✅ Pass | `notifications`, `nav` |
+| N2 | Click bell → notification dropdown opens | ✅ Pass | `notifications` |
+| N3 | Unread count clears after viewing | ✅ Pass | `notifications` |
+
+### A — Admin Panel (Phase 13)
+
+| ID | Description | Status | Feature Tags |
+|----|-------------|--------|-------------|
+| A1 | Admin login at `/admin` renders dashboard | ✅ Pass | `admin`, `auth` |
+| A2 | Dashboard shows user/provider/booking counts | ✅ Pass | `admin` |
+| A3 | Users page: list loads, search works | ✅ Pass | `admin` |
+| A4 | Suspend user → user cannot login | ✅ Pass | `admin`, `auth` |
+| A5 | Reactivate user → login works again | ✅ Pass | `admin`, `auth` |
+| A6 | Providers page: list loads, verify/unverify toggle | ✅ Pass | `admin`, `providers` |
+
+### PW — Password Recovery (Phase 19)
+
+| ID | Description | Status | Feature Tags |
+|----|-------------|--------|-------------|
+| PW1 | Forgot password → email sent (Ethereal preview URL in backend log) | ✅ Pass | `auth` |
+| PW2 | Reset link → new password accepted → login with new password succeeds | ✅ Pass | `auth` |
+| PW3 | Bogus reset token → "Invalid or expired token" error | ✅ Pass | `auth` |
+| PW4 | Change password from profile page (logged-in flow) | ✅ Pass | `auth`, `profile` |
+
+### M — Agentic Memory (Phase 24)
+
+| ID | Description | Status | Feature Tags |
+|----|-------------|--------|-------------|
+| M1 | AI assistant extracts location from conversation and stores to memory | ✅ Pass | `assistant` |
+| M2 | On next session, agent references memory (skips asking about known location) | ✅ Pass | `assistant` |
+| M3 | Reflection job synthesises cross-session patterns into semantic facts + rules | ✅ Pass | `assistant` |
+| M4 | `GET /api/v1/agentic-assistant/memory-debug` returns scored memories for user | ✅ Pass | `assistant` |
+
 ---
 
 ## Regression Checklist by Phase
@@ -187,17 +225,20 @@ When a phase is complete, re-run only the tests whose tags intersect with what c
 
 | Phase | Changed Feature Tags | Tests to Re-run |
 |-------|---------------------|-----------------|
-| Phase 8 — Socket.IO real-time | `socket`, `messaging` | D1, D2, D3, D4, D5, F2 |
-| Phase 9 — Notifications | `notifications`, `socket`, `nav` | + new N tests (TBD) |
-| Phase 10 — Quote system | `quotes` | L1, L2 + new L tests |
+| Phase 8 — Socket.IO real-time | `socket`, `messaging` | D1–D5, F2 |
+| Phase 9 — Notifications | `notifications`, `socket`, `nav` | N1–N3 |
+| Phase 10 — Quote system | `quotes` | L1–L3 |
 | Phase 11 — Provider availability | `providers`, `bookings` | H1–H6, I2–I4, J1–J4 |
-| Phase 12 — Provider review responses | `reviews` | R1–R4, I1, F3 |
-| Phase 13 — Admin panel | new `admin` tag | new A tests (TBD) |
+| Phase 12 — Provider review responses | `reviews` | R1���R4, I1, F3 |
+| Phase 13 — Admin panel | `admin`, `auth` | A1–A6 |
 | Phase 14 — Stripe escrow | `payments`, `escrow`, `bookings` | E1–E5, F4, P1–P10 |
 | Phase 15 — Dispute resolution | `escrow`, `payments`, `admin` | P6, P11–P17 |
 | Phase 16 — Email verification | `auth` | K1, K3, EV1–EV5 |
 | Phase 17 — GPS geocoding | `providers` | GPS1–GPS4 |
 | Phase 18 — File attachments | `messaging` | FA1–FA2 |
+| Phase 19 �� Password recovery | `auth`, `profile` | PW1–PW4 |
+| Phase 21/22 — i18n + seed data | all pages | Full smoke test both roles |
+| Phase 24 — Agentic memory | `assistant` | M1–M4 |
 
 ---
 

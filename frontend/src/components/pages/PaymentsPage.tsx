@@ -221,14 +221,15 @@ const PaymentsPage: React.FC = () => {
   const renderPaymentStats = () => {
     const stats = payments.reduce(
       (acc, payment) => {
-        acc.total += payment.amount;
+        const amt = Number(payment.amount);
+        acc.total += amt;
         acc.count += 1;
         if (payment.status === 'succeeded') {
-          acc.successful += payment.amount;
+          acc.successful += amt;
           acc.successCount += 1;
         }
         if (payment.escrowStatus === 'held') {
-          acc.escrow += payment.amount;
+          acc.escrow += amt;
         }
         return acc;
       },
@@ -292,7 +293,7 @@ const PaymentsPage: React.FC = () => {
                 <Typography variant="h6">{t('payments:stats.platform_fees')}</Typography>
               </Box>
               <Typography variant="h4">
-                {formatAmount(payments.reduce((acc, p) => acc + p.platformFee, 0))}
+                {formatAmount(payments.reduce((acc, p) => acc + Number(p.platformFee), 0))}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 {t('payments:stats.total_collected')}
@@ -426,11 +427,11 @@ const PaymentsPage: React.FC = () => {
                       <TableCell>
                         <Box>
                           <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                            {formatAmount(payment.amount, payment.currency)}
+                            {formatAmount(Number(payment.amount), payment.currency)}
                           </Typography>
-                          {payment.platformFee > 0 && (
+                          {Number(payment.platformFee) > 0 && (
                             <Typography variant="caption" color="text.secondary">
-                              {t('payments:table.fee')}: {formatAmount(payment.platformFee, payment.currency)}
+                              {t('payments:table.fee')}: {formatAmount(Number(payment.platformFee), payment.currency)}
                             </Typography>
                           )}
                         </Box>
