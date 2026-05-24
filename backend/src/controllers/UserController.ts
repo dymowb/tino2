@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getRepository } from 'typeorm';
+import { AppDataSource } from '@/config/database';
 import { validate } from 'class-validator';
 import bcrypt from 'bcrypt';
 import { User, UserType } from '@/models/User';
@@ -50,7 +50,7 @@ class UserController {
   // GET /api/users/profile - Get current user profile (FR-006, FR-008)
   public async getProfile(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userRepository = getRepository(User);
+      const userRepository = AppDataSource.getRepository(User);
       const user = await userRepository.findOne({
         where: { id: req.user.id },
         select: ['id', 'email', 'firstName', 'lastName', 'phone', 'profileImage', 'userType', 'settings', 'createdAt', 'updatedAt']
@@ -83,7 +83,7 @@ class UserController {
   public async updateProfile(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { firstName, lastName, phone } = req.body;
-      const userRepository = getRepository(User);
+      const userRepository = AppDataSource.getRepository(User);
 
       const user = await userRepository.findOne({ where: { id: req.user.id } });
       if (!user) {
@@ -169,7 +169,7 @@ class UserController {
         return;
       }
 
-      const userRepository = getRepository(User);
+      const userRepository = AppDataSource.getRepository(User);
       const user = await userRepository.findOne({ where: { id: req.user.id } });
 
       if (!user) {
@@ -215,7 +215,7 @@ class UserController {
   public async getUserById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const userRepository = getRepository(User);
+      const userRepository = AppDataSource.getRepository(User);
 
       const user = await userRepository.findOne({
         where: { id, isActive: true },
@@ -258,7 +258,7 @@ class UserController {
   public async updateSettings(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { notifications, privacy } = req.body;
-      const userRepository = getRepository(User);
+      const userRepository = AppDataSource.getRepository(User);
 
       const user = await userRepository.findOne({ where: { id: req.user.id } });
       if (!user) {
