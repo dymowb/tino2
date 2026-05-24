@@ -132,8 +132,8 @@ export class ProviderSearchService {
       }
 
       if (params.maxRate !== undefined) {
-        query = query.andWhere('JSON_EXTRACT(provider.pricing, "$.baseRate") <= :maxRate', { 
-          maxRate: params.maxRate 
+        query = query.andWhere("(provider.pricing->>'baseRate')::numeric <= :maxRate", {
+          maxRate: params.maxRate
         });
       }
 
