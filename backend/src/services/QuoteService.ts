@@ -212,7 +212,7 @@ export class QuoteService {
       // Filter by budget range
       if (minBudget) {
         queryBuilder = queryBuilder.andWhere(
-          'JSON_EXTRACT(quoteRequest.budget, "$.max") >= :minBudget', 
+          "(quoteRequest.budget->>'max')::numeric >= :minBudget",
           { minBudget }
         );
       }

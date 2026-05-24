@@ -104,7 +104,7 @@ export class ProviderSearchService {
       if (params.serviceType) {
         // Normalize service type: convert underscores to spaces and use case-insensitive match
         const normalizedService = params.serviceType.replace(/_/g, ' ');
-        query = query.andWhere('LOWER(JSON_EXTRACT(provider.services, "$")) LIKE LOWER(:serviceType)', {
+        query = query.andWhere('provider.services::text ILIKE :serviceType', {
           serviceType: `%${normalizedService}%`
         });
       }
@@ -306,7 +306,7 @@ export class ProviderSearchService {
         .andWhere('user.isActive = :userIsActive', { userIsActive: true });
 
       if (serviceType) {
-        query = query.andWhere('JSON_EXTRACT(provider.services, "$") LIKE :serviceType', {
+        query = query.andWhere('provider.services::text ILIKE :serviceType', {
           serviceType: `%${serviceType}%`
         });
       }
