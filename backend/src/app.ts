@@ -25,6 +25,7 @@ import notificationRoutes from '@/routes/notifications';
 import locationRoutes from '@/routes/locations';
 import adminRoutes from '@/routes/admin';
 import agenticAssistantRoutes from '@/routes/agentic-assistant.routes';
+import memoryRoutes from '@/routes/memory.routes';
 import messageService from '@/services/MessageService';
 import notificationService from '@/services/NotificationService';
 import jwt from './utils/jwt';
@@ -130,6 +131,7 @@ export class App {
     this.app.use(`/api/${config.server.apiVersion}/reviews`, reviewRoutes);
     this.app.use(`/api/${config.server.apiVersion}/locations`, locationRoutes);
     this.app.use(`/api/${config.server.apiVersion}/agentic-assistant`, agenticAssistantRoutes);
+    this.app.use(`/api/${config.server.apiVersion}/memory`, memoryRoutes);
     this.app.use(`/api/${config.server.apiVersion}/admin`, adminRoutes);
 
     this.app.all('*', (req, res) => {

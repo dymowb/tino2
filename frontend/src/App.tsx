@@ -32,6 +32,7 @@ import AdminProvidersPage from './components/pages/AdminProvidersPage';
 import AdminReviewsPage from './components/pages/AdminReviewsPage';
 import AdminSettingsPage from './components/pages/AdminSettingsPage';
 import AdminDisputesPage from './components/pages/AdminDisputesPage';
+import MemoryPage from './components/pages/MemoryPage';
 import { Box, Button, Typography } from '@mui/material';
 
 class ErrorBoundary extends Component<{ children: React.ReactNode }, { error: Error | null }> {
@@ -209,6 +210,15 @@ const AppContent: React.FC = () => {
                 <NotificationsPage />
               </ProtectedRoute>
             } 
+          />
+
+          <Route
+            path="/memory"
+            element={
+              <ProtectedRoute>
+                <MemoryPage />
+              </ProtectedRoute>
+            }
           />
 
           {/* Admin routes — own layout, no top Navigation */}

@@ -1259,6 +1259,7 @@ class ApiService {
   get(path: string, config?: any) { return this.api.get(path, config); }
   post(path: string, data?: any, config?: any) { return this.api.post(path, data, config); }
   put(path: string, data?: any, config?: any) { return this.api.put(path, data, config); }
+  patch(path: string, data?: any, config?: any) { return this.api.patch(path, data, config); }
   delete(path: string, config?: any) { return this.api.delete(path, config); }
 }
 

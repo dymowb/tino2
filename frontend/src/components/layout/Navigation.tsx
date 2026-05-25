@@ -35,6 +35,7 @@ import {
   RateReview as ReviewIcon,
   RequestQuote as QuoteIcon,
   AdminPanelSettings as AdminIcon,
+  Psychology as MemoryIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import NotificationBadge from '../notifications/NotificationBadge';
@@ -226,6 +227,10 @@ const Navigation: React.FC = () => {
           <MenuItem onClick={() => { navigate('/profile'); handleUserMenuClose(); }}>
             <ProfileIcon sx={{ mr: 2 }} />
             {t('navigation.profile')}
+          </MenuItem>
+          <MenuItem onClick={() => { navigate('/memory'); handleUserMenuClose(); }}>
+            <MemoryIcon sx={{ mr: 2 }} />
+            Minha Memória
           </MenuItem>
           <MenuItem onClick={handleLogout}>
             <LogoutIcon sx={{ mr: 2 }} />

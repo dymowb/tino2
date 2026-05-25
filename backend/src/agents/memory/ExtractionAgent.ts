@@ -3,6 +3,7 @@ import { deduper, SemanticCandidate, DedupResult } from '@/services/memory/Dedup
 import { scrubPii } from '@/services/memory/PiiScrubber';
 import { episodicWriter } from './EpisodicWriter';
 import { isMemoryEnabled } from '@/config/memoryDatabase';
+import { AppDataSource } from '@/config/database';
 import logger from '@/config/logger';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -102,6 +103,18 @@ export class ExtractionAgent {
   ): Promise<ExtractionResult> {
     if (!isMemoryEnabled()) {
       return { written: [], episodicSummary: '', episodicImportance: 0, piiDetected: false };
+    }
+
+    // Respect user opt-out — check before any extraction work
+    try {
+      const rows = await AppDataSource.query(`SELECT settings FROM users WHERE id = $1`, [userId]);
+      if (rows[0]?.settings?.memoryOptOut === true) {
+        logger.info(`[ExtractionAgent] user=${userId} opted out — skipping extraction`);
+        return { written: [], episodicSummary: '', episodicImportance: 0, piiDetected: false };
+      }
+    } catch (err) {
+      // DB failure must not block the write path — proceed with extraction
+      logger.warn('[ExtractionAgent] opt-out check failed, proceeding with extraction', err);
     }
 
     const window = turns.slice(-this.maxTurns);
