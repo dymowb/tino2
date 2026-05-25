@@ -31,6 +31,8 @@ import logger from '../config/logger';
 export interface VerificationAgentInput {
   requirements: RequirementsAgentOutput;
   recommendations: Recommendation[];
+  /** Formatted <constraints> block from active procedural rules */
+  constraintContext?: string;
 }
 
 export interface VerificationAgentOutput {
@@ -123,9 +125,13 @@ Rules:
       `Customer Requirements:\n${reqSummary}\n\nRecommendations:\n${recsSummary}`;
 
     // ── Race Claude against timeout ───────────────────────────────────
+    const systemPrompt = input.constraintContext
+      ? `${input.constraintContext}\n\n${this.metadata.systemPrompt}`
+      : this.metadata.systemPrompt;
+
     const claudeCall = anthropicService.callClaude({
       model: ClaudeModel.HAIKU,
-      systemPrompt: this.metadata.systemPrompt,
+      systemPrompt,
       userMessage,
       maxTokens: this.metadata.maxTokens,
       temperature: this.metadata.temperature,

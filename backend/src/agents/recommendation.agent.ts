@@ -44,6 +44,9 @@ export interface RecommendationAgentInput {
 
   /** Full requirements — used to explain WHY a provider fits the user's needs */
   requirements: RequirementsAgentOutput;
+
+  /** Formatted <constraints> block from active procedural rules */
+  constraintContext?: string;
 }
 
 /**
@@ -155,9 +158,13 @@ Rules:
 
     // TODO 5.2c: Call Claude (same pattern as analysis agent).
     // Use this.metadata.model, this.metadata.systemPrompt, etc.
+    const systemPrompt = input.constraintContext
+      ? `${input.constraintContext}\n\n${this.metadata.systemPrompt}`
+      : this.metadata.systemPrompt;
+
     const response = await anthropicService.callClaude({
       model: ClaudeModel.SONNET,
-      systemPrompt: this.metadata.systemPrompt,
+      systemPrompt,
       userMessage,
       maxTokens: this.metadata.maxTokens,
       temperature: this.metadata.temperature,

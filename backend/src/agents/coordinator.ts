@@ -134,12 +134,18 @@ export class CoordinatorAgent {
         workflowId,
       );
       const memoryBlock = contextInjector.format(memories);
-      if (memoryBlock) {
-        await workflowStateService.updateContext(workflowId, { memoryContext: memoryBlock });
-        logger.info(`[Coordinator] Memory injected for workflow ${workflowId}: ${memories.semantic.length}s ${memories.episodic.length}e ${memories.procedural.length}p`);
-      } else {
-        logger.warn(`[Coordinator] No memory context for workflow ${workflowId} (hasAny=${memories.hasAny})`);
+      const constraintBlock = contextInjector.formatConstraints(memories.procedural);
+      const contextPatch: { memoryContext?: string; constraintContext?: string } = {};
+      if (memoryBlock) contextPatch.memoryContext = memoryBlock;
+      if (constraintBlock) contextPatch.constraintContext = constraintBlock;
+      if (Object.keys(contextPatch).length > 0) {
+        await workflowStateService.updateContext(workflowId, contextPatch);
       }
+      logger.info(
+        `[Coordinator] Memory for workflow ${workflowId}: ` +
+        `${memories.semantic.length}s ${memories.episodic.length}e ${memories.procedural.length}p ` +
+        `(constraints=${constraintBlock ? 'yes' : 'no'})`,
+      );
 
       // Execute agents in sequence until done
       let iterations = 0;
@@ -389,36 +395,36 @@ export class CoordinatorAgent {
           })),
           conversationMessages: workflow.context.conversationMessages,
           memoryContext: workflow.context.memoryContext,
+          constraintContext: workflow.context.constraintContext,
         };
 
       case 'search':
-        // Search agent needs the gathered requirements
         return {
           requirements: workflow.context.requirements?.requirementsSummary || null,
-          workflowId: workflow.id, // Pass workflow ID for potential database access
-          userId: workflow.userId, // Pass user ID for personalized search
+          workflowId: workflow.id,
+          userId: workflow.userId,
         };
 
       case 'analysis':
-        // Analysis agent needs search results
         return {
           providers: workflow.context.searchResults,
           requirements: workflow.context.requirements,
+          constraintContext: workflow.context.constraintContext,
         };
 
       case 'recommendation':
-        // Recommendation agent needs search results + analysis + requirements
         return {
           providers: workflow.context.searchResults,
           analysisResults: workflow.context.analysisResults,
           requirements: workflow.context.requirements,
+          constraintContext: workflow.context.constraintContext,
         };
 
       case 'verification':
-        // Verification agent needs recommendations
         return {
           recommendations: workflow.context.recommendations,
           requirements: workflow.context.requirements,
+          constraintContext: workflow.context.constraintContext,
         };
 
       default:

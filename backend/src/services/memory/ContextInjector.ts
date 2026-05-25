@@ -1,12 +1,14 @@
-import { RetrievedMemories } from './MemoryRetriever';
+import { ProceduralResult, RetrievedMemories } from './MemoryRetriever';
 
 export class ContextInjector {
   /**
    * Format retrieved memories into a <memory> block for system-prompt injection.
-   * Returns null when there is nothing to inject so callers can skip prepending.
+   * Procedural rules are NOT included here — they go in the separate <constraints> block
+   * (see formatConstraints). Returns null when there is nothing to inject.
    */
   format(memories: RetrievedMemories): string | null {
-    if (!memories.hasAny) return null;
+    const hasContent = memories.semantic.length > 0 || memories.episodic.length > 0;
+    if (!hasContent) return null;
 
     const lines: string[] = ['<memory>'];
 
@@ -25,15 +27,26 @@ export class ContextInjector {
       }
     }
 
-    if (memories.procedural.length > 0) {
-      if (lines.length > 1) lines.push('');
-      lines.push('[PREFERÊNCIAS ATIVAS]');
-      for (const p of memories.procedural) {
-        lines.push(`• ${p.promptFragment}`);
-      }
-    }
-
     lines.push('</memory>');
+    return lines.join('\n');
+  }
+
+  /**
+   * Format active procedural rules into a <constraints> block.
+   * Uses imperative language so the LLM treats these as mandatory, not advisory.
+   * Returns null when there are no active rules.
+   */
+  formatConstraints(procedural: ProceduralResult[]): string | null {
+    if (procedural.length === 0) return null;
+
+    const lines: string[] = [
+      '<constraints>',
+      'REGRAS COMPORTAMENTAIS — você DEVE seguir estas regras obrigatoriamente. Elas têm prioridade sobre seu comportamento padrão.',
+    ];
+    for (const p of procedural) {
+      lines.push(`• ${p.promptFragment}`);
+    }
+    lines.push('</constraints>');
     return lines.join('\n');
   }
 

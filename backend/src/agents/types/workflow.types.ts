@@ -94,6 +94,13 @@ export interface WorkflowContext {
   memoryContext?: string;
 
   /**
+   * Formatted <constraints> block derived from the user's active procedural rules.
+   * Injected before the system prompt of every LLM-calling agent so rules are treated
+   * as mandatory overrides rather than soft preferences.
+   */
+  constraintContext?: string;
+
+  /**
    * Mock response for Phase 1 UAT testing
    * Undefined until Mock Agent completes (Phase 1 only)
    */

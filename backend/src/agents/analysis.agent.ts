@@ -37,6 +37,9 @@ export interface AnalysisAgentInput {
 
   /** Full requirements output for context */
   requirements: RequirementsAgentOutput;
+
+  /** Formatted <constraints> block from active procedural rules */
+  constraintContext?: string;
 }
 
 /**
@@ -275,9 +278,13 @@ Return a JSON array of analysis objects.`,
           `Booking History: ${JSON.stringify(ep.bookingHistory, null, 2)}\n`
       )).join('\n\n')}`
 
+    const systemPrompt = input.constraintContext
+      ? `${input.constraintContext}\n\n${this.metadata.systemPrompt}`
+      : this.metadata.systemPrompt;
+
     const response = await anthropicService.callClaude({
       model: ClaudeModel.HAIKU,
-      systemPrompt: this.metadata.systemPrompt,
+      systemPrompt,
       userMessage,
       maxTokens: this.metadata.maxTokens,
       temperature: this.metadata.temperature,

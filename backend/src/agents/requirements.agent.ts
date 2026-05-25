@@ -40,6 +40,8 @@ export interface RequirementsAgentInput {
   }>;
   /** Formatted <memory> block from ContextInjector, prepended to system prompt when present */
   memoryContext?: string;
+  /** Formatted <constraints> block from active procedural rules — takes precedence over defaults */
+  constraintContext?: string;
   currentTurn?: number;
 }
 
@@ -183,12 +185,14 @@ Analyze the conversation and respond with JSON following the format specified in
       let totalTokensUsed = 0;
       let finalExecutionTimeMs = 0;
       while (iterationCount < MAX_REFLECTION_ITERATIONS) {
-        const systemPrompt = input.memoryContext
-          ? `${input.memoryContext}\n\n${this.buildSystemPrompt()}`
-          : this.metadata.systemPrompt;
+        // Layer order: constraints (mandatory) → memory (informational) → base instructions
+        let systemPrompt = this.buildSystemPrompt();
+        if (input.memoryContext) systemPrompt = `${input.memoryContext}\n\n${systemPrompt}`;
+        if (input.constraintContext) systemPrompt = `${input.constraintContext}\n\n${systemPrompt}`;
 
-        if (input.memoryContext && iterationCount === 0) {
-          logger.info(`[RequirementsAgent] Memory injected into system prompt:\n${input.memoryContext}`);
+        if (iterationCount === 0) {
+          if (input.constraintContext) logger.info(`[RequirementsAgent] Constraints injected:\n${input.constraintContext}`);
+          if (input.memoryContext) logger.info(`[RequirementsAgent] Memory injected:\n${input.memoryContext}`);
         }
 
         const response = await anthropicService.callClaude({
