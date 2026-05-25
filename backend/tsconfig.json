@@ -21,6 +21,7 @@
     "noImplicitReturns": false,
     "noFallthroughCasesInSwitch": true,
     "strictPropertyInitialization": false,
+    "noEmitOnError": false,
     "moduleResolution": "node",
     "baseUrl": "./src",
     "paths": {
@@ -43,7 +44,10 @@
   "exclude": [
     "node_modules",
     "dist",
-    "tests"
+    "tests",
+    "src/tests",
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts"
   ],
   "ts-node": {
     "require": ["tsconfig-paths/register"]

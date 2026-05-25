@@ -2,7 +2,7 @@ import 'reflect-metadata';
 require('../module-alias');
 import dotenv from 'dotenv';
 
-dotenv.config();
+dotenv.config({ path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env' });
 
 import * as Sentry from '@sentry/node';
 if (process.env.SENTRY_DSN) {
