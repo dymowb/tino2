@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import * as Sentry from '@sentry/node';
 import express from 'express';
 import morgan from 'morgan';
+import path from 'path';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import { createServer } from 'http';
@@ -134,12 +135,16 @@ export class App {
     this.app.use(`/api/${config.server.apiVersion}/memory`, memoryRoutes);
     this.app.use(`/api/${config.server.apiVersion}/admin`, adminRoutes);
 
-    this.app.all('*', (req, res) => {
-      res.status(404).json({
-        success: false,
-        error: 'Route not found',
+    if (process.env.NODE_ENV === 'production') {
+      // Serve React build; __dirname is dist/ so ../../frontend/build reaches the repo root
+      const buildDir = path.join(__dirname, '../../frontend/build');
+      this.app.use(express.static(buildDir));
+      this.app.get('*', (_req, res) => res.sendFile(path.join(buildDir, 'index.html')));
+    } else {
+      this.app.all('*', (_req, res) => {
+        res.status(404).json({ success: false, error: 'Route not found' });
       });
-    });
+    }
   }
 
   private initializeErrorHandling(): void {
