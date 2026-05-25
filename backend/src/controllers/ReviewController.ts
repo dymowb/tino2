@@ -8,6 +8,11 @@ import {
   AuthenticatedRequest
 } from '../types';
 import { reviewResponseAgent } from '../agents/review-response.agent';
+import { memoryRetriever } from '../services/memory/MemoryRetriever';
+import { contextInjector } from '../services/memory/ContextInjector';
+import { extractionAgent, ConversationTurn } from '../agents/memory/ExtractionAgent';
+import { isMemoryEnabled } from '../config/memoryDatabase';
+import logger from '../config/logger';
 
 class ReviewController {
   private reviewService: ReviewService;
@@ -124,6 +129,17 @@ class ReviewController {
         data: review,
         message: 'Response added successfully'
       });
+
+      // Fire-and-forget: extract provider communication style from this review+response pair
+      if (isMemoryEnabled()) {
+        const turns: ConversationTurn[] = [
+          { role: 'user', content: `Review (${review.rating} stars): "${review.comment || ''}"` },
+          { role: 'agent', content: response },
+        ];
+        extractionAgent.extractAndWrite(turns, providerId, `review-response-${id}`, 'provider').catch(err => {
+          logger.error('[ReviewController] provider memory extraction failed', err);
+        });
+      }
     } catch (error) {
       res.status(400).json({
         success: false,
@@ -135,6 +151,7 @@ class ReviewController {
   draftReviewResponse = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
+      const providerId = req.user!.userId;
 
       const review = await this.reviewService.getReviewById(id);
       if (!review) {
@@ -142,10 +159,29 @@ class ReviewController {
         return;
       }
 
+      // Retrieve provider's memory to personalise the draft tone/style
+      let memoryContext: string | undefined;
+      let constraintContext: string | undefined;
+      if (isMemoryEnabled()) {
+        try {
+          const memories = await memoryRetriever.retrieve(
+            `resposta a avaliação ${review.rating} estrelas sobre ${review.booking?.serviceType || 'serviço'}`,
+            providerId,
+            `review-draft-${id}`,
+          );
+          memoryContext = contextInjector.format(memories) ?? undefined;
+          constraintContext = contextInjector.formatConstraints(memories.procedural) ?? undefined;
+        } catch (err) {
+          logger.warn('[ReviewController] memory retrieval failed for draft — proceeding without', err);
+        }
+      }
+
       const draft = await reviewResponseAgent.execute({
         reviewText: review.comment || '',
         rating: Number(review.rating),
         serviceName: review.booking?.serviceType?.replace(/_/g, ' ') || 'Home Service',
+        memoryContext,
+        constraintContext,
       });
 
       res.json({ success: true, data: draft });

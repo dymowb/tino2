@@ -7,6 +7,8 @@ export interface ReviewDraftInput {
   reviewText: string;
   rating: number;      // 1–5
   serviceName: string;
+  memoryContext?: string;
+  constraintContext?: string;
 }
 
 export interface ReviewDraftOutput {
@@ -84,9 +86,13 @@ async execute(input: ReviewDraftInput): Promise<ReviewDraftOutput> {
     //
     const userMessage = `Review (${input.rating} stars): "${input.reviewText}"\nService: ${input.serviceName}`;
 
+    let systemPrompt = this.systemPrompt;
+    if (input.memoryContext) systemPrompt = `${input.memoryContext}\n\n${systemPrompt}`;
+    if (input.constraintContext) systemPrompt = `${input.constraintContext}\n\n${systemPrompt}`;
+
     const response = await anthropicService.callClaude({
     model: ClaudeModel.SONNET,
-    systemPrompt: this.systemPrompt,
+    systemPrompt,
     userMessage,
     maxTokens: 300,
     temperature: 0.7,

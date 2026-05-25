@@ -39,7 +39,7 @@ export interface ExtractionResult {
 // constrained. The prompt uses few-shot examples (correct + incorrect pattern)
 // and an explicit confidence rubric to calibrate outputs.
 
-const SYSTEM_PROMPT = `You are a memory extraction agent for a domestic-service platform (Tino). Your job is to read a conversation between a user and an AI assistant, then extract durable facts worth remembering for future sessions.
+const CUSTOMER_SYSTEM_PROMPT = `You are a memory extraction agent for a domestic-service platform (Tino). Your job is to read a conversation between a user and an AI assistant, then extract durable facts worth remembering for future sessions.
 
 Output ONLY valid JSON matching this schema exactly:
 {
@@ -89,6 +89,51 @@ Conversation: "User: Preciso de uma faxineira para o meu apartamento em Lagoa. T
 - "Assistant recommended Maria Santos" — fact about assistant, not user
 - "User wants cleaning this Saturday" — session-specific, not durable`;
 
+const PROVIDER_SYSTEM_PROMPT = `You are a memory extraction agent for a domestic-service platform (Tino). Your job is to read a service provider's interaction (a customer review + the provider's written response), then extract durable facts about the PROVIDER'S communication style and service patterns worth remembering for future AI-drafted responses.
+
+Output ONLY valid JSON matching this schema exactly:
+{
+  "semantic_facts": [
+    { "content": string, "confidence": number, "importance": number }
+  ],
+  "episodic_summary": string,
+  "episodic_importance": number
+}
+
+## Confidence rubric
+- 0.9–1.0: Provider stated this explicitly in their response ("Temos 10 anos de experiência")
+- 0.7–0.89: Strongly implied by their writing style or word choice
+- 0.5–0.69: Reasonably inferred but uncertain
+- Below 0.5: Do not include
+
+## Importance rubric
+- 0.8–1.0: Core tone/style (formal vs informal, solution-focused vs apologetic)
+- 0.5–0.79: Useful patterns (phrases they reuse, how they handle negative reviews)
+- 0.3–0.49: Nice-to-have details
+- Below 0.3: Do not include
+
+## Rules
+- Facts must be about the PROVIDER, not the customer
+- Extract ATOMIC facts — one fact per entry, as short as possible
+- Focus on: communication tone, recurring phrases, how they handle criticism, what they emphasize (experience, quality, etc.)
+- Do NOT extract session-specific facts ("responded to Ana's review")
+- Do NOT extract customer facts or review content
+- episodic_summary: 1–2 sentences, past-tense. What kind of review did they respond to? What tone did they use?
+- episodic_importance: 0–1, higher if a strong style signal emerged
+
+## Example — good output
+Review (2 stars): "A faxineira não limpou o banheiro direito."
+Provider response: "Olá! Pedimos sinceras desculpas pela experiência. Nossa equipe preza pela qualidade e vamos retornar para refazer o serviço gratuitamente."
+{
+  "semantic_facts": [
+    { "content": "Provider uses formal Portuguese in responses (Olá, pedimos desculpas)", "confidence": 0.9, "importance": 0.85 },
+    { "content": "Provider offers to redo unsatisfactory work at no charge", "confidence": 0.95, "importance": 0.8 },
+    { "content": "Provider emphasizes quality as a core value", "confidence": 0.8, "importance": 0.7 }
+  ],
+  "episodic_summary": "Provider responded to a 2-star complaint about incomplete cleaning. Used formal, apologetic tone and offered a free redo.",
+  "episodic_importance": 0.65
+}`;
+
 // ── Agent ─────────────────────────────────────────────────────────────────────
 
 export class ExtractionAgent {
@@ -100,6 +145,7 @@ export class ExtractionAgent {
     turns: ConversationTurn[],
     userId: string,
     workflowId: string,
+    role: 'customer' | 'provider' = 'customer',
   ): Promise<ExtractionResult> {
     if (!isMemoryEnabled()) {
       return { written: [], episodicSummary: '', episodicImportance: 0, piiDetected: false };
@@ -129,7 +175,7 @@ export class ExtractionAgent {
     // ── Step 1: LLM extraction ─────────────────────────────────────────────
     let llmOutput: ExtractionLLMOutput;
     try {
-      llmOutput = await this.callLlm(conversationText, workflowId);
+      llmOutput = await this.callLlm(conversationText, workflowId, role);
     } catch (err) {
       logger.error(`[ExtractionAgent] LLM extraction failed for user ${userId}`, err);
       return { written: [], episodicSummary: '', episodicImportance: 0, piiDetected: false };
@@ -190,10 +236,11 @@ export class ExtractionAgent {
     };
   }
 
-  private async callLlm(conversationText: string, workflowId: string): Promise<ExtractionLLMOutput> {
+  private async callLlm(conversationText: string, workflowId: string, role: 'customer' | 'provider' = 'customer'): Promise<ExtractionLLMOutput> {
+    const systemPrompt = role === 'provider' ? PROVIDER_SYSTEM_PROMPT : CUSTOMER_SYSTEM_PROMPT;
     const response = await anthropicService.callClaude({
       model: ClaudeModel.HAIKU,
-      systemPrompt: SYSTEM_PROMPT,
+      systemPrompt,
       userMessage: `Conversation to extract from:\n\n${conversationText}`,
       maxTokens: 800,
       temperature: 0,

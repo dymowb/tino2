@@ -1,9 +1,9 @@
 # Session Context - Current Work
 
-## CURRENT SESSION: Post-Phase 24 — Booking Flow E2E + Bug Fixes (Round 2)
-**Date**: 2026-05-24
-**Goal**: Complete booking creation + escrow E2E test; fix remaining regressions
-**Status**: ✅ Booking creation fixed ✅ Provider accept fixed ✅ Stripe hang fixed ✅ Reviews E2E tested ✅ Carina booking verified
+## CURRENT SESSION: Agentic Memory — All Phases Complete (6–9)
+**Date**: 2026-05-25
+**Goal**: Agentic memory phases 6–9
+**Status**: ✅ Phase 6 ✅ Phase 7 ✅ Phase 8 ✅ Phase 9 — all done
 
 ---
 
@@ -42,7 +42,66 @@ Any field typed as `numeric(p,s)` or `decimal` in the DB comes back as a string 
 
 ### Phase 24 Agentic Memory — Phase 5 done (previous session)
 - Reflection job complete, procedural rules auto-approved at conf ≥ 0.85
-- Next phases: Phase 6 (wire procedural rules into requirements agent), Phase 7 (UI to view/edit memories)
+
+### Agentic Memory — Phase status
+| Phase | Feature | Status |
+|-------|---------|--------|
+| 1 | Schema + infra (pgvector, entities, DataSource) | ✅ Done |
+| 2 | Semantic write path (ExtractionAgent, Deduper, PiiScrubber) | ✅ Done |
+| 3 | Semantic read path (MemoryRetriever, ContextInjector) | ✅ Done |
+| 4 | Episodic memory | ✅ Done |
+| 5 | Reflection job (procedural rule derivation) | ✅ Done |
+| 6 | Wire procedural rules as constraints into all agents | ✅ Done (2026-05-25) |
+| 7 | Memory UI — view & edit | ✅ Done (2026-05-25) |
+| 8 | Evaluation framework | ✅ Done (2026-05-25) |
+| 9 | Extend memory to providers | — |
+
+### Phase 6 — Implementation notes (2026-05-25)
+- `ContextInjector.formatConstraints()` produces a `<constraints>` block with imperative Portuguese phrasing — distinct from the advisory `<memory>` block
+- `WorkflowContext.constraintContext` stores it independently alongside `memoryContext`
+- System prompt layer order: `<constraints>` → `<memory>` → base instructions (highest priority first)
+- Search agent excluded: its LLM call maps catalog names, not provider behaviour
+- All 4 LLM-calling agents (requirements, analysis, recommendation, verification) receive `constraintContext` via `prepareAgentInput()`
+
+### Phase 7 — Done (2026-05-25)
+- `/memory` page: three sections — Regras ativas / O que sabemos / Histórico de sessões
+- Delete any memory (soft-delete: is_active=FALSE or status='deprecated')
+- Opt-out toggle: sets user.settings.memoryOptOut=true + immediately deactivates all memories
+- ExtractionAgent skips write when opted out; retriever naturally returns empty (is_active=FALSE)
+- "Minha Memória" added to avatar dropdown in Navigation
+- apiService.patch() generic method added
+
+### Phase 8 — Next: Evaluation framework
+- Track memory hit rate, retrieval latency, dedup decisions over time
+- Add `/memory/stats` endpoint
+- Log recall precision against known facts (can seed test memories)
+
+---
+
+### Production Deployment — Plan (next session)
+**Goal**: deploy to a public URL for beta access.
+
+**Status check** (already done):
+- ✅ `synchronize: false` in database.ts — migrations in place (`src/migrations/1777158117672-InitialSchema.ts`)
+- ✅ CORS reads `ALLOWED_ORIGINS` env var
+- ✅ `validateConfig()` throws at startup for missing JWT/NODE_ENV
+- ✅ Auth rate limiting (10/15min in prod)
+- ✅ PM2 `ecosystem.config.js` exists
+- ✅ React `ErrorBoundary` wraps app
+
+**Remaining before deploy (in order):**
+1. **Frontend build + serving** — either `npm run build` → serve via Express static OR document nginx reverse-proxy config. Pick one.
+2. **Health check completeness** — current `/health` pings DB; add Redis + optional Stripe connectivity check.
+3. **Structured logging + correlation IDs** — add `X-Request-Id` header middleware; include request ID in all Winston log entries. Helps debug prod issues.
+4. **Environment setup** — provision hosting (recommendation: Railway for backend + Neon for PostgreSQL; Vercel for frontend). Set all env vars. Run `npm run migration:run`.
+5. **Stripe live keys** — configure real `STRIPE_SECRET_KEY` + customer payment method setup for escrow flow to work in prod.
+6. **Browserbase key rotation** — rotate the key that was accidentally committed (user action required in Browserbase dashboard).
+
+**Recommended hosting:**
+- Backend: Railway (Node.js, GitHub auto-deploy, add-ons for Postgres)
+- Frontend: Vercel (CRA, zero-config)
+- DB: Neon (serverless PostgreSQL, supports pgvector for memory system)
+- Redis: Upstash (serverless, free tier, no persistent connection needed)
 
 ---
 
