@@ -61,6 +61,7 @@ export class MemoryRetriever {
     if (!isMemoryEnabled() || !MemoryDataSource.isInitialized) return EMPTY_RESULT;
 
     try {
+      const t0 = Date.now();
       const embedding = await getEmbeddingProvider().embed(query);
       const pgEmbedding = formatEmbeddingForPg(embedding);
 
@@ -69,6 +70,7 @@ export class MemoryRetriever {
         this.fetchEpisodic(pgEmbedding, userId),
         this.fetchProcedural(userId),
       ]);
+      const latencyMs = Date.now() - t0;
 
       const result: RetrievedMemories = {
         semantic,
@@ -82,10 +84,10 @@ export class MemoryRetriever {
         .catch(err => logger.error('[MemoryRetriever] semantic access update failed', err));
       this.updateAccessStats(episodic.map(e => e.id), 'episodic_memories')
         .catch(err => logger.error('[MemoryRetriever] episodic access update failed', err));
-      this.logRetrieval(userId, query, pgEmbedding, result, workflowId)
+      this.logRetrieval(userId, query, pgEmbedding, result, workflowId, latencyMs)
         .catch(err => logger.error('[MemoryRetriever] retrieval log failed', err));
 
-      logger.debug(`[MemoryRetriever] query="${query.slice(0, 60)}" → ${semantic.length}s ${episodic.length}e ${procedural.length}p`);
+      logger.debug(`[MemoryRetriever] query="${query.slice(0, 60)}" → ${semantic.length}s ${episodic.length}e ${procedural.length}p latency=${latencyMs}ms`);
       return result;
     } catch (err) {
       // Memory failures must never break the main workflow
@@ -221,6 +223,7 @@ export class MemoryRetriever {
     queryEmbedding: string,
     result: RetrievedMemories,
     workflowId: string,
+    latencyMs: number,
   ): Promise<void> {
     const results = {
       semanticIds: result.semantic.map(s => s.id),
@@ -233,9 +236,9 @@ export class MemoryRetriever {
     };
     await MemoryDataSource.query(
       `INSERT INTO memory_retrieval_log
-              (user_id, query_text, query_embedding, memory_type, results, workflow_id)
-       VALUES ($1, $2, $3::vector, 'hybrid', $4, $5)`,
-      [userId, queryText, queryEmbedding, JSON.stringify(results), workflowId],
+              (user_id, query_text, query_embedding, memory_type, results, workflow_id, latency_ms)
+       VALUES ($1, $2, $3::vector, 'hybrid', $4, $5, $6)`,
+      [userId, queryText, queryEmbedding, JSON.stringify(results), workflowId, latencyMs],
     );
   }
 }

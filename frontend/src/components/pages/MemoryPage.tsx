@@ -19,12 +19,17 @@ import {
   DialogContentText,
   DialogActions,
   Button,
+  Collapse,
+  Grid,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import HistoryIcon from '@mui/icons-material/History';
 import RuleIcon from '@mui/icons-material/Rule';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '../../services/api';
 import toast from 'react-hot-toast';
@@ -64,6 +69,18 @@ interface MemoryData {
   procedural: ProceduralRule[];
   isOptedOut: boolean;
   memoryDisabled?: boolean;
+}
+
+interface MemoryStats {
+  counts: { semantic: number; episodic: number; procedural: number };
+  retrieval: {
+    totalQueries: number;
+    queriesWithHits: number;
+    hitRatePct: number;
+    avgLatencyMs: number | null;
+    p95LatencyMs: number | null;
+  };
+  writes: { created: number; merged: number; discarded: number };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -114,6 +131,7 @@ const SectionSkeleton = () => (
 const MemoryPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [deleteTarget, setDeleteTarget] = useState<{ type: string; id: string; label: string } | null>(null);
+  const [statsOpen, setStatsOpen] = useState(false);
 
   const { data, isLoading, isError } = useQuery<MemoryData>({
     queryKey: ['my-memories'],
@@ -121,6 +139,15 @@ const MemoryPage: React.FC = () => {
       const res = await apiService.get('/memory/me');
       return res.data.data as MemoryData;
     },
+  });
+
+  const { data: stats } = useQuery<MemoryStats>({
+    queryKey: ['my-memory-stats'],
+    queryFn: async () => {
+      const res = await apiService.get('/memory/stats/me');
+      return res.data.data as MemoryStats;
+    },
+    enabled: statsOpen,
   });
 
   const deleteMutation = useMutation({
@@ -217,6 +244,41 @@ const MemoryPage: React.FC = () => {
               sx={{ m: 0 }}
             />
           </Box>
+        </CardContent>
+      </Card>
+
+      {/* Stats panel */}
+      <Card variant="outlined" sx={{ mb: 3 }}>
+        <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+          <Box
+            sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }}
+            onClick={() => setStatsOpen(o => !o)}
+          >
+            <BarChartIcon fontSize="small" color="action" />
+            <Typography variant="subtitle2" sx={{ flex: 1 }}>Estatísticas (últimos 30 dias)</Typography>
+            {statsOpen ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+          </Box>
+          <Collapse in={statsOpen}>
+            <Box sx={{ mt: 2 }}>
+              {!stats ? (
+                <Grid container spacing={2}>
+                  {[0,1,2,3,4,5].map(i => <Grid item xs={6} sm={4} key={i}><Skeleton height={48} /></Grid>)}
+                </Grid>
+              ) : (
+                <Grid container spacing={2}>
+                  <StatCell label="Fatos salvos"     value={stats.counts.semantic} />
+                  <StatCell label="Sessões salvas"   value={stats.counts.episodic} />
+                  <StatCell label="Regras ativas"    value={stats.counts.procedural} />
+                  <StatCell label="Taxa de acerto"   value={`${stats.retrieval.hitRatePct}%`} />
+                  <StatCell label="Latência média"   value={stats.retrieval.avgLatencyMs != null ? `${stats.retrieval.avgLatencyMs}ms` : '—'} />
+                  <StatCell label="Latência p95"     value={stats.retrieval.p95LatencyMs != null ? `${stats.retrieval.p95LatencyMs}ms` : '—'} />
+                  <StatCell label="Criados"     value={stats.writes.created} color="success.main" />
+                  <StatCell label="Mesclados"   value={stats.writes.merged}  color="info.main" />
+                  <StatCell label="Descartados" value={stats.writes.discarded} color="text.disabled" />
+                </Grid>
+              )}
+            </Box>
+          </Collapse>
         </CardContent>
       </Card>
 
@@ -343,6 +405,25 @@ const Section: React.FC<SectionProps> = ({ icon, title, subtitle, tooltip, empty
     </Box>
   );
 };
+
+// ── Stat cell ─────────────────────────────────────────────────────────────────
+
+interface StatCellProps {
+  label: string;
+  value: string | number;
+  color?: string;
+}
+
+const StatCell: React.FC<StatCellProps> = ({ label, value, color }) => (
+  <Grid item xs={6} sm={4}>
+    <Box sx={{ textAlign: 'center', p: 1, borderRadius: 1, bgcolor: 'action.hover' }}>
+      <Typography variant="h6" fontWeight={700} sx={{ color: color ?? 'text.primary' }}>
+        {value}
+      </Typography>
+      <Typography variant="caption" color="text.secondary">{label}</Typography>
+    </Box>
+  </Grid>
+);
 
 // ── Single memory card ────────────────────────────────────────────────────────
 
