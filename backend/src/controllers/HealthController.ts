@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { AppDataSource } from '../config/database';
-import { createClient } from 'redis';
 import axios from 'axios';
 
 /**
@@ -292,6 +291,8 @@ export class HealthController {
     const startTime = Date.now();
 
     try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { createClient } = require('redis');
       const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
       const client = createClient({ url: redisUrl });
 

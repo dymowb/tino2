@@ -299,7 +299,7 @@ if (process.env.NODE_ENV === 'production' && !process.env.REACT_APP_API_URL) {
 
 class ApiService {
   private api: AxiosInstance;
-  private baseURL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api/v1';
+  private baseURL = process.env.REACT_APP_API_URL || '/api/v1';
 
   constructor() {
     this.api = axios.create({

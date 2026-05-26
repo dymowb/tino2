@@ -31,11 +31,16 @@ echo "→ Building backend..."
 cd $BACKEND
 npm run build 2>&1 | grep -E "^src.*error TS" | grep -v "test\|spec" || true
 
+# 3b. Build frontend (bakes relative API URL via .env.production)
+echo "→ Building frontend..."
+cd $REPO/frontend
+npm run build 2>&1 | tail -5
+
 # 4. Clear port 3000 (dev server may be running) and stop old PM2 instance
 echo "→ Starting backend under PM2..."
 fuser -k 3000/tcp 2>/dev/null || true
 pm2 delete tino-backend 2>/dev/null || true
-pm2 start ecosystem.config.js --env production
+pm2 start $BACKEND/ecosystem.config.js --env production
 pm2 save
 
 # Register PM2 to restart on boot (extracts and runs the sudo command)

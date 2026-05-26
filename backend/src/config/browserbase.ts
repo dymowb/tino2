@@ -37,7 +37,7 @@ export class BrowserbaseManager {
 
       const sessionData: BrowserbaseSession = {
         id: session.id,
-        connectUrl: session.debuggerFullscreenUrl || session.id, // Fallback to ID if no URL
+        connectUrl: (session as any).debuggerFullscreenUrl || session.id,
         status: session.status as 'RUNNING' | 'COMPLETED' | 'ERROR',
         createdAt: new Date(session.createdAt),
       };
@@ -58,7 +58,7 @@ export class BrowserbaseManager {
       
       const sessionData: BrowserbaseSession = {
         id: session.id,
-        connectUrl: session.debuggerFullscreenUrl || session.id, // Fallback to ID if no URL
+        connectUrl: (session as any).debuggerFullscreenUrl || session.id,
         status: session.status as 'RUNNING' | 'COMPLETED' | 'ERROR',
         createdAt: new Date(session.createdAt),
       };
@@ -103,7 +103,7 @@ export class BrowserbaseManager {
         if (session.status === 'RUNNING') {
           this.activeSessions.set(session.id, {
             id: session.id,
-            connectUrl: session.debuggerFullscreenUrl || session.id, // Fallback to ID if no URL
+            connectUrl: (session as any).debuggerFullscreenUrl || session.id,
             status: session.status as 'RUNNING' | 'COMPLETED' | 'ERROR',
             createdAt: new Date(session.createdAt),
           });

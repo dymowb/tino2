@@ -75,31 +75,6 @@ export class App {
   }
 
   private initializeRoutes(): void {
-    // Welcome page
-    this.app.get('/', (req, res) => {
-      res.json({
-        success: true,
-        message: 'Tino 2 Domestic Service API',
-        version: config.server.apiVersion,
-        environment: config.server.nodeEnv,
-        endpoints: {
-          health: '/health',
-          auth: `/api/${config.server.apiVersion}/auth`,
-          users: `/api/${config.server.apiVersion}/users`,
-          providers: `/api/${config.server.apiVersion}/providers`,
-          bookings: `/api/${config.server.apiVersion}/bookings`,
-          quotes: `/api/${config.server.apiVersion}/quotes`,
-          messages: `/api/${config.server.apiVersion}/messages`,
-          browser: `/api/${config.server.apiVersion}/browser`,
-          payments: `/api/${config.server.apiVersion}/payments`,
-          reviews: `/api/${config.server.apiVersion}/reviews`,
-          locations: `/api/${config.server.apiVersion}/locations`,
-          agenticAssistant: `/api/${config.server.apiVersion}/agentic-assistant`,
-          admin: `/api/${config.server.apiVersion}/admin`,
-        },
-        documentation: 'Available endpoints listed above',
-      });
-    });
 
     this.app.get('/health', async (req, res) => {
       const health: Record<string, any> = {

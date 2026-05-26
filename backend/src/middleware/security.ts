@@ -21,29 +21,38 @@ export const securityMiddleware = [
       directives: {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"],
+        scriptSrc: ["'self'", 'https://js.stripe.com'],
         imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'"],
+        connectSrc: ["'self'", 'https://api.stripe.com'],
         fontSrc: ["'self'"],
         objectSrc: ["'none'"],
         mediaSrc: ["'self'"],
-        frameSrc: ["'none'"],
+        frameSrc: ['https://js.stripe.com', 'https://hooks.stripe.com'],
       },
     },
     crossOriginEmbedderPolicy: false,
   }),
 
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
+  cors((req, callback) => {
+    const origin = req.headers.origin;
+    if (!origin) {
+      callback(null, { origin: true, credentials: true });
+      return;
+    }
+    // Allow same-host requests (covers tunnel URLs automatically)
+    try {
+      const originHost = new URL(origin).host;
+      if (originHost === req.headers.host) {
+        callback(null, { origin: true, credentials: true });
+        return;
       }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-API-Key'],
+    } catch (_) { /* invalid origin URL */ }
+    // Allow explicitly configured origins
+    if (allowedOrigins.includes(origin)) {
+      callback(null, { origin: true, credentials: true });
+      return;
+    }
+    callback(new Error('Not allowed by CORS'));
   }),
 ];
 

@@ -368,7 +368,7 @@ export class ProviderController {
       }
 
       const provider = await providerService.updateProviderByUserId(userId, {
-        availableHours: parsed.data,
+        availableHours: parsed.data as any,
       });
 
       const response: ApiResponse = { success: true, data: provider.availableHours };

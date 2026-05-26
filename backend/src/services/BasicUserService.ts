@@ -81,8 +81,9 @@ export class BasicUserService {
 
       const { accessToken, refreshToken } = await jwtService.generateTokens({
         userId: user.id,
+        id: user.id,
         email: user.email,
-        userType: user.userType,
+        userType: user.userType as 'customer' | 'provider' | 'admin',
       });
 
       // Remove password from user object
@@ -115,8 +116,9 @@ export class BasicUserService {
 
       const { accessToken, refreshToken } = await jwtService.generateTokens({
         userId: user.id,
+        id: user.id,
         email: user.email,
-        userType: user.userType,
+        userType: user.userType as 'customer' | 'provider' | 'admin',
       });
 
       return {

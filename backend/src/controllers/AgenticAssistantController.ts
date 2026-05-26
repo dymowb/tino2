@@ -127,7 +127,7 @@ Write 2-3 warm, direct sentences introducing the top recommendation and what mak
 Do NOT list all providers. Do NOT use markdown.
 
 Customer needs: ${JSON.stringify(requirements.requirementsSummary)}
-Top recommendation: ${topRec.provider.name ?? topRec.provider.providerId} — ${topRec.reasoning}`;
+Top recommendation: ${topRec.provider.businessName ?? topRec.provider.providerId} — ${topRec.reasoning}`;
 
         for await (const chunk of anthropicService.stream({
           model: ClaudeModel.HAIKU,

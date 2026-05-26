@@ -32,7 +32,7 @@ export class QuoteService {
     try {
       // Verify customer exists
       const customer = await this.userRepository.findOne({
-        where: { id: customerId, userType: 'customer', isActive: true },
+        where: { id: customerId, userType: 'customer' as any, isActive: true },
       });
 
       if (!customer) {
@@ -51,7 +51,7 @@ export class QuoteService {
         preferredDate: requestData.preferredDate,
         budget: requestData.budget,
         images: requestData.images || [],
-        urgency: requestData.urgency || UrgencyLevel.MEDIUM,
+        urgency: (requestData.urgency as UrgencyLevel) || UrgencyLevel.MEDIUM,
         requirements: requestData.requirements || [],
         availability: requestData.availability || [],
         searchRadius: requestData.searchRadius || 25.0,
@@ -59,7 +59,7 @@ export class QuoteService {
         status: QuoteRequestStatus.OPEN,
       });
 
-      const savedRequest = await this.quoteRequestRepository.save(quoteRequest);
+      const savedRequest = await this.quoteRequestRepository.save(quoteRequest) as QuoteRequest;
       logger.info('Quote request created', { 
         quoteRequestId: savedRequest.id, 
         customerId, 

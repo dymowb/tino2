@@ -713,12 +713,12 @@ export class QuoteController {
       const sortBy = (req.query.sortBy as string) || 'price';
       const sortOrder = (req.query.sortOrder as string) || 'asc';
 
-      const query = {
+      const query: import('@/types').QuoteSearchQuery = {
         requestId,
         page,
         limit,
-        sortBy,
-        sortOrder,
+        sortBy: sortBy as 'price' | 'date' | 'created',
+        sortOrder: sortOrder as 'asc' | 'desc',
       };
 
       // If user is a customer, ensure they can only see quotes for their requests

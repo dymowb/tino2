@@ -232,23 +232,13 @@ class PaymentController {
 
     } catch (error) {
       logger.error('Error confirming payment:', error);
-      
-      if (error.message === 'Payment not found') {
-        res.status(404).json({
-          success: false,
-          error: error.message
-        });
-      } else if (error.message.includes('Unauthorized')) {
-        res.status(403).json({
-          success: false,
-          error: error.message
-        });
+      const errMsg = error instanceof Error ? error.message : 'Unknown error';
+      if (errMsg === 'Payment not found') {
+        res.status(404).json({ success: false, error: errMsg });
+      } else if (errMsg.includes('Unauthorized')) {
+        res.status(403).json({ success: false, error: errMsg });
       } else {
-        const errorMessage = getStripeErrorMessage(error);
-        res.status(500).json({
-          success: false,
-          error: errorMessage
-        });
+        res.status(500).json({ success: false, error: getStripeErrorMessage(error) });
       }
     }
   }
@@ -278,27 +268,17 @@ class PaymentController {
 
     } catch (error) {
       logger.error('Error processing refund:', error);
-      
-      if (error.message === 'Payment not found') {
-        res.status(404).json({
-          success: false,
-          error: error.message
-        });
-      } else if (error.message.includes('Unauthorized') || error.message.includes('only refund')) {
-        res.status(403).json({
-          success: false,
-          error: error.message
-        });
-      } else if (error.message.includes('Can only refund') || error.message.includes('already refunded')) {
-        res.status(400).json({
-          success: false,
-          error: error.message
-        });
+      const errMsg = error instanceof Error ? error.message : 'Unknown error';
+      if (errMsg === 'Payment not found') {
+        res.status(404).json({ success: false, error: errMsg });
+      } else if (errMsg.includes('Unauthorized') || errMsg.includes('only refund')) {
+        res.status(403).json({ success: false, error: errMsg });
+      } else if (errMsg.includes('Can only refund') || errMsg.includes('already refunded')) {
+        res.status(400).json({ success: false, error: errMsg });
       } else {
-        const errorMessage = getStripeErrorMessage(error);
         res.status(500).json({
           success: false,
-          error: errorMessage
+          error: getStripeErrorMessage(error)
         });
       }
     }

@@ -157,7 +157,7 @@ export interface ApiResponse<T = any> {
   data?: T;
   message?: string;
   error?: string;
-  errors?: Record<string, string[]>;
+  errors?: any;
 }
 
 export interface PaginationParams {

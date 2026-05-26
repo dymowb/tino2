@@ -384,7 +384,7 @@ export class ProviderSearchService {
     availability: { date: Date; startTime: string; endTime: string }
   ): Promise<boolean> {
     try {
-      const dayOfWeek = availability.date.toLocaleDateString('en-US', { weekday: 'lowercase' }) as keyof typeof provider.availableHours;
+      const dayOfWeek = availability.date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase() as keyof typeof provider.availableHours;
       const providerHours = provider.availableHours[dayOfWeek];
 
       if (!providerHours || !providerHours.available) {

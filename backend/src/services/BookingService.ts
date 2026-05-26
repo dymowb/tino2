@@ -1,7 +1,7 @@
 import { Repository } from 'typeorm';
 import { AppDataSource } from '@/config/database';
-import { Booking } from '@/models/Booking';
-import { User } from '@/models/User';
+import { Booking, BookingStatus } from '@/models/Booking';
+import { User, UserType } from '@/models/User';
 import { Provider } from '@/models/Provider';
 import logger from '@/config/logger';
 import notificationService from '@/services/NotificationService';
@@ -62,7 +62,7 @@ export class BookingService {
     try {
       // Verify customer exists
       const customer = await this.userRepository.findOne({
-        where: { id: customerId, userType: 'customer' },
+        where: { id: customerId, userType: UserType.CUSTOMER },
       });
 
       if (!customer) {
@@ -103,12 +103,12 @@ export class BookingService {
         scheduledDate: bookingData.scheduledDate,
         estimatedDuration: bookingData.estimatedDuration,
         totalAmount: estimatedCost,
-        status: 'pending',
-        paymentStatus: 'pending',
+        status: BookingStatus.PENDING,
+        paymentStatus: 'pending' as any,
         specialInstructions: bookingData.specialInstructions,
       });
 
-      const savedBooking = await this.bookingRepository.save(booking);
+      const savedBooking = await this.bookingRepository.save(booking) as Booking;
       logger.info(`Booking created`, { bookingId: savedBooking.id, customerId, providerId: bookingData.providerId });
 
       // Notify provider of new booking request
@@ -237,7 +237,7 @@ export class BookingService {
         throw new Error(`Invalid status transition from ${booking.status} to ${newStatus} for ${userRole}`);
       }
 
-      booking.status = newStatus;
+      booking.status = newStatus as BookingStatus;
       booking.updatedAt = new Date();
 
       // Set completion date if booking is completed
@@ -375,10 +375,9 @@ export class BookingService {
         throw new Error('Access denied');
       }
 
-      booking.status = 'cancelled';
+      booking.status = BookingStatus.CANCELLED;
       booking.updatedAt = new Date();
       booking.cancelledAt = new Date();
-      booking.cancelledBy = userRole;
 
       const cancelledBooking = await this.bookingRepository.save(booking);
       logger.info(`Booking cancelled`, { bookingId, userId, userRole });

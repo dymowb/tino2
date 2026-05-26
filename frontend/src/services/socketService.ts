@@ -40,7 +40,11 @@ interface ConversationData {
 
 class SocketService {
   private socket: Socket | null = null;
-  private baseURL = new URL(process.env.REACT_APP_API_URL || 'http://localhost:3000').origin;
+  private baseURL = (() => {
+    const apiUrl = process.env.REACT_APP_API_URL;
+    if (!apiUrl) return window.location.origin;
+    try { return new URL(apiUrl).origin; } catch { return window.location.origin; }
+  })();
   private messageHandlers: Map<string, (data: MessageData) => void> = new Map();
   private conversationHandlers: Map<string, (data: ConversationData) => void> = new Map();
   private notificationHandlers: Map<string, (data: any) => void> = new Map();

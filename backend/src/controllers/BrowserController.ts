@@ -26,7 +26,6 @@ export class BrowserController {
         data: {
           sessionId: session.id,
           connectUrl: session.connectUrl,
-          debuggerUrl: session.debuggerUrl
         }
       });
 
@@ -65,7 +64,6 @@ export class BrowserController {
         data: {
           sessionId: session.id,
           connectUrl: session.connectUrl,
-          debuggerUrl: session.debuggerUrl,
           isActive: true
         }
       });

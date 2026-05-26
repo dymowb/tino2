@@ -67,14 +67,14 @@ export class MessageService {
 
       // Create new conversation
       const conversation = this.conversationRepository.create({
-        type: conversationData.type || ConversationType.DIRECT,
+        type: (conversationData.type as ConversationType) || ConversationType.DIRECT,
         title: conversationData.title,
         description: conversationData.description,
         metadata: conversationData.metadata,
         participants,
       });
 
-      const savedConversation = await this.conversationRepository.save(conversation);
+      const savedConversation = await this.conversationRepository.save(conversation) as Conversation;
 
       // Emit to all participants
       if (this.io) {
@@ -218,12 +218,12 @@ export class MessageService {
         senderId,
         receiverId,
         message: messageData.message || '',
-        messageType: messageData.messageType || MessageType.TEXT,
+        messageType: (messageData.messageType as MessageType) || MessageType.TEXT,
         attachments: messageData.attachments || [],
         replyToMessageId: messageData.replyToMessageId,
       });
 
-      const savedMessage = await this.messageRepository.save(message);
+      const savedMessage = await this.messageRepository.save(message) as Message;
 
       // Notify recipient of new message
       if (receiverId) {

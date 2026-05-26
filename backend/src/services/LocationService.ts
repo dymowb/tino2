@@ -125,8 +125,8 @@ export class LocationService {
         params: {
           origins: [origin],
           destinations: [destination],
-          mode,
-          units: 'metric',
+          mode: mode as any,
+          units: 'metric' as any,
           key: config.external.googleMapsApiKey,
         },
       });
@@ -172,8 +172,8 @@ export class LocationService {
           params: {
             origins: [origin],
             destinations: batch,
-            mode,
-            units: 'metric',
+            mode: mode as any,
+            units: 'metric' as any,
             key: config.external.googleMapsApiKey,
           },
         });

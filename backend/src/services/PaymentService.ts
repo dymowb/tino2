@@ -50,7 +50,7 @@ class PaymentService {
       if (!key) {
         throw new Error('STRIPE_SECRET_KEY is not configured');
       }
-      this.stripe = new Stripe(key, { apiVersion: '2024-10-28.acacia' });
+      this.stripe = new Stripe(key, { apiVersion: '2025-08-27.basil' });
     }
     return this.stripe;
   }
@@ -214,9 +214,9 @@ class PaymentService {
         payment.completedAt = new Date();
         payment.paidAt = new Date();
         
-        // Update metadata with charge information
-        if (paymentIntent.charges?.data[0]) {
-          const charge = paymentIntent.charges.data[0];
+        // Update metadata with charge information (charges removed from PaymentIntent in newer SDK)
+        const charge = (paymentIntent as any).charges?.data?.[0];
+        if (charge) {
           payment.stripeChargeId = charge.id;
           payment.metadata = {
             ...payment.metadata,
@@ -260,12 +260,12 @@ class PaymentService {
         throw new Error('Payment not found');
       }
 
-      if (payment.status !== PaymentStatus.SUCCEEDED) {
-        throw new Error('Can only refund succeeded payments');
-      }
-
       if (payment.status === PaymentStatus.REFUNDED) {
         throw new Error('Payment already refunded');
+      }
+
+      if (payment.status !== PaymentStatus.SUCCEEDED) {
+        throw new Error('Can only refund succeeded payments');
       }
 
       // Create refund via Stripe
@@ -470,12 +470,12 @@ class PaymentService {
   private async handlePaymentFailed(paymentIntent: Stripe.PaymentIntent): Promise<void> {
     await this.paymentRepository.update(
       { stripePaymentIntentId: paymentIntent.id },
-      { 
-        status: PaymentStatus.FAILED, 
+      {
+        status: PaymentStatus.FAILED,
         failedAt: new Date(),
         metadata: {
           failure_reason: paymentIntent.last_payment_error?.message
-        }
+        } as any
       }
     );
     logger.warn(`Payment failed via webhook: ${paymentIntent.id}`);
