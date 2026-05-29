@@ -5,7 +5,7 @@ import { Box, Button, Typography, Alert, CircularProgress, Paper } from '@mui/ma
 import { CreditCard } from '@mui/icons-material';
 import apiService from '../../services/api';
 
-const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || '');
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
 
 // Inner form — must be a child of <Elements> to access useStripe/useElements
 const SetupFormInner: React.FC<{ onSuccess: () => void; onCancel: () => void }> = ({ onSuccess, onCancel }) => {

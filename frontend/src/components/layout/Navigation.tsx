@@ -36,7 +36,10 @@ import {
   RequestQuote as QuoteIcon,
   AdminPanelSettings as AdminIcon,
   Psychology as MemoryIcon,
+  Brightness4 as DarkModeIcon,
+  Brightness7 as LightModeIcon,
 } from '@mui/icons-material';
+import { useColorMode } from '../../App';
 import { useAuth } from '../../contexts/AuthContext';
 import NotificationBadge from '../notifications/NotificationBadge';
 import LanguageSwitcher from '../common/LanguageSwitcher';
@@ -52,6 +55,7 @@ const Navigation: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user, logout, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
+  const { mode, toggleColorMode } = useColorMode();
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -175,6 +179,14 @@ const Navigation: React.FC = () => {
     if (!isAuthenticated || !user) {
       return (
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <IconButton
+            color="inherit"
+            onClick={toggleColorMode}
+            size="small"
+            title={mode === 'dark' ? 'Modo claro' : 'Modo escuro'}
+          >
+            {mode === 'dark' ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+          </IconButton>
           <LanguageSwitcher />
           <Button
             color="inherit"
@@ -203,6 +215,14 @@ const Navigation: React.FC = () => {
           color={user.userType === 'customer' ? 'secondary' : 'primary'}
           sx={{ color: 'white', fontWeight: 'bold' }}
         />
+        <IconButton
+          color="inherit"
+          onClick={toggleColorMode}
+          size="small"
+          title={mode === 'dark' ? 'Modo claro' : 'Modo escuro'}
+        >
+          {mode === 'dark' ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+        </IconButton>
         <LanguageSwitcher />
         <NotificationBadge />
         <IconButton onClick={handleUserMenuOpen} sx={{ p: 0 }}>

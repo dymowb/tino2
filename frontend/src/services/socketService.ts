@@ -41,7 +41,7 @@ interface ConversationData {
 class SocketService {
   private socket: Socket | null = null;
   private baseURL = (() => {
-    const apiUrl = process.env.REACT_APP_API_URL;
+    const apiUrl = import.meta.env.VITE_API_URL;
     if (!apiUrl) return window.location.origin;
     try { return new URL(apiUrl).origin; } catch { return window.location.origin; }
   })();

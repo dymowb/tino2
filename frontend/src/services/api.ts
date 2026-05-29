@@ -293,13 +293,13 @@ export interface WorkflowData {
   completedAt?: string;
 }
 
-if (process.env.NODE_ENV === 'production' && !process.env.REACT_APP_API_URL) {
-  console.warn('WARNING: REACT_APP_API_URL is not set. API calls will target localhost — this is wrong in production.');
+if (process.env.NODE_ENV === 'production' && !import.meta.env.VITE_API_URL) {
+  console.warn('WARNING: VITE_API_URL is not set. API calls will target localhost — this is wrong in production.');
 }
 
 class ApiService {
   private api: AxiosInstance;
-  private baseURL = process.env.REACT_APP_API_URL || '/api/v1';
+  private baseURL = import.meta.env.VITE_API_URL || '/api/v1';
 
   constructor() {
     this.api = axios.create({

@@ -1,14 +1,34 @@
 # Session Context - Current Work
 
-## CURRENT SESSION: Agentic Memory — All Phases Complete (6–9)
+## CURRENT SESSION: UI Redesign — "Casa" Design Language
+**Date**: 2026-05-29
+**Goal**: Pro-grade UI overhaul — see `UI_REDESIGN.md` for full plan
+**Status**: ✅ Phase 1 done (2026-05-28) · ✅ Phase 2 done (2026-05-29) — Phase 3 (Bookings + Dashboard) is next
+
+### Phase reorder (decided 2026-05-29)
+Old: Phase 2=Shell, 3=Homepage, 4=Core flow. New: **Restructure first, refine later.**
+New order: 2=Homepage+ProviderCards ✅ → 3=Bookings+Dashboard → 4=Nav Shell → 5=Admin+Polish
+
+### Previous Session: Agentic Memory — All Phases Complete (6–9)
 **Date**: 2026-05-25
-**Goal**: Agentic memory phases 6–9
 **Status**: ✅ Phase 6 ✅ Phase 7 ✅ Phase 8 ✅ Phase 9 — all done
 
 ---
 
 ## ⚠️ FIRST THING NEXT SESSION
-Docker auto-starts via `restart: unless-stopped`. Start backend: `cd backend && npm run dev` (port 3000). Start frontend: `cd frontend && npm start` (port 3001).
+1. Docker auto-starts via `restart: unless-stopped`. Start backend: `cd backend && npm run dev` (port 3000). Start frontend: `cd frontend && npm run dev` (port 3001, Vite).
+2. **UI Redesign Phase 3**: read `UI_REDESIGN.md` Phase 3 checklist. Target pages:
+   - `MyBookingsPage` — status-border card layout (gold=pending, green=confirmed, stone=cancelled)
+   - `ProviderDashboardPage` — Fraunces stat numbers, styled Recharts (earth fill, cream bg)
+   - `BookingDialog` — step indicator at top
+   - Provider-facing booking cards (accept/reject)
+3. Vite LAN: `server.host: true` already set — app available at 192.168.1.98:3001
+
+### Phase 2 — What was built (2026-05-29)
+- **HomePage**: Purple hero killed → editorial split (text + geometric composition). Services: flat grid → bento 4-col asymmetric. Features: checkbox list → 3 pillar cards. CTA: pink gradient → solid earth green with stat numbers.
+- **FindProvidersPage provider cards**: Full structural rebuild. 4:3 colored header block with Fraunces initials (deterministic color per provider). DM Mono price pill + frosted glass trust badges overlaid on header. Custom gold star rendering (no MUI Rating). Service chips use card accent color. Two pill-button footer.
+- **Default coords**: Changed to Florianópolis (-27.5954, -48.5480) to match seed data.
+- **Vite host**: `server.host: true` added — LAN accessible.
 
 ### Memory system status (end of session 2026-05-23)
 ### Booking flow bugs fixed (2026-05-24 session 2)

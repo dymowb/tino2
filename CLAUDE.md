@@ -51,15 +51,16 @@ npm run lint                   # Run ESLint
 npm run format                 # Format code with Prettier
 ```
 
-### Frontend (React)
+### Frontend (React + Vite)
 ```bash
 cd frontend
 npm install                    # Install dependencies
-npm start                      # Start development server
-npm run build                  # Build for production
-npm test                       # Run tests
-npm run lint                   # Run linting
+npm run dev                    # Start Vite dev server (port 3001)
+npm start                      # Alias for npm run dev
+npm run build                  # TypeScript check + Vite production build → build/
+npm run preview                # Preview production build locally
 ```
+Env vars use `VITE_` prefix (not `REACT_APP_`). Access via `import.meta.env.VITE_*`.
 
 ### Database Setup
 ```bash
@@ -164,10 +165,8 @@ The application includes Browserbase MCP integration for automated browser testi
 ## Known Issues & Fixes (SOP)
 
 ### Frontend TypeScript Compilation Errors (react-i18next)
-**Problem**: `TS2554: Expected 0 arguments, but got 1` on `useTranslation('namespace')` and `t('key', fallback)` calls.
-**Root cause**: react-i18next v16 + i18next v25 use `const` type parameters (TypeScript 5.0+ feature), but CRA pins TypeScript at 4.9.5.
-**Fix**: `frontend/src/react-i18next.d.ts` provides a TS 4.9-compatible type override for `useTranslation` and `TFunction`. Do NOT delete this file.
-**Permanent fix**: Upgrade to TypeScript 5.x (requires ejecting from CRA or migrating to Vite).
+**Status**: ✅ RESOLVED (2026-05-28) — migrated from CRA to Vite, TypeScript upgraded to 5.x.
+`react-i18next.d.ts` workaround has been deleted. `useTranslation('namespace')` and `t('key', fallback)` now type-check correctly with TS5 const type parameters.
 
 ### Missing translation key: `profile.fields.customer`
 **Status**: Known, cosmetic only. Shows raw key in the nav bar after login.

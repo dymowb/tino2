@@ -39,7 +39,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import apiService from '../../services/api';
 import { toast } from 'react-hot-toast';
 
-const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || 'pk_test_example');
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_example');
 
 interface Props {
   open: boolean;
