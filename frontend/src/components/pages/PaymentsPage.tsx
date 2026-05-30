@@ -211,7 +211,7 @@ const PaymentsPage: React.FC = () => {
     return colors[status as keyof typeof colors] || 'default';
   };
 
-  const formatAmount = (amount: number, currency = 'USD') => {
+  const formatAmount = (amount: number, currency = 'BRL') => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency,

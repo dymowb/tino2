@@ -1174,7 +1174,7 @@ class ApiService {
 
   async getUnreadNotificationCount(): Promise<{ unreadCount: number }> {
     const response = await this.api.get('/notifications/unread/count');
-    return response.data;
+    return response.data?.data ?? response.data;
   }
 
   async markNotificationsRead(notificationIds: string[]): Promise<any> {
@@ -1253,6 +1253,12 @@ class ApiService {
 
   setStoredUser(user: User): void {
     localStorage.setItem('user', JSON.stringify(user));
+  }
+
+  clearStoredUser(): void {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
   }
 
   // Generic HTTP methods for ad-hoc requests (admin pages, payment forms, etc.)

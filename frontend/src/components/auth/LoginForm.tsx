@@ -36,8 +36,12 @@ const LoginForm: React.FC = () => {
     setError('');
 
     try {
-      await login(formData.email, formData.password);
-      navigate('/');
+      const loggedUser = await login(formData.email, formData.password);
+      if (loggedUser?.userType === 'provider') {
+        navigate('/dashboard');
+      } else {
+        navigate('/');
+      }
     } catch (error: any) {
       const data = error.response?.data;
       if (data?.error === 'EMAIL_NOT_VERIFIED') {

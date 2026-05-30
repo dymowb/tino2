@@ -89,7 +89,7 @@ const AdminDashboardPage: React.FC = () => {
                       primary={`${u.firstName} ${u.lastName}`}
                       secondary={u.email}
                     />
-                    <Chip label={u.userType} size="small" variant="outlined" />
+                    <Chip label={u.userType === 'customer' ? 'Cliente' : u.userType === 'provider' ? 'Prestador' : u.userType} size="small" variant="outlined" />
                   </ListItem>
                 ))}
               </List>
@@ -109,7 +109,7 @@ const AdminDashboardPage: React.FC = () => {
                       primary={b.serviceType?.replace(/_/g, ' ')}
                       secondary={`${b.customer?.firstName} → ${b.provider?.businessName}`}
                     />
-                    <Chip label={b.status} size="small" />
+                    <Chip label={{ pending: 'Pendente', confirmed: 'Confirmada', in_progress: 'Em Andamento', completed: 'Concluída', cancelled: 'Cancelada' }[b.status as string] ?? b.status} size="small" />
                   </ListItem>
                 ))}
               </List>

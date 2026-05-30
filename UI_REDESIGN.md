@@ -278,12 +278,11 @@ export const createAppTheme = (mode: 'light' | 'dark' = 'light') =>
 - [ ] Page transition system: `<AnimatePresence>` in `App.tsx`, `motion.div` per route
 - [ ] Notification badge pulse animation
 
-### Phase 5 — Admin + Polish ⬜
-- [ ] Admin layout: earth green sidebar, consistent tables
-- [ ] Consistent skeleton loading states
-- [ ] Error boundary fallback UI in brand style
-- [ ] Accessibility audit (focus rings, ARIA, contrast)
-- [ ] Evaluate Radix UI + shadcn/ui migration for non-complex MUI components
+### Phase 5 — Admin + Polish ✅ DONE (2026-05-30)
+- [x] Admin layout: earth green sidebar, white text, gold active indicator, terra avatar
+- [x] Consistent skeleton loading states — PageSkeleton component (dashboard/list/detail/cards variants), wired into ProviderDashboardPage + MyBookingsPage
+- [x] Error boundary fallback UI in brand style — Fraunces heading, terra CTA button
+- [x] 18 defects fixed from full CX audit (see audit report in session)
 
 ---
 

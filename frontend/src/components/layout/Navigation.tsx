@@ -14,27 +14,11 @@ import {
   Chip,
   useMediaQuery,
   useTheme,
-  Drawer,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  ListItemButton,
+  alpha,
 } from '@mui/material';
 import {
-  Menu as MenuIcon,
-  Home as HomeIcon,
-  Search as SearchIcon,
-  BookOnline as BookingIcon,
-  Dashboard as DashboardIcon,
   Person as ProfileIcon,
-  Business as BusinessIcon,
   ExitToApp as LogoutIcon,
-  Message as MessageIcon,
-  Payment as PaymentIcon,
-  RateReview as ReviewIcon,
-  RequestQuote as QuoteIcon,
-  AdminPanelSettings as AdminIcon,
   Psychology as MemoryIcon,
   Brightness4 as DarkModeIcon,
   Brightness7 as LightModeIcon,
@@ -46,6 +30,9 @@ import LanguageSwitcher from '../common/LanguageSwitcher';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { socketService } from '../../services/socketService';
+import { tokens } from '../../theme/theme';
+
+const TOOLBAR_HEIGHT = 64;
 
 const Navigation: React.FC = () => {
   const { t } = useTranslation();
@@ -53,31 +40,23 @@ const Navigation: React.FC = () => {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isDark = theme.palette.mode === 'dark';
   const { user, logout, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const { mode, toggleColorMode } = useColorMode();
-
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
-
     const unsubscribe = socketService.onNotification(() => {
       queryClient.invalidateQueries({ queryKey: ['notification-count'] });
-      toast('You have a new notification');
+      toast('Você tem uma nova notificação');
     });
-
     return unsubscribe;
   }, [user, queryClient]);
 
-  const handleUserMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleUserMenuClose = () => {
-    setAnchorEl(null);
-  };
+  const handleUserMenuOpen = (event: React.MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget);
+  const handleUserMenuClose = () => setAnchorEl(null);
 
   const handleLogout = async () => {
     handleUserMenuClose();
@@ -85,222 +64,229 @@ const Navigation: React.FC = () => {
     navigate('/');
   };
 
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-  };
-
-  const navigationItems = [
-    { label: t('navigation.home'), path: '/', icon: <HomeIcon />, public: true },
-    ...(isAuthenticated && user?.userType === 'customer' ? [
-      { label: t('navigation.find_providers'), path: '/providers', icon: <SearchIcon />, public: false },
-      { label: t('navigation.my_bookings'), path: '/bookings', icon: <BookingIcon />, public: false },
-      { label: t('navigation.my_quotes'), path: '/quotes', icon: <QuoteIcon />, public: false },
-      { label: t('navigation.messages'), path: '/messages', icon: <MessageIcon />, public: false },
-      { label: t('navigation.payments'), path: '/payments', icon: <PaymentIcon />, public: false },
-      { label: t('navigation.my_reviews'), path: '/reviews', icon: <ReviewIcon />, public: false },
-    ] : []),
-    ...(isAuthenticated && user?.userType === 'provider' ? [
-      { label: t('navigation.dashboard'), path: '/dashboard', icon: <DashboardIcon />, public: false },
-      { label: t('navigation.my_quotes'), path: '/quotes', icon: <QuoteIcon />, public: false },
-      { label: t('navigation.messages'), path: '/messages', icon: <MessageIcon />, public: false },
-      { label: t('navigation.payments'), path: '/payments', icon: <PaymentIcon />, public: false },
-      { label: t('navigation.my_reviews'), path: '/reviews', icon: <ReviewIcon />, public: false },
-    ] : []),
-    ...(isAuthenticated && user?.userType === 'admin' ? [
-      { label: t('navigation.admin_panel'), path: '/admin', icon: <AdminIcon />, public: false },
-    ] : []),
-  ];
-
   const isActivePath = (path: string) => {
-    if (path === '/') {
-      return location.pathname === '/';
-    }
+    if (path === '/') return location.pathname === '/';
     return location.pathname.startsWith(path);
   };
 
-  const renderDesktopNav = () => (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-      {navigationItems.map((item) => (
-        <Button
-          key={item.path}
-          onClick={() => navigate(item.path)}
-          startIcon={item.icon}
-          sx={{
-            color: 'white',
-            textTransform: 'none',
-            fontWeight: isActivePath(item.path) ? 600 : 400,
-            backgroundColor: isActivePath(item.path) ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-            '&:hover': {
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            },
-          }}
-        >
-          {item.label}
-        </Button>
-      ))}
-    </Box>
-  );
-
-  const renderMobileDrawer = () => (
-    <Drawer
-      variant="temporary"
-      open={mobileOpen}
-      onClose={handleDrawerToggle}
-      sx={{
-        display: { xs: 'block', md: 'none' },
-        '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 240 },
-      }}
-    >
-      <Box sx={{ p: 2 }}>
-        <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-          🏠 Tino 2
-        </Typography>
-      </Box>
-      <List>
-        {navigationItems.map((item) => (
-          <ListItem key={item.path} disablePadding>
-            <ListItemButton
-              onClick={() => {
-                navigate(item.path);
-                setMobileOpen(false);
-              }}
-              selected={isActivePath(item.path)}
-            >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.label} />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
-    </Drawer>
-  );
-
-  const renderUserSection = () => {
-    if (!isAuthenticated || !user) {
-      return (
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-          <IconButton
-            color="inherit"
-            onClick={toggleColorMode}
-            size="small"
-            title={mode === 'dark' ? 'Modo claro' : 'Modo escuro'}
-          >
-            {mode === 'dark' ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
-          </IconButton>
-          <LanguageSwitcher />
-          <Button
-            color="inherit"
-            onClick={() => navigate('/login')}
-            sx={{ textTransform: 'none' }}
-          >
-            {t('navigation.login')}
-          </Button>
-          <Button
-            color="secondary"
-            variant="contained"
-            onClick={() => navigate('/register')}
-            sx={{ textTransform: 'none' }}
-          >
-            {t('navigation.register')}
-          </Button>
-        </Box>
-      );
-    }
-
-    return (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Chip
-          label={user.userType === 'customer' ? t('profile:fields.customer') : t('profile:fields.provider')}
-          size="small"
-          color={user.userType === 'customer' ? 'secondary' : 'primary'}
-          sx={{ color: 'white', fontWeight: 'bold' }}
-        />
-        <IconButton
-          color="inherit"
-          onClick={toggleColorMode}
-          size="small"
-          title={mode === 'dark' ? 'Modo claro' : 'Modo escuro'}
-        >
-          {mode === 'dark' ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
-        </IconButton>
-        <LanguageSwitcher />
-        <NotificationBadge />
-        <IconButton onClick={handleUserMenuOpen} sx={{ p: 0 }}>
-          <Avatar
-            sx={{ 
-              width: 40, 
-              height: 40,
-              bgcolor: 'secondary.main',
-              color: 'white',
-            }}
-          >
-            {user.firstName?.[0]?.toUpperCase() || 'U'}
-          </Avatar>
-        </IconButton>
-        <Menu
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={handleUserMenuClose}
-          transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-          anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        >
-          <MenuItem onClick={() => { navigate('/profile'); handleUserMenuClose(); }}>
-            <ProfileIcon sx={{ mr: 2 }} />
-            {t('navigation.profile')}
-          </MenuItem>
-          <MenuItem onClick={() => { navigate('/memory'); handleUserMenuClose(); }}>
-            <MemoryIcon sx={{ mr: 2 }} />
-            Minha Memória
-          </MenuItem>
-          <MenuItem onClick={handleLogout}>
-            <LogoutIcon sx={{ mr: 2 }} />
-            {t('navigation.logout')}
-          </MenuItem>
-        </Menu>
-      </Box>
-    );
-  };
+  // Desktop nav links — text only, no icons
+  const desktopNavItems = isAuthenticated
+    ? user?.userType === 'provider'
+      ? [
+          { label: t('navigation.dashboard'), path: '/dashboard' },
+          { label: t('navigation.my_quotes'), path: '/quotes' },
+          { label: t('navigation.messages'), path: '/messages' },
+          { label: t('navigation.my_reviews'), path: '/reviews' },
+        ]
+      : user?.userType === 'admin'
+      ? [{ label: t('navigation.admin_panel'), path: '/admin' }]
+      : [
+          { label: t('navigation.find_providers'), path: '/providers' },
+          { label: t('navigation.my_bookings'), path: '/bookings' },
+          { label: t('navigation.messages'), path: '/messages' },
+          { label: t('navigation.my_reviews'), path: '/reviews' },
+        ]
+    : [{ label: t('navigation.home'), path: '/' }];
 
   return (
-    <>
-      <AppBar position="static" elevation={2}>
-        <Toolbar>
-          {isMobile && (
-            <IconButton
-              color="inherit"
-              edge="start"
-              onClick={handleDrawerToggle}
-              sx={{ mr: 2 }}
-            >
-              <MenuIcon />
-            </IconButton>
+    <AppBar
+      position="sticky"
+      elevation={0}
+      sx={{ height: TOOLBAR_HEIGHT }}
+    >
+      <Toolbar
+        disableGutters
+        sx={{
+          height: TOOLBAR_HEIGHT,
+          minHeight: `${TOOLBAR_HEIGHT}px !important`,
+          px: { xs: 2, md: 4 },
+          position: 'relative',
+        }}
+      >
+        {/* Logo — left */}
+        <Typography
+          sx={{
+            fontFamily: tokens.font.display,
+            fontWeight: 500,
+            fontSize: '1.25rem',
+            color: '#FFFFFF',
+            cursor: 'pointer',
+            letterSpacing: '-0.01em',
+            flexShrink: 0,
+          }}
+          onClick={() => navigate('/')}
+        >
+          🏠 Tino 2
+        </Typography>
+
+        {/* Desktop center links — absolute center */}
+        {!isMobile && isAuthenticated && (
+          <Box sx={{
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.5,
+          }}>
+            {desktopNavItems.map((item) => {
+              const active = isActivePath(item.path);
+              return (
+                <Button
+                  key={item.path}
+                  onClick={() => navigate(item.path)}
+                  disableRipple
+                  sx={{
+                    color: active ? '#FFFFFF' : 'rgba(255,255,255,0.7)',
+                    fontFamily: tokens.font.body,
+                    fontWeight: active ? 600 : 400,
+                    fontSize: '0.875rem',
+                    textTransform: 'none',
+                    px: 1.5, py: 0.5,
+                    minWidth: 0,
+                    borderRadius: 0,
+                    position: 'relative',
+                    background: 'none',
+                    '&:hover': {
+                      background: 'none',
+                      color: '#FFFFFF',
+                    },
+                    '&::after': {
+                      content: '""',
+                      position: 'absolute',
+                      bottom: 0,
+                      left: '50%',
+                      transform: active ? 'translateX(-50%) scaleX(1)' : 'translateX(-50%) scaleX(0)',
+                      width: '100%',
+                      height: '2px',
+                      bgcolor: tokens.color.gold,
+                      transition: 'transform 0.2s ease',
+                      borderRadius: '1px',
+                    },
+                    '&:hover::after': {
+                      transform: 'translateX(-50%) scaleX(1)',
+                      opacity: 0.6,
+                    },
+                  }}
+                >
+                  {item.label}
+                </Button>
+              );
+            })}
+          </Box>
+        )}
+
+        {/* Right — user section */}
+        <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: { xs: 0.5, md: 1 } }}>
+          {isAuthenticated && user ? (
+            <>
+              {/* User type chip — desktop only */}
+              {!isMobile && (
+                <Chip
+                  label={user.userType === 'customer' ? t('profile:fields.customer') : t('profile:fields.provider')}
+                  size="small"
+                  sx={{
+                    bgcolor: user.userType === 'customer'
+                      ? alpha(tokens.color.terra, 0.9)
+                      : alpha('#fff', 0.15),
+                    color: '#fff',
+                    fontWeight: 600,
+                    fontSize: '0.75rem',
+                    height: 24,
+                  }}
+                />
+              )}
+
+              <IconButton
+                color="inherit"
+                onClick={toggleColorMode}
+                size="small"
+                title={mode === 'dark' ? 'Modo claro' : 'Modo escuro'}
+              >
+                {mode === 'dark'
+                  ? <LightModeIcon sx={{ fontSize: 18 }} />
+                  : <DarkModeIcon sx={{ fontSize: 18 }} />
+                }
+              </IconButton>
+
+              <LanguageSwitcher />
+              <NotificationBadge />
+
+              <IconButton onClick={handleUserMenuOpen} sx={{ p: 0.5 }}>
+                <Avatar
+                  sx={{
+                    width: 34, height: 34,
+                    bgcolor: tokens.color.terra,
+                    fontFamily: tokens.font.display,
+                    fontSize: '0.9375rem',
+                    fontWeight: 500,
+                  }}
+                >
+                  {user.firstName?.[0]?.toUpperCase() || 'U'}
+                </Avatar>
+              </IconButton>
+
+              <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleUserMenuClose}
+                transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                PaperProps={{ sx: { mt: 1, borderRadius: tokens.radius.md, minWidth: 180 } }}
+              >
+                <MenuItem onClick={() => { navigate('/profile'); handleUserMenuClose(); }}>
+                  <ProfileIcon sx={{ mr: 1.5, fontSize: 18 }} />
+                  <Typography variant="body2">{t('navigation.profile')}</Typography>
+                </MenuItem>
+                <MenuItem onClick={() => { navigate('/memory'); handleUserMenuClose(); }}>
+                  <MemoryIcon sx={{ mr: 1.5, fontSize: 18 }} />
+                  <Typography variant="body2">Minha Memória</Typography>
+                </MenuItem>
+                <MenuItem onClick={handleLogout} sx={{ color: tokens.color.terra }}>
+                  <LogoutIcon sx={{ mr: 1.5, fontSize: 18 }} />
+                  <Typography variant="body2">{t('navigation.logout')}</Typography>
+                </MenuItem>
+              </Menu>
+            </>
+          ) : (
+            <>
+              <IconButton
+                color="inherit"
+                onClick={toggleColorMode}
+                size="small"
+              >
+                {mode === 'dark'
+                  ? <LightModeIcon sx={{ fontSize: 18 }} />
+                  : <DarkModeIcon sx={{ fontSize: 18 }} />
+                }
+              </IconButton>
+              <LanguageSwitcher />
+              <Button
+                color="inherit"
+                onClick={() => navigate('/login')}
+                sx={{ textTransform: 'none', fontSize: '0.875rem', fontFamily: tokens.font.body }}
+              >
+                {t('navigation.login')}
+              </Button>
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={() => navigate('/register')}
+                sx={{
+                  textTransform: 'none',
+                  fontSize: '0.875rem',
+                  fontFamily: tokens.font.body,
+                  borderRadius: tokens.radius.full,
+                  px: 2,
+                }}
+              >
+                {t('navigation.register')}
+              </Button>
+            </>
           )}
-
-          <Typography
-            variant="h6"
-            component="div"
-            sx={{ 
-              flexGrow: { xs: 1, md: 0 },
-              mr: { md: 4 },
-              fontWeight: 'bold',
-              cursor: 'pointer',
-            }}
-            onClick={() => navigate('/')}
-          >
-            🏠 Tino 2
-          </Typography>
-
-          {!isMobile && (
-            <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center' }}>
-              {renderDesktopNav()}
-            </Box>
-          )}
-
-          {renderUserSection()}
-        </Toolbar>
-      </AppBar>
-      {renderMobileDrawer()}
-    </>
+        </Box>
+      </Toolbar>
+    </AppBar>
   );
 };
 

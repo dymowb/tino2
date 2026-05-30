@@ -152,11 +152,16 @@ const ProfilePage: React.FC = () => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString('pt-BR', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  const formatUserType = (type: string) => {
+    const map: Record<string, string> = { customer: 'Cliente', provider: 'Prestador', admin: 'Administrador' };
+    return map[type] ?? type;
   };
 
   const getAvailabilityColor = (status: string) => {
@@ -331,7 +336,7 @@ const ProfilePage: React.FC = () => {
               {t('profile:fields.account_type')}:
             </label>
             <p style={{ margin: '0', color: '#555', textTransform: 'capitalize' }}>
-              {userProfile?.user_type}
+              {formatUserType(userProfile?.user_type || '')}
             </p>
           </div>
 

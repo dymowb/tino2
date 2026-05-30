@@ -137,7 +137,7 @@ const MyReviewsPage: React.FC = () => {
   // Fetch ALL reviewed booking IDs (unpaginated) — used only for eligibility check
   const { data: allCustomerReviews } = useQuery({
     queryKey: ['all-customer-review-ids'],
-    queryFn: () => apiService.getMyCustomerReviews({ page: 1, limit: 1000 }),
+    queryFn: () => apiService.getMyCustomerReviews({ page: 1, limit: 50 }),
     enabled: user?.userType === 'customer'
   });
 
@@ -271,7 +271,7 @@ const MyReviewsPage: React.FC = () => {
                     •
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {new Date(review.createdAt).toLocaleDateString()}
+                    {new Date(review.createdAt).toLocaleDateString('pt-BR')}
                   </Typography>
                 </Box>
               </Box>

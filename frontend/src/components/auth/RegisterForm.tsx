@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Container,
-  Paper,
   TextField,
   Button,
   Typography,
@@ -19,6 +18,7 @@ import {
 } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
+import { tokens } from '../../theme/theme';
 
 const RegisterForm: React.FC = () => {
   const { register } = useAuth();
@@ -102,12 +102,12 @@ const RegisterForm: React.FC = () => {
 
   if (registeredEmail) {
     return (
-      <Container maxWidth="sm" sx={{ mt: 8, mb: 4 }}>
-        <Paper elevation={4} sx={{ p: 4, borderRadius: 3, textAlign: 'center' }}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#4CAF50' }}>
+      <Box sx={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', px: 2 }}>
+        <Box sx={{ maxWidth: 440, width: '100%', p: 4, borderRadius: tokens.radius.xl, border: `1px solid ${tokens.color.paperDark}`, bgcolor: tokens.color.paper, textAlign: 'center' }}>
+          <Typography sx={{ fontFamily: tokens.font.display, fontSize: '1.75rem', fontWeight: 500, color: tokens.color.earth, mb: 1.5 }}>
             {t('auth:register.check_email_title')}
           </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 1.5 }}>
             {t('auth:register.verification_sent_to', { email: registeredEmail })}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
@@ -115,12 +115,12 @@ const RegisterForm: React.FC = () => {
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {t('auth:register.already_verified')}{' '}
-            <Link to="/login" style={{ color: '#1976d2', textDecoration: 'none', fontWeight: 600 }}>
+            <Link to="/login" style={{ color: tokens.color.earth, textDecoration: 'none', fontWeight: 600 }}>
               {t('auth:register.login_here')}
             </Link>
           </Typography>
-        </Paper>
-      </Container>
+        </Box>
+      </Box>
     );
   }
 
@@ -129,54 +129,30 @@ const RegisterForm: React.FC = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
       >
-        <Paper
-          elevation={4}
-          sx={{
-            p: 4,
-            borderRadius: 3,
-            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-          }}
-        >
-          <Box sx={{ textAlign: 'center', mb: 4 }}>
-            <Typography
-              variant="h4"
-              component="h1"
-              gutterBottom
-              sx={{
-                fontWeight: 'bold',
-                color: 'white',
-                textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
-              }}
-            >
+        <Box sx={{
+          p: { xs: 3, sm: 4 },
+          borderRadius: tokens.radius.xl,
+          border: `1px solid ${tokens.color.paperDark}`,
+          bgcolor: tokens.color.paper,
+        }}>
+          <Box sx={{ mb: 3.5 }}>
+            <Typography sx={{ fontFamily: tokens.font.display, fontSize: '1.875rem', fontWeight: 500, mb: 0.5 }}>
               {t('auth:register.title')}
             </Typography>
-            <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.9)' }}>
+            <Typography variant="body2" color="text.secondary">
               {t('auth:register.subtitle')}
             </Typography>
           </Box>
 
           {error && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-            >
-              <Alert severity="error" sx={{ mb: 3 }}>
-                {error}
-              </Alert>
-            </motion.div>
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
           )}
 
-          <Box
-            component="form"
-            onSubmit={handleSubmit}
-            sx={{
-              bgcolor: 'rgba(255,255,255,0.95)',
-              p: 3,
-              borderRadius: 2,
-            }}
-          >
+          <Box component="form" onSubmit={handleSubmit}>
             <FormControl fullWidth margin="normal" sx={{ mb: 2 }}>
               <InputLabel>{t('auth:register.user_type')}</InputLabel>
               <Select
@@ -275,14 +251,12 @@ const RegisterForm: React.FC = () => {
               size="large"
               disabled={loading}
               sx={{
-                py: 1.5,
-                mb: 3,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                fontSize: '1.1rem',
+                py: 1.5, mb: 3,
+                bgcolor: tokens.color.terra,
+                '&:hover': { bgcolor: tokens.color.terraDark },
+                borderRadius: tokens.radius.full,
+                fontSize: '0.9375rem',
                 textTransform: 'none',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
-                },
               }}
             >
               {loading ? <CircularProgress size={24} color="inherit" /> : t('auth:register.submit')}
@@ -291,20 +265,13 @@ const RegisterForm: React.FC = () => {
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary">
                 {t('auth:register.already_have_account')}{' '}
-                <Link
-                  to="/login"
-                  style={{
-                    color: '#1976d2',
-                    textDecoration: 'none',
-                    fontWeight: 600,
-                  }}
-                >
+                <Link to="/login" style={{ color: tokens.color.earth, textDecoration: 'none', fontWeight: 600 }}>
                   {t('auth:register.login_link')}
                 </Link>
               </Typography>
             </Box>
           </Box>
-        </Paper>
+        </Box>
       </motion.div>
     </Container>
   );

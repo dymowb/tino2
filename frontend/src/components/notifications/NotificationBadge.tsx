@@ -113,10 +113,25 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
           onClick={handleClick}
           color="inherit"
           sx={{
-            color: hasUnreadNotifications ? theme.palette.secondary.main : 'inherit',
-            '&:hover': {
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            }
+            color: 'inherit',
+            position: 'relative',
+            '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' },
+            ...(hasUnreadNotifications && {
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                inset: 2,
+                borderRadius: '50%',
+                border: '1.5px solid rgba(212,168,83,0.7)',
+                animation: 'notif-pulse 2s ease-out infinite',
+                pointerEvents: 'none',
+              },
+              '@keyframes notif-pulse': {
+                '0%':   { opacity: 1, transform: 'scale(1)' },
+                '70%':  { opacity: 0, transform: 'scale(1.6)' },
+                '100%': { opacity: 0, transform: 'scale(1.6)' },
+              },
+            }),
           }}
         >
           <Badge
@@ -162,7 +177,7 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
         <Box sx={{ p: 2, pb: 1, borderBottom: 1, borderColor: 'divider' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Typography variant="h6" fontWeight="bold">
-              Notifications
+              Notificações
             </Typography>
             <Box sx={{ display: 'flex', gap: 0.5 }}>
               <IconButton size="small" onClick={handleRefresh}>
@@ -175,7 +190,7 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
           </Box>
           {hasUnreadNotifications && (
             <Typography variant="body2" color="primary" sx={{ mt: 0.5 }}>
-              {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
+              {unreadCount} {unreadCount === 1 ? 'notificação não lida' : 'notificações não lidas'}
             </Typography>
           )}
         </Box>
@@ -191,7 +206,7 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
                 disabled={!hasUnreadNotifications}
                 sx={{ fontSize: '0.75rem' }}
               >
-                Mark All Read
+                Marcar como lidas
               </Button>
               <Button
                 size="small"
@@ -199,7 +214,7 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
                 onClick={handleViewAllNotifications}
                 sx={{ fontSize: '0.75rem', ml: 'auto' }}
               >
-                View All
+                Ver todas
               </Button>
             </Box>
           </Box>
@@ -286,7 +301,7 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
             <ListItemText
               primary={
                 <Typography variant="body2" textAlign="center" color="text.secondary">
-                  No notifications
+                  Nenhuma notificação
                 </Typography>
               }
             />
@@ -306,7 +321,7 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
                     color="primary"
                     fontWeight="medium"
                   >
-                    View All Notifications
+                    Ver todas as notificações
                   </Typography>
                 }
               />

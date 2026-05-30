@@ -1,13 +1,15 @@
 import React, { Component, ErrorInfo, createContext, useContext, useState, useMemo } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
-import { CssBaseline, GlobalStyles, Box, Button, Typography } from '@mui/material';
+import { CssBaseline, GlobalStyles, Box, Button, Typography, useMediaQuery } from '@mui/material';
+import { AnimatePresence, motion } from 'framer-motion';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { createAppTheme, tokens } from './theme/theme';
 import './i18n';
 import Navigation from './components/layout/Navigation';
+import MobileBottomNav from './components/layout/MobileBottomNav';
 import HomePage from './components/pages/HomePage';
 import LoginForm from './components/auth/LoginForm';
 import RegisterForm from './components/auth/RegisterForm';
@@ -71,16 +73,35 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { error: Er
   render() {
     if (this.state.error) {
       return (
-        <Box sx={{ p: 4, textAlign: 'center', mt: 8 }}>
-          <Typography variant="h4" sx={{ fontFamily: tokens.font.display, mb: 2, color: 'text.primary' }}>
-            Algo deu errado.
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-            Por favor, recarregue a página. Se o problema persistir, entre em contato com o suporte.
-          </Typography>
-          <Button variant="contained" onClick={() => this.setState({ error: null })}>
-            Tentar novamente
-          </Button>
+        <Box sx={{
+          minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          bgcolor: tokens.color.cream, px: 3,
+        }}>
+          <Box sx={{ maxWidth: 480, textAlign: 'center' }}>
+            <Typography sx={{
+              fontFamily: tokens.font.display,
+              fontSize: { xs: '2rem', md: '2.75rem' },
+              fontWeight: 500, lineHeight: 1.1, mb: 2,
+              color: tokens.color.earth,
+            }}>
+              Algo deu errado.
+            </Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 4, lineHeight: 1.6 }}>
+              Por favor, recarregue a página. Se o problema persistir, entre em contato com o suporte.
+            </Typography>
+            <Button
+              variant="contained"
+              onClick={() => this.setState({ error: null })}
+              sx={{
+                bgcolor: tokens.color.terra,
+                '&:hover': { bgcolor: tokens.color.terraDark },
+                borderRadius: tokens.radius.full,
+                px: 4,
+              }}
+            >
+              Tentar novamente
+            </Button>
+          </Box>
         </Box>
       );
     }
@@ -111,61 +132,90 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireAuth = true,
   redirectTo = '/login',
 }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
 
   if (loading) return <LoadingSpinner />;
   if (requireAuth && !isAuthenticated) return <Navigate to={redirectTo} replace />;
-  if (!requireAuth && isAuthenticated) return <Navigate to="/" replace />;
+  if (!requireAuth && isAuthenticated) {
+    const dest = user?.userType === 'provider' ? '/dashboard' : '/';
+    return <Navigate to={dest} replace />;
+  }
 
   return <>{children}</>;
 };
 
+// ─── Page transition wrapper ───────────────────────────────────────────────────
+const pageVariants = {
+  initial: { opacity: 0, y: 10 },
+  animate: { opacity: 1, y: 0 },
+  exit:    { opacity: 0, y: -6 },
+};
+const pageTransition = { duration: 0.22, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] };
+
 // ─── App content (needs Router context) ───────────────────────────────────────
 const AppContent: React.FC = () => {
-  const { loading } = useAuth();
+  const { loading, isAuthenticated } = useAuth();
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
+  const theme = useMediaQuery('(max-width:899px)'); // md breakpoint
+  const isMobile = theme;
 
   if (loading) return <LoadingSpinner />;
+
+  // Mobile bottom nav adds 56px; add padding so content isn't hidden under it
+  const bottomPad = isMobile && isAuthenticated && !isAdminRoute ? '56px' : 0;
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       {!isAdminRoute && <Navigation />}
-      <Box component="main" sx={{ flexGrow: 1 }}>
-        <Routes>
-          {/* Public */}
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<ProtectedRoute requireAuth={false}><LoginForm /></ProtectedRoute>} />
-          <Route path="/register" element={<ProtectedRoute requireAuth={false}><RegisterForm /></ProtectedRoute>} />
-          <Route path="/verify-email" element={<VerifyEmailPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Box component="main" sx={{ flexGrow: 1, pb: bottomPad }}>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={location.pathname}
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransition}
+            style={{ display: 'contents' }}
+          >
+            <Routes location={location}>
+              {/* Public */}
+              <Route path="/" element={<HomePage />} />
+              <Route path="/login" element={<ProtectedRoute requireAuth={false}><LoginForm /></ProtectedRoute>} />
+              <Route path="/register" element={<ProtectedRoute requireAuth={false}><RegisterForm /></ProtectedRoute>} />
+              <Route path="/verify-email" element={<VerifyEmailPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-          {/* Protected */}
-          <Route path="/providers"     element={<ProtectedRoute><FindProvidersPage /></ProtectedRoute>} />
-          <Route path="/bookings"      element={<ProtectedRoute><MyBookingsPage /></ProtectedRoute>} />
-          <Route path="/profile"       element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-          <Route path="/dashboard"     element={<ProtectedRoute><ProviderDashboardPage /></ProtectedRoute>} />
-          <Route path="/messages"      element={<ProtectedRoute><MessagingPage /></ProtectedRoute>} />
-          <Route path="/payments"      element={<ProtectedRoute><PaymentsPage /></ProtectedRoute>} />
-          <Route path="/quotes"        element={<ProtectedRoute><MyQuotesPage /></ProtectedRoute>} />
-          <Route path="/reviews"       element={<ProtectedRoute><MyReviewsPage /></ProtectedRoute>} />
-          <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
-          <Route path="/memory"        element={<ProtectedRoute><MemoryPage /></ProtectedRoute>} />
+              {/* Protected */}
+              <Route path="/providers"     element={<ProtectedRoute><FindProvidersPage /></ProtectedRoute>} />
+              <Route path="/bookings"      element={<ProtectedRoute><MyBookingsPage /></ProtectedRoute>} />
+              <Route path="/profile"       element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+              <Route path="/dashboard"     element={<ProtectedRoute><ProviderDashboardPage /></ProtectedRoute>} />
+              <Route path="/messages"      element={<ProtectedRoute><MessagingPage /></ProtectedRoute>} />
+              <Route path="/payments"      element={<ProtectedRoute><PaymentsPage /></ProtectedRoute>} />
+              <Route path="/quotes"        element={<ProtectedRoute><MyQuotesPage /></ProtectedRoute>} />
+              <Route path="/reviews"       element={<ProtectedRoute><MyReviewsPage /></ProtectedRoute>} />
+              <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+              <Route path="/memory"        element={<ProtectedRoute><MemoryPage /></ProtectedRoute>} />
 
-          {/* Admin — own layout, no top Navigation */}
-          <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
-            <Route index element={<AdminDashboardPage />} />
-            <Route path="users"     element={<AdminUsersPage />} />
-            <Route path="providers" element={<AdminProvidersPage />} />
-            <Route path="reviews"   element={<AdminReviewsPage />} />
-            <Route path="disputes"  element={<AdminDisputesPage />} />
-            <Route path="settings"  element={<AdminSettingsPage />} />
-          </Route>
+              {/* Admin — own layout, no top Navigation */}
+              <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
+                <Route index element={<AdminDashboardPage />} />
+                <Route path="users"     element={<AdminUsersPage />} />
+                <Route path="providers" element={<AdminProvidersPage />} />
+                <Route path="reviews"   element={<AdminReviewsPage />} />
+                <Route path="disputes"  element={<AdminDisputesPage />} />
+                <Route path="settings"  element={<AdminSettingsPage />} />
+              </Route>
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </motion.div>
+        </AnimatePresence>
       </Box>
+      {!isAdminRoute && <MobileBottomNav />}
     </Box>
   );
 };

@@ -5,7 +5,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   register: (userData: {
     email: string;
     password: string;
@@ -38,26 +38,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const storedUser = apiService.getStoredUser();
       if (storedUser && apiService.isAuthenticated()) {
-        // Verify token is still valid by fetching profile
         const currentUser = await apiService.getProfile();
         setUser(currentUser);
         apiService.setStoredUser(currentUser);
       } else {
-        // Clear any stale data
-        await logout();
+        // No token — clear local state only, don't call the logout API
+        apiService.clearStoredUser?.();
+        setUser(null);
       }
     } catch (error) {
-      console.error('Error initializing auth:', error);
-      await logout();
+      apiService.clearStoredUser?.();
+      setUser(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<User> => {
     const authResponse: AuthResponse = await apiService.login(email, password);
     setUser(authResponse.user);
     apiService.setStoredUser(authResponse.user);
+    return authResponse.user;
   };
 
   const register = async (userData: {
