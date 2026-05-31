@@ -5,28 +5,29 @@ import cors from 'cors';
 import config from '@/config/environment';
 import logger from '@/config/logger';
 
-if (process.env.NODE_ENV === 'production' && !process.env.ALLOWED_ORIGINS) {
-  throw new Error('FATAL: ALLOWED_ORIGINS env var is required in production.');
+// Called at request time (not module load), so dotenv.config() in server.ts is always ready.
+// ES module imports are hoisted above dotenv.config(), so top-level env reads return undefined.
+export function getAllowedOrigins(): string[] {
+  if (process.env.NODE_ENV === 'production' && !process.env.ALLOWED_ORIGINS) {
+    throw new Error('FATAL: ALLOWED_ORIGINS env var is required in production.');
+  }
+  return (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:3001')
+    .split(',')
+    .map((o) => o.trim());
 }
-
-export const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:3001')
-  .split(',')
-  .map((o) => o.trim());
-
-const validApiKeys = process.env.VALID_API_KEYS?.split(',') ?? [];
 
 export const securityMiddleware = [
   helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'", 'https://js.stripe.com'],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        scriptSrc: ["'self'", 'https://js.stripe.com', 'https://static.cloudflareinsights.com'],
         imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'", 'https://api.stripe.com'],
-        fontSrc: ["'self'"],
+        connectSrc: ["'self'", 'https://api.stripe.com', 'https://cloudflareinsights.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
         objectSrc: ["'none'"],
-        mediaSrc: ["'self'"],
+        mediaSrc: ["'self'", 'blob:'],
         frameSrc: ['https://js.stripe.com', 'https://hooks.stripe.com'],
       },
     },
@@ -48,7 +49,7 @@ export const securityMiddleware = [
       }
     } catch (_) { /* invalid origin URL */ }
     // Allow explicitly configured origins
-    if (allowedOrigins.includes(origin)) {
+    if (getAllowedOrigins().includes(origin)) {
       callback(null, { origin: true, credentials: true });
       return;
     }
@@ -135,6 +136,7 @@ export const rateLimiters = {
 
 export const validateApiKey = (req: Request, res: Response, next: NextFunction): void => {
   const apiKey = req.headers['x-api-key'] as string;
+  const validApiKeys = process.env.VALID_API_KEYS?.split(',') ?? [];
 
   if (validApiKeys.length > 0 && !validApiKeys.includes(apiKey)) {
     res.status(401).json({

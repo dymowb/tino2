@@ -9,7 +9,7 @@
  * - Failed → Error message + retry button
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -28,10 +28,11 @@ import {
 } from '@mui/material';
 import { CheckCircleOutline } from '@mui/icons-material';
 import { Send, Refresh, AutoAwesome, EmojiEvents, WarningAmber } from '@mui/icons-material';
-import { Recommendation, VerificationReport } from '../../services/api';
+import { Recommendation, VerificationReport, apiService } from '../../services/api';
 import { useTranslation } from 'react-i18next';
 import { useAssistantWorkflow } from '../../hooks/useAssistantWorkflow';
 import AssistantProviderCard from './AssistantProviderCard';
+import VoiceMicButton from './VoiceMicButton';
 import QuoteRequestDialog from '../quotes/QuoteRequestDialog';
 
 const AIAssistantTab: React.FC = () => {
@@ -67,6 +68,24 @@ const AIAssistantTab: React.FC = () => {
 
   // Sort order for the "all providers" section below recommendations
   const [providerSort, setProviderSort] = useState<'match' | 'rating' | 'price'>('match');
+
+  // TTS: speak assistant text via the /voice/synthesize endpoint
+  const speakText = useCallback(async (text: string) => {
+    try {
+      const blob = await apiService.voiceSynthesize(text);
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.onended = () => URL.revokeObjectURL(url);
+      audio.play();
+    } catch {
+      // TTS unavailable (no OPENAI_API_KEY) — silent fail
+    }
+  }, []);
+
+  // Auto-read follow-up questions aloud so the voice interaction feels natural
+  useEffect(() => {
+    if (followUpQuestion) speakText(followUpQuestion);
+  }, [followUpQuestion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
@@ -120,15 +139,21 @@ const AIAssistantTab: React.FC = () => {
           disabled={isStarting}
           sx={{ mb: 2 }}
         />
-        <Button
-          type="submit"
-          variant="contained"
-          size="large"
-          disabled={!input.trim() || isStarting}
-          startIcon={isStarting ? <CircularProgress size={20} /> : <Send />}
-        >
-          {t('actions.send')}
-        </Button>
+        <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
+          <Button
+            type="submit"
+            variant="contained"
+            size="large"
+            disabled={!input.trim() || isStarting}
+            startIcon={isStarting ? <CircularProgress size={20} /> : <Send />}
+          >
+            {t('actions.send')}
+          </Button>
+          <VoiceMicButton
+            onTranscript={(text) => { if (text) startWorkflow(text); }}
+            disabled={isStarting}
+          />
+        </Stack>
       </Box>
     </Box>
   );
@@ -216,7 +241,7 @@ const AIAssistantTab: React.FC = () => {
           disabled={isSending}
           sx={{ mb: 2 }}
         />
-        <Stack direction="row" spacing={1}>
+        <Stack direction="row" spacing={1} alignItems="center">
           <Button
             type="submit"
             variant="contained"
@@ -225,6 +250,10 @@ const AIAssistantTab: React.FC = () => {
           >
             {t('actions.send')}
           </Button>
+          <VoiceMicButton
+            onTranscript={(text) => { if (text) sendMessage(text); }}
+            disabled={isSending}
+          />
           <Button variant="text" color="inherit" onClick={cancel}>
             {t('actions.cancel')}
           </Button>

@@ -80,7 +80,7 @@ interface Props {
   onConversationUpdate?: () => void;
 }
 
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace('/api/v1', '') || 'http://localhost:3000';
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace('/api/v1', '') || '';
 
 const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate }) => {
   const { t } = useTranslation('messages');

@@ -293,9 +293,8 @@ export interface WorkflowData {
   completedAt?: string;
 }
 
-if (process.env.NODE_ENV === 'production' && !import.meta.env.VITE_API_URL) {
-  console.warn('WARNING: VITE_API_URL is not set. API calls will target localhost — this is wrong in production.');
-}
+// VITE_API_URL is intentionally unset when frontend is served by the same Express server —
+// relative /api/v1 URLs resolve correctly in that case.
 
 class ApiService {
   private api: AxiosInstance;
@@ -1267,6 +1266,36 @@ class ApiService {
   put(path: string, data?: any, config?: any) { return this.api.put(path, data, config); }
   patch(path: string, data?: any, config?: any) { return this.api.patch(path, data, config); }
   delete(path: string, config?: any) { return this.api.delete(path, config); }
+
+  async voiceTranscribe(audioBlob: Blob, filename: string): Promise<string> {
+    const form = new FormData();
+    form.append('audio', audioBlob, filename);
+    // Use fetch directly — axios instance default 'Content-Type: application/json' breaks
+    // multipart uploads by overwriting the browser-generated boundary parameter
+    const token = localStorage.getItem('accessToken');
+    const res = await fetch(`${this.baseURL}/voice/transcribe`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error ?? res.statusText);
+    }
+    const json = await res.json();
+    return json.data?.transcript ?? '';
+  }
+
+  async voiceSynthesize(text: string): Promise<Blob> {
+    const token = localStorage.getItem('accessToken');
+    const res = await fetch(`${this.baseURL}/voice/synthesize`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    if (!res.ok) throw new Error(res.statusText);
+    return res.blob();
+  }
 }
 
 export const apiService = new ApiService();

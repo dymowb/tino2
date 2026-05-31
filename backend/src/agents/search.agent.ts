@@ -201,11 +201,14 @@ Plan your search strategy before executing queries.`,
       const serviceCatalog = await ProviderService.getServiceCatalog();
       const inferredServices = await this.inferServices(input.requirements, serviceCatalog);
 
-      // Step 2: Build search query — use city/state from requirements for location filtering
-      const { city, state } = input.requirements.location ?? {};
+      // Step 2: Build search query
+      // Note: provider locations are stored at neighborhood level, not city level.
+      // Using city would filter out all providers in a city like "Florianópolis" whose
+      // neighborhoods (Ingleses, Campeche, etc.) are stored as the city field.
+      // State-level scoping is sufficient; services filter does the real narrowing.
+      const { state } = input.requirements.location ?? {};
       const searchQuery = {
         services: inferredServices.length > 0 ? inferredServices : undefined,
-        city: city ?? undefined,
         state: state ?? undefined,
         page: 1,
         limit: 20,

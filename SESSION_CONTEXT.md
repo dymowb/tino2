@@ -1,8 +1,30 @@
 # Session Context - Current Work
 
-## CURRENT SESSION: UI Redesign — "Casa" Design Language
-**Date**: 2026-05-30
-**Goal**: Pro-grade UI overhaul — see `UI_REDESIGN.md` for full plan
+## CURRENT SESSION: Voice UI — 2026-05-30
+**Goal**: Voice input/output for AI assistant
+**Status**: ✅ COMPLETE
+
+### What was built
+- **`backend/src/routes/voice.ts`** — POST `/voice/transcribe` (Whisper-1, Portuguese) + POST `/voice/synthesize` (TTS-1, nova voice); `openai` npm package added
+- **`frontend/src/components/assistant/VoiceMicButton.tsx`** — mic button, MediaRecorder, transcription via `apiService.voiceTranscribe()`; pulse animation while recording (Casa terracotta color)
+- **`frontend/src/services/api.ts`** — `voiceTranscribe()` and `voiceSynthesize()` typed methods added to ApiService
+- **`AIAssistantTab.tsx`** — VoiceMicButton wired into welcome form (auto-starts workflow on transcript) and follow-up form (auto-sends); `speakText()` TTS function reads follow-up questions aloud; `useEffect` auto-plays each new follow-up
+- **CORS bug fixed** — `getAllowedOrigins()` was a top-level constant in security.ts, so ES module hoisting caused dotenv to not be loaded yet → `ALLOWED_ORIGINS` was always undefined. Changed to a lazy function called at request time.
+- **PM2 rebuilt** — `npm run build` regenerated `dist/`, PM2 tino-backend restarted with new code
+
+### How voice flow works
+1. User taps mic (circle button with Mic icon) → browser requests microphone
+2. Recording starts (button turns terracotta + pulse animation)  
+3. Tap again → stops recording → uploads webm blob to `/voice/transcribe` → Whisper returns transcript
+4. If on welcome screen: transcript auto-starts the AI workflow (no typing needed)
+5. If on follow-up screen: transcript auto-sends the answer
+6. When AI asks a follow-up question, TTS auto-plays it via `/voice/synthesize` → OpenAI nova voice → browser Audio API
+7. Requires `OPENAI_API_KEY` in backend `.env`; TTS silently skips if key absent
+
+---
+
+## Previous Session: UI Redesign — "Casa" Design Language
+**Date**: 2026-05-30 (earlier)
 **Status**: ✅ Phase 1 · ✅ Phase 2 · ✅ Phase 3 · ✅ Phase 4 · ✅ Phase 5 — ALL PHASES COMPLETE
 
 ### Phase reorder (decided 2026-05-29)
@@ -16,7 +38,10 @@ New order: 2=Homepage+ProviderCards ✅ → 3=Bookings+Dashboard → 4=Nav Shell
 ---
 
 ## ⚠️ FIRST THING NEXT SESSION
-1. Docker auto-starts via `restart: unless-stopped`. Start backend: `cd backend && npm run dev` (port 3000). Start frontend: `cd frontend && npm run dev` (port 3001, Vite).
+1. Production is live at https://newtino.com via PM2 + Cloudflare tunnel. **Do not use `npm run dev` — use `bash deploy.sh` to push changes.**
+2. To test locally: `pm2 stop tino-backend`, then `cd backend && npm run dev` (port 3000) + `cd frontend && npm run dev` (port 3001). Restart production with `bash deploy.sh` when done.
+
+## Previous "FIRST THING" (now done — left for reference):
 2. **UI Redesign Phase 3**: read `UI_REDESIGN.md` Phase 3 checklist. Target pages:
    - `MyBookingsPage` — status-border card layout (gold=pending, green=confirmed, stone=cancelled)
    - `ProviderDashboardPage` — Fraunces stat numbers, styled Recharts (earth fill, cream bg)
@@ -229,10 +254,10 @@ Files to build: `src/services/memory/MemoryRetriever.ts` + `src/services/memory/
 ---
 
 ## Resume Point
-1. Backend on port 3000, frontend on port 3001
-2. DB seeded with Florianópolis data; demo password: `Demo123!`
-3. Customer login: `customer@demo.com` / `Demo123!`
-4. **ALL PHASES COMPLETE** — app is ready for beta. Next: define new feature phases or begin beta testing.
+1. Production live at https://newtino.com (PM2 + Cloudflare tunnel). Demo: `customer@demo.com` / `Demo123!`
+2. Voice feature is live and working end-to-end (STT + TTS via OpenAI).
+3. AI assistant returns providers correctly — search agent city filter bug fixed.
+4. All known bugs from this session are fixed and deployed.
 5. **NOTE**: Phase 22 — No new bugs. admin.json is the only new locale file; all other namespaces extended. Key pattern for enum-like arrays: use `as const` key arrays and resolve labels via `t()` at render time (not at module init).
 5. **NOTE**: Phase 19 bug — BasicUser entity was missing `passwordResetToken` and `passwordResetExpiry` columns; added to fix forgot-password flow
 6. **NOTE**: Phase 20 hardening — CORS now reads ALLOWED_ORIGINS env var; auth rate limit is 10/15min in prod, 100/1min in dev; health check includes DB ping; database.ts auto-selects SQLite (dev) or PostgreSQL (prod) via NODE_ENV; startup validateConfig() rejects placeholder JWT in prod; React ErrorBoundary wraps AppContent; ecosystem.config.js added for PM2

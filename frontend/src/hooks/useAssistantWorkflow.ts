@@ -130,7 +130,7 @@ export function useAssistantWorkflow(): AssistantWorkflowState {
 
     try {
       const token = localStorage.getItem('accessToken');
-      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+      const apiBase = import.meta.env.VITE_API_URL || '/api/v1';
       const response = await fetch(`${apiBase}/agentic-assistant/workflows?stream=true`, {
         method: 'POST',
         headers: {

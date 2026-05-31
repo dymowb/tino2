@@ -9,7 +9,7 @@ import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import config from '@/config/environment';
 import logger from '@/config/logger';
-import { securityMiddleware, sanitizeInput, logSuspiciousActivity, rateLimiters, allowedOrigins } from '@/middleware/security';
+import { securityMiddleware, sanitizeInput, logSuspiciousActivity, rateLimiters, getAllowedOrigins } from '@/middleware/security';
 
 import { AppDataSource } from '@/config/database';
 import authRoutes from '@/routes/auth';
@@ -27,6 +27,7 @@ import locationRoutes from '@/routes/locations';
 import adminRoutes from '@/routes/admin';
 import agenticAssistantRoutes from '@/routes/agentic-assistant.routes';
 import memoryRoutes from '@/routes/memory.routes';
+import voiceRoutes from '@/routes/voice';
 import messageService from '@/services/MessageService';
 import notificationService from '@/services/NotificationService';
 import jwt from './utils/jwt';
@@ -41,7 +42,7 @@ export class App {
     this.server = createServer(this.app);
     this.io = new SocketIOServer(this.server, {
       cors: {
-        origin: allowedOrigins,
+        origin: getAllowedOrigins(),
         credentials: true,
       },
     });
@@ -108,6 +109,7 @@ export class App {
     this.app.use(`/api/${config.server.apiVersion}/locations`, locationRoutes);
     this.app.use(`/api/${config.server.apiVersion}/agentic-assistant`, agenticAssistantRoutes);
     this.app.use(`/api/${config.server.apiVersion}/memory`, memoryRoutes);
+    this.app.use(`/api/${config.server.apiVersion}/voice`, voiceRoutes);
     this.app.use(`/api/${config.server.apiVersion}/admin`, adminRoutes);
 
     if (process.env.NODE_ENV === 'production') {
