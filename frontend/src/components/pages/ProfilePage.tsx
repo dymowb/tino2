@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { apiService } from '../../services/api';
 import PasswordChangeDialog from '../profile/PasswordChangeDialog';
 import AccountDeletionDialog from '../profile/AccountDeletionDialog';
+import PrivacySettingsDialog from '../profile/PrivacySettingsDialog';
 
 interface UserProfile {
   id: number;
@@ -34,6 +36,7 @@ interface ProviderProfile {
 const ProfilePage: React.FC = () => {
   const { t, i18n } = useTranslation(['profile']);
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [providerProfile, setProviderProfile] = useState<ProviderProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,6 +45,7 @@ const ProfilePage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [deletionDialogOpen, setDeletionDialogOpen] = useState(false);
+  const [privacyDialogOpen, setPrivacyDialogOpen] = useState(false);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -152,17 +156,14 @@ const ProfilePage: React.FC = () => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
+    return new Date(dateString).toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'pt-BR', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
   };
 
-  const formatUserType = (type: string) => {
-    const map: Record<string, string> = { customer: 'Cliente', provider: 'Prestador', admin: 'Administrador' };
-    return map[type] ?? type;
-  };
+  const formatUserType = (type: string) => t(`common:user_type.${type}`, type);
 
   const getAvailabilityColor = (status: string) => {
     const option = availabilityOptions.find(opt => opt.value === status);
@@ -541,7 +542,7 @@ const ProfilePage: React.FC = () => {
           </button>
 
           <button
-            onClick={() => alert(t('profile:messages.notifications_pending'))}
+            onClick={() => navigate('/notifications?tab=settings')}
             style={{
               padding: '10px 20px',
               backgroundColor: '#9b59b6',
@@ -556,7 +557,7 @@ const ProfilePage: React.FC = () => {
           </button>
 
           <button
-            onClick={() => alert(t('profile:messages.privacy_pending'))}
+            onClick={() => setPrivacyDialogOpen(true)}
             style={{
               padding: '10px 20px',
               backgroundColor: '#16a085',
@@ -591,6 +592,12 @@ const ProfilePage: React.FC = () => {
       <PasswordChangeDialog
         open={passwordDialogOpen}
         onClose={() => setPasswordDialogOpen(false)}
+      />
+
+      {/* Privacy Settings Dialog */}
+      <PrivacySettingsDialog
+        open={privacyDialogOpen}
+        onClose={() => setPrivacyDialogOpen(false)}
       />
 
       {/* Account Deletion Dialog */}

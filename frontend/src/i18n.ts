@@ -31,6 +31,7 @@ i18n
       'dashboard',
       'assistant',
       'admin',
+      'memory',
     ],
     backend: {
       loadPath: '/locales/{{lng}}/{{ns}}.json',

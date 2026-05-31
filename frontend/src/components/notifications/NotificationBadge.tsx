@@ -23,6 +23,7 @@ import {
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { apiService } from '../../services/api';
 import NotificationCenter from './NotificationCenter';
@@ -39,6 +40,7 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
   const { user } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
+  const { t } = useTranslation('common');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -89,15 +91,9 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
 
   const handleMarkAllRead = async () => {
     try {
-      const unreadIds = recentNotifications?.data
-        ?.filter((n: any) => !n.isRead)
-        ?.map((n: any) => n.id) || [];
-      
-      if (unreadIds.length > 0) {
-        await apiService.markNotificationsRead(unreadIds);
-        refetchCount();
-        refetchRecent();
-      }
+      await apiService.markAllNotificationsRead();
+      refetchCount();
+      refetchRecent();
     } catch (error) {
       console.error('Failed to mark notifications as read:', error);
     }
@@ -177,7 +173,7 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
         <Box sx={{ p: 2, pb: 1, borderBottom: 1, borderColor: 'divider' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Typography variant="h6" fontWeight="bold">
-              Notificações
+              {t('notifications_panel.title')}
             </Typography>
             <Box sx={{ display: 'flex', gap: 0.5 }}>
               <IconButton size="small" onClick={handleRefresh}>
@@ -190,7 +186,7 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
           </Box>
           {hasUnreadNotifications && (
             <Typography variant="body2" color="primary" sx={{ mt: 0.5 }}>
-              {unreadCount} {unreadCount === 1 ? 'notificação não lida' : 'notificações não lidas'}
+              {t(unreadCount === 1 ? 'notifications_panel.unread_one' : 'notifications_panel.unread_other', { count: unreadCount })}
             </Typography>
           )}
         </Box>
@@ -206,7 +202,7 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
                 disabled={!hasUnreadNotifications}
                 sx={{ fontSize: '0.75rem' }}
               >
-                Marcar como lidas
+                {t('notifications_panel.mark_read')}
               </Button>
               <Button
                 size="small"
@@ -214,7 +210,7 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
                 onClick={handleViewAllNotifications}
                 sx={{ fontSize: '0.75rem', ml: 'auto' }}
               >
-                Ver todas
+                {t('notifications_panel.see_all')}
               </Button>
             </Box>
           </Box>
@@ -321,7 +317,7 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
                     color="primary"
                     fontWeight="medium"
                   >
-                    Ver todas as notificações
+                    {t('notifications_panel.see_all')}
                   </Typography>
                 }
               />

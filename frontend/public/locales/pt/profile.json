@@ -142,5 +142,23 @@
     "validation_error": "Por favor, verifique suas informações e tente novamente",
     "notifications_pending": "Integração de preferências de notificação pendente",
     "privacy_pending": "Integração de configurações de privacidade pendente"
+  },
+
+  "privacy": {
+    "visibility_title": "Visibilidade do Perfil",
+    "visibility_public": "Perfil público",
+    "visibility_private": "Privado (visível apenas para prestadores com reserva ativa)",
+    "visibility_desc": "Controla quem pode encontrar seu perfil ao buscar clientes.",
+    "export_title": "Exportar Dados",
+    "export_desc": "Baixe uma cópia de todos os seus dados, incluindo perfil, reservas e avaliações em formato JSON.",
+    "export_button": "Baixar Meus Dados",
+    "export_success": "Dados exportados com sucesso",
+    "export_error": "Falha ao exportar dados",
+    "memory_title": "Memória da IA",
+    "memory_desc": "Controle o que o assistente de IA lembra sobre suas preferências e histórico.",
+    "memory_manage": "Gerenciar Memória",
+    "delete_title": "Exclusão de Conta",
+    "delete_desc": "Solicitar a exclusão da conta irá desativá-la e agendá-la para exclusão permanente após 30 dias.",
+    "delete_contact": "Para solicitar a exclusão, use o botão Excluir Minha Conta na página principal de Perfil."
   }
 }

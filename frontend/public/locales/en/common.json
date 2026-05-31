@@ -27,6 +27,7 @@
 
   "navigation": {
     "home": "Home",
+    "my_memory": "My Memory",
     "find_providers": "Find Providers",
     "my_bookings": "My Bookings",
     "my_quotes": "My Quotes",
@@ -134,6 +135,41 @@
       "rating": "⭐ 4.8/5 Rating",
       "services_count": "🎯 50+ Services",
       "verified_badge": "✅ Verified Providers"
-    }
+    },
+    "hero_eyebrow": "Domestic Services Platform",
+    "hero_headline": "Trusted home services, at one click.",
+    "stat_rating_label": "Average Rating",
+    "stat_services_label": "Available Services",
+    "stat_providers_label": "Verified Providers",
+    "all_rating": "All"
+  },
+
+  "payment_status": {
+    "pending": "Pending",
+    "paid": "Paid",
+    "completed": "Paid",
+    "failed": "Failed",
+    "refunded": "Refunded",
+    "held": "Held in escrow"
+  },
+
+  "user_type": {
+    "customer": "Customer",
+    "provider": "Service Provider",
+    "admin": "Administrator"
+  },
+
+  "error_boundary": {
+    "title": "Something went wrong.",
+    "message": "Please reload the page. If the problem persists, contact support.",
+    "retry": "Try again"
+  },
+
+  "notifications_panel": {
+    "title": "Notifications",
+    "unread_one": "{{count}} unread notification",
+    "unread_other": "{{count}} unread notifications",
+    "mark_read": "Mark as read",
+    "see_all": "See all"
   }
 }

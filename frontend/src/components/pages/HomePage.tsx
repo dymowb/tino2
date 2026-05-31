@@ -42,10 +42,10 @@ const featurePillars = [
   },
 ];
 
-const stats = [
-  { value: '4.8', unit: '/5',  label: 'Avaliação média' },
-  { value: '50+', unit: '',    label: 'Serviços disponíveis' },
-  { value: '100%', unit: '',   label: 'Prestadores verificados' },
+const STAT_LABEL_KEYS = [
+  { value: '4.8', unit: '/5',  labelKey: 'home.stat_rating_label' },
+  { value: '50+', unit: '',    labelKey: 'home.stat_services_label' },
+  { value: '100%', unit: '',   labelKey: 'home.stat_providers_label' },
 ];
 
 const HomePage: React.FC = () => {
@@ -100,7 +100,7 @@ const HomePage: React.FC = () => {
                   color: tokens.color.terra,
                   mb: 3,
                 }}>
-                  {t('home.hero_eyebrow', 'Plataforma de Serviços Domésticos')}
+                  {t('home.hero_eyebrow')}
                 </Typography>
               </motion.div>
 
@@ -117,7 +117,7 @@ const HomePage: React.FC = () => {
                     mb: 3,
                   }}
                 >
-                  {t('home.hero_headline', 'Serviços domésticos de confiança, a um clique.')}
+                  {t('home.hero_headline')}
                 </Typography>
               </motion.div>
 
@@ -534,8 +534,8 @@ const HomePage: React.FC = () => {
 
             {/* Stats */}
             <Box sx={{ display: 'flex', gap: { xs: 5, md: 7 }, flexWrap: 'wrap' }}>
-              {stats.map(stat => (
-                <Box key={stat.label} sx={{ textAlign: 'center' }}>
+              {STAT_LABEL_KEYS.map(stat => (
+                <Box key={stat.labelKey} sx={{ textAlign: 'center' }}>
                   <Typography sx={{
                     fontFamily: tokens.font.display,
                     fontSize: { xs: '2.75rem', md: '3.75rem' },
@@ -563,7 +563,7 @@ const HomePage: React.FC = () => {
                     letterSpacing: '0.1em',
                     fontWeight: 600,
                   }}>
-                    {stat.label}
+                    {t(stat.labelKey)}
                   </Typography>
                 </Box>
               ))}

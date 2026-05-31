@@ -10,6 +10,7 @@ import { Conversation, ConversationType } from '@/models/Conversation';
 import { Message, MessageType } from '@/models/Message';
 import { Payment, PaymentStatus, PaymentMethod } from '@/models/Payment';
 import { AppSettings } from '@/models/AppSettings';
+import { Notification, NotificationType, NotificationPriority } from '@/models/Notification';
 import { passwordService } from '@/utils/password';
 import logger from '@/config/logger';
 
@@ -274,6 +275,7 @@ class DatabaseSeeder {
       await this.seedPayments();
       await this.seedConversations();
       await this.seedReviews();
+      await this.seedNotifications();
       logger.info('Database seeding completed successfully!');
     } catch (error) {
       logger.error('Database seeding failed:', error);
@@ -287,7 +289,7 @@ class DatabaseSeeder {
     // session_replication_role approach fails because SET applies to the
     // session that issues it, but TypeORM pool may use a different connection.
     await AppDataSource.query(
-      `TRUNCATE TABLE reviews, messages, conversations, payments, bookings, providers, users CASCADE`,
+      `TRUNCATE TABLE notifications, reviews, messages, conversations, payments, bookings, providers, users CASCADE`,
     );
     logger.info('Database cleared successfully');
   }
@@ -917,6 +919,61 @@ class DatabaseSeeder {
     if (messageIndex === 5) return MESSAGE_TEMPLATES.scheduling;
     if (messageIndex > 5 && messageIndex < totalMessages - 1) return MESSAGE_TEMPLATES.workUpdates;
     return [...MESSAGE_TEMPLATES.providerQuote, ...MESSAGE_TEMPLATES.scheduling];
+  }
+
+  private async seedNotifications(): Promise<void> {
+    logger.info('Seeding notifications...');
+    const notificationRepo = AppDataSource.getRepository(Notification);
+
+    const customer = this.users.find(u => u.email === 'customer@demo.com');
+    const providerUser = this.users.find(u => u.email === 'provider@demo.com');
+    const adminUser = this.users.find(u => u.email === 'admin@demo.com');
+
+    const daysAgo = (n: number) => {
+      const d = new Date();
+      d.setDate(d.getDate() - n);
+      return d;
+    };
+
+    const notifs: Partial<Notification>[] = [];
+
+    if (customer) {
+      notifs.push(
+        { userId: customer.id, type: NotificationType.BOOKING, title: 'Reserva Confirmada', message: 'Sua reserva de Limpeza Residencial foi confirmada pelo prestador.', isRead: true, priority: NotificationPriority.HIGH, actionUrl: '/bookings', createdAt: daysAgo(6) },
+        { userId: customer.id, type: NotificationType.BOOKING, title: 'Serviço Concluído', message: 'Seu serviço de Encanamento foi marcado como concluído. Confirme para liberar o pagamento.', isRead: true, priority: NotificationPriority.HIGH, actionUrl: '/bookings', createdAt: daysAgo(5) },
+        { userId: customer.id, type: NotificationType.PAYMENT, title: 'Pagamento Processado', message: 'O pagamento de R$280,00 para Limpeza Residencial foi processado com sucesso.', isRead: true, priority: NotificationPriority.MEDIUM, actionUrl: '/payments', createdAt: daysAgo(5) },
+        { userId: customer.id, type: NotificationType.MESSAGE, title: 'Nova Mensagem', message: 'Carina Pereira Serviços enviou uma mensagem sobre sua reserva.', isRead: true, priority: NotificationPriority.MEDIUM, actionUrl: '/messages', createdAt: daysAgo(4) },
+        { userId: customer.id, type: NotificationType.BOOKING, title: 'Reserva Cancelada', message: 'A reserva de Jardinagem foi cancelada pelo prestador.', isRead: false, priority: NotificationPriority.HIGH, actionUrl: '/bookings', createdAt: daysAgo(3) },
+        { userId: customer.id, type: NotificationType.BOOKING, title: 'Nova Reserva Pendente', message: 'Sua solicitação de Alarme Residencial foi enviada e aguarda confirmação do prestador.', isRead: false, priority: NotificationPriority.MEDIUM, actionUrl: '/bookings', createdAt: daysAgo(1) },
+        { userId: customer.id, type: NotificationType.SYSTEM, title: 'Bem-vindo ao Tino 2', message: 'Sua conta foi verificada. Comece a buscar prestadores de serviços em Florianópolis!', isRead: true, priority: NotificationPriority.LOW, actionUrl: '/providers', createdAt: daysAgo(30) },
+      );
+    }
+
+    if (providerUser) {
+      notifs.push(
+        { userId: providerUser.id, type: NotificationType.BOOKING, title: 'Nova Solicitação de Reserva', message: 'Demo Customer solicitou Limpeza Residencial para 15 de junho.', isRead: true, priority: NotificationPriority.HIGH, actionUrl: '/bookings', createdAt: daysAgo(6) },
+        { userId: providerUser.id, type: NotificationType.REVIEW, title: 'Nova Avaliação Recebida', message: 'Demo Customer avaliou seu serviço com 5 estrelas: "Excelente trabalho!"', isRead: true, priority: NotificationPriority.MEDIUM, actionUrl: '/reviews', createdAt: daysAgo(4) },
+        { userId: providerUser.id, type: NotificationType.PAYMENT, title: 'Pagamento Recebido', message: 'Você recebeu R$252,00 pelo serviço de Limpeza Residencial (após taxa da plataforma).', isRead: false, priority: NotificationPriority.HIGH, actionUrl: '/payments', createdAt: daysAgo(5) },
+        { userId: providerUser.id, type: NotificationType.MESSAGE, title: 'Nova Mensagem', message: 'Demo Customer enviou uma mensagem sobre a reserva de amanhã.', isRead: false, priority: NotificationPriority.MEDIUM, actionUrl: '/messages', createdAt: daysAgo(1) },
+        { userId: providerUser.id, type: NotificationType.BOOKING, title: 'Conclusão Confirmada', message: 'Demo Customer confirmou a conclusão do serviço. O pagamento foi liberado.', isRead: false, priority: NotificationPriority.HIGH, actionUrl: '/bookings', createdAt: daysAgo(2) },
+        { userId: providerUser.id, type: NotificationType.SYSTEM, title: 'Perfil Verificado', message: 'Seu perfil foi verificado com sucesso. Você agora aparece nas buscas dos clientes.', isRead: true, priority: NotificationPriority.LOW, createdAt: daysAgo(20) },
+      );
+    }
+
+    if (adminUser) {
+      notifs.push(
+        { userId: adminUser.id, type: NotificationType.BOOKING, title: 'Disputa Aberta', message: 'Um cliente abriu uma disputa para a reserva #8d7f3a. Revisão necessária.', isRead: false, priority: NotificationPriority.HIGH, actionUrl: '/admin/disputes', createdAt: daysAgo(2) },
+        { userId: adminUser.id, type: NotificationType.SYSTEM, title: 'Novo Prestador Cadastrado', message: '3 novos prestadores se cadastraram esta semana e aguardam aprovação.', isRead: true, priority: NotificationPriority.MEDIUM, actionUrl: '/admin/providers', createdAt: daysAgo(3) },
+        { userId: adminUser.id, type: NotificationType.PAYMENT, title: 'Relatório Semanal', message: 'O relatório de pagamentos da semana está disponível. Total: R$12.450,00 em transações.', isRead: true, priority: NotificationPriority.LOW, actionUrl: '/admin', createdAt: daysAgo(7) },
+      );
+    }
+
+    for (const n of notifs) {
+      const notif = notificationRepo.create(n);
+      await notificationRepo.save(notif);
+    }
+
+    logger.info(`Seeded ${notifs.length} notifications`);
   }
 }
 

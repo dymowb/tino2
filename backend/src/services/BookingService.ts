@@ -249,7 +249,9 @@ export class BookingService {
       logger.info(`Booking status updated`, { bookingId, newStatus, userId, userRole });
 
       // Notify the other party about the status change
-      const notifyUserId = userRole === 'provider' ? updatedBooking.customerId : undefined;
+      const notifyUserId = userRole === 'provider'
+        ? updatedBooking.customerId
+        : updatedBooking.provider?.userId;
       if (notifyUserId) {
         notificationService.createNotification(notifyUserId, {
           type: NotificationType.BOOKING,
@@ -283,7 +285,7 @@ export class BookingService {
         dateTo,
         page = 1,
         limit = 20,
-        sortBy = 'date',
+        sortBy = 'created',
         sortOrder = 'desc',
       } = query;
 
@@ -381,6 +383,18 @@ export class BookingService {
 
       const cancelledBooking = await this.bookingRepository.save(booking);
       logger.info(`Booking cancelled`, { bookingId, userId, userRole });
+
+      // Notify the other party
+      const notifyUserId = isCustomer ? booking.provider?.userId : booking.customerId;
+      if (notifyUserId) {
+        notificationService.createNotification(notifyUserId, {
+          type: NotificationType.BOOKING,
+          title: 'Booking Cancelled',
+          message: `A booking has been cancelled by the ${isCustomer ? 'customer' : 'provider'}.`,
+          actionUrl: `/bookings/${bookingId}`,
+          metadata: { bookingId },
+        }).catch(err => logger.error('Failed to send cancellation notification:', err));
+      }
 
       return cancelledBooking;
     } catch (error) {

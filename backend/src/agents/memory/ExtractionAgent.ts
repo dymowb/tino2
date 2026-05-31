@@ -70,16 +70,17 @@ Output ONLY valid JSON matching this schema exactly:
 - Do NOT include PII like phone numbers, CPF, exact street addresses, or credit card numbers — the system will scrub these, but do not store them in the first place
 - episodic_summary: 1–3 sentences, past-tense, factual. What happened in this session? Did a booking result?
 - episodic_importance: 0–1, higher if booking was made or strong signal emerged
+- **LANGUAGE**: Write all fact content and summaries in the SAME language as the conversation. If the conversation is in Portuguese, write in Portuguese. If in English, write in English.
 
-## Example — good output
+## Example — good output (conversation in Portuguese → facts in Portuguese)
 Conversation: "User: Preciso de uma faxineira para o meu apartamento em Lagoa. Tenho dois gatos. Meu orçamento é até R$280."
 {
   "semantic_facts": [
-    { "content": "User lives in Lagoa da Conceição, Florianópolis", "confidence": 0.9, "importance": 0.9 },
-    { "content": "User has two cats; needs pet-friendly providers", "confidence": 0.95, "importance": 0.85 },
-    { "content": "User's cleaning budget is up to R$280", "confidence": 0.95, "importance": 0.8 }
+    { "content": "Usuário mora em Lagoa da Conceição, Florianópolis", "confidence": 0.9, "importance": 0.9 },
+    { "content": "Usuário tem dois gatos; precisa de prestadores que aceitam animais", "confidence": 0.95, "importance": 0.85 },
+    { "content": "Orçamento do usuário para limpeza é até R$280", "confidence": 0.95, "importance": 0.8 }
   ],
-  "episodic_summary": "User searched for a cleaner for their apartment in Lagoa. Mentioned two cats and a R$280 budget. No booking was confirmed in this session.",
+  "episodic_summary": "Usuário buscou faxineira para apartamento em Lagoa. Mencionou dois gatos e orçamento de R$280. Nenhuma reserva foi confirmada nesta sessão.",
   "episodic_importance": 0.4
 }
 
@@ -120,17 +121,18 @@ Output ONLY valid JSON matching this schema exactly:
 - Do NOT extract customer facts or review content
 - episodic_summary: 1–2 sentences, past-tense. What kind of review did they respond to? What tone did they use?
 - episodic_importance: 0–1, higher if a strong style signal emerged
+- **LANGUAGE**: Write all fact content and summaries in the SAME language as the review/response text.
 
-## Example — good output
+## Example — good output (interaction in Portuguese → facts in Portuguese)
 Review (2 stars): "A faxineira não limpou o banheiro direito."
 Provider response: "Olá! Pedimos sinceras desculpas pela experiência. Nossa equipe preza pela qualidade e vamos retornar para refazer o serviço gratuitamente."
 {
   "semantic_facts": [
-    { "content": "Provider uses formal Portuguese in responses (Olá, pedimos desculpas)", "confidence": 0.9, "importance": 0.85 },
-    { "content": "Provider offers to redo unsatisfactory work at no charge", "confidence": 0.95, "importance": 0.8 },
-    { "content": "Provider emphasizes quality as a core value", "confidence": 0.8, "importance": 0.7 }
+    { "content": "Prestador usa português formal nas respostas (Olá, pedimos desculpas)", "confidence": 0.9, "importance": 0.85 },
+    { "content": "Prestador oferece refazer serviços insatisfatórios sem custo", "confidence": 0.95, "importance": 0.8 },
+    { "content": "Prestador enfatiza qualidade como valor central", "confidence": 0.8, "importance": 0.7 }
   ],
-  "episodic_summary": "Provider responded to a 2-star complaint about incomplete cleaning. Used formal, apologetic tone and offered a free redo.",
+  "episodic_summary": "Prestador respondeu a reclamação de 2 estrelas sobre limpeza incompleta. Usou tom formal e apologético, oferecendo refazer o serviço gratuitamente.",
   "episodic_importance": 0.65
 }`;
 

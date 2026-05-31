@@ -141,6 +141,24 @@
     }
   },
 
+  "privacy": {
+    "visibility_title": "Profile Visibility",
+    "visibility_public": "Public profile",
+    "visibility_private": "Private (visible only to providers with an active booking)",
+    "visibility_desc": "Controls who can find your profile when searching for service customers.",
+    "export_title": "Data Export",
+    "export_desc": "Download a copy of all your account data including profile, bookings, and reviews in JSON format.",
+    "export_button": "Download My Data",
+    "export_success": "Data exported successfully",
+    "export_error": "Failed to export data",
+    "memory_title": "AI Memory",
+    "memory_desc": "Control what the AI assistant remembers about your preferences and history.",
+    "memory_manage": "Manage Memory",
+    "delete_title": "Account Deletion",
+    "delete_desc": "Requesting account deletion will deactivate your account and schedule it for permanent deletion after 30 days.",
+    "delete_contact": "To request deletion, use the Delete My Account button on the main Profile page."
+  },
+
   "messages": {
     "update_success": "Profile updated successfully",
     "update_error": "Failed to update profile",

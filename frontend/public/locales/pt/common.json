@@ -27,6 +27,7 @@
 
   "navigation": {
     "home": "Início",
+    "my_memory": "Minha Memória",
     "find_providers": "Buscar Prestadores",
     "my_bookings": "Minhas Reservas",
     "my_quotes": "Minhas Cotações",
@@ -134,6 +135,41 @@
       "rating": "⭐ 4.8/5 Avaliação",
       "services_count": "🎯 50+ Serviços",
       "verified_badge": "✅ Prestadores Verificados"
-    }
+    },
+    "hero_eyebrow": "Plataforma de Serviços Domésticos",
+    "hero_headline": "Serviços domésticos de confiança, a um clique.",
+    "stat_rating_label": "Avaliação média",
+    "stat_services_label": "Serviços disponíveis",
+    "stat_providers_label": "Prestadores verificados",
+    "all_rating": "Todos"
+  },
+
+  "payment_status": {
+    "pending": "Pendente",
+    "paid": "Pago",
+    "completed": "Pago",
+    "failed": "Falhou",
+    "refunded": "Reembolsado",
+    "held": "Retido em garantia"
+  },
+
+  "user_type": {
+    "customer": "Cliente",
+    "provider": "Prestador",
+    "admin": "Administrador"
+  },
+
+  "error_boundary": {
+    "title": "Algo deu errado.",
+    "message": "Por favor, recarregue a página. Se o problema persistir, entre em contato com o suporte.",
+    "retry": "Tentar novamente"
+  },
+
+  "notifications_panel": {
+    "title": "Notificações",
+    "unread_one": "{{count}} notificação não lida",
+    "unread_other": "{{count}} notificações não lidas",
+    "mark_read": "Marcar como lidas",
+    "see_all": "Ver todas"
   }
 }

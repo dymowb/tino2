@@ -42,6 +42,21 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
+// PATCH /api/v1/notifications/read-all
+router.patch('/read-all', authenticate, async (req, res) => {
+  try {
+    const result = await notificationService.getUserNotifications(req.user.id, { limit: 500 });
+    const unreadIds = result.notifications.filter(n => !n.isRead).map(n => n.id);
+    if (unreadIds.length > 0) {
+      await notificationService.markAsRead(req.user.id, unreadIds);
+    }
+    res.json({ success: true, message: 'All notifications marked as read' });
+  } catch (error) {
+    logger.error('Error marking all notifications as read:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
 // PATCH /api/v1/notifications/read  body: { notificationIds }
 router.patch('/read', authenticate, async (req, res) => {
   try {

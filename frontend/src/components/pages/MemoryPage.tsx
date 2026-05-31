@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -85,8 +86,10 @@ interface MemoryStats {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+import i18n from '../../i18n';
+
 const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  new Date(iso).toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
 const confidenceColor = (v: number): 'error' | 'warning' | 'success' =>
   v >= 0.8 ? 'success' : v >= 0.6 ? 'warning' : 'error';
@@ -100,23 +103,26 @@ interface DeleteDialogProps {
   label: string;
 }
 
-const DeleteDialog: React.FC<DeleteDialogProps> = ({ open, onClose, onConfirm, label }) => (
-  <Dialog open={open} onClose={onClose}>
-    <DialogTitle>Remover memória?</DialogTitle>
-    <DialogContent>
-      <DialogContentText>
-        Esta ação vai apagar permanentemente:<br />
-        <strong>{label}</strong>
-        <br /><br />
-        O assistente não terá mais acesso a esta informação em sessões futuras.
-      </DialogContentText>
-    </DialogContent>
-    <DialogActions>
-      <Button onClick={onClose}>Cancelar</Button>
-      <Button onClick={onConfirm} color="error" variant="contained">Remover</Button>
-    </DialogActions>
-  </Dialog>
-);
+const DeleteDialog: React.FC<DeleteDialogProps> = ({ open, onClose, onConfirm, label }) => {
+  const { t } = useTranslation('memory');
+  return (
+    <Dialog open={open} onClose={onClose}>
+      <DialogTitle>{t('delete_dialog_title')}</DialogTitle>
+      <DialogContent>
+        <DialogContentText>
+          {t('delete_dialog_body')}<br />
+          <strong>{label}</strong>
+          <br /><br />
+          {t('delete_dialog_warn')}
+        </DialogContentText>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t('delete_cancel')}</Button>
+        <Button onClick={onConfirm} color="error" variant="contained">{t('delete_confirm')}</Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
 
 // ── Section skeleton ──────────────────────────────────────────────────────────
 
@@ -130,6 +136,7 @@ const SectionSkeleton = () => (
 
 const MemoryPage: React.FC = () => {
   const queryClient = useQueryClient();
+  const { t } = useTranslation('memory');
   const [deleteTarget, setDeleteTarget] = useState<{ type: string; id: string; label: string } | null>(null);
   const [statsOpen, setStatsOpen] = useState(false);
 
@@ -155,9 +162,9 @@ const MemoryPage: React.FC = () => {
       apiService.delete(`/memory/me/${type}/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-memories'] });
-      toast.success('Memória removida');
+      toast.success(t('removed_success'));
     },
-    onError: () => toast.error('Não foi possível remover a memória'),
+    onError: () => toast.error(t('remove_error')),
   });
 
   const optOutMutation = useMutation({
@@ -165,9 +172,9 @@ const MemoryPage: React.FC = () => {
       apiService.patch('/memory/me/optout', { optOut }),
     onSuccess: (_res, optOut) => {
       queryClient.invalidateQueries({ queryKey: ['my-memories'] });
-      toast.success(optOut ? 'Memória desativada' : 'Memória reativada');
+      toast.success(optOut ? t('disabled_active') : t('disabled_reactivated'));
     },
-    onError: () => toast.error('Não foi possível alterar a configuração'),
+    onError: () => toast.error(t('toggle_error')),
   });
 
   const handleDelete = (type: string, id: string, label: string) =>
@@ -183,7 +190,7 @@ const MemoryPage: React.FC = () => {
   if (isError) {
     return (
       <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
-        <Alert severity="error">Não foi possível carregar suas memórias. Tente novamente mais tarde.</Alert>
+        <Alert severity="error">{t('load_error')}</Alert>
       </Box>
     );
   }
@@ -191,9 +198,7 @@ const MemoryPage: React.FC = () => {
   if (data?.memoryDisabled) {
     return (
       <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
-        <Alert severity="info">
-          O sistema de memória não está ativo neste ambiente.
-        </Alert>
+        <Alert severity="info">{t('system_disabled')}</Alert>
       </Box>
     );
   }
@@ -206,10 +211,8 @@ const MemoryPage: React.FC = () => {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
         <PsychologyIcon sx={{ fontSize: 36, color: 'primary.main' }} />
         <Box>
-          <Typography variant="h5" fontWeight={700}>Minha Memória</Typography>
-          <Typography variant="body2" color="text.secondary">
-            O que o assistente sabe sobre você e como usa essas informações
-          </Typography>
+          <Typography variant="h5" fontWeight={700}>{t('title')}</Typography>
+          <Typography variant="body2" color="text.secondary">{t('subtitle')}</Typography>
         </Box>
       </Box>
 
@@ -218,17 +221,9 @@ const MemoryPage: React.FC = () => {
         <CardContent>
           <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
             <Box>
-              <Typography variant="subtitle1" fontWeight={600}>
-                Aprendizado personalizado
-              </Typography>
+              <Typography variant="subtitle1" fontWeight={600}>{t('learning_toggle')}</Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                Quando ativo, o assistente lembra de suas preferências, orçamento, localização e histórico
-                para oferecer recomendações mais precisas em cada sessão.
-                {isOptedOut && (
-                  <Box component="span" sx={{ display: 'block', mt: 1, color: 'warning.main', fontWeight: 500 }}>
-                    Memória desativada — desativar também apaga todos os dados existentes.
-                  </Box>
-                )}
+                {t('learning_desc')}
               </Typography>
             </Box>
             <FormControlLabel
@@ -255,7 +250,7 @@ const MemoryPage: React.FC = () => {
             onClick={() => setStatsOpen(o => !o)}
           >
             <BarChartIcon fontSize="small" color="action" />
-            <Typography variant="subtitle2" sx={{ flex: 1 }}>Estatísticas (últimos 30 dias)</Typography>
+            <Typography variant="subtitle2" sx={{ flex: 1 }}>{t('stats_section')}</Typography>
             {statsOpen ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
           </Box>
           <Collapse in={statsOpen}>
@@ -283,25 +278,23 @@ const MemoryPage: React.FC = () => {
       </Card>
 
       {isOptedOut ? (
-        <Alert severity="warning">
-          Memória desativada. Reative para ver e gerenciar suas informações.
-        </Alert>
+        <Alert severity="warning">{t('opted_out_alert')}</Alert>
       ) : (
         <>
           {/* Procedural Rules */}
           <Section
             icon={<RuleIcon color="primary" />}
-            title="Regras ativas"
-            subtitle="Comportamentos que o assistente aplica automaticamente com base nos seus padrões"
-            tooltip="Derivadas das suas sessões passadas. Têm prioridade sobre o comportamento padrão do assistente."
-            emptyText="Nenhuma regra ativa ainda. Continue usando o assistente para que ele aprenda seus padrões."
+            title={t('active_rules_section')}
+            subtitle={t('active_rules_desc')}
+            tooltip={t('active_rules_section')}
+            emptyText={t('no_active_rules')}
             isLoading={isLoading}
           >
             {data?.procedural.map(rule => (
               <MemoryCard
                 key={rule.id}
                 primary={rule.rule_text}
-                secondary={`Confiança ${(Number(rule.confidence) * 100).toFixed(0)}%`}
+                secondary={t('confidence', { pct: (Number(rule.confidence) * 100).toFixed(0) })}
                 confidence={Number(rule.confidence)}
                 date={rule.created_at}
                 onDelete={() => handleDelete('procedural', rule.id, rule.rule_text)}
@@ -314,17 +307,17 @@ const MemoryPage: React.FC = () => {
           {/* Semantic memories */}
           <Section
             icon={<PsychologyIcon color="secondary" />}
-            title="O que sabemos sobre você"
-            subtitle="Fatos extraídos das suas conversas — preferências, localização, orçamento"
-            tooltip="Usados para pular perguntas já respondidas e personalizar recomendações."
-            emptyText="Nenhum fato registrado ainda. Inicie uma sessão com o assistente para começar."
+            title={t('known_facts_section')}
+            subtitle={t('known_facts_desc')}
+            tooltip={t('known_facts_section')}
+            emptyText={t('no_facts')}
             isLoading={isLoading}
           >
             {data?.semantic.map(mem => (
               <MemoryCard
                 key={mem.id}
                 primary={mem.content}
-                secondary={`Confiança ${(Number(mem.confidence) * 100).toFixed(0)}% · Acessado ${mem.access_count}×`}
+                secondary={`${t('confidence', { pct: (Number(mem.confidence) * 100).toFixed(0) })} · ${(t as Function)('accessed', { count: mem.access_count })}`}
                 confidence={Number(mem.confidence)}
                 date={mem.created_at}
                 onDelete={() => handleDelete('semantic', mem.id, mem.content)}
@@ -337,10 +330,10 @@ const MemoryPage: React.FC = () => {
           {/* Episodic memories */}
           <Section
             icon={<HistoryIcon sx={{ color: 'text.secondary' }} />}
-            title="Histórico de sessões"
-            subtitle="Resumo das suas sessões passadas com o assistente"
-            tooltip="Contexto recente que ajuda o assistente a entender o que você já buscou."
-            emptyText="Nenhuma sessão registrada ainda."
+            title={t('session_history_section')}
+            subtitle={t('session_history_desc')}
+            tooltip={t('session_history_section')}
+            emptyText={t('no_sessions')}
             isLoading={isLoading}
           >
             {data?.episodic.map(ep => (
@@ -435,7 +428,9 @@ interface MemoryCardProps {
   onDelete: () => void;
 }
 
-const MemoryCard: React.FC<MemoryCardProps> = ({ primary, secondary, confidence, date, onDelete }) => (
+const MemoryCard: React.FC<MemoryCardProps> = ({ primary, secondary, confidence, date, onDelete }) => {
+  const { t } = useTranslation('memory');
+  return (
   <Card variant="outlined" sx={{ '&:hover': { boxShadow: 2 }, transition: 'box-shadow 0.2s' }}>
     <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
       <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
@@ -460,7 +455,7 @@ const MemoryCard: React.FC<MemoryCardProps> = ({ primary, secondary, confidence,
             </Box>
           </Box>
         </Box>
-        <Tooltip title="Remover esta memória">
+        <Tooltip title={t('delete_confirm')}>
           <IconButton size="small" onClick={onDelete} color="error" sx={{ mt: -0.5 }}>
             <DeleteIcon fontSize="small" />
           </IconButton>
@@ -468,6 +463,7 @@ const MemoryCard: React.FC<MemoryCardProps> = ({ primary, secondary, confidence,
       </Box>
     </CardContent>
   </Card>
-);
+  );
+};
 
 export default MemoryPage;

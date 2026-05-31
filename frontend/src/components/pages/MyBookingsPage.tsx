@@ -38,6 +38,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { apiService, Booking } from '../../services/api';
 import { tokens } from '../../theme/theme';
@@ -99,6 +100,7 @@ const MyBookingsPage: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const { t } = useTranslation(['bookings']);
   const theme = useTheme();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
@@ -114,7 +116,7 @@ const MyBookingsPage: React.FC = () => {
     queryKey: ['bookings', filterStatus],
     queryFn: () => apiService.getBookings({
       ...(filterStatus !== 'all' && { status: filterStatus }),
-      limit: 50
+      limit: 100
     }),
     enabled: isAuthenticated,
     staleTime: 30 * 1000,
@@ -199,9 +201,9 @@ const MyBookingsPage: React.FC = () => {
     { value: 'pending', label: t('bookings:status.pending') },
     { value: 'confirmed', label: t('bookings:status.confirmed') },
     { value: 'in_progress', label: t('bookings:status.in_progress') },
-    { value: 'pending_completion', label: 'Aguardando Confirmação' },
+    { value: 'pending_completion', label: t('bookings:status.pending_completion') },
     { value: 'completed', label: t('bookings:status.completed') },
-    { value: 'in_dispute', label: 'Em Disputa' },
+    { value: 'in_dispute', label: t('bookings:status.in_dispute') },
     { value: 'cancelled', label: t('bookings:status.cancelled') },
   ];
 
@@ -222,8 +224,7 @@ const MyBookingsPage: React.FC = () => {
           </Typography>
           {pagination.total > 0 && (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              {pagination.total} {pagination.total === 1 ? 'reserva' : 'reservas'}
-              {filterStatus !== 'all' && ` · filtrado por ${filterStatus.replace('_', ' ')}`}
+              {t('bookings:list.' + (pagination.total === 1 ? 'results_count' : 'results_count_plural'), { count: pagination.total })}
             </Typography>
           )}
         </Box>
@@ -385,7 +386,7 @@ const MyBookingsPage: React.FC = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                       <Payment sx={{ fontSize: 15, color: 'text.disabled' }} />
                       <Typography variant="body2" color="text.secondary">
-                        {({ pending: 'Pendente', paid: 'Pago', completed: 'Pago', failed: 'Falhou', refunded: 'Reembolsado', held: 'Retido' } as Record<string, string>)[booking.paymentStatus] ?? booking.paymentStatus}
+                        {t(`common:payment_status.${booking.paymentStatus}`, booking.paymentStatus)}
                       </Typography>
                     </Box>
                   </Box>
@@ -546,7 +547,10 @@ const MyBookingsPage: React.FC = () => {
                       variant="text"
                       size="small"
                       startIcon={<Chat fontSize="small" />}
-                      onClick={() => toast(t('bookings:messages.messaging_coming_soon'))}
+                      onClick={() => {
+                        const providerUserId = booking.provider?.userId;
+                        navigate(providerUserId ? `/messages?with=${providerUserId}` : '/messages');
+                      }}
                       sx={{ color: 'text.secondary', borderRadius: tokens.radius.full }}
                     >
                       {t('bookings:actions.message')}

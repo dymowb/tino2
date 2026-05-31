@@ -24,6 +24,7 @@ import {
   Clear as ClearIcon,
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import apiService from '../../services/api';
 import socketService from '../../services/socketService';
 import ChatInterface from '../messaging/ChatInterface';
@@ -59,6 +60,8 @@ interface Conversation {
 
 const MessagingPage: React.FC = () => {
   const { t } = useTranslation(['messages']);
+  const [searchParams] = useSearchParams();
+  const withUserId = searchParams.get('with');
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [newConversationOpen, setNewConversationOpen] = useState(false);
@@ -76,8 +79,15 @@ const MessagingPage: React.FC = () => {
   useEffect(() => {
     if (conversationsData?.data) {
       setConversations(conversationsData.data);
+      // Auto-select conversation when navigated with ?with=userId
+      if (withUserId && !selectedConversation) {
+        const match = conversationsData.data.find((c: Conversation) =>
+          c.participants.some(p => p.id === withUserId)
+        );
+        if (match) setSelectedConversation(match.id);
+      }
     }
-  }, [conversationsData]);
+  }, [conversationsData, withUserId]);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');

@@ -240,7 +240,7 @@ const Navigation: React.FC = () => {
                 </MenuItem>
                 <MenuItem onClick={() => { navigate('/memory'); handleUserMenuClose(); }}>
                   <MemoryIcon sx={{ mr: 1.5, fontSize: 18 }} />
-                  <Typography variant="body2">Minha Memória</Typography>
+                  <Typography variant="body2">{t('navigation.my_memory')}</Typography>
                 </MenuItem>
                 <MenuItem onClick={handleLogout} sx={{ color: tokens.color.terra }}>
                   <LogoutIcon sx={{ mr: 1.5, fontSize: 18 }} />

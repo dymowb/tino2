@@ -8,6 +8,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { createAppTheme, tokens } from './theme/theme';
 import './i18n';
+import i18n from './i18n';
 import Navigation from './components/layout/Navigation';
 import MobileBottomNav from './components/layout/MobileBottomNav';
 import HomePage from './components/pages/HomePage';
@@ -84,10 +85,10 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { error: Er
               fontWeight: 500, lineHeight: 1.1, mb: 2,
               color: tokens.color.earth,
             }}>
-              Algo deu errado.
+              {i18n.t('common:error_boundary.title')}
             </Typography>
             <Typography variant="body1" color="text.secondary" sx={{ mb: 4, lineHeight: 1.6 }}>
-              Por favor, recarregue a página. Se o problema persistir, entre em contato com o suporte.
+              {i18n.t('common:error_boundary.message')}
             </Typography>
             <Button
               variant="contained"
@@ -99,7 +100,7 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { error: Er
                 px: 4,
               }}
             >
-              Tentar novamente
+              {i18n.t('common:error_boundary.retry')}
             </Button>
           </Box>
         </Box>

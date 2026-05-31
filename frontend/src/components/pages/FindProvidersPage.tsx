@@ -548,7 +548,7 @@ const FindProvidersPage: React.FC = () => {
                         value={searchParams.minRating}
                         onChange={(_, v) => setSearchParams(p => ({ ...p, minRating: v as number }))}
                         min={0} max={5} step={0.5} valueLabelDisplay="auto" size="small"
-                        marks={[{ value: 0, label: 'Todos' }, { value: 4, label: '4★' }, { value: 5, label: '5★' }]}
+                        marks={[{ value: 0, label: t('common:home.all_rating') }, { value: 4, label: '4★' }, { value: 5, label: '5★' }]}
                       />
                     </Box>
                     <FormControlLabel

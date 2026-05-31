@@ -1181,6 +1181,11 @@ class ApiService {
     return response.data;
   }
 
+  async markAllNotificationsRead(): Promise<any> {
+    const response = await this.api.patch('/notifications/read-all');
+    return response.data;
+  }
+
   async deleteNotifications(notificationIds: string[]): Promise<any> {
     const response = await this.api.delete('/notifications', { 
       data: { notificationIds } 
@@ -1190,7 +1195,7 @@ class ApiService {
 
   async getNotificationPreferences(): Promise<any> {
     const response = await this.api.get('/notifications/preferences');
-    return response.data;
+    return response.data?.data ?? response.data;
   }
 
   async updateNotificationPreferences(preferences: any): Promise<any> {

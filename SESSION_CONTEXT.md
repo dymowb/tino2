@@ -1,6 +1,39 @@
 # Session Context - Current Work
 
-## CURRENT SESSION: Voice UI — 2026-05-30
+## CURRENT SESSION: Bug Fixes + Notifications + i18n + Profile — 2026-05-31
+**Goal**: Booking bug, i18n audit, notifications, send message, profile privacy settings
+**Status**: ✅ ALL COMPLETE — deployed to production
+
+### What was built / fixed
+
+**Bugs fixed:**
+- **Booking list not showing new bookings** — default sort changed from `scheduledDate DESC` to `createdAt DESC` in `BookingService.searchBookings()`; limit raised 50→100 in `MyBookingsPage`. New bookings always surface at top.
+- **i18n audit (EN locale)** — fixed all hardcoded PT strings across: `HomePage` (hero headline, eyebrow, stat labels), `MyBookingsPage` (filter chips "Aguardando Confirmação"/"Em Disputa", count "56 reservas", payment status labels), `Navigation` ("Minha Memória" avatar item), `NotificationBadge` (full panel: "Notificações", unread count, "Marcar como lidas", "Ver todas"), `ProfilePage` (userType "Cliente"), `MemoryPage` (entire page wired to `memory` namespace), `App.tsx` ErrorBoundary. Created `memory.json` locale for both en/pt.
+- **ExtractionAgent memories in English** — added LANGUAGE rule to both customer and provider system prompts: write facts in same language as conversation. Updated examples to use PT.
+
+**Notifications system (fully wired):**
+- Fixed crash on `/notifications` page: `NotificationCenter.renderPreferencesDialog` was calling `Object.entries(preferences.email)` but `preferences` was the API wrapper `{ success, data }` — fixed `getNotificationPreferences()` to unwrap `.data`.
+- Added `PATCH /notifications/read-all` endpoint to backend routes.
+- Added `markAllNotificationsRead()` to `apiService`.
+- `NotificationBadge` now uses `markAllNotificationsRead()` and properly translates all strings.
+- Wired missing notification emissions: cancellation notifies other party; `updateBookingStatus` now notifies provider when customer updates (not just customer when provider updates).
+
+**Send Message (My Bookings):**
+- "Message" button now navigates to `/messages?with={provider.userId}` instead of showing "coming soon" toast.
+- `MessagingPage` auto-selects the conversation with that user when `?with=` param is present.
+
+**Profile Settings:**
+- Notification Settings button now navigates to `/notifications?tab=settings` (existing preferences UI).
+- Privacy Settings button opens a new `PrivacySettingsDialog` with: profile visibility toggle, data export (JSON download), AI memory link (→ /memory), account deletion info.
+- Added `privacy` section to `profile.json` locale (en + pt).
+
+**Seed data:**
+- `seedDatabase.ts` now seeds notifications for customer@demo.com (7), provider@demo.com (6), admin@demo.com (3). All types covered: booking, payment, review, message, system. Mix of read/unread.
+
+**Known gap:**
+- Real-time notification push via Socket.IO still not wired (polling every 30s instead).
+
+## Previous Session: Voice UI — 2026-05-30
 **Goal**: Voice input/output for AI assistant
 **Status**: ✅ COMPLETE
 
