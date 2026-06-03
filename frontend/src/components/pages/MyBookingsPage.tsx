@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Box,
@@ -33,16 +33,19 @@ import {
   Done,
   Refresh,
   AccessTime,
-  ReceiptLong
+  ReceiptLong,
+  Person,
+  Replay
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { apiService, Booking } from '../../services/api';
+import { apiService, Booking, Provider } from '../../services/api';
 import { tokens } from '../../theme/theme';
 import PageSkeleton from '../common/PageSkeleton';
+import BookingDialog from '../bookings/BookingDialog';
 
 const STATUS_BORDER: Record<string, string> = {
   pending:            tokens.color.gold,
@@ -101,6 +104,8 @@ const MyBookingsPage: React.FC = () => {
   const { t } = useTranslation(['bookings']);
   const theme = useTheme();
   const navigate = useNavigate();
+  const [searchParamsURL] = useSearchParams();
+  const highlightBookingId = searchParamsURL.get('bookingId');
   const queryClient = useQueryClient();
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
@@ -109,6 +114,8 @@ const MyBookingsPage: React.FC = () => {
   const [showDisputeDialog, setShowDisputeDialog] = useState(false);
   const [disputeReason, setDisputeReason] = useState('');
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
+  const [rebookProvider, setRebookProvider] = useState<Provider | null>(null);
+  const [rebookServiceType, setRebookServiceType] = useState<string>('');
 
   const isDark = theme.palette.mode === 'dark';
 
@@ -310,17 +317,25 @@ const MyBookingsPage: React.FC = () => {
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.3, delay: index * 0.05, ease: [0.16, 1, 0.3, 1] }}
               >
-                <Box sx={{
-                  borderRadius: tokens.radius.lg,
-                  border: `1px solid ${isDark ? tokens.color.nightBorder : tokens.color.paperDark}`,
-                  bgcolor: isDark ? tokens.color.nightCard : tokens.color.paper,
-                  overflow: 'hidden',
-                  borderLeft: `4px solid ${borderColor}`,
-                  transition: 'box-shadow 0.2s ease',
-                  '&:hover': {
-                    boxShadow: `0 4px 24px ${alpha(borderColor, 0.15)}`,
-                  }
-                }}>
+                <Box
+                  id={`booking-${booking.id}`}
+                  ref={(el: HTMLElement | null) => {
+                    if (el && highlightBookingId === booking.id) {
+                      setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+                    }
+                  }}
+                  sx={{
+                    borderRadius: tokens.radius.lg,
+                    border: `1px solid ${isDark ? tokens.color.nightBorder : tokens.color.paperDark}`,
+                    bgcolor: isDark ? tokens.color.nightCard : tokens.color.paper,
+                    overflow: 'hidden',
+                    borderLeft: `4px solid ${highlightBookingId === booking.id ? tokens.color.gold : borderColor}`,
+                    transition: 'box-shadow 0.2s ease',
+                    outline: highlightBookingId === booking.id ? `2px solid ${tokens.color.gold}` : 'none',
+                    '&:hover': {
+                      boxShadow: `0 4px 24px ${alpha(borderColor, 0.15)}`,
+                    }
+                  }}>
                   {/* Card header */}
                   <Box sx={{
                     px: 3, pt: 2.5, pb: 2,
@@ -336,7 +351,7 @@ const MyBookingsPage: React.FC = () => {
                         color: 'text.primary',
                         mb: 0.25,
                       }}>
-                        {booking.serviceType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        {booking.serviceType.replace(/_/g, ' ').replace(/(^|\s)(\S)/g, (_, s, c) => s + c.toUpperCase())}
                       </Typography>
                       <Typography sx={{
                         fontFamily: tokens.font.mono,
@@ -363,6 +378,14 @@ const MyBookingsPage: React.FC = () => {
 
                   {/* Details row */}
                   <Box sx={{ px: 3, py: 2, display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                    {booking.provider?.businessName && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                        <Person sx={{ fontSize: 15, color: 'text.disabled' }} />
+                        <Typography variant="body2" color="text.secondary">
+                          {booking.provider.businessName}
+                        </Typography>
+                      </Box>
+                    )}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                       <Schedule sx={{ fontSize: 15, color: 'text.disabled' }} />
                       <Typography variant="body2" color="text.secondary">
@@ -386,7 +409,9 @@ const MyBookingsPage: React.FC = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                       <Payment sx={{ fontSize: 15, color: 'text.disabled' }} />
                       <Typography variant="body2" color="text.secondary">
-                        {t(`common:payment_status.${booking.paymentStatus}`, booking.paymentStatus)}
+                        {booking.status === 'cancelled' && booking.paymentStatus === 'pending'
+                          ? t('bookings:payment_status.not_charged')
+                          : t(`common:payment_status.${booking.paymentStatus}`, booking.paymentStatus)}
                       </Typography>
                     </Box>
                   </Box>
@@ -510,20 +535,55 @@ const MyBookingsPage: React.FC = () => {
                       </>
                     )}
 
-                    {/* Customer: leave review */}
+                    {/* Customer: leave review or show "sent" state */}
                     {booking.status === 'completed' && user?.userType === 'customer' && (
+                      booking.reviews && booking.reviews.length > 0 ? (
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<CheckCircle fontSize="small" />}
+                          disabled
+                          sx={{
+                            borderColor: tokens.color.stone, color: tokens.color.stone,
+                            borderRadius: tokens.radius.full, px: 2.5,
+                          }}
+                        >
+                          {t('bookings:actions.review_sent')}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<Star fontSize="small" />}
+                          onClick={() => toast(t('bookings:messages.review_coming_soon'))}
+                          sx={{
+                            borderColor: tokens.color.gold, color: tokens.color.gold,
+                            '&:hover': { bgcolor: `${tokens.color.gold}0D`, borderColor: tokens.color.gold },
+                            borderRadius: tokens.radius.full, px: 2.5,
+                          }}
+                        >
+                          {t('bookings:actions.leave_review')}
+                        </Button>
+                      )
+                    )}
+
+                    {/* Customer: re-book on completed or cancelled */}
+                    {(booking.status === 'completed' || booking.status === 'cancelled') && user?.userType === 'customer' && booking.provider && (
                       <Button
                         variant="outlined"
                         size="small"
-                        startIcon={<Star fontSize="small" />}
-                        onClick={() => toast(t('bookings:messages.review_coming_soon'))}
+                        startIcon={<Replay fontSize="small" />}
+                        onClick={() => {
+                          setRebookProvider(booking.provider as Provider);
+                          setRebookServiceType(booking.serviceType);
+                        }}
                         sx={{
-                          borderColor: tokens.color.gold, color: tokens.color.gold,
-                          '&:hover': { bgcolor: `${tokens.color.gold}0D`, borderColor: tokens.color.gold },
+                          borderColor: tokens.color.earth, color: tokens.color.earth,
+                          '&:hover': { bgcolor: `${tokens.color.earth}0D` },
                           borderRadius: tokens.radius.full, px: 2.5,
                         }}
                       >
-                        {t('bookings:actions.leave_review')}
+                        {t('bookings:actions.rebook')}
                       </Button>
                     )}
 
@@ -547,9 +607,18 @@ const MyBookingsPage: React.FC = () => {
                       variant="text"
                       size="small"
                       startIcon={<Chat fontSize="small" />}
-                      onClick={() => {
+                      onClick={async () => {
                         const providerUserId = booking.provider?.userId;
-                        navigate(providerUserId ? `/messages?with=${providerUserId}` : '/messages');
+                        if (!providerUserId) { navigate('/messages'); return; }
+                        try {
+                          const conv = await apiService.createConversation({
+                            participantIds: [providerUserId],
+                            metadata: { bookingId: booking.id, serviceType: booking.serviceType },
+                          });
+                          navigate(`/messages?conversationId=${conv.id}`);
+                        } catch {
+                          navigate(`/messages?with=${providerUserId}`);
+                        }
                       }}
                       sx={{ color: 'text.secondary', borderRadius: tokens.radius.full }}
                     >
@@ -596,6 +665,14 @@ const MyBookingsPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Re-book Dialog */}
+      <BookingDialog
+        open={!!rebookProvider}
+        onClose={() => { setRebookProvider(null); setRebookServiceType(''); }}
+        provider={rebookProvider}
+        serviceType={rebookServiceType}
+      />
 
       {/* Dispute Dialog */}
       <Dialog open={showDisputeDialog} onClose={() => setShowDisputeDialog(false)} maxWidth="sm" fullWidth>

@@ -1,6 +1,7 @@
 {
   "request": {
     "title": "Request Service Quotes",
+    "title_provider": "Request Quote from {{name}}",
     "service_type": "Service Type",
     "urgency_level": "Urgency Level",
     "urgency_low": "Low - Flexible timeline",
@@ -33,6 +34,18 @@
     "creating": "Creating...",
     "success": "Quote request created successfully!",
     "error": "Failed to create quote request",
+    "services": {
+      "house_cleaning": "House Cleaning",
+      "deep_cleaning": "Deep Cleaning",
+      "plumbing": "Plumbing",
+      "electrical": "Electrical",
+      "carpentry": "Carpentry",
+      "painting": "Painting",
+      "gardening": "Gardening",
+      "hvac": "HVAC",
+      "appliance_repair": "Appliance Repair",
+      "pest_control": "Pest Control"
+    },
     "validation": {
       "service_type_required": "Service type is required",
       "description_required": "Description is required",
@@ -151,6 +164,8 @@
     "available_requests_tab": "Available Requests ({{count}})",
     "my_quotes_tab": "My Quotes ({{count}})",
     "created": "Created: {{date}}",
+    "expires_at": "Expires: {{date}}",
+    "expired": "Expired",
     "valid_until": "Valid until: {{date}}",
     "submitted": "Submitted: {{date}}",
     "quotes_received_count": "Quotes Received: {{count}}",

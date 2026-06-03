@@ -296,7 +296,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onBook, onQuote }
         {/* Stats row */}
         <Box sx={{ display: 'flex', gap: 2, pt: 0.5 }}>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            {provider.completedJobs} {t('providers:card.completed_jobs_label')}
+            {Math.floor(Number(provider.completedJobs))} {t('providers:card.completed_jobs_label')}
           </Typography>
           {(provider.durationText || provider.duration) && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
@@ -356,6 +356,7 @@ const FindProvidersPage: React.FC = () => {
   const [showQuoteDialog, setShowQuoteDialog] = useState(false);
   const [selectedServiceForQuote, setSelectedServiceForQuote] = useState('');
   const [activeTab, setActiveTab] = useState(0);
+  const [aiCompleted, setAiCompleted] = useState(false);
 
   const { data: serviceCatalog = [] } = useQuery({
     queryKey: ['service-catalog'],
@@ -434,16 +435,18 @@ const FindProvidersPage: React.FC = () => {
         </Typography>
       </Box>
 
-      <Tabs
-        value={activeTab}
-        onChange={(_e, v) => setActiveTab(v)}
-        sx={{ mb: 4, borderBottom: '1px solid', borderColor: 'divider' }}
-      >
-        <Tab label={t('assistant:tabs.aiAssistant')} />
-        <Tab label={t('assistant:tabs.browseFilter')} />
-      </Tabs>
+      {!aiCompleted && (
+        <Tabs
+          value={activeTab}
+          onChange={(_e, v) => setActiveTab(v)}
+          sx={{ mb: 4, borderBottom: '1px solid', borderColor: 'divider' }}
+        >
+          <Tab label={t('assistant:tabs.aiAssistant')} />
+          <Tab label={t('assistant:tabs.browseFilter')} />
+        </Tabs>
+      )}
 
-      {activeTab === 0 && <AIAssistantTab />}
+      {activeTab === 0 && <AIAssistantTab onComplete={() => setAiCompleted(true)} onReset={() => setAiCompleted(false)} />}
 
       {activeTab === 1 && (
         <>
@@ -500,7 +503,7 @@ const FindProvidersPage: React.FC = () => {
                     onChange={(_, v) => setSearchParams(p => ({ ...p, serviceTypes: v }))}
                     renderInput={params => (
                       <TextField {...params} size="small" label={t('providers:search.service_types')}
-                        placeholder={searchParams.serviceTypes.length === 0 ? 'Tipo de serviço...' : ''} />
+                        placeholder={searchParams.serviceTypes.length === 0 ? t('providers:search.service_type_placeholder') : ''} />
                     )}
                     renderTags={(value, getTagProps) =>
                       value.map((opt, i) => <Chip label={opt} size="small" {...getTagProps({ index: i })} key={opt} />)

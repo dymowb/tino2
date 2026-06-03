@@ -29,25 +29,37 @@ export class AdminController {
         totalProviders,
         totalBookings,
         totalReviews,
-        totalRevenue,
+        revenueRaw,
         pendingProviders,
         activeBookings,
-        flaggedReviews
+        flaggedReviews,
+        ratingRaw
       ] = await Promise.all([
         userRepository.count({ where: { isActive: true } }),
-        providerRepository.count({ where: { verifiedAt: Not(IsNull()) } }),
+        providerRepository.count({ where: { isActive: true } }),
         bookingRepository.count(),
         reviewRepository.count({ where: { isFlagged: false } }),
         paymentRepository
           .createQueryBuilder('payment')
-          .select('SUM(payment.platformFee)', 'total')
-          .where('payment.status = :status', { status: 'succeeded' })
-          .getRawOne()
-          .then(result => parseFloat(result.total) || 0),
+          .select('SUM(CASE WHEN payment.status = \'succeeded\' THEN payment.platformFee ELSE 0 END)', 'total')
+          .select('SUM(CASE WHEN payment.status = \'succeeded\' THEN CAST(payment.amount AS float) ELSE 0 END)', 'gross')
+          .addSelect('SUM(CASE WHEN payment.status IN (\'refunded\', \'partially_refunded\') THEN CAST(payment.refundAmount AS float) ELSE 0 END)', 'refunds')
+          .getRawOne(),
         providerRepository.count({ where: { verifiedAt: IsNull() } }),
         bookingRepository.count({ where: { status: BookingStatus.IN_PROGRESS } }),
-        reviewRepository.count({ where: { isFlagged: true } })
+        reviewRepository.count({ where: { isFlagged: true } }),
+        reviewRepository
+          .createQueryBuilder('review')
+          .select('AVG(review.rating)', 'avg')
+          .addSelect('COUNT(*)', 'count')
+          .where('review.isFlagged = false')
+          .getRawOne()
       ]);
+
+      const totalRevenue = parseFloat(revenueRaw?.gross) || 0;
+      const totalRefunds = parseFloat(revenueRaw?.refunds) || 0;
+      const netRevenue = totalRevenue - totalRefunds;
+      const averageRating = parseFloat(ratingRaw?.avg) || null;
 
       // Get recent activities
       const recentUsers = await userRepository.find({
@@ -70,9 +82,12 @@ export class AdminController {
             totalBookings,
             totalReviews,
             totalRevenue,
+            totalRefunds,
+            netRevenue,
             pendingProviders,
             activeBookings,
-            flaggedReviews
+            flaggedReviews,
+            averageRating: averageRating != null ? Number(averageRating.toFixed(1)) : null
           },
           recentActivities: {
             users: recentUsers,
@@ -468,7 +483,7 @@ export class AdminController {
         .orderBy('date', 'ASC')
         .getRawMany();
 
-      // Revenue analytics
+      // Revenue analytics — daily breakdown
       const revenueData = await paymentRepository
         .createQueryBuilder('payment')
         .select('DATE(payment.createdAt)', 'date')
@@ -481,13 +496,30 @@ export class AdminController {
         .orderBy('date', 'ASC')
         .getRawMany();
 
+      // Revenue summary: gross, refunds, net for the selected period
+      const revenueSummaryRaw = await paymentRepository
+        .createQueryBuilder('payment')
+        .select('SUM(CASE WHEN payment.status = \'succeeded\' THEN CAST(payment.amount AS float) ELSE 0 END)', 'grossRevenue')
+        .addSelect('SUM(CASE WHEN payment.status IN (\'refunded\', \'partially_refunded\') THEN CAST(payment.refundAmount AS float) ELSE 0 END)', 'refundedAmount')
+        .where('payment.createdAt >= :date', { date: dateFilter })
+        .getRawOne();
+
+      const grossRevenue = parseFloat(revenueSummaryRaw?.grossRevenue) || 0;
+      const refundedAmount = parseFloat(revenueSummaryRaw?.refundedAmount) || 0;
+      const revenueSummary = {
+        grossRevenue,
+        refundedAmount,
+        netRevenue: grossRevenue - refundedAmount,
+      };
+
       res.json({
         success: true,
         data: {
           period,
           userGrowth,
           bookingTrends,
-          revenueData
+          revenueData,
+          revenueSummary
         }
       });
 

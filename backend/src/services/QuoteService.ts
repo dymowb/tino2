@@ -1,10 +1,13 @@
 import { Repository } from 'typeorm';
 import { AppDataSource } from '@/config/database';
 import { QuoteRequest, QuoteRequestStatus, UrgencyLevel } from '@/models/QuoteRequest';
+import { AppSettings } from '@/models/AppSettings';
 import { Quote, QuoteStatus } from '@/models/Quote';
 import { User } from '@/models/User';
 import { Provider } from '@/models/Provider';
 import logger from '@/config/logger';
+import notificationService from '@/services/NotificationService';
+import { NotificationType } from '@/models/Notification';
 import { 
   CreateQuoteRequestRequest, 
   UpdateQuoteRequestRequest, 
@@ -39,8 +42,10 @@ export class QuoteService {
         throw new Error('Customer not found or inactive');
       }
 
-      // Set expiration date if not provided (default 7 days)
-      const expiresAt = requestData.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      // Read staleness from admin settings (default 7 days if unset)
+      const stalenessSetting = await AppDataSource.getRepository(AppSettings).findOne({ where: { key: 'quote_staleness_days' } });
+      const stalenessDays = stalenessSetting ? Number(stalenessSetting.value) || 7 : 7;
+      const expiresAt = requestData.expiresAt || new Date(Date.now() + stalenessDays * 24 * 60 * 60 * 1000);
 
       // Create quote request
       const quoteRequest = this.quoteRequestRepository.create({
@@ -60,11 +65,26 @@ export class QuoteService {
       });
 
       const savedRequest = await this.quoteRequestRepository.save(quoteRequest) as QuoteRequest;
-      logger.info('Quote request created', { 
-        quoteRequestId: savedRequest.id, 
-        customerId, 
-        serviceType: requestData.serviceType 
+      logger.info('Quote request created', {
+        quoteRequestId: savedRequest.id,
+        customerId,
+        serviceType: requestData.serviceType,
+        targetProviderIds: requestData.targetProviderIds,
       });
+
+      // Notify targeted providers when the customer explicitly selected them
+      if (requestData.targetProviderIds?.length) {
+        const providers = await this.providerRepository.findByIds(requestData.targetProviderIds);
+        for (const provider of providers) {
+          notificationService.createNotification(provider.userId, {
+            type: NotificationType.BOOKING,
+            title: 'New Quote Request',
+            message: `A customer is requesting a quote for ${requestData.serviceType}. Respond now to win the job!`,
+            actionUrl: '/quotes',
+            metadata: { quoteRequestId: savedRequest.id },
+          }).catch(err => logger.error('Failed to notify provider of quote request:', err));
+        }
+      }
 
       return savedRequest;
     } catch (error) {
@@ -335,10 +355,19 @@ export class QuoteService {
       quoteRequest.quotesReceived += 1;
       await this.quoteRequestRepository.save(quoteRequest);
 
-      logger.info('Quote created', { 
-        quoteId: savedQuote.id, 
-        providerId, 
-        requestId: quoteData.requestId 
+      // Notify the customer that a provider submitted a quote
+      notificationService.createNotification(quoteRequest.customerId, {
+        type: NotificationType.BOOKING,
+        title: 'Nova proposta recebida',
+        message: `${provider.businessName} enviou uma proposta para ${quoteData.serviceType}.`,
+        actionUrl: '/quotes',
+        metadata: { quoteId: savedQuote.id, requestId: quoteData.requestId },
+      }).catch(err => logger.error('Failed to notify customer of new quote:', err));
+
+      logger.info('Quote created', {
+        quoteId: savedQuote.id,
+        providerId,
+        requestId: quoteData.requestId
       });
 
       return savedQuote;

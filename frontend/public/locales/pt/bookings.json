@@ -108,10 +108,16 @@
     "message": "Mensagem",
     "message_provider": "Enviar Mensagem ao Prestador",
     "leave_review": "Deixar Avaliação",
+    "review_sent": "Avaliação enviada",
+    "rebook": "Reservar Novamente",
     "view_receipt": "Ver Recibo",
     "get_directions": "Obter Direções",
     "keep_booking": "Manter Reserva",
     "cancelling": "Cancelando..."
+  },
+
+  "payment_status": {
+    "not_charged": "Não cobrado"
   },
   "status": {
     "pending": "Pendente",

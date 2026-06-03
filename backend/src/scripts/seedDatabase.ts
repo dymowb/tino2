@@ -998,6 +998,10 @@ async function runSeeder(): Promise<void> {
       { key: 'auto_capture_days', value: '3', description: 'Days before auto-capturing payment after provider marks service complete' },
       ['key']
     );
+    await settingsRepo.upsert(
+      { key: 'quote_staleness_days', value: '7', description: 'Days before a quote request expires and is no longer open to providers' },
+      ['key']
+    );
     logger.info('App settings seeded');
 
     logger.info('Database seeding completed! 🎉');

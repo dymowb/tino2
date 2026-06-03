@@ -5,11 +5,16 @@
     "stats": {
       "total_users": "Total Users",
       "verified_providers": "Verified Providers",
+      "total_providers": "Total Providers",
       "total_bookings": "Total Bookings",
       "flagged_reviews": "Flagged Reviews",
       "pending_providers": "Pending Providers",
       "active_bookings": "Active Bookings",
-      "platform_revenue": "Platform Revenue"
+      "platform_revenue": "Platform Revenue",
+      "gross_revenue": "Gross Revenue",
+      "refunds": "Refunds",
+      "net_revenue": "Net Revenue",
+      "average_rating": "Platform Rating"
     },
     "recent_users": "Recent Users",
     "recent_bookings": "Recent Bookings"

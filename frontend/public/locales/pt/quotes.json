@@ -1,6 +1,7 @@
 {
   "request": {
     "title": "Solicitar Cotações de Serviço",
+    "title_provider": "Solicitar Cotação de {{name}}",
     "service_type": "Tipo de Serviço",
     "urgency_level": "Nível de Urgência",
     "urgency_low": "Baixa - Prazo flexível",
@@ -33,6 +34,18 @@
     "creating": "Criando...",
     "success": "Solicitação de cotação criada com sucesso!",
     "error": "Falha ao criar solicitação de cotação",
+    "services": {
+      "house_cleaning": "Limpeza Residencial",
+      "deep_cleaning": "Limpeza Profunda",
+      "plumbing": "Encanamento",
+      "electrical": "Elétrica",
+      "carpentry": "Marcenaria",
+      "painting": "Pintura",
+      "gardening": "Jardinagem",
+      "hvac": "Ar-Condicionado",
+      "appliance_repair": "Conserto de Eletrodomésticos",
+      "pest_control": "Controle de Pragas"
+    },
     "validation": {
       "service_type_required": "O tipo de serviço é obrigatório",
       "description_required": "A descrição é obrigatória",
@@ -148,6 +161,8 @@
     "available_requests_tab": "Solicitações Disponíveis ({{count}})",
     "my_quotes_tab": "Minhas Cotações ({{count}})",
     "created": "Criado: {{date}}",
+    "expires_at": "Expira em: {{date}}",
+    "expired": "Expirada",
     "valid_until": "Válido até: {{date}}",
     "submitted": "Enviado: {{date}}",
     "quotes_received_count": "Cotações Recebidas: {{count}}",

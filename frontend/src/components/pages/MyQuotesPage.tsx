@@ -170,7 +170,7 @@ const MyQuotesPage: React.FC = () => {
   };
 
   const formatServiceName = (service: string) => {
-    return service.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    return service.replace(/_/g, ' ').replace(/(^|\s)(\S)/g, (_, s, c) => s + c.toUpperCase());
   };
 
   const getStatusColor = (status: string) => {
@@ -284,12 +284,23 @@ const MyQuotesPage: React.FC = () => {
                           </Box>
                         )}
 
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                           <Schedule sx={{ fontSize: 'small' }} />
                           <Typography variant="body2">
                             {t('page.created', { date: format(new Date(request.createdAt), 'dd/MM/yyyy') })}
                           </Typography>
                         </Box>
+
+                        {request.expiresAt && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                            <Schedule sx={{ fontSize: 'small', color: new Date(request.expiresAt) < new Date() ? 'error.main' : 'warning.main' }} />
+                            <Typography variant="body2" color={new Date(request.expiresAt) < new Date() ? 'error' : 'text.secondary'}>
+                              {new Date(request.expiresAt) < new Date()
+                                ? t('page.expired', 'Expirada')
+                                : t('page.expires_at', { date: format(new Date(request.expiresAt), 'dd/MM/yyyy') })}
+                            </Typography>
+                          </Box>
+                        )}
 
                         <Typography variant="body2" sx={{ mb: 2 }}>
                           <strong>{t('page.quotes_received_count', { count: request.quotesReceived })}</strong>

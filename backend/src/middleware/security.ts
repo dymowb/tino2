@@ -132,6 +132,19 @@ export const rateLimiters = {
       return req.user?.userId || req.ip || 'unknown';
     },
   }),
+
+  // Higher limit for admin-role sensitive operations (suspend, verify, resolve)
+  adminStrict: rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 20,
+    message: {
+      success: false,
+      error: 'Too many admin operations, please try again later',
+    },
+    keyGenerator: (req: Request) => {
+      return `admin:${req.user?.userId || req.ip || 'unknown'}`;
+    },
+  }),
 };
 
 export const validateApiKey = (req: Request, res: Response, next: NextFunction): void => {

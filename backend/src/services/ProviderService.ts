@@ -185,9 +185,12 @@ export class ProviderService {
         }
       }
 
-      // Filter by minimum rating
+      // Filter by minimum rating — exclude NaN (providers with no reviews) since PostgreSQL NaN > any number
       if (minRating) {
-        queryBuilder = queryBuilder.andWhere('provider.rating >= :minRating', { minRating });
+        queryBuilder = queryBuilder.andWhere(
+          "provider.rating IS NOT NULL AND provider.rating::text != 'NaN' AND provider.rating >= :minRating",
+          { minRating }
+        );
       }
 
       // Filter by insurance status
@@ -213,7 +216,15 @@ export class ProviderService {
           break;
         case 'distance':
         default:
-          queryBuilder = queryBuilder.orderBy('provider.rating', 'DESC');
+          if (latitude && longitude) {
+            // Sort by Euclidean distance on lat/lng — good approximation for intra-city searches
+            queryBuilder = queryBuilder.orderBy(
+              `SQRT(POW(CAST(provider.location->>'latitude' AS float) - :sortLat, 2) + POW(CAST(provider.location->>'longitude' AS float) - :sortLng, 2))`,
+              'ASC'
+            ).setParameter('sortLat', latitude).setParameter('sortLng', longitude);
+          } else {
+            queryBuilder = queryBuilder.orderBy('provider.rating', 'DESC');
+          }
           break;
       }
 

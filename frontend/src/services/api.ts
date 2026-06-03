@@ -112,6 +112,7 @@ export interface Booking {
   totalAmount: number;
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   specialInstructions?: string;
+  reviews?: Array<{ id: string }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -277,6 +278,14 @@ export interface WorkflowData {
       followUpQuestion?: string;
       extractedFacts?: string[];
       missingInformation?: string[];
+      requirementsSummary?: {
+        serviceType: string;
+        location: { neighborhood?: string; address?: string; city?: string; state?: string; zipCode?: string };
+        timing: { preferredDate?: string; preferredTime?: string; isFlexible: boolean };
+        budget?: { min?: number; max?: number; hasFlexibility: boolean };
+        specialRequirements: string[];
+        urgency: 'low' | 'medium' | 'high' | 'emergency';
+      };
     };
     searchResults?: WorkflowProviderResult[];
     analysisResults?: ProviderAnalysis[];
@@ -607,12 +616,12 @@ class ApiService {
     serviceType: string;
     description: string;
     location: {
-      latitude: number;
-      longitude: number;
-      address: string;
+      latitude?: number;
+      longitude?: number;
+      address?: string;
       city: string;
-      state: string;
-      zipCode: string;
+      state?: string;
+      zipCode?: string;
     };
     preferredDate?: string;
     budget?: {
@@ -636,6 +645,7 @@ class ApiService {
     }>;
     searchRadius?: number;
     expiresAt?: string;
+    targetProviderIds?: string[];
   }): Promise<QuoteRequest> {
     const response = await this.api.post<ApiResponse<{ quoteRequest: QuoteRequest }>>('/quotes/requests', requestData);
     return response.data.data!.quoteRequest;

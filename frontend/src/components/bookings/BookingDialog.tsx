@@ -15,6 +15,7 @@ import {
   MenuItem,
   Divider,
   CircularProgress,
+  Alert,
   useTheme,
   alpha
 } from '@mui/material';
@@ -30,6 +31,7 @@ import {
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { ptBR, enUS } from 'date-fns/locale';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -132,13 +134,15 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
   provider,
   serviceType = ''
 }) => {
-  const { t } = useTranslation('bookings');
+  const { t, i18n } = useTranslation('bookings');
   const { user } = useAuth();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const queryClient = useQueryClient();
+  const dateLocale = i18n.language.startsWith('pt') ? ptBR : enUS;
 
   const [step, setStep] = useState(0);
+  const [conflictError, setConflictError] = useState<string | null>(null);
   const [formData, setFormData] = useState<BookingFormData>({
     serviceType,
     scheduledDate: null,
@@ -158,12 +162,19 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
       resetForm();
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || t('create.error'));
+      const msg = error?.response?.data?.message || error?.response?.data?.error || t('create.error');
+      if (error?.response?.status === 409) {
+        // Keep dialog open and surface conflict inline so user can pick a different time
+        setConflictError(msg);
+      } else {
+        toast.error(msg);
+      }
     },
   });
 
   const resetForm = () => {
     setStep(0);
+    setConflictError(null);
     setFormData({
       serviceType,
       scheduledDate: null,
@@ -225,7 +236,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
   };
 
   const formatServiceName = (service: string) =>
-    service.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    service.replace(/_/g, ' ').replace(/(^|\s)(\S)/g, (_, s, c) => s + c.toUpperCase());
 
   const formatCurrency = (v: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -258,7 +269,16 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
       <Divider />
 
       <DialogContent sx={{ pt: 3 }}>
-        <LocalizationProvider dateAdapter={AdapterDateFns}>
+        {conflictError && (
+          <Alert
+            severity="warning"
+            onClose={() => setConflictError(null)}
+            sx={{ mb: 2, borderRadius: tokens.radius.sm }}
+          >
+            {conflictError} — {t('create.validation.try_another_time', 'Tente outro horário.')}
+          </Alert>
+        )}
+        <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={dateLocale}>
           <AnimatePresence mode="wait">
             {/* Step 0 — Service details */}
             {step === 0 && (
@@ -379,6 +399,14 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
                       value={formData.specialInstructions}
                       onChange={(e) => setFormData({ ...formData, specialInstructions: e.target.value })}
                     />
+                  </Grid>
+
+                  <Grid xs={12}>
+                    <Alert severity="info" icon={false} sx={{ borderRadius: tokens.radius.sm, py: 0.75 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        <strong>{t('cancel.policy')}:</strong> {t('cancel.policy_text')}
+                      </Typography>
+                    </Alert>
                   </Grid>
                 </Grid>
               </motion.div>

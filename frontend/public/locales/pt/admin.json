@@ -5,11 +5,16 @@
     "stats": {
       "total_users": "Total de Usuários",
       "verified_providers": "Prestadores Verificados",
+      "total_providers": "Total de Prestadores",
       "total_bookings": "Total de Reservas",
       "flagged_reviews": "Avaliações Sinalizadas",
       "pending_providers": "Prestadores Pendentes",
       "active_bookings": "Reservas Ativas",
-      "platform_revenue": "Receita da Plataforma"
+      "platform_revenue": "Receita da Plataforma",
+      "gross_revenue": "Receita Bruta",
+      "refunds": "Reembolsos",
+      "net_revenue": "Receita Líquida",
+      "average_rating": "Avaliação da Plataforma"
     },
     "recent_users": "Usuários Recentes",
     "recent_bookings": "Reservas Recentes"

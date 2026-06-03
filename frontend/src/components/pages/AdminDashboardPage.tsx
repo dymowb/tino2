@@ -5,7 +5,8 @@ import {
   ListItem, ListItemText, Chip,
 } from '@mui/material';
 import {
-  People, Store, BookOnline, Flag, HourglassEmpty, TrendingUp,
+  People, Store, BookOnline, Flag, HourglassEmpty, TrendingUp, Star,
+  TrendingDown, AccountBalance,
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -56,7 +57,7 @@ const AdminDashboardPage: React.FC = () => {
           <StatCard label={t('dashboard.stats.total_users')} value={stats?.totalUsers ?? '—'} icon={<People fontSize="large" />} color="primary.main" />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard label={t('dashboard.stats.verified_providers')} value={stats?.totalProviders ?? '—'} icon={<Store fontSize="large" />} color="success.main" />
+          <StatCard label={t('dashboard.stats.total_providers')} value={stats?.totalProviders ?? '—'} icon={<Store fontSize="large" />} color="success.main" />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard label={t('dashboard.stats.total_bookings')} value={stats?.totalBookings ?? '—'} icon={<BookOnline fontSize="large" />} color="info.main" />
@@ -71,7 +72,38 @@ const AdminDashboardPage: React.FC = () => {
           <StatCard label={t('dashboard.stats.active_bookings')} value={stats?.activeBookings ?? '—'} icon={<TrendingUp fontSize="large" />} color="secondary.main" />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard label={t('dashboard.stats.platform_revenue')} value={stats?.totalRevenue != null ? `R$${Number(stats.totalRevenue).toFixed(2)}` : '—'} icon={<TrendingUp fontSize="large" />} color="success.dark" />
+          <StatCard
+            label={t('dashboard.stats.gross_revenue')}
+            value={stats?.totalRevenue != null ? `R$${Number(stats.totalRevenue).toFixed(2)}` : '—'}
+            icon={<TrendingUp fontSize="large" />}
+            color="success.dark"
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard
+            label={t('dashboard.stats.refunds')}
+            value={stats?.totalRefunds != null ? `R$${Number(stats.totalRefunds).toFixed(2)}` : '—'}
+            icon={<TrendingDown fontSize="large" />}
+            color="error.main"
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard
+            label={t('dashboard.stats.net_revenue')}
+            value={stats?.netRevenue != null ? `R$${Number(stats.netRevenue).toFixed(2)}` : '—'}
+            icon={<AccountBalance fontSize="large" />}
+            color="primary.main"
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard
+            label={t('dashboard.stats.average_rating')}
+            value={stats?.averageRating != null
+              ? `${stats.averageRating} (${stats.totalReviews} avaliações)`
+              : '—'}
+            icon={<Star fontSize="large" />}
+            color="warning.main"
+          />
         </Grid>
       </Grid>
 

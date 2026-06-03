@@ -111,10 +111,16 @@
     "message": "Message",
     "message_provider": "Message Provider",
     "leave_review": "Leave Review",
+    "review_sent": "Review Sent",
+    "rebook": "Book Again",
     "view_receipt": "View Receipt",
     "get_directions": "Get Directions",
     "keep_booking": "Keep Booking",
     "cancelling": "Cancelling..."
+  },
+
+  "payment_status": {
+    "not_charged": "Not charged"
   },
 
   "status": {

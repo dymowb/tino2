@@ -16,19 +16,19 @@ router.get('/dashboard', rateLimiters.general, adminController.getDashboard);
 router.get('/users', rateLimiters.general, adminController.getUsers);
 
 // PUT /api/admin/users/:id/status - Update user status (FR-074)
-router.put('/users/:id/status', rateLimiters.strict, adminController.updateUserStatus);
+router.put('/users/:id/status', rateLimiters.adminStrict, adminController.updateUserStatus);
 
 // GET /api/admin/providers/pending - Get pending provider verifications (FR-075)
 router.get('/providers/pending', rateLimiters.general, adminController.getPendingProviders);
 
 // POST /api/admin/providers/:id/verify - Verify provider (FR-075)
-router.post('/providers/:id/verify', rateLimiters.strict, adminController.verifyProvider);
+router.post('/providers/:id/verify', rateLimiters.adminStrict, adminController.verifyProvider);
 
 // GET /api/admin/reviews/flagged - Get flagged reviews (FR-077, FR-081)
 router.get('/reviews/flagged', rateLimiters.general, adminController.getFlaggedReviews);
 
 // PUT /api/admin/reviews/:id/moderate - Moderate review (FR-081)
-router.put('/reviews/:id/moderate', rateLimiters.strict, adminController.moderateReview);
+router.put('/reviews/:id/moderate', rateLimiters.adminStrict, adminController.moderateReview);
 
 // GET /api/admin/analytics - Platform analytics (FR-076)
 router.get('/analytics', rateLimiters.general, adminController.getAnalytics);
@@ -37,9 +37,9 @@ router.get('/analytics', rateLimiters.general, adminController.getAnalytics);
 router.get('/disputes', rateLimiters.general, adminController.getDisputes);
 
 // PUT /api/admin/disputes/:id/resolve - Resolve dispute (FR-077)
-router.put('/disputes/:id/resolve', rateLimiters.strict, adminController.resolveDispute);
+router.put('/disputes/:id/resolve', rateLimiters.adminStrict, adminController.resolveDispute);
 
 router.get('/settings', rateLimiters.general, adminController.getSettings);
-router.put('/settings/:key', rateLimiters.strict, adminController.updateSetting);
+router.put('/settings/:key', rateLimiters.adminStrict, adminController.updateSetting);
 
 export default router;

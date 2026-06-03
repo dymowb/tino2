@@ -116,7 +116,7 @@ export class BookingService {
         type: NotificationType.BOOKING,
         title: 'New Booking Request',
         message: `${customer.firstName} ${customer.lastName} has requested a booking for ${bookingData.serviceType}`,
-        actionUrl: `/bookings/${savedBooking.id}`,
+        actionUrl: `/bookings?bookingId=${savedBooking.id}`,
         metadata: { bookingId: savedBooking.id },
       }).catch(err => logger.error('Failed to send booking notification:', err));
 
@@ -257,7 +257,7 @@ export class BookingService {
           type: NotificationType.BOOKING,
           title: 'Booking Status Updated',
           message: `Your booking status has been updated to: ${newStatus}`,
-          actionUrl: `/bookings/${bookingId}`,
+          actionUrl: `/bookings?bookingId=${bookingId}`,
           metadata: { bookingId, newStatus },
         }).catch(err => logger.error('Failed to send status notification:', err));
       }
@@ -293,7 +293,8 @@ export class BookingService {
         .createQueryBuilder('booking')
         .leftJoinAndSelect('booking.customer', 'customer')
         .leftJoinAndSelect('booking.provider', 'provider')
-        .leftJoinAndSelect('provider.user', 'providerUser');
+        .leftJoinAndSelect('provider.user', 'providerUser')
+        .leftJoinAndSelect('booking.reviews', 'reviews');
 
       // Filter by customer
       if (customerId) {
@@ -391,7 +392,7 @@ export class BookingService {
           type: NotificationType.BOOKING,
           title: 'Booking Cancelled',
           message: `A booking has been cancelled by the ${isCustomer ? 'customer' : 'provider'}.`,
-          actionUrl: `/bookings/${bookingId}`,
+          actionUrl: `/bookings?bookingId=${bookingId}`,
           metadata: { bookingId },
         }).catch(err => logger.error('Failed to send cancellation notification:', err));
       }
@@ -465,8 +466,18 @@ export class BookingService {
         provider: ['in_progress', 'cancelled'],
       },
       in_progress: {
+        // provider marks complete via /complete endpoint; kept here for state machine completeness
         customer: [],
-        provider: ['completed', 'cancelled'],
+        provider: ['pending_completion', 'cancelled'],
+      },
+      pending_completion: {
+        // customer confirms via /confirm-completion or disputes via /dispute endpoint
+        customer: ['in_dispute'],
+        provider: [],
+      },
+      in_dispute: {
+        customer: [],
+        provider: [],
       },
       completed: {
         customer: [],
