@@ -24,6 +24,7 @@ All 9 are fixed and verified end-to-end for both roles in light and dark mode.
 | 7 | 🟡 Medium | Frontend | React `validateDOMNesting` console errors on every render of the conversation list |
 | 8 | 🟡 Medium | CX | `markMessagesAsRead` re-fired on every render and never cleared the list's unread badge |
 | 9 | 🟢 Polish | CX/Design | Messaging UI was raw default-MUI, inconsistent with the "Casa" design language; English-suffixed titles ("… Service Discussion") in a PT app |
+| 10 | 🔴 High | Security (IDOR) | `createConversation` accepted any `metadata.bookingId` without verifying the requester was a party to that booking — enabling squatting on / inserting oneself into another booking's conversation |
 
 Real-time delivery via Socket.IO was found to be **already wired** (JWT handshake auth +
 `user_${id}` rooms) — the stale CLAUDE.md note saying otherwise was incorrect. It is now
@@ -110,6 +111,23 @@ reveals, full light/dark support, and a mobile back button. Direct conversations
 the other person's name (the service chip carries the service context), eliminating the
 English title leak. Added i18n keys (`today`, `attachment_image/file`, `you_prefix`) in EN + PT.
 **Verified**: Consistent, polished UI in light and dark mode for both roles.
+
+---
+
+### 10. 🔴 IDOR — booking-scoped conversation hijack (post-commit security review)
+**Found**: `createConversation` looked up / created a conversation by `metadata.bookingId`
+without checking the requester was a party to that booking. An attacker could (a) fetch the
+existing booking conversation (leaking the two parties' names + conversation id), or (b) create
+a conversation tagged with someone else's `bookingId` and supply arbitrary `participantIds` —
+"squatting" on the booking. Because booking conversations are deduped by `bookingId`, the
+legitimate parties would then be handed the attacker's poisoned conversation, letting the
+attacker read the booking's messages as a "participant".
+**Fix** (`MessageService.createConversation`):
+- Load the `Booking` and require `userId === booking.customerId || userId === booking.provider.userId`; otherwise throw (`Booking not found` / `Access denied: you are not a party to this booking`).
+- For booking conversations, **force** the participants to exactly the two booking parties — client-supplied `participantIds` are ignored.
+- Only reuse an existing booking conversation when its participant set is *exactly* the two booking parties; any mis-scoped/poisoned record is deactivated and a clean one is created (self-heals pre-existing poison).
+**Verified**: own booking → 201; another user's booking → denied ("not a party"); bogus id →
+"Booking not found"; `messaging-isolation` still 9/9.
 
 ---
 

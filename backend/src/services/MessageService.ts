@@ -4,6 +4,7 @@ import { AppDataSource } from '@/config/database';
 import { Message, MessageType } from '@/models/Message';
 import { Conversation, ConversationType } from '@/models/Conversation';
 import { User } from '@/models/User';
+import { Booking } from '@/models/Booking';
 import logger from '@/config/logger';
 import notificationService from '@/services/NotificationService';
 import { NotificationType } from '@/models/Notification';
@@ -48,8 +49,31 @@ export class MessageService {
   // Conversation Management
   async createConversation(userId: string, conversationData: CreateConversationRequest): Promise<any> {
     try {
-      // Ensure the requesting user is included in participants
-      const allParticipantIds = Array.from(new Set([userId, ...conversationData.participantIds]));
+      // Resolve the participant set. For a booking-scoped conversation, the participants are
+      // ALWAYS exactly the two booking parties (the customer and the provider's user). We never
+      // trust client-supplied participantIds here, and we verify the requester is one of those
+      // parties — this prevents IDOR / squatting on bookings the requester is not part of.
+      const bookingId = conversationData.metadata?.bookingId;
+      let allParticipantIds: string[];
+
+      if (bookingId) {
+        const booking = await AppDataSource.getRepository(Booking).findOne({
+          where: { id: bookingId },
+          relations: ['provider'],
+        });
+        if (!booking) {
+          throw new Error('Booking not found');
+        }
+        const providerUserId = booking.provider?.userId;
+        const isParty = booking.customerId === userId || providerUserId === userId;
+        if (!isParty) {
+          throw new Error('Access denied: you are not a party to this booking');
+        }
+        allParticipantIds = Array.from(new Set([booking.customerId, providerUserId].filter(Boolean) as string[]));
+      } else {
+        // Ensure the requesting user is included in participants
+        allParticipantIds = Array.from(new Set([userId, ...conversationData.participantIds]));
+      }
 
       // Verify all participants exist — findByIds is deprecated; use findBy+In
       const participants = await this.userRepository.findBy({ id: In(allParticipantIds) });
@@ -58,7 +82,6 @@ export class MessageService {
       }
 
       // If a bookingId is provided, find or create a conversation specific to that booking
-      const bookingId = conversationData.metadata?.bookingId;
       if (bookingId) {
         const existing = await this.conversationRepository
           .createQueryBuilder('conversation')
@@ -66,8 +89,20 @@ export class MessageService {
           .where("conversation.metadata->>'bookingId' = :bookingId", { bookingId })
           .andWhere('conversation.isActive = :isActive', { isActive: true })
           .getOne();
-        if (existing) return this.shapeConversation(existing);
-        // No booking-specific conversation yet — fall through to create one
+        if (existing) {
+          // Only reuse the existing conversation when its participants are EXACTLY the two
+          // booking parties. A record with any other participant set was squatted/poisoned
+          // (e.g. created before this check existed) — deactivate it and create a clean one.
+          const existingIds = new Set((existing.participants || []).map(p => p.id));
+          const sameParties = existingIds.size === allParticipantIds.length
+            && allParticipantIds.every(id => existingIds.has(id));
+          if (sameParties) {
+            return this.shapeConversation(existing);
+          }
+          await this.conversationRepository.update(existing.id, { isActive: false });
+          logger.warn('Deactivated mis-scoped booking conversation', { conversationId: existing.id, bookingId });
+        }
+        // No valid booking-specific conversation yet — fall through to create one
       } else if (conversationData.type === 'direct' || !conversationData.type) {
         // Dedup by participant pair — use raw SQL to avoid TypeORM M2M hydration bug
         // where getMany() can mix up participant arrays across conversations.
