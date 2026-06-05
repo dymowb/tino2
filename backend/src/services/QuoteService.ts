@@ -3,6 +3,7 @@ import { AppDataSource } from '@/config/database';
 import { QuoteRequest, QuoteRequestStatus, UrgencyLevel } from '@/models/QuoteRequest';
 import { AppSettings } from '@/models/AppSettings';
 import { Quote, QuoteStatus } from '@/models/Quote';
+import { Booking, BookingStatus, PaymentStatus } from '@/models/Booking';
 import { User } from '@/models/User';
 import { Provider } from '@/models/Provider';
 import logger from '@/config/logger';
@@ -60,6 +61,7 @@ export class QuoteService {
         requirements: requestData.requirements || [],
         availability: requestData.availability || [],
         searchRadius: requestData.searchRadius || 25.0,
+        targetProviderIds: requestData.targetProviderIds || null,
         expiresAt,
         status: QuoteRequestStatus.OPEN,
       });
@@ -93,7 +95,10 @@ export class QuoteService {
     }
   }
 
-  async getQuoteRequestById(requestId: string, userId?: string): Promise<QuoteRequest | null> {
+  async getQuoteRequestById(
+    requestId: string,
+    access?: { customerId?: string; forProviderId?: string }
+  ): Promise<QuoteRequest | null> {
     try {
       const queryBuilder = this.quoteRequestRepository
         .createQueryBuilder('quoteRequest')
@@ -103,9 +108,17 @@ export class QuoteService {
         .leftJoinAndSelect('provider.user', 'providerUser')
         .where('quoteRequest.id = :requestId', { requestId });
 
-      // If userId is provided, ensure access control
-      if (userId) {
-        queryBuilder.andWhere('quoteRequest.customerId = :userId', { userId });
+      // Access control mirrors the list endpoint: customers see only their own requests;
+      // providers see broadcast requests plus ones targeted at them (never targeted-at-others).
+      if (access?.customerId) {
+        queryBuilder.andWhere('quoteRequest.customerId = :customerId', { customerId: access.customerId });
+      } else if (access?.forProviderId) {
+        queryBuilder.andWhere(
+          `("quoteRequest"."targetProviderIds" IS NULL
+            OR jsonb_array_length("quoteRequest"."targetProviderIds") = 0
+            OR "quoteRequest"."targetProviderIds" @> :forProviderTarget)`,
+          { forProviderTarget: JSON.stringify([access.forProviderId]) }
+        );
       }
 
       return await queryBuilder.getOne();
@@ -202,6 +215,7 @@ export class QuoteService {
         limit = 20,
         sortBy = 'created',
         sortOrder = 'desc',
+        forProviderId,
       } = query;
 
       let queryBuilder = this.quoteRequestRepository
@@ -222,6 +236,17 @@ export class QuoteService {
       // Filter by status
       if (status) {
         queryBuilder = queryBuilder.andWhere('quoteRequest.status = :status', { status });
+      }
+
+      // Provider visibility: a provider browsing available requests sees broadcast
+      // requests (no targets) plus any request explicitly targeted at them.
+      if (forProviderId) {
+        queryBuilder = queryBuilder.andWhere(
+          `("quoteRequest"."targetProviderIds" IS NULL
+            OR jsonb_array_length("quoteRequest"."targetProviderIds") = 0
+            OR "quoteRequest"."targetProviderIds" @> :forProviderTarget)`,
+          { forProviderTarget: JSON.stringify([forProviderId]) }
+        );
       }
 
       // Filter by urgency
@@ -403,13 +428,19 @@ export class QuoteService {
   }
 
   async updateQuote(
-    quoteId: string, 
-    providerId: string, 
+    quoteId: string,
+    providerUserId: string,
     updateData: UpdateQuoteRequest
   ): Promise<Quote> {
     try {
+      // `providerUserId` is the User id; quote.providerId is the Provider entity id.
+      const provider = await this.providerRepository.findOne({ where: { userId: providerUserId } });
+      if (!provider) {
+        throw new Error('Quote not found or access denied');
+      }
+
       const quote = await this.quoteRepository.findOne({
-        where: { id: quoteId, providerId },
+        where: { id: quoteId, providerId: provider.id },
       });
 
       if (!quote) {
@@ -426,7 +457,7 @@ export class QuoteService {
       quote.updatedAt = new Date();
 
       const updatedQuote = await this.quoteRepository.save(quote);
-      logger.info('Quote updated', { quoteId, providerId });
+      logger.info('Quote updated', { quoteId, providerId: provider.id });
 
       return updatedQuote;
     } catch (error) {
@@ -452,12 +483,17 @@ export class QuoteService {
         throw new Error('Quote not found');
       }
 
-      // Validate access
+      // Validate access. NOTE: quote.providerId stores the Provider entity id, while
+      // `userId` is the User id — resolve the provider profile before comparing, or a
+      // provider can never act on their own quote (withdraw was returning 403/404).
       if (userRole === 'customer' && quote.customerId !== userId) {
         throw new Error('Access denied');
       }
-      if (userRole === 'provider' && quote.providerId !== userId) {
-        throw new Error('Access denied');
+      if (userRole === 'provider') {
+        const provider = await this.providerRepository.findOne({ where: { userId } });
+        if (!provider || quote.providerId !== provider.id) {
+          throw new Error('Access denied');
+        }
       }
 
       // Validate status transitions
@@ -482,6 +518,10 @@ export class QuoteService {
         quote.request.closedAt = new Date();
         quote.request.closureReason = 'Quote accepted';
         await this.quoteRequestRepository.save(quote.request);
+
+        // Materialise the agreed quote into a confirmed booking so the service is actually
+        // scheduled. Both parties agreed price + scope, so it starts confirmed.
+        await this.createBookingFromQuote(quote);
       } else if (newStatus === QuoteStatus.REJECTED) {
         quote.rejectedAt = new Date();
         quote.rejectionReason = reason;
@@ -595,10 +635,16 @@ export class QuoteService {
     }
   }
 
-  async withdrawQuote(quoteId: string, providerId: string): Promise<Quote> {
+  async withdrawQuote(quoteId: string, providerUserId: string): Promise<Quote> {
     try {
+      // `providerUserId` is the User id; quote.providerId is the Provider entity id.
+      const provider = await this.providerRepository.findOne({ where: { userId: providerUserId } });
+      if (!provider) {
+        throw new Error('Quote not found or access denied');
+      }
+
       const quote = await this.quoteRepository.findOne({
-        where: { id: quoteId, providerId },
+        where: { id: quoteId, providerId: provider.id },
       });
 
       if (!quote) {
@@ -613,13 +659,69 @@ export class QuoteService {
       quote.updatedAt = new Date();
 
       const withdrawnQuote = await this.quoteRepository.save(quote);
-      logger.info('Quote withdrawn', { quoteId, providerId });
+      logger.info('Quote withdrawn', { quoteId, providerId: provider.id });
 
       return withdrawnQuote;
     } catch (error) {
       logger.error('Error withdrawing quote:', error);
       throw error;
     }
+  }
+
+  /**
+   * Create a confirmed booking from an accepted quote. Created directly (not via
+   * BookingService.createBooking) on purpose: that path recomputes totalAmount from the
+   * provider's base rate and runs an availability conflict check — here we must preserve
+   * the negotiated quote price and the slot was already agreed.
+   */
+  private async createBookingFromQuote(quote: Quote): Promise<Booking> {
+    const bookingRepo = AppDataSource.getRepository(Booking);
+    const request = quote.request;
+    const loc: any = request?.location || {};
+    const hasPreferred = !!request?.preferredDate;
+    const scheduledDate = hasPreferred
+      ? new Date(request.preferredDate as any)
+      : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    const booking = bookingRepo.create({
+      customerId: quote.customerId,
+      providerId: quote.providerId,
+      serviceType: quote.serviceType,
+      description: quote.description || request?.description || quote.serviceType,
+      location: {
+        latitude: Number(loc.latitude) || 0,
+        longitude: Number(loc.longitude) || 0,
+        address: loc.address || '',
+        city: loc.city || '',
+        state: loc.state || '',
+        zipCode: loc.zipCode || '',
+      },
+      scheduledDate,
+      estimatedDuration: quote.estimatedDuration,
+      totalAmount: quote.estimatedPrice,
+      status: BookingStatus.CONFIRMED,
+      paymentStatus: PaymentStatus.PENDING,
+      specialInstructions: hasPreferred
+        ? undefined
+        : 'Reserva criada a partir de orçamento aceito — data a confirmar com o cliente.',
+    });
+
+    const saved = (await bookingRepo.save(booking)) as Booking;
+
+    // Notify the provider that the quote was accepted and a booking now exists
+    const provider = await this.providerRepository.findOne({ where: { id: quote.providerId } });
+    if (provider) {
+      notificationService.createNotification(provider.userId, {
+        type: NotificationType.BOOKING,
+        title: 'Orçamento aceito',
+        message: `O cliente aceitou seu orçamento de ${quote.serviceType}. Uma reserva foi criada.`,
+        actionUrl: `/bookings?bookingId=${saved.id}`,
+        metadata: { bookingId: saved.id, quoteId: quote.id },
+      }).catch(err => logger.error('Failed to notify provider of accepted quote booking:', err));
+    }
+
+    logger.info('Booking created from accepted quote', { bookingId: saved.id, quoteId: quote.id });
+    return saved;
   }
 
   private validateQuoteStatusTransition(

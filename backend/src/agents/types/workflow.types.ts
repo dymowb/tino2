@@ -50,6 +50,9 @@ export interface WorkflowContext {
   /** Original user request that started the workflow */
   userRequest: string;
 
+  /** UI locale when workflow was started (e.g. "pt", "en") */
+  locale?: string;
+
   /** Conversational messages between user and agents (for multi-turn dialogs) */
   conversationMessages?: Array<{
     role: 'user' | 'agent';

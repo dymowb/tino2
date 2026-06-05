@@ -227,7 +227,7 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
   };
 
   const formatServiceName = (service: string) => {
-    return service.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    return service.replace(/_/g, ' ').replace(/(^|\s)(\S)/g, (_, s, c) => s + c.toUpperCase());
   };
 
   const getUrgencyColor = (urgency: string) => {

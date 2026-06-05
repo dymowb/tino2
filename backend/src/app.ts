@@ -39,6 +39,10 @@ export class App {
 
   constructor() {
     this.app = express();
+    // Trust loopback proxy (Cloudflare tunnel arrives from 127.0.0.1).
+    // This makes Express use X-Forwarded-For for req.ip so rate limiting
+    // and logging see real client IPs instead of the tunnel address.
+    this.app.set('trust proxy', 'loopback');
     this.server = createServer(this.app);
     this.io = new SocketIOServer(this.server, {
       cors: {

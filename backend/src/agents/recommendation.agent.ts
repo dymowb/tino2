@@ -1,3 +1,4 @@
+import { getLanguageInstruction } from './utils/locale';
 /**
  * Recommendation Agent
  *
@@ -47,6 +48,7 @@ export interface RecommendationAgentInput {
 
   /** Formatted <constraints> block from active procedural rules */
   constraintContext?: string;
+  locale?: string;
 }
 
 /**
@@ -91,7 +93,6 @@ class RecommendationAgent implements Agent<RecommendationAgentInput, Recommendat
     temperature: 0.4, // Fairly deterministic — we want consistent ranking logic
     systemPrompt: `You are a Provider Recommendation Agent. Your job is to rank service providers
 and explain your reasoning in a way that helps the customer make a confident decision.
-Respond ONLY in Brazilian Portuguese (pt-BR). All reasoning, descriptions, and bestFor text must be in Portuguese.
 
 You will receive:
 - The customer's requirements (what they need, where, when, budget)
@@ -158,9 +159,10 @@ Rules:
 
     // TODO 5.2c: Call Claude (same pattern as analysis agent).
     // Use this.metadata.model, this.metadata.systemPrompt, etc.
+    const langPrompt = `${this.metadata.systemPrompt}\n${getLanguageInstruction(input.locale)}`;
     const systemPrompt = input.constraintContext
-      ? `${input.constraintContext}\n\n${this.metadata.systemPrompt}`
-      : this.metadata.systemPrompt;
+      ? `${input.constraintContext}\n\n${langPrompt}`
+      : langPrompt;
 
     const response = await anthropicService.callClaude({
       model: ClaudeModel.SONNET,

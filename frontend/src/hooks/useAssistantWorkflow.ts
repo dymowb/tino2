@@ -34,6 +34,8 @@ export interface AssistantWorkflowState {
   isStreaming: boolean;
   /** Current pipeline stage label (e.g. "Searching for providers…") */
   progressMessage: string;
+  /** Current pipeline stage key (requirements|search|analysis|recommendation|verification|narrative) for localized labels */
+  progressStage: string | null;
   /** Narrative text accumulated from token events (typewriter effect) */
   narrative: string;
   followUpQuestion: string | null;
@@ -85,6 +87,10 @@ export function useAssistantWorkflow(): AssistantWorkflowState {
   // Streaming-specific state
   const [isStreaming, setIsStreaming] = useState(false);
   const [progressMessage, setProgressMessage] = useState('');
+  // Stage key (requirements|search|analysis|recommendation|verification|narrative)
+  // from the backend SSE so the component can render a localized label rather
+  // than the backend's English message string.
+  const [progressStage, setProgressStage] = useState<string | null>(null);
   const [narrative, setNarrative] = useState('');
   const [streamedWorkflow, setStreamedWorkflow] = useState<WorkflowData | null>(null);
   const [streamError, setStreamError] = useState<string | null>(null);
@@ -118,6 +124,7 @@ export function useAssistantWorkflow(): AssistantWorkflowState {
     setIsStreaming(true);
     setNarrative('');
     setProgressMessage('Starting…');
+    setProgressStage(null);
     setStreamedWorkflow(null);
     setStreamError(null);
     setWorkflowId(null);
@@ -137,7 +144,7 @@ export function useAssistantWorkflow(): AssistantWorkflowState {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ initialMessage: message }),
+        body: JSON.stringify({ initialMessage: message, locale: localStorage.getItem('i18nextLng') || 'pt' }),
         signal: controller.signal,
       });
 
@@ -164,6 +171,7 @@ export function useAssistantWorkflow(): AssistantWorkflowState {
 
             case 'progress':
               setProgressMessage(event.message);
+              setProgressStage(event.stage ?? null);
               break;
 
             case 'token':
@@ -263,6 +271,7 @@ export function useAssistantWorkflow(): AssistantWorkflowState {
     messages,
     isStreaming,
     progressMessage,
+    progressStage,
     narrative,
     ...derivedState,
     startWorkflow,

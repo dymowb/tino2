@@ -19,21 +19,33 @@ import {
   Stack,
   Tooltip,
 } from '@mui/material';
-import { Security, Verified, CheckCircleOutline, WarningAmberOutlined } from '@mui/icons-material';
+import { Security, Verified, CheckCircleOutline, WarningAmberOutlined, CheckBox, CheckBoxOutlineBlank } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { WorkflowProviderResult, ProviderAnalysis } from '../../services/api';
-import QuoteRequestDialog from '../quotes/QuoteRequestDialog';
 
 interface AssistantProviderCardProps {
   provider: WorkflowProviderResult;
   analysis?: ProviderAnalysis;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
+  selectionDisabled?: boolean;
+  onViewProfile?: () => void;
 }
 
-const AssistantProviderCard: React.FC<AssistantProviderCardProps> = ({ provider, analysis }) => {
-  const { t } = useTranslation('assistant');
+const AssistantProviderCard: React.FC<AssistantProviderCardProps> = ({
+  provider, analysis, isSelected = false, onToggleSelect, selectionDisabled = false, onViewProfile,
+}) => {
+  const { t } = useTranslation(['assistant', 'providers']);
+  const ratingNum = Number(provider.rating);
+  const hasRating = Number.isFinite(ratingNum) && ratingNum > 0 && (provider.totalReviews ?? 0) > 0;
 
   return (
-    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Card sx={{
+      height: '100%', display: 'flex', flexDirection: 'column',
+      outline: isSelected ? '2px solid' : '1px solid transparent',
+      outlineColor: isSelected ? 'primary.main' : 'transparent',
+      transition: 'outline 0.15s ease',
+    }}>
       <CardContent sx={{ flexGrow: 1 }}>
         {/* Header with match score */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -43,12 +55,11 @@ const AssistantProviderCard: React.FC<AssistantProviderCardProps> = ({ provider,
             </Typography>
 
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <Rating value={Number(provider.rating)} readOnly size="small" precision={0.5} />
+              <Rating value={hasRating ? ratingNum : 0} readOnly size="small" precision={0.5} />
               <Typography variant="body2" sx={{ ml: 1 }}>
-                {t('results.rating', {
-                  rating: Number(provider.rating).toFixed(1),
-                  count: provider.totalReviews,
-                })}
+                {hasRating
+                  ? t('results.rating', { rating: ratingNum.toFixed(1), count: provider.totalReviews })
+                  : t('providers:card.no_rating', 'Novo')}
               </Typography>
             </Box>
           </Box>
@@ -73,7 +84,7 @@ const AssistantProviderCard: React.FC<AssistantProviderCardProps> = ({ provider,
             ))}
             {provider.services.length > 3 && (
               <Chip
-                label={`+${provider.services.length - 3} more`}
+                label={t('providers:card.more_services', { count: provider.services.length - 3 })}
                 size="small"
                 variant="outlined"
               />
@@ -111,9 +122,9 @@ const AssistantProviderCard: React.FC<AssistantProviderCardProps> = ({ provider,
         {provider.pricing && (
           <Box sx={{ mb: 2 }}>
             <Typography variant="h6" color="primary.main">
-              ${provider.pricing.baseRate}
+              R${provider.pricing.baseRate}
               <Typography component="span" variant="body2" color="text.secondary">
-                /{provider.pricing.rateType}
+                {t(`providers:card.${provider.pricing.rateType || 'hourly'}`, '/hora')}
               </Typography>
             </Typography>
           </Box>
@@ -163,16 +174,26 @@ const AssistantProviderCard: React.FC<AssistantProviderCardProps> = ({ provider,
 
       <Divider />
 
-      {/* Action buttons */}
-      <Box sx={{ p: 2 }}>
-        <Stack direction="row" spacing={1}>
-          <Button fullWidth variant="outlined">
-            {t('actions.viewProfile')}
-          </Button>
-          <Button fullWidth variant="contained">
-            {t('actions.requestQuote')}
-          </Button>
-        </Stack>
+      {/* Action footer — fixed height so all cards align */}
+      <Box sx={{ p: 1.5, mt: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Button variant="outlined" size="small" onClick={onViewProfile} sx={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
+          {t('actions.viewProfile')}
+        </Button>
+        <Box sx={{ flex: 1 }} />
+        <Tooltip title={selectionDisabled && !isSelected ? t('actions.maxSelected') : ''}>
+          <span>
+            <Chip
+              icon={isSelected ? <CheckBox fontSize="small" /> : <CheckBoxOutlineBlank fontSize="small" />}
+              label={t('actions.requestQuote')}
+              onClick={selectionDisabled && !isSelected ? undefined : onToggleSelect}
+              color={isSelected ? 'success' : 'default'}
+              variant={isSelected ? 'filled' : 'outlined'}
+              size="small"
+              clickable={!(selectionDisabled && !isSelected)}
+              sx={{ fontWeight: isSelected ? 600 : 400, cursor: selectionDisabled && !isSelected ? 'not-allowed' : 'pointer' }}
+            />
+          </span>
+        </Tooltip>
       </Box>
     </Card>
   );

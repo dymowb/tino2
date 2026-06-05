@@ -134,7 +134,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
   provider,
   serviceType = ''
 }) => {
-  const { t, i18n } = useTranslation('bookings');
+  const { t, i18n } = useTranslation(['bookings', 'providers']);
   const { user } = useAuth();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -308,7 +308,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <Payment sx={{ fontSize: 15, color: 'text.disabled' }} />
                     <Typography sx={{ fontFamily: tokens.font.mono, fontSize: '0.875rem', color: tokens.color.terra }}>
-                      {formatCurrency(provider.pricing?.baseRate || 50)}/{provider.pricing?.rateType || 'hora'}
+                      {formatCurrency(provider.pricing?.baseRate || 50)}{t(`providers:card.${provider.pricing?.rateType || 'hourly'}`, '/hora')}
                     </Typography>
                   </Box>
                 </Box>

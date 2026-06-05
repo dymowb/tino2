@@ -29,7 +29,6 @@
     "offline": "Offline",
     "typing": "digitando...",
     "participants": "{{count}} participante",
-    "participants_plural": "{{count}} participantes",
     "replying_to": "Respondendo a {{name}}",
     "edited": "(editado)",
     "editing": "Editando mensagem",
@@ -37,7 +36,9 @@
     "reply": "Responder",
     "edit": "Editar",
     "delete": "Excluir",
-    "conversation_fallback": "Conversa"
+    "conversation_fallback": "Conversa",
+    "participants_other": "{{count}} participantes",
+    "participants_one": "{{count}} participante"
   },
   "errors": {
     "send_failed": "Falha ao enviar mensagem",

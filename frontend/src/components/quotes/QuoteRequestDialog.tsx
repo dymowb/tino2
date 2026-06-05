@@ -45,6 +45,10 @@ interface QuoteRequestDialogProps {
   open: boolean;
   onClose: () => void;
   serviceType?: string;
+  providerName?: string;
+  /** When set, the request is targeted at this specific provider (not broadcast). */
+  providerId?: string;
+  initialDescription?: string;
 }
 
 interface Requirement {
@@ -79,7 +83,10 @@ interface QuoteRequestFormData {
 const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
   open,
   onClose,
-  serviceType = ''
+  serviceType = '',
+  providerName,
+  providerId,
+  initialDescription = '',
 }) => {
   const { t } = useTranslation('quotes');
   const { user } = useAuth();
@@ -87,7 +94,7 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
 
   const [formData, setFormData] = useState<QuoteRequestFormData>({
     serviceType: serviceType,
-    description: '',
+    description: initialDescription,
     location: {
       address: '',
       city: '',
@@ -196,7 +203,9 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
       urgency: formData.urgency,
       requirements: formData.requirements,
       searchRadius: formData.searchRadius,
-      expiresAt: formData.expiresAt?.toISOString()
+      expiresAt: formData.expiresAt?.toISOString(),
+      // Target the specific provider when launched from a provider card; otherwise broadcast.
+      ...(providerId ? { targetProviderIds: [providerId] } : {}),
     };
 
     createQuoteRequestMutation.mutate(requestData);
@@ -220,21 +229,17 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
   };
 
   const availableServices = [
-    'house_cleaning',
-    'deep_cleaning',
-    'plumbing',
-    'electrical',
-    'carpentry',
-    'painting',
-    'gardening',
-    'hvac',
-    'appliance_repair',
-    'pest_control'
+    t('request.services.house_cleaning'),
+    t('request.services.deep_cleaning'),
+    t('request.services.plumbing'),
+    t('request.services.electrical'),
+    t('request.services.carpentry'),
+    t('request.services.painting'),
+    t('request.services.gardening'),
+    t('request.services.hvac'),
+    t('request.services.appliance_repair'),
+    t('request.services.pest_control'),
   ];
-
-  const formatServiceName = (service: string) => {
-    return service.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  };
 
   const requirementCategories = [
     { value: 'experience', label: t('request.requirement_categories.experience') },
@@ -256,7 +261,7 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <RequestQuote />
-          {t('request.title')}
+          {providerName ? t('request.title_provider', { name: providerName }) : t('request.title')}
         </Box>
       </DialogTitle>
 
@@ -274,7 +279,7 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
                 >
                   {availableServices.map(service => (
                     <MenuItem key={service} value={service}>
-                      {formatServiceName(service)}
+                      {service}
                     </MenuItem>
                   ))}
                 </Select>
@@ -407,10 +412,10 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
                   max={2000}
                   step={25}
                   marks={[
-                    { value: 25, label: '$25' },
-                    { value: 500, label: '$500' },
-                    { value: 1000, label: '$1000' },
-                    { value: 2000, label: '$2000+' }
+                    { value: 25, label: 'R$25' },
+                    { value: 500, label: 'R$500' },
+                    { value: 1000, label: 'R$1000' },
+                    { value: 2000, label: 'R$2000+' }
                   ]}
                 />
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>

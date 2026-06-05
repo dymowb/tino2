@@ -1,3 +1,4 @@
+import { getLanguageInstruction } from './utils/locale';
 /**
  * Requirements Agent
  *
@@ -42,6 +43,7 @@ export interface RequirementsAgentInput {
   memoryContext?: string;
   /** Formatted <constraints> block from active procedural rules — takes precedence over defaults */
   constraintContext?: string;
+  locale?: string;
   currentTurn?: number;
 }
 
@@ -54,6 +56,7 @@ export interface RequirementsAgentOutput {
   requirementsSummary?: {
     serviceType: string;
     location: {
+      neighborhood?: string;
       address?: string;
       city?: string;
       state?: string;
@@ -95,19 +98,26 @@ class RequirementsAgent implements Agent<RequirementsAgentInput, RequirementsAge
   /**
    * Build system prompt for requirements gathering
    */
-  private buildSystemPrompt(): string {
+  private buildSystemPrompt(locale?: string): string {
+    const today = new Date();
+    const todayISO = today.toISOString().split('T')[0];
+    const todayWeekday = today.toLocaleDateString('en-US', { weekday: 'long' });
+    // Dynamic example date (today + 7d) so the example never anchors the model to a past year.
+    const exampleDate = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     return `You are a requirements gathering assistant for a domestic services platform.
-Respond ONLY in Brazilian Portuguese (pt-BR). All questions and responses must be in Portuguese.
+${getLanguageInstruction(locale)}
+
+**Today's date is ${todayISO} (${todayWeekday}).** Use this as the reference for resolving any relative dates.
 
 Your job is to extract complete service booking requirements from users through natural conversation.
 
 **Required Information:**
 1. Service Type: What service do they need? (cleaning, plumbing, electrical, etc.)
 2. Location: Where does the service need to be performed?
-3. Timing: When do they need the service? (date, time, flexibility)
+3. Timing: When do they need the service? (date, time, flexibility). Always convert relative dates ("hoje", "amanhã", "esta semana", "próximo sábado", "sexta-feira", "next Saturday") to ISO format YYYY-MM-DD using the today's date given above as the anchor. For a bare weekday, pick the NEXT future occurrence of that weekday (never a past date). Leave blank if truly unknown.
 4. Budget: What is their budget range? (optional but helpful)
 5. Special Requirements: Any specific needs, preferences, or constraints?
-6. Urgency: How urgent is the request?
+6. Urgency: How urgent is the request? (must be one of: "low", "medium", "high", "emergency")
 
 **Your Response Format:**
 You must respond with a JSON object in one of two formats:
@@ -127,8 +137,8 @@ If you have all required information:
   "isComplete": true,
   "requirementsSummary": {
     "serviceType": "Plumbing",
-    "location": { "city": "San Francisco", "state": "CA" },
-    "timing": { "preferredDate": "2024-11-15", "isFlexible": true },
+    "location": { "neighborhood": "Mission District", "city": "San Francisco", "state": "CA" },
+    "timing": { "preferredDate": "${exampleDate}", "isFlexible": true },
     "budget": { "max": 200, "hasFlexibility": true },
     "specialRequirements": ["emergency", "drain cleaning"],
     "urgency": "high"
@@ -186,7 +196,7 @@ Analyze the conversation and respond with JSON following the format specified in
       let finalExecutionTimeMs = 0;
       while (iterationCount < MAX_REFLECTION_ITERATIONS) {
         // Layer order: constraints (mandatory) → memory (informational) → base instructions
-        let systemPrompt = this.buildSystemPrompt();
+        let systemPrompt = this.buildSystemPrompt(input.locale);
         if (input.memoryContext) systemPrompt = `${input.memoryContext}\n\n${systemPrompt}`;
         if (input.constraintContext) systemPrompt = `${input.constraintContext}\n\n${systemPrompt}`;
 

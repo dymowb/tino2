@@ -34,24 +34,23 @@
     "no_results": "No se encontraron proveedores que coincidan con tus criterios",
     "no_providers_description": "No se encontraron proveedores que coincidan con tus criterios. Intenta ajustar tus filtros o ampliar tu radio de búsqueda.",
     "results_count": "{{count}} proveedor encontrado",
-    "results_count_plural": "{{count}} proveedores encontrados",
     "providers_found": "{{count}} Proveedor Encontrado",
-    "providers_found_plural": "{{count}} Proveedores Encontrados"
+    "results_count_other": "{{count}} proveedores encontrados",
+    "results_count_one": "{{count}} proveedor encontrado",
+    "providers_found_other": "{{count}} Proveedores Encontrados",
+    "providers_found_one": "{{count}} Proveedor Encontrado"
   },
-
   "card": {
     "starting_at": "Desde",
     "per_hour": "por hora",
     "hour": "hora",
     "rating": "{{rating}} estrellas",
     "reviews_count": "{{count}} reseña",
-    "reviews_count_plural": "{{count}} reseñas",
     "reviews": "reseñas",
     "distance_away": "a {{distance}} millas",
     "responds_in": "Responde en {{time}}",
     "responds_in_hours": "Responde en {{time}}h",
     "completed_jobs": "{{count}} trabajo completado",
-    "completed_jobs_plural": "{{count}} trabajos completados",
     "completed_jobs_label": "trabajos completados",
     "insurance_verified": "Seguro Verificado",
     "insured": "Asegurado",
@@ -64,9 +63,12 @@
     "available_now": "Disponible Ahora",
     "available_today": "Disponible Hoy",
     "services_label": "Servicios:",
-    "more_services": "+{{count}} más"
+    "more_services": "+{{count}} más",
+    "reviews_count_other": "{{count}} reseñas",
+    "reviews_count_one": "{{count}} reseña",
+    "completed_jobs_other": "{{count}} trabajos completados",
+    "completed_jobs_one": "{{count}} trabajo completado"
   },
-
   "profile": {
     "title": "Perfil del Proveedor",
     "about": "Acerca de",
@@ -88,7 +90,6 @@
     "no_reviews": "Aún no hay reseñas",
     "see_all_reviews": "Ver Todas las Reseñas"
   },
-
   "services": {
     "house_cleaning": "Limpieza del Hogar",
     "plumbing": "Plomería",
@@ -105,7 +106,6 @@
     "home_inspection": "Inspección del Hogar",
     "roofing": "Techado"
   },
-
   "messages": {
     "location_updated": "¡Ubicación actualizada!",
     "location_error": "Error al obtener tu ubicación",

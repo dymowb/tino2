@@ -85,9 +85,27 @@ export class ProviderController {
         return;
       }
 
+      // Strip sensitive user fields — this is a public endpoint. Keep only
+      // fields safe to show on a public provider profile (contact + identity).
+      const publicProvider = provider as any;
+      if (publicProvider.user) {
+        const u = publicProvider.user;
+        publicProvider.user = {
+          id: u.id,
+          firstName: u.firstName,
+          lastName: u.lastName,
+          profileImage: u.profileImage,
+          userType: u.userType,
+          email: u.email,
+          phone: u.phone,
+          isActive: u.isActive,
+          createdAt: u.createdAt,
+        };
+      }
+
       const response: ApiResponse = {
         success: true,
-        data: { provider },
+        data: { provider: publicProvider },
       };
 
       res.status(200).json(response);
@@ -449,10 +467,15 @@ export class ProviderController {
         return;
       }
 
-      // Get booking statistics using bookingService
-      const allBookingsQuery = { providerId: provider.id, limit: 1000 };
-      const pendingQuery = { providerId: provider.id, status: 'pending', limit: 1000 };
-      const completedQuery = { providerId: provider.id, status: 'completed', limit: 1000 };
+      // Build date range from period
+      const period = (req.query.period as string) || 'month';
+      const periodDays: Record<string, number> = { week: 7, month: 30, quarter: 90, year: 365 };
+      const dateFrom = new Date();
+      dateFrom.setDate(dateFrom.getDate() - (periodDays[period] ?? 30));
+
+      const allBookingsQuery = { providerId: provider.id, limit: 1000, dateFrom };
+      const pendingQuery = { providerId: provider.id, status: 'pending', limit: 1000, dateFrom };
+      const completedQuery = { providerId: provider.id, status: 'completed', limit: 1000, dateFrom };
 
       const allBookingsResult = await bookingService.searchBookings(allBookingsQuery);
       const pendingResult = await bookingService.searchBookings(pendingQuery);

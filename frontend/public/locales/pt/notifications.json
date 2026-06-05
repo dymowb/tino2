@@ -82,10 +82,13 @@
   "time": {
     "just_now": "Agora mesmo",
     "minutes_ago": "{{count}} minuto atrás",
-    "minutes_ago_plural": "{{count}} minutos atrás",
     "hours_ago": "{{count}} hora atrás",
-    "hours_ago_plural": "{{count}} horas atrás",
     "days_ago": "{{count}} dia atrás",
-    "days_ago_plural": "{{count}} dias atrás"
+    "minutes_ago_other": "{{count}} minutos atrás",
+    "minutes_ago_one": "{{count}} minuto atrás",
+    "hours_ago_other": "{{count}} horas atrás",
+    "hours_ago_one": "{{count}} hora atrás",
+    "days_ago_other": "{{count}} dias atrás",
+    "days_ago_one": "{{count}} dia atrás"
   }
 }

@@ -14,13 +14,13 @@
     "login_required": "Please log in to view your bookings",
     "error_loading": "Failed to load bookings. Please try again.",
     "results_count": "{{count}} Booking Found",
-    "results_count_plural": "{{count}} Bookings Found",
     "filter_applied": "({{status}})",
     "no_results": "No bookings found matching your criteria.",
     "start_booking_prompt": "Start by finding service providers and booking services!",
-    "booking_number": "Booking #{{id}}"
+    "booking_number": "Booking #{{id}}",
+    "results_count_other": "{{count}} Bookings Found",
+    "results_count_one": "{{count}} Booking Found"
   },
-
   "create": {
     "title": "Create New Booking",
     "dialog_title": "Book Service with {{provider}}",
@@ -70,7 +70,6 @@
       "estimated_cost": "Estimated Cost:"
     }
   },
-
   "details": {
     "title": "Booking Details",
     "booking_id": "Booking ID",
@@ -98,7 +97,6 @@
     "updated_at": "Updated At",
     "notes": "Notes"
   },
-
   "actions": {
     "cancel": "Cancel",
     "cancel_booking": "Cancel Booking",
@@ -118,11 +116,9 @@
     "keep_booking": "Keep Booking",
     "cancelling": "Cancelling..."
   },
-
   "payment_status": {
     "not_charged": "Not charged"
   },
-
   "status": {
     "pending": "Pending",
     "confirmed": "Confirmed",
@@ -132,7 +128,6 @@
     "in_dispute": "In Dispute",
     "cancelled": "Cancelled"
   },
-
   "cancel": {
     "title": "Cancel Booking",
     "confirm": "Are you sure you want to cancel this booking?",
@@ -144,7 +139,6 @@
     "policy": "Cancellation Policy",
     "policy_text": "Cancellations made more than 24 hours in advance receive a full refund. Cancellations within 24 hours may incur a fee."
   },
-
   "messages": {
     "status_updated_success": "Booking status updated successfully!",
     "status_updated_error": "Failed to update booking status",
@@ -153,7 +147,6 @@
     "review_coming_soon": "Review system - Coming in Task 6!",
     "messaging_coming_soon": "Messaging system - Coming in Task 4!"
   },
-
   "reschedule": {
     "title": "Reschedule Booking",
     "new_date": "New Date",
@@ -163,7 +156,6 @@
     "success": "Booking rescheduled successfully",
     "error": "Failed to reschedule booking"
   },
-
   "status_messages": {
     "pending": "Your booking request is pending confirmation",
     "confirmed": "Your booking has been confirmed",

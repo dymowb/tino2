@@ -455,7 +455,14 @@ export class BookingService {
     userRole: 'customer' | 'provider',
     isOwner: boolean
   ): boolean {
-    // Define valid status transitions
+    // Valid transitions for the GENERIC status route — accept & cancel only.
+    // Every escrow-bearing transition is owned by a dedicated endpoint that also moves the
+    // money, so they are intentionally absent here:
+    //   confirmed -> in_progress         via POST /:id/start              (places hold)
+    //   in_progress -> pending_completion via POST /:id/complete
+    //   pending_completion -> completed   via POST /:id/confirm-completion (captures)
+    //   pending_completion -> in_dispute  via POST /:id/dispute
+    // Cancelling an in-progress (held) booking is a refund decision handled by dispute/admin.
     const transitions: Record<string, Record<string, string[]>> = {
       pending: {
         customer: ['cancelled'],
@@ -463,16 +470,14 @@ export class BookingService {
       },
       confirmed: {
         customer: ['cancelled'],
-        provider: ['in_progress', 'cancelled'],
+        provider: ['cancelled'],
       },
       in_progress: {
-        // provider marks complete via /complete endpoint; kept here for state machine completeness
         customer: [],
-        provider: ['pending_completion', 'cancelled'],
+        provider: [],
       },
       pending_completion: {
-        // customer confirms via /confirm-completion or disputes via /dispute endpoint
-        customer: ['in_dispute'],
+        customer: [],
         provider: [],
       },
       in_dispute: {

@@ -104,6 +104,8 @@ const MyQuotesPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
       queryClient.invalidateQueries({ queryKey: ['quote-requests'] });
+      // Accepting a quote now creates a booking server-side — refresh bookings too.
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
       toast.success(t('page.status_updated'));
       setAnchorEl(null);
       setSelectedQuote(null);

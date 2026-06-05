@@ -165,11 +165,18 @@ export class ReviewService {
 
   async addProviderResponse(
     id: string,
-    providerId: string,
+    providerUserId: string,
     response: string
   ): Promise<Review> {
+    // `providerUserId` is the User id; review.providerId is the Provider entity id —
+    // resolve the provider profile first, else a provider can never respond to their review.
+    const provider = await this.providerRepository.findOne({ where: { userId: providerUserId } });
+    if (!provider) {
+      throw new Error('Review not found or unauthorized');
+    }
+
     const review = await this.reviewRepository.findOne({
-      where: { id, providerId }
+      where: { id, providerId: provider.id }
     });
 
     if (!review) {

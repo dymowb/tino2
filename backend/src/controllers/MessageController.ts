@@ -172,6 +172,15 @@ export class MessageController {
   getConversationMessages = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { conversationId } = req.params;
+      const userId = req.user!.userId;
+
+      // Only conversation participants may read messages — prevents admin eavesdropping
+      const isParticipant = await messageService.isConversationParticipant(conversationId, userId);
+      if (!isParticipant) {
+        res.status(403).json({ success: false, message: 'Access denied' });
+        return;
+      }
+
       const query = {
         conversationId,
         senderId: req.query.senderId as string | undefined,

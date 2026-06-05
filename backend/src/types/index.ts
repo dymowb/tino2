@@ -325,12 +325,12 @@ export interface CreateQuoteRequestRequest {
   serviceType: string;
   description: string;
   location: {
-    latitude: number;
-    longitude: number;
-    address: string;
+    latitude?: number;
+    longitude?: number;
+    address?: string;
     city: string;
-    state: string;
-    zipCode: string;
+    state?: string;
+    zipCode?: string;
   };
   preferredDate?: Date;
   budget?: {
@@ -354,6 +354,7 @@ export interface CreateQuoteRequestRequest {
   }>;
   searchRadius?: number;
   expiresAt?: Date;
+  targetProviderIds?: string[];
 }
 
 export interface UpdateQuoteRequestRequest {
@@ -448,6 +449,8 @@ export interface QuoteRequestSearchQuery {
   limit?: number;
   sortBy?: 'date' | 'budget' | 'urgency' | 'created';
   sortOrder?: 'asc' | 'desc';
+  /** When a provider browses available requests, restrict to broadcast requests + those targeted at this provider id. */
+  forProviderId?: string;
 }
 
 export interface QuoteSearchQuery {

@@ -396,6 +396,7 @@ export class CoordinatorAgent {
           conversationMessages: workflow.context.conversationMessages,
           memoryContext: workflow.context.memoryContext,
           constraintContext: workflow.context.constraintContext,
+          locale: workflow.context.locale,
         };
 
       case 'search':
@@ -403,6 +404,7 @@ export class CoordinatorAgent {
           requirements: workflow.context.requirements?.requirementsSummary || null,
           workflowId: workflow.id,
           userId: workflow.userId,
+          locale: workflow.context.locale,
         };
 
       case 'analysis':
@@ -410,6 +412,7 @@ export class CoordinatorAgent {
           providers: workflow.context.searchResults,
           requirements: workflow.context.requirements,
           constraintContext: workflow.context.constraintContext,
+          locale: workflow.context.locale,
         };
 
       case 'recommendation':
@@ -418,6 +421,7 @@ export class CoordinatorAgent {
           analysisResults: workflow.context.analysisResults,
           requirements: workflow.context.requirements,
           constraintContext: workflow.context.constraintContext,
+          locale: workflow.context.locale,
         };
 
       case 'verification':

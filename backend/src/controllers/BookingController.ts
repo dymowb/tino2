@@ -510,7 +510,6 @@ export class BookingController {
     const providerRepo = AppDataSource.getRepository(Provider);
 
     try {
-      const stripe = getStripeInstance();
       const { bookingId } = req.params;
 
       // Verify caller is the provider for this booking
@@ -536,6 +535,9 @@ export class BookingController {
       // Create PaymentIntent with manual capture = escrow hold
       // The interesting design decision: we don't charge yet — capture_method:'manual'
       // authorises the funds (freezes them on the card) without moving money.
+      // Stripe is initialised only after owner + state + payment-method checks pass,
+      // so authz/state errors return proper 4xx instead of a 500 when Stripe is absent.
+      const stripe = getStripeInstance();
       const fees = calculateFees(Number(booking.totalAmount));
       let paymentIntent: any;
       try {
@@ -561,7 +563,7 @@ export class BookingController {
           type: NotificationType.PAYMENT,
           title: 'Payment hold failed',
           message: 'Your booking was cancelled because the payment could not be authorised. Please update your payment method.',
-          actionUrl: `/bookings/${bookingId}`,
+          actionUrl: `/bookings?bookingId=${bookingId}`,
           metadata: { bookingId },
         }).catch(() => {});
 
@@ -569,7 +571,7 @@ export class BookingController {
           type: NotificationType.PAYMENT,
           title: 'Booking cancelled',
           message: 'The booking was cancelled because the customer\'s payment method was declined.',
-          actionUrl: `/bookings/${bookingId}`,
+          actionUrl: `/bookings?bookingId=${bookingId}`,
           metadata: { bookingId },
         }).catch(() => {});
 
@@ -618,7 +620,7 @@ export class BookingController {
         type: NotificationType.BOOKING,
         title: 'Service complete — please confirm',
         message: 'Your provider has marked the service as complete. Please confirm or raise a dispute within 3 days.',
-        actionUrl: `/bookings/${bookingId}`,
+        actionUrl: `/bookings?bookingId=${bookingId}`,
         metadata: { bookingId },
       }).catch(() => {});
 
@@ -634,7 +636,6 @@ export class BookingController {
     const bookingRepo = AppDataSource.getRepository(Booking);
 
     try {
-      const stripe = getStripeInstance();
       const { bookingId } = req.params;
       const booking = await bookingRepo.findOne({
         where: { id: bookingId, customerId: req.user.userId },
@@ -646,6 +647,8 @@ export class BookingController {
         return;
       }
 
+      // Init Stripe only after owner + state checks so IDOR/wrong-state return proper 4xx.
+      const stripe = getStripeInstance();
       await stripe.paymentIntents.capture(booking.stripePaymentIntentId);
 
       booking.status = BookingStatus.COMPLETED;
@@ -655,7 +658,7 @@ export class BookingController {
         type: NotificationType.PAYMENT,
         title: 'Payment released',
         message: 'The customer confirmed service completion. Payment has been captured.',
-        actionUrl: `/bookings/${bookingId}`,
+        actionUrl: `/bookings?bookingId=${bookingId}`,
         metadata: { bookingId },
       }).catch(() => {});
 

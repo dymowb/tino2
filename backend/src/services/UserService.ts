@@ -84,6 +84,7 @@ export class UserService {
           'phone',
           'isActive',
           'isVerified',
+          'suspendedUntil',
           'createdAt',
           'updatedAt',
         ],
@@ -91,6 +92,18 @@ export class UserService {
 
       if (!user) {
         throw new Error('Invalid credentials');
+      }
+
+      // Lazy reactivation: a temporary suspension whose window has passed should not
+      // block login. Mirrors the same check in the authenticate middleware — without it,
+      // a user whose token expired during a time-boxed suspension stays locked out
+      // forever (DEF-B2). Persist the reactivation so subsequent reads agree.
+      if (!user.isActive && user.suspendedUntil && new Date() > new Date(user.suspendedUntil)) {
+        user.isActive = true;
+        user.suspendedUntil = null;
+        user.suspensionReason = null;
+        user.suspensionComment = null;
+        await this.userRepository.save(user);
       }
 
       if (!user.isActive) {

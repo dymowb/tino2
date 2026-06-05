@@ -1,3 +1,4 @@
+import { getLanguageInstruction } from './utils/locale';
 /**
  * Analysis Agent
  *
@@ -40,6 +41,7 @@ export interface AnalysisAgentInput {
 
   /** Formatted <constraints> block from active procedural rules */
   constraintContext?: string;
+  locale?: string;
 }
 
 /**
@@ -105,7 +107,6 @@ class AnalysisAgent implements Agent<AnalysisAgentInput, AnalysisAgentOutput> {
     temperature: 0.3, // Low temperature for consistent structured output
     systemPrompt: `You are a Provider Analysis Agent. Your job is to evaluate service providers
 based on their profile data, customer reviews, and booking history.
-Respond ONLY in Brazilian Portuguese (pt-BR). All strengths, concerns, reviewSentiment, uniqueValue, and riskFactors must be in Portuguese.
 
 For each provider, generate:
 1. strengths (3-5): Specific, data-backed strengths. Reference actual review themes or stats.
@@ -278,9 +279,10 @@ Return a JSON array of analysis objects.`,
           `Booking History: ${JSON.stringify(ep.bookingHistory, null, 2)}\n`
       )).join('\n\n')}`
 
+    const langPrompt = `${this.metadata.systemPrompt}\n${getLanguageInstruction(input.locale)}`;
     const systemPrompt = input.constraintContext
-      ? `${input.constraintContext}\n\n${this.metadata.systemPrompt}`
-      : this.metadata.systemPrompt;
+      ? `${input.constraintContext}\n\n${langPrompt}`
+      : langPrompt;
 
     const response = await anthropicService.callClaude({
       model: ClaudeModel.HAIKU,

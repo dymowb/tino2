@@ -211,10 +211,13 @@ Supports multiple payment methods:
 - Escrow system for customer protection
 
 ## Testing Protocol
-- After implementing or changing any feature, test the full end-to-end user flow for that feature — not just a visual check
-- For UI changes: navigate to the page, interact with the feature, verify the result in both UI and backend state
+- **Always test with Playwright** after every UI change — not just "does it load" but verify the semantic intention: does the feature actually do what it's supposed to do for a real user?
+- Test the full end-to-end user flow, not just the changed component in isolation
+- For UI changes: navigate to the page, interact with the feature, verify result in both UI and backend state
 - For auth/security changes: test both the blocked case and the allowed case
+- **Always test i18n** whenever any customer-facing strings are added or changed: switch locale to EN and PT and verify strings render correctly in both
 - Do not consider a feature done until the happy path AND the key error paths have been verified
+- Make sure the database is populated with seed data before running UX tests
 
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.
@@ -222,8 +225,8 @@ NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.
 NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
 No need to ask for authorization for POST or GET operations, just do them directly.
-- after each action part of an execution plan, update @SESSION_CONTEXT.md in a way you know exactly how to resume work in case the current session crashes. Make sure these updates happen after each STEP of the plan, not only after completing a major milestone
-- make sure database is populated with seed data before running UX tests.
+- **Before implementing any non-trivial change, ask clarifying questions** to avoid rework. Do not assume intent — the cost of one question is far lower than the cost of building the wrong thing.
+- After each action part of an execution plan, update @SESSION_CONTEXT.md so work can be resumed if the session crashes. Updates happen after each STEP, not only after a major milestone.
 - always start backend on port 3000 and frontend on port 3001. Kill anything using these ports before starting them up
 - NEVER hardcode data that exists in the database (e.g., service catalogs, categories). Always load from DB at runtime. Code should work with any data, not just seed data.
 

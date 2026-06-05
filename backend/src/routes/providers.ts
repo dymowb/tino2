@@ -55,7 +55,7 @@ router.get(
   authenticate,
   requireProviderRole,
   [
-    query('period').optional().isIn(['week', 'month', 'year']).withMessage('Period must be week, month, or year'),
+    query('period').optional().isIn(['week', 'month', 'quarter', 'year']).withMessage('Period must be week, month, quarter, or year'),
     handleValidationErrors,
   ],
   providerController.getDashboardStats

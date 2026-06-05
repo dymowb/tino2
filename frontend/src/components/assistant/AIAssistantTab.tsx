@@ -9,7 +9,7 @@
  * - Failed → Error message + retry button
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -25,17 +25,28 @@ import {
   Chip,
   Rating,
   Divider,
+  Slide,
+  Tooltip,
 } from '@mui/material';
-import { CheckCircleOutline } from '@mui/icons-material';
-import { Send, Refresh, AutoAwesome, EmojiEvents, WarningAmber } from '@mui/icons-material';
+import { CheckCircleOutline, CheckBox, CheckBoxOutlineBlank } from '@mui/icons-material';
+import { Send, Refresh, AutoAwesome, EmojiEvents, WarningAmber, RequestQuote } from '@mui/icons-material';
 import { Recommendation, VerificationReport, apiService } from '../../services/api';
 import { useTranslation } from 'react-i18next';
 import { useAssistantWorkflow } from '../../hooks/useAssistantWorkflow';
 import AssistantProviderCard from './AssistantProviderCard';
+import AIRequirementsSummary, { RequirementsSummary } from './AIRequirementsSummary';
+import ProviderDetailDrawer from './ProviderDetailDrawer';
 import VoiceMicButton from './VoiceMicButton';
-import QuoteRequestDialog from '../quotes/QuoteRequestDialog';
+import { toast } from 'react-hot-toast';
 
-const AIAssistantTab: React.FC = () => {
+const MAX_PROVIDERS = Number(import.meta.env.VITE_MAX_PROVIDERS_PER_QUOTE ?? 5);
+
+interface AIAssistantTabProps {
+  onComplete?: () => void;
+  onReset?: () => void;
+}
+
+const AIAssistantTab: React.FC<AIAssistantTabProps> = ({ onComplete, onReset }) => {
   const { t } = useTranslation('assistant');
   const {
     workflow,
@@ -43,6 +54,7 @@ const AIAssistantTab: React.FC = () => {
     isProcessing,
     isStreaming,
     progressMessage,
+    progressStage,
     narrative,
     followUpQuestion,
     results,
@@ -62,9 +74,17 @@ const AIAssistantTab: React.FC = () => {
   // Input state for the text field (used for both initial message and follow-up)
   const [input, setInput] = useState('');
 
-  // Quote dialog state
-  const [quoteDialogOpen, setQuoteDialogOpen] = useState(false);
-  const [quoteServiceType, setQuoteServiceType] = useState('');
+  // Provider detail drawer
+  const [drawerProvider, setDrawerProvider] = useState<import('../../services/api').WorkflowProviderResult | null>(null);
+
+  // Multi-select quote state
+  const [selectedProviderIds, setSelectedProviderIds] = useState<Set<string>>(new Set());
+  const [isSendingQuote, setIsSendingQuote] = useState(false);
+
+  // Editable requirements summary
+  const [editedRequirements, setEditedRequirements] = useState<RequirementsSummary | null>(null);
+  const [editedDescription, setEditedDescription] = useState('');
+  const [requirementsModified, setRequirementsModified] = useState(false);
 
   // Sort order for the "all providers" section below recommendations
   const [providerSort, setProviderSort] = useState<'match' | 'rating' | 'price'>('match');
@@ -86,6 +106,67 @@ const AIAssistantTab: React.FC = () => {
   useEffect(() => {
     if (followUpQuestion) speakText(followUpQuestion);
   }, [followUpQuestion]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Initialise editable requirements when workflow completes
+  useEffect(() => {
+    const summary = workflow?.context?.requirements?.requirementsSummary;
+    if (summary && !editedRequirements) {
+      setEditedRequirements(summary as RequirementsSummary);
+      setEditedDescription(workflow?.context?.userRequest ?? '');
+      setRequirementsModified(false);
+    }
+    if (workflow?.status === 'completed') onComplete?.();
+  }, [workflow?.context?.requirements?.requirementsSummary, workflow?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reset selection + requirements when workflow is reset
+  useEffect(() => {
+    if (!workflow) {
+      setSelectedProviderIds(new Set());
+      setEditedRequirements(null);
+      setEditedDescription('');
+      setRequirementsModified(false);
+      onReset?.();
+    }
+  }, [workflow]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggleProvider = (providerId: string) => {
+    setSelectedProviderIds(prev => {
+      const next = new Set(prev);
+      if (next.has(providerId)) { next.delete(providerId); } else { next.add(providerId); }
+      return next;
+    });
+  };
+
+  const handleSendQuote = async () => {
+    if (selectedProviderIds.size === 0 || !editedRequirements) return;
+    setIsSendingQuote(true);
+    try {
+      const req = editedRequirements;
+      await apiService.createQuoteRequest({
+        serviceType: req.serviceType,
+        description: editedDescription,
+        location: {
+          city: req.location.neighborhood ?? req.location.city ?? '',
+          address: req.location.address || undefined,
+          state: req.location.state || undefined,
+          zipCode: req.location.zipCode || undefined,
+        },
+        preferredDate: req.timing.preferredDate && /^\d{4}-\d{2}-\d{2}/.test(req.timing.preferredDate)
+          ? req.timing.preferredDate : undefined,
+        budget: req.budget
+          ? { min: req.budget.min ?? 0, max: req.budget.max ?? 0, currency: 'BRL' }
+          : undefined,
+        urgency: ({ emergency: 'urgent', high: 'high', low: 'low' } as Record<string, 'low' | 'medium' | 'high' | 'urgent'>)[req.urgency] ?? 'medium',
+        targetProviderIds: [...selectedProviderIds],
+      });
+      toast.success(t('results.quoteSent', { count: selectedProviderIds.size }));
+      setSelectedProviderIds(new Set());
+    } catch {
+      toast.error(t('results.quoteError', 'Failed to send quote request. Please try again.'));
+    } finally {
+      setIsSendingQuote(false);
+    }
+  };
 
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
@@ -114,6 +195,10 @@ const AIAssistantTab: React.FC = () => {
         return t('status.analysis');
       case 'recommendation':
         return t('status.recommendation', 'Building your personalised recommendations…');
+      case 'verification':
+        return t('status.verification');
+      case 'narrative':
+        return t('status.narrative');
       default:
         return t('status.starting');
     }
@@ -162,7 +247,7 @@ const AIAssistantTab: React.FC = () => {
     <Box sx={{ textAlign: 'center', py: 4 }}>
       <CircularProgress size={48} sx={{ mb: 2 }} />
       <Typography variant="h6" sx={{ mb: 1 }}>
-        {isStreaming ? progressMessage : getStatusMessage(currentStep)}
+        {isStreaming ? getStatusMessage(progressStage) : getStatusMessage(currentStep)}
       </Typography>
 
       {/* Narrative streams in token-by-token once the recommendation stage completes */}
@@ -207,8 +292,11 @@ const AIAssistantTab: React.FC = () => {
 
   const renderFollowUp = () => (
     <Box sx={{ maxWidth: 600, mx: 'auto', py: 4 }}>
-      {/* Show conversation history */}
-      {messages.map((msg) => (
+      {/* Show conversation history — exclude the active follow-up question, which
+          is rendered on its own below (avoids showing the same question twice). */}
+      {messages
+        .filter((msg) => !(msg.role === 'assistant' && msg.content === followUpQuestion))
+        .map((msg) => (
         <Paper
           key={msg.id}
           sx={{
@@ -284,7 +372,7 @@ const AIAssistantTab: React.FC = () => {
             <Typography variant="h6" sx={{ fontWeight: 'bold', flex: 1 }}>
               {rec.provider.businessName}
             </Typography>
-            <Rating value={rec.provider.rating} readOnly size="small" precision={0.5} />
+            <Rating value={Number(rec.provider.rating) || 0} readOnly size="small" precision={0.5} />
             <Typography variant="body2" color="text.secondary">
               ({rec.provider.totalReviews})
             </Typography>
@@ -309,7 +397,7 @@ const AIAssistantTab: React.FC = () => {
 
           {/* Best for */}
           {rec.bestFor && (
-            <Chip label={`Best for: ${rec.bestFor}`} size="small" variant="outlined" sx={{ mb: 1.5 }} />
+            <Chip label={`${t('results.bestFor', 'Best for')}: ${rec.bestFor}`} size="small" variant="outlined" sx={{ mb: 1.5 }} />
           )}
 
           {/* Strengths from analysis */}
@@ -326,23 +414,25 @@ const AIAssistantTab: React.FC = () => {
         </CardContent>
 
         <Divider />
-        <Box sx={{ p: 1.5 }}>
-          <Stack direction="row" spacing={1}>
-            <Button fullWidth variant="outlined" size="small">
-              {t('actions.viewProfile')}
-            </Button>
-            <Button
-              fullWidth
-              variant="contained"
-              size="small"
-              onClick={() => {
-                setQuoteServiceType(rec.provider.services[0] ?? '');
-                setQuoteDialogOpen(true);
-              }}
-            >
-              {t('actions.requestQuote')}
-            </Button>
-          </Stack>
+        <Box sx={{ p: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Button variant="outlined" size="small" onClick={() => setDrawerProvider(rec.provider as import('../../services/api').WorkflowProviderResult)} sx={{ flexShrink: 0 }}>
+            {t('actions.viewProfile')}
+          </Button>
+          <Box sx={{ flex: 1 }} />
+          <Tooltip title={selectedProviderIds.size >= MAX_PROVIDERS && !selectedProviderIds.has(rec.provider.providerId) ? t('actions.maxSelected') : ''}>
+            <span>
+              <Chip
+                icon={selectedProviderIds.has(rec.provider.providerId) ? <CheckBox fontSize="small" /> : <CheckBoxOutlineBlank fontSize="small" />}
+                label={t('actions.requestQuote')}
+                onClick={selectedProviderIds.size >= MAX_PROVIDERS && !selectedProviderIds.has(rec.provider.providerId) ? undefined : () => toggleProvider(rec.provider.providerId)}
+                color={selectedProviderIds.has(rec.provider.providerId) ? 'success' : 'default'}
+                variant={selectedProviderIds.has(rec.provider.providerId) ? 'filled' : 'outlined'}
+                size="small"
+                clickable={!(selectedProviderIds.size >= MAX_PROVIDERS && !selectedProviderIds.has(rec.provider.providerId))}
+                sx={{ fontWeight: selectedProviderIds.has(rec.provider.providerId) ? 600 : 400 }}
+              />
+            </span>
+          </Tooltip>
         </Box>
       </Card>
     );
@@ -350,6 +440,21 @@ const AIAssistantTab: React.FC = () => {
 
   const renderResults = () => (
     <Box sx={{ py: 2 }}>
+      {/* Editable requirements summary */}
+      {editedRequirements && (
+        <AIRequirementsSummary
+          requirements={editedRequirements}
+          description={editedDescription}
+          isModified={requirementsModified}
+          onChange={(r, d) => {
+            setEditedRequirements(r);
+            setEditedDescription(d);
+            setRequirementsModified(true);
+          }}
+          onRerun={() => { reset(); onReset?.(); }}
+        />
+      )}
+
       {/* Narrative intro generated during the stream */}
       {narrative && (
         <Paper sx={{ p: 2, mb: 3, bgcolor: 'primary.50' }} elevation={0}>
@@ -369,8 +474,8 @@ const AIAssistantTab: React.FC = () => {
               sx={{ mb: 2 }}
             >
               {verification.passed
-                ? `Quality verified · Score ${verification.qualityScore}/10`
-                : `Quality score ${verification.qualityScore}/10 · ${verification.suggestions[0] ?? 'Some concerns noted'}`}
+                ? t('results.qualityVerified', { score: verification.qualityScore })
+                : t('results.qualityConcerns', { score: verification.qualityScore, note: verification.suggestions[0] ?? t('results.someConcerns') })}
             </Alert>
           )}
           {recommendations
@@ -393,10 +498,10 @@ const AIAssistantTab: React.FC = () => {
               <Box sx={{ mt: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                   <Typography variant="subtitle1" color="text.secondary">
-                    {remaining.length} other provider{remaining.length > 1 ? 's' : ''} found
+                    {t('results.otherProvidersFound', { count: remaining.length })}
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="body2" color="text.secondary">Sort by:</Typography>
+                    <Typography variant="body2" color="text.secondary">{t('results.sortBy')}</Typography>
                     {(['match', 'rating', 'price'] as const).map(opt => (
                       <Button
                         key={opt}
@@ -405,7 +510,7 @@ const AIAssistantTab: React.FC = () => {
                         onClick={() => setProviderSort(opt)}
                         sx={{ minWidth: 0, px: 1.5, py: 0.5, fontSize: '0.75rem' }}
                       >
-                        {opt === 'match' ? 'Match' : opt === 'rating' ? 'Rating' : 'Price'}
+                        {t(`results.sort_${opt}`)}
                       </Button>
                     ))}
                   </Box>
@@ -416,6 +521,10 @@ const AIAssistantTab: React.FC = () => {
                       <AssistantProviderCard
                         provider={provider}
                         analysis={analysisResults.find(a => a.providerId === provider.providerId)}
+                        isSelected={selectedProviderIds.has(provider.providerId)}
+                        selectionDisabled={selectedProviderIds.size >= MAX_PROVIDERS}
+                        onToggleSelect={() => toggleProvider(provider.providerId)}
+                        onViewProfile={() => setDrawerProvider(provider)}
                       />
                     </Grid>
                   ))}
@@ -438,6 +547,9 @@ const AIAssistantTab: React.FC = () => {
                   <AssistantProviderCard
                     provider={provider}
                     analysis={analysisResults.find(a => a.providerId === provider.providerId)}
+                    isSelected={selectedProviderIds.has(provider.providerId)}
+                    selectionDisabled={selectedProviderIds.size >= MAX_PROVIDERS}
+                    onToggleSelect={() => toggleProvider(provider.providerId)}
                   />
                 </Grid>
               ))}
@@ -446,7 +558,7 @@ const AIAssistantTab: React.FC = () => {
         </>
       )}
       <Box sx={{ mt: 3, textAlign: 'center' }}>
-        <Button variant="outlined" startIcon={<Refresh />} onClick={reset}>
+        <Button variant="outlined" startIcon={<Refresh />} onClick={() => { reset(); onReset?.(); }}>
           {t('actions.newSearch')}
         </Button>
       </Box>
@@ -476,13 +588,63 @@ const AIAssistantTab: React.FC = () => {
   };
 
   return (
-    <Box>
+    <Box sx={{ pb: selectedProviderIds.size > 0 ? 10 : 0 }}>
       {renderContent()}
-      <QuoteRequestDialog
-        open={quoteDialogOpen}
-        onClose={() => setQuoteDialogOpen(false)}
-        serviceType={quoteServiceType}
+      <ProviderDetailDrawer
+        provider={drawerProvider}
+        open={!!drawerProvider}
+        onClose={() => setDrawerProvider(null)}
       />
+
+      {/* Sticky selection bar */}
+      <Slide direction="up" in={selectedProviderIds.size > 0} mountOnEnter unmountOnExit>
+        <Paper
+          elevation={8}
+          sx={{
+            position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1300,
+            p: 2, display: 'flex', alignItems: 'center', gap: 2,
+            borderTop: '1px solid', borderColor: 'divider',
+          }}
+        >
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="body2" fontWeight={600}>
+              {t('results.selectedCount', '{{count}} of {{max}} providers selected', {
+                count: selectedProviderIds.size, max: MAX_PROVIDERS,
+              })}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}>
+              {Array.from({ length: MAX_PROVIDERS }).map((_, i) => (
+                <Box
+                  key={i}
+                  sx={{
+                    width: 32, height: 4, borderRadius: 2,
+                    bgcolor: i < selectedProviderIds.size ? 'primary.main' : 'action.disabled',
+                    transition: 'background-color 0.2s',
+                  }}
+                />
+              ))}
+            </Box>
+          </Box>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => setSelectedProviderIds(new Set())}
+            sx={{ whiteSpace: 'nowrap' }}
+          >
+            {t('results.clearSelection', 'Clear')}
+          </Button>
+          <Button
+            variant="contained"
+            size="large"
+            startIcon={isSendingQuote ? <CircularProgress size={16} color="inherit" /> : <RequestQuote />}
+            onClick={handleSendQuote}
+            disabled={isSendingQuote}
+            sx={{ whiteSpace: 'nowrap' }}
+          >
+            {t('results.sendQuoteRequest', 'Send Quote Request')}
+          </Button>
+        </Paper>
+      </Slide>
     </Box>
   );
 };

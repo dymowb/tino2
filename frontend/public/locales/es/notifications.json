@@ -10,7 +10,6 @@
   "delete_all": "Eliminar Todas",
   "no_notifications": "No hay notificaciones",
   "empty_message": "¡Estás al día!",
-
   "types": {
     "all": "Todas",
     "bookings": "Reservas",
@@ -19,7 +18,6 @@
     "reviews": "Reseñas",
     "system": "Sistema"
   },
-
   "booking": {
     "new_booking": "Nueva solicitud de reserva de {{customer}}",
     "booking_confirmed": "Tu reserva ha sido confirmada",
@@ -28,7 +26,6 @@
     "booking_reminder": "Recordatorio: Reserva programada para {{time}}",
     "booking_updated": "Detalles de la reserva actualizados"
   },
-
   "payment": {
     "payment_received": "Pago recibido: {{amount}}",
     "payment_sent": "Pago enviado exitosamente",
@@ -37,18 +34,15 @@
     "payout_scheduled": "Pago programado para {{date}}",
     "payout_completed": "Pago completado: {{amount}}"
   },
-
   "message": {
     "new_message": "Nuevo mensaje de {{sender}}",
     "conversation_started": "{{name}} inició una conversación"
   },
-
   "review": {
     "new_review": "Nueva reseña recibida de {{customer}}",
     "review_response": "{{provider}} respondió a tu reseña",
     "review_reminder": "No olvides reseñar tu servicio reciente"
   },
-
   "system": {
     "account_verified": "Tu cuenta ha sido verificada",
     "password_changed": "Tu contraseña fue cambiada",
@@ -56,7 +50,6 @@
     "maintenance": "Mantenimiento programado el {{date}}",
     "new_feature": "Conoce nuestra nueva función: {{feature}}"
   },
-
   "preferences": {
     "title": "Preferencias de Notificaciones",
     "description": "Elige cómo quieres ser notificado",
@@ -75,7 +68,6 @@
     "success": "Preferencias guardadas exitosamente",
     "error": "Error al guardar las preferencias"
   },
-
   "history": {
     "title": "Historial",
     "page_title": "Historial de Notificaciones",
@@ -87,14 +79,16 @@
     "note_label": "Nota:",
     "note_message": "Las notificaciones eliminadas no se pueden recuperar. La información importante debe guardarse por separado si es necesaria para referencia futura."
   },
-
   "time": {
     "just_now": "Justo ahora",
     "minutes_ago": "Hace {{count}} minuto",
-    "minutes_ago_plural": "Hace {{count}} minutos",
     "hours_ago": "Hace {{count}} hora",
-    "hours_ago_plural": "Hace {{count}} horas",
     "days_ago": "Hace {{count}} día",
-    "days_ago_plural": "Hace {{count}} días"
+    "minutes_ago_other": "Hace {{count}} minutos",
+    "minutes_ago_one": "Hace {{count}} minuto",
+    "hours_ago_other": "Hace {{count}} horas",
+    "hours_ago_one": "Hace {{count}} hora",
+    "days_ago_other": "Hace {{count}} días",
+    "days_ago_one": "Hace {{count}} día"
   }
 }

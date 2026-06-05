@@ -130,3 +130,7 @@ dump.rdb
 
 # Claude Code local settings (machine-specific)
 .claude/settings.local.json
+
+# Manual test/audit screenshots (root-level) + Playwright test output
+/*.png
+backend/test-results/

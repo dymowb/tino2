@@ -192,6 +192,7 @@ const AppContent: React.FC = () => {
               {/* Protected */}
               <Route path="/providers"     element={<ProtectedRoute><FindProvidersPage /></ProtectedRoute>} />
               <Route path="/bookings"      element={<ProtectedRoute><MyBookingsPage /></ProtectedRoute>} />
+              <Route path="/bookings/:id"  element={<Navigate to="/bookings" replace />} />
               <Route path="/profile"       element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
               <Route path="/dashboard"     element={<ProtectedRoute><ProviderDashboardPage /></ProtectedRoute>} />
               <Route path="/messages"      element={<ProtectedRoute><MessagingPage /></ProtectedRoute>} />

@@ -35,11 +35,15 @@
     "no_results": "No providers found matching your criteria",
     "no_providers_description": "No providers found matching your criteria. Try adjusting your filters or expanding your search radius.",
     "results_count": "{{count}} provider found",
-    "results_count_plural": "{{count}} providers found",
     "providers_found": "{{count}} Provider Found",
-    "providers_found_plural": "{{count}} Providers Found"
+    "max_price_value": "Max Price: R${{price}}",
+    "max_price_any": "Max Price: Any",
+    "verified_only_label": "Verified Only",
+    "results_count_other": "{{count}} providers found",
+    "results_count_one": "{{count}} provider found",
+    "providers_found_other": "{{count}} Providers Found",
+    "providers_found_one": "{{count}} Provider Found"
   },
-
   "card": {
     "starting_at": "Starting at",
     "per_hour": "per hour",
@@ -47,13 +51,11 @@
     "hourly": "/hour",
     "rating": "{{rating}} stars",
     "reviews_count": "{{count}} review",
-    "reviews_count_plural": "{{count}} reviews",
     "reviews": "reviews",
     "distance_away": "{{distance}} miles away",
     "responds_in": "Responds in {{time}}",
     "responds_in_hours": "Responds in {{time}}h",
     "completed_jobs": "{{count}} completed job",
-    "completed_jobs_plural": "{{count}} completed jobs",
     "completed_jobs_label": "completed jobs",
     "insurance_verified": "Insurance Verified",
     "insured": "Insured",
@@ -66,9 +68,14 @@
     "available_now": "Available Now",
     "available_today": "Available Today",
     "services_label": "Services:",
-    "more_services": "+{{count}} more"
+    "more_services": "+{{count}} more",
+    "fixed": "flat",
+    "no_rating": "New",
+    "reviews_count_other": "{{count}} reviews",
+    "reviews_count_one": "{{count}} review",
+    "completed_jobs_other": "{{count}} completed jobs",
+    "completed_jobs_one": "{{count}} completed job"
   },
-
   "profile": {
     "title": "Provider Profile",
     "about": "About",
@@ -90,7 +97,6 @@
     "no_reviews": "No reviews yet",
     "see_all_reviews": "See All Reviews"
   },
-
   "services": {
     "house_cleaning": "House Cleaning",
     "plumbing": "Plumbing",
@@ -107,7 +113,6 @@
     "home_inspection": "Home Inspection",
     "roofing": "Roofing"
   },
-
   "messages": {
     "location_updated": "Location updated!",
     "location_error": "Failed to get your location",

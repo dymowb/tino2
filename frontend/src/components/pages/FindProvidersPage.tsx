@@ -13,11 +13,12 @@ import {
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
-import { apiService, Provider } from '../../services/api';
+import { apiService, Provider, WorkflowProviderResult } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import BookingDialog from '../bookings/BookingDialog';
 import QuoteRequestDialog from '../quotes/QuoteRequestDialog';
 import AIAssistantTab from '../assistant/AIAssistantTab';
+import ProviderDetailDrawer from '../assistant/ProviderDetailDrawer';
 import { tokens } from '../../theme/theme';
 
 interface ExtendedProvider extends Provider {
@@ -48,6 +49,11 @@ function getInitials(name: string): string {
   return name.split(' ').slice(0, 2).map(w => w[0] ?? '').join('').toUpperCase();
 }
 
+// Max value of the price slider. At this value the price filter is treated as
+// "no limit" and maxRate is not sent to the API. Keep above the highest plausible
+// provider rate so the default search never hides anyone on price.
+const MAX_PRICE_CAP = 300;
+
 function formatDistance(distance: number): string {
   return distance < 1000 ? `${Math.round(distance)}m` : `${(distance / 1000).toFixed(1)}km`;
 }
@@ -61,7 +67,12 @@ function formatDuration(duration: number): string {
 // ── StarRating ────────────────────────────────────────────
 
 const StarRating: React.FC<{ value: number; count: number }> = ({ value, count }) => {
-  const filled = Math.round(Number(value));
+  const { t } = useTranslation(['providers']);
+  const num = Number(value);
+  // A provider with no usable rating (null/NaN, or zero reviews) shows a
+  // "new" label instead of "NaN" or a misleading 0.0.
+  const hasRating = Number.isFinite(num) && num > 0 && count > 0;
+  const filled = hasRating ? Math.round(num) : 0;
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
       {[1, 2, 3, 4, 5].map(n => (
@@ -79,7 +90,7 @@ const StarRating: React.FC<{ value: number; count: number }> = ({ value, count }
         color: 'text.secondary',
         ml: 0.75,
       }}>
-        {Number(value).toFixed(1)} · {count}
+        {hasRating ? `${num.toFixed(1)} · ${count}` : t('providers:card.no_rating', 'Novo')}
       </Typography>
     </Box>
   );
@@ -91,9 +102,10 @@ interface ProviderCardProps {
   provider: ExtendedProvider;
   onBook: () => void;
   onQuote: () => void;
+  onViewProfile: () => void;
 }
 
-const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onBook, onQuote }) => {
+const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onBook, onQuote, onViewProfile }) => {
   const { t } = useTranslation(['providers']);
   const accent = getProviderAccent(provider.businessName);
   const initials = getInitials(provider.businessName);
@@ -174,7 +186,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onBook, onQuote }
             R${price}
           </Typography>
           <Typography sx={{ fontFamily: tokens.font.mono, fontSize: '0.7rem', color: 'rgba(255,255,255,0.65)' }}>
-            /{t(`providers:card.${rateType}`, rateType)}
+            {t(`providers:card.${rateType}`, rateType)}
           </Typography>
         </Box>
 
@@ -314,18 +326,24 @@ const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onBook, onQuote }
         borderTop: '1px solid',
         borderColor: 'divider',
         p: 2,
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
+        display: 'flex',
+        flexDirection: 'column',
         gap: 1,
       }}>
-        <Button variant="outlined" color="primary" size="small" onClick={onQuote}
+        <Button variant="text" color="primary" size="small" onClick={onViewProfile}
           sx={{ borderRadius: tokens.radius.full, fontSize: '0.8rem' }}>
-          {t('providers:card.request_quote')}
+          {t('providers:card.view_profile')}
         </Button>
-        <Button variant="contained" color="secondary" size="small" endIcon={<ArrowForward sx={{ fontSize: '0.9rem' }} />}
-          onClick={onBook} sx={{ borderRadius: tokens.radius.full, fontSize: '0.8rem' }}>
-          {t('providers:card.book_now')}
-        </Button>
+        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+          <Button variant="outlined" color="primary" size="small" onClick={onQuote}
+            sx={{ borderRadius: tokens.radius.full, fontSize: '0.8rem' }}>
+            {t('providers:card.request_quote')}
+          </Button>
+          <Button variant="contained" color="secondary" size="small" endIcon={<ArrowForward sx={{ fontSize: '0.9rem' }} />}
+            onClick={onBook} sx={{ borderRadius: tokens.radius.full, fontSize: '0.8rem' }}>
+            {t('providers:card.book_now')}
+          </Button>
+        </Box>
       </Box>
     </Box>
   );
@@ -343,7 +361,7 @@ const FindProvidersPage: React.FC = () => {
     serviceTypes: [] as string[],
     sortBy: 'distance' as 'distance' | 'rating' | 'price' | 'response_time',
     minRating: 0,
-    maxPrice: 200,
+    maxPrice: 300, // 300 == "no cap" (above the highest provider rate); see MAX_PRICE_CAP
     hasInsurance: false,
     hasBackgroundCheck: false,
     isAvailable: false,
@@ -355,6 +373,8 @@ const FindProvidersPage: React.FC = () => {
   const [showBookingDialog, setShowBookingDialog] = useState(false);
   const [showQuoteDialog, setShowQuoteDialog] = useState(false);
   const [selectedServiceForQuote, setSelectedServiceForQuote] = useState('');
+  const [quoteProvider, setQuoteProvider] = useState<ExtendedProvider | null>(null);
+  const [detailProvider, setDetailProvider] = useState<WorkflowProviderResult | null>(null);
   const [activeTab, setActiveTab] = useState(0);
   const [aiCompleted, setAiCompleted] = useState(false);
 
@@ -389,7 +409,12 @@ const FindProvidersPage: React.FC = () => {
 
   const { data: providersData, isLoading, error, refetch } = useQuery({
     queryKey: ['providers-gps', searchParams],
-    queryFn: () => apiService.searchProvidersGPS(searchParams),
+    // At the slider's max (MAX_PRICE_CAP) we treat price as unbounded and omit
+    // maxRate entirely — otherwise the default would silently hide pricier providers.
+    queryFn: () => apiService.searchProvidersGPS({
+      ...searchParams,
+      maxPrice: searchParams.maxPrice >= MAX_PRICE_CAP ? undefined : searchParams.maxPrice,
+    }),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -411,7 +436,31 @@ const FindProvidersPage: React.FC = () => {
     if (!isAuthenticated) { toast.error(t('providers:messages.login_required_quote')); return; }
     if (user?.userType !== 'customer') { toast.error(t('providers:messages.customers_only_quote')); return; }
     setSelectedServiceForQuote(provider.services?.[0] || '');
+    setQuoteProvider(provider);
     setShowQuoteDialog(true);
+  };
+
+  // Open the shared provider profile drawer from a manual search card. The drawer
+  // expects the AI result shape, so map the search provider into it (matchScore 0
+  // → the match chip is hidden for direct/manual views).
+  const handleViewProfile = (provider: ExtendedProvider) => {
+    setDetailProvider({
+      providerId: provider.id,
+      providerName: provider.businessName,
+      businessName: provider.businessName,
+      services: provider.services || [],
+      matchScore: 0,
+      rating: Number(provider.rating) || 0,
+      totalReviews: provider.totalReviews ?? 0,
+      pricing: provider.pricing
+        ? { baseRate: provider.pricing.baseRate, currency: provider.pricing.currency ?? 'BRL', rateType: provider.pricing.rateType }
+        : null,
+      location: provider.location && typeof provider.location === 'object'
+        ? { city: provider.location.city, state: provider.location.state }
+        : null,
+      isBackgroundChecked: !!provider.isBackgroundChecked,
+      isInsured: !!provider.isInsured,
+    });
   };
 
   return (
@@ -541,6 +590,22 @@ const FindProvidersPage: React.FC = () => {
                   />
                 </Grid>
 
+                <Grid xs={12} md={3}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
+                    {searchParams.maxPrice >= MAX_PRICE_CAP
+                      ? t('providers:search.max_price_any')
+                      : t('providers:search.max_price_value', { price: searchParams.maxPrice })}
+                  </Typography>
+                  <Slider
+                    value={searchParams.maxPrice}
+                    onChange={(_, v) => setSearchParams(p => ({ ...p, maxPrice: v as number }))}
+                    min={50} max={MAX_PRICE_CAP} step={10}
+                    marks={[{ value: 50, label: 'R$50' }, { value: MAX_PRICE_CAP, label: '∞' }]}
+                    valueLabelDisplay="auto"
+                    size="small"
+                  />
+                </Grid>
+
                 <Grid xs={12}>
                   <Stack direction="row" spacing={3} flexWrap="wrap" alignItems="center">
                     <Box sx={{ minWidth: 200 }}>
@@ -564,7 +629,7 @@ const FindProvidersPage: React.FC = () => {
                     />
                     <FormControlLabel
                       control={<Switch size="small" checked={searchParams.isAvailable} onChange={e => setSearchParams(p => ({ ...p, isAvailable: e.target.checked }))} />}
-                      label={<Typography variant="body2">{t('providers:search.available_now_label')}</Typography>}
+                      label={<Typography variant="body2">{t('providers:search.verified_only_label')}</Typography>}
                     />
                   </Stack>
                 </Grid>
@@ -616,6 +681,7 @@ const FindProvidersPage: React.FC = () => {
                       provider={provider}
                       onBook={() => handleBookNow(provider)}
                       onQuote={() => handleQuoteRequest(provider)}
+                      onViewProfile={() => handleViewProfile(provider)}
                     />
                   ))}
                 </Box>
@@ -633,8 +699,15 @@ const FindProvidersPage: React.FC = () => {
       />
       <QuoteRequestDialog
         open={showQuoteDialog}
-        onClose={() => { setShowQuoteDialog(false); setSelectedServiceForQuote(''); }}
+        onClose={() => { setShowQuoteDialog(false); setSelectedServiceForQuote(''); setQuoteProvider(null); }}
         serviceType={selectedServiceForQuote}
+        providerName={quoteProvider?.businessName}
+        providerId={quoteProvider?.id}
+      />
+      <ProviderDetailDrawer
+        provider={detailProvider}
+        open={!!detailProvider}
+        onClose={() => setDetailProvider(null)}
       />
     </Box>
   );

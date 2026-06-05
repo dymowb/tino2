@@ -16,7 +16,7 @@
     "state": "State",
     "zip_code": "ZIP Code",
     "budget_range": "Budget Range",
-    "budget_display": "Budget: ${{min}} - ${{max}}",
+    "budget_display": "Budget: R${{min}} - R${{max}}",
     "preferred_start_date": "Preferred Start Date (Optional)",
     "search_radius": "Search Radius (miles)",
     "search_radius_help": "How far should we search for providers?",
@@ -64,7 +64,6 @@
       "special_skills": "Special Skills"
     }
   },
-
   "submission": {
     "title": "Submit Quote for {{service}}",
     "quote_request_details": "Quote Request Details",
@@ -107,7 +106,6 @@
       "valid_until_future": "Valid until date must be in the future"
     }
   },
-
   "list": {
     "title": "My Quote Requests",
     "empty": "You have no quote requests yet",
@@ -119,7 +117,6 @@
     "declined": "Declined",
     "search_placeholder": "Search quotes..."
   },
-
   "details": {
     "title": "Quote Request Details",
     "request_id": "Request ID",
@@ -133,7 +130,6 @@
     "no_quotes": "No quotes received yet",
     "waiting_for_quotes": "Waiting for providers to send quotes..."
   },
-
   "quote_card": {
     "provider": "Provider",
     "price": "Price",
@@ -146,7 +142,6 @@
     "message": "Message Provider",
     "view_profile": "View Provider Profile"
   },
-
   "actions": {
     "compare": "Compare Quotes",
     "accept_confirm": "Accept this quote?",
@@ -154,7 +149,6 @@
     "cancel_request": "Cancel Request",
     "edit_request": "Edit Request"
   },
-
   "page": {
     "customer_title": "My Quotes",
     "provider_title": "Quote Requests",

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import quoteService from '@/services/QuoteService';
+import providerService from '@/services/ProviderService';
 import logger from '@/config/logger';
 import { ApiResponse, AuthenticatedRequest } from '@/types';
 import { AppDataSource } from '@/config/database';
@@ -94,10 +95,22 @@ export class QuoteController {
         return;
       }
 
-      // Customers can only see their own quote requests
-      const userIdFilter = req.user?.userType === 'customer' ? userId : undefined;
-      
-      const quoteRequest = await quoteService.getQuoteRequestById(requestId, userIdFilter);
+      // Customers see only their own requests; providers see broadcast + targeted-at-them
+      // (admins fall through with no filter). Resolve the provider id so a provider cannot
+      // read a request targeted at a different provider via the single-GET endpoint.
+      let access: { customerId?: string; forProviderId?: string } | undefined;
+      if (req.user?.userType === 'customer') {
+        access = { customerId: userId };
+      } else if (req.user?.userType === 'provider') {
+        const provider = await providerService.getProviderByUserId(userId);
+        if (!provider) {
+          res.status(404).json({ success: false, message: 'Quote request not found or access denied' });
+          return;
+        }
+        access = { forProviderId: provider.id };
+      }
+
+      const quoteRequest = await quoteService.getQuoteRequestById(requestId, access);
 
       if (!quoteRequest) {
         const response: ApiResponse = {
@@ -291,8 +304,12 @@ export class QuoteController {
       // Filter by user role
       if (userType === 'customer') {
         query.customerId = userId;
+      } else if (userType === 'provider') {
+        // Providers see broadcast requests + those targeted at them; resolve their
+        // provider id so targeted requests stay private to the intended provider.
+        const provider = await providerService.getProviderByUserId(userId);
+        if (provider) query.forProviderId = provider.id;
       }
-      // Providers can see all open quote requests in their area (public search)
 
       const result = await quoteService.searchQuoteRequests(query);
 

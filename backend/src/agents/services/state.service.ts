@@ -104,7 +104,7 @@ export class WorkflowStateService {
    * @param userRequest - Initial request message
    * @returns Newly created workflow state
    */
-  async createWorkflow(userId: string, userRequest: string): Promise<WorkflowState> {
+  async createWorkflow(userId: string, userRequest: string, locale?: string): Promise<WorkflowState> {
     const workflowId = uuidv4();
     const now = new Date();
 
@@ -119,6 +119,7 @@ export class WorkflowStateService {
         userId,
         createdAt: now,
         userRequest,
+        locale: locale || 'pt',
       },
       createdAt: now,
       updatedAt: now,

@@ -50,6 +50,17 @@ export class BasicUser {
   @Column({ default: false })
   isVerified: boolean;
 
+  // Suspension fields (mapped here so the login path can honour expired temporary
+  // suspensions symmetrically with the authenticate middleware — see DEF-B2).
+  @Column({ nullable: true })
+  suspensionReason?: string;
+
+  @Column({ type: 'text', nullable: true })
+  suspensionComment?: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  suspendedUntil?: Date;
+
   @Column({ nullable: true })
   emailVerificationToken?: string;
 

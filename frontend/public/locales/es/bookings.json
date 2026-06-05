@@ -14,13 +14,13 @@
     "login_required": "Por favor inicia sesión para ver tus reservas",
     "error_loading": "Error al cargar las reservas. Por favor, inténtalo de nuevo.",
     "results_count": "{{count}} Reserva Encontrada",
-    "results_count_plural": "{{count}} Reservas Encontradas",
     "filter_applied": "({{status}})",
     "no_results": "No se encontraron reservas que coincidan con tus criterios.",
     "start_booking_prompt": "¡Comienza buscando proveedores de servicios y reservando servicios!",
-    "booking_number": "Reserva #{{id}}"
+    "booking_number": "Reserva #{{id}}",
+    "results_count_other": "{{count}} Reservas Encontradas",
+    "results_count_one": "{{count}} Reserva Encontrada"
   },
-
   "create": {
     "title": "Crear Nueva Reserva",
     "dialog_title": "Reservar Servicio con {{provider}}",
@@ -70,7 +70,6 @@
       "estimated_cost": "Costo Estimado:"
     }
   },
-
   "details": {
     "title": "Detalles de la Reserva",
     "booking_id": "ID de Reserva",
@@ -98,7 +97,6 @@
     "updated_at": "Actualizado el",
     "notes": "Notas"
   },
-
   "actions": {
     "cancel": "Cancelar",
     "cancel_booking": "Cancelar Reserva",
@@ -116,7 +114,6 @@
     "keep_booking": "Mantener Reserva",
     "cancelling": "Cancelando..."
   },
-
   "status": {
     "pending": "Pendiente",
     "confirmed": "Confirmada",
@@ -126,7 +123,6 @@
     "in_dispute": "En Disputa",
     "cancelled": "Cancelada"
   },
-
   "cancel": {
     "title": "Cancelar Reserva",
     "confirm": "¿Estás seguro de que quieres cancelar esta reserva?",
@@ -138,7 +134,6 @@
     "policy": "Política de Cancelación",
     "policy_text": "Las cancelaciones realizadas con más de 24 horas de anticipación reciben un reembolso completo. Las cancelaciones dentro de las 24 horas pueden incurrir en una tarifa."
   },
-
   "messages": {
     "status_updated_success": "¡Estado de la reserva actualizado exitosamente!",
     "status_updated_error": "Error al actualizar el estado de la reserva",
@@ -147,7 +142,6 @@
     "review_coming_soon": "Sistema de reseñas - ¡Próximamente en Tarea 6!",
     "messaging_coming_soon": "Sistema de mensajería - ¡Próximamente en Tarea 4!"
   },
-
   "reschedule": {
     "title": "Reprogramar Reserva",
     "new_date": "Nueva Fecha",
@@ -157,7 +151,6 @@
     "success": "Reserva reprogramada exitosamente",
     "error": "Error al reprogramar la reserva"
   },
-
   "status_messages": {
     "pending": "Tu solicitud de reserva está pendiente de confirmación",
     "confirmed": "Tu reserva ha sido confirmada",

@@ -239,7 +239,7 @@ const QuoteManagementPage: React.FC = () => {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
                         <div>
                           <h3 style={{ color: '#2c3e50', marginBottom: '5px' }}>
-                            {request.service_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            {request.service_type.replace(/_/g, ' ').replace(/(^|\s)(\S)/g, (_, s, c) => s + c.toUpperCase())}
                           </h3>
                           <p style={{ color: '#7f8c8d', margin: '0' }}>
                             Request #{request.id} • {request.customer_name}

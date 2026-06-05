@@ -15,7 +15,10 @@
     "analysis": "Analyzing results...",
     "completed": "Here are your matches!",
     "failed": "Something went wrong",
-    "cancelled": "Request cancelled"
+    "cancelled": "Request cancelled",
+    "recommendation": "Building your personalised recommendations…",
+    "verification": "Verifying recommendations...",
+    "narrative": "Writing your recommendation..."
   },
   "followUp": {
     "title": "We need a bit more information",
@@ -23,12 +26,29 @@
   },
   "results": {
     "title": "Recommended Providers",
+    "recommendationsTitle": "Your Top Recommendations",
+    "bestFor": "Best for",
     "matchScore": "{{score}}% match",
     "noResults": "No providers found matching your criteria. Try broadening your requirements.",
     "rating": "{{rating}} ({{count}} reviews)",
     "baseRate": "From {{rate}}/{{type}}",
     "backgroundChecked": "Background Checked",
-    "insured": "Insured"
+    "insured": "Insured",
+    "selectedCount": "{{count}} of {{max}} providers selected",
+    "clearSelection": "Clear",
+    "sendQuoteRequest": "Send Quote Request",
+    "quoteSent": "Quote request sent to {{count}} provider(s)!",
+    "quoteError": "Failed to send quote request. Please try again.",
+    "qualityVerified": "Quality verified · Score {{score}}/10",
+    "qualityConcerns": "Quality score {{score}}/10 · {{note}}",
+    "someConcerns": "Some concerns noted",
+    "otherProvidersFound": "{{count}} other providers found",
+    "sortBy": "Sort by:",
+    "sort_match": "Match",
+    "sort_rating": "Rating",
+    "sort_price": "Price",
+    "otherProvidersFound_one": "{{count}} other provider found",
+    "otherProvidersFound_other": "{{count}} other providers found"
   },
   "actions": {
     "send": "Send",
@@ -36,7 +56,29 @@
     "retry": "Try Again",
     "newSearch": "New Search",
     "viewProfile": "View Profile",
-    "requestQuote": "Request Quote"
+    "requestQuote": "Request Quote",
+    "addToQuote": "Request Quote",
+    "selected": "Selected",
+    "maxSelected": "Maximum providers selected"
+  },
+  "summary": {
+    "title": "Your Requirements",
+    "clickToEdit": "Click to edit",
+    "notSet": "Not set",
+    "modified": "Modified",
+    "modifiedWarning": "Requirements changed — results may no longer match. Re-run the search to update.",
+    "rerun": "Re-run Search",
+    "serviceType": "Service",
+    "location": "Location",
+    "date": "Date / Time",
+    "flexible": "Flexible",
+    "budget": "Budget",
+    "description": "Description",
+    "descriptionPlaceholder": "Describe what you need..."
+  },
+  "drawer": {
+    "providerProfile": "Provider Profile",
+    "services": "Services Offered"
   },
   "errors": {
     "startFailed": "Failed to start the assistant. Please try again.",

@@ -1,8 +1,149 @@
 # Session Context - Current Work
 
-## CURRENT SESSION: Bug Fixes + Notifications + i18n + Profile — 2026-05-31
-**Goal**: Booking bug, i18n audit, notifications, send message, profile privacy settings
-**Status**: ✅ ALL COMPLETE — deployed to production
+## ✅ GOAL 2 COMPLETE (2026-06-05) — Chunk A (customer↔provider, 6 defects) + Chunk B (admin-mediated, 2 defects) = 8 fixed. See the two ✅ sections below. Original brief kept for reference.
+
+## GOAL 2 BRIEF (reference): Cross-role service lifecycle E2E (self-contained)
+Trigger this with: "Start Goal 2 — read SESSION_CONTEXT.md". Goal 1 (Find Providers audit) is ✅ complete (below).
+
+**Objective**: critical E2E test of the *service lifecycle* across roles, the same way Goal 1 tested discovery — verify semantic intent and the cross-role customer/provider/admin journey, not just "does it load". Fix defects as you go; show a defect report at the end.
+
+**Scope decisions (already made by user)**: **every state × every transition** (exhaustive, not just happy path) + **fix-as-you-go**. This is the most context-heavy combo → **chunk it**: (A) customer↔provider transitions first, then (B) admin-mediated states. Consider a `/clear` between A and B.
+
+**Lifecycle states/transitions to cover** (booking is the spine):
+- Booking: create → pending → provider accept/reject → confirmed → start (escrow hold) → in-progress → complete → customer confirm completion → review. Plus cancellation (by each side, at each stage), no-show, schedule conflict.
+- Quote→booking path: quote request (incl. the new **targeted** vs broadcast — provider visibility), provider submits quote, customer accepts → booking created; expire/withdraw/close.
+- Payments/escrow: hold on start, release on completion confirm, refund paths. NOTE escrow needs STRIPE_SECRET_KEY + customer payment method — may be absent in dev; test what's reachable and flag the rest.
+- Disputes (admin-mediated): open dispute → admin views → resolve (favour customer / favour provider) → refund/release. Suspend/reactivate provider mid-lifecycle.
+- Reviews: customer review after completion; provider response (FR-069 if present).
+
+**Cross-role rule**: for each transition test BOTH the actor who's allowed and one who isn't (authorization/IDOR), and verify the *other* party's view updates (notifications, list status).
+
+**Env / setup**: local dev. Backend :3000 (`cd backend && npm run dev` — **first `pkill -f src/server.ts` to avoid the duplicate-ts-node-dev stale-serving trap seen in Goal 1**), frontend :3001 (`npm run dev`). PT default locale; also spot-check EN per CLAUDE.md. Seed data present (customer@demo.com / provider@demo.com / admin@demo.com — Demo123!). Postgres in docker (tino2-app-db). Test with Playwright MCP + verify DB state after each transition.
+
+**Carry-over context from Goal 1 worth knowing**: quote requests now persist `targetProviderIds` (targeted requests only visible to the target provider — test this in the quote→booking path). Booking/escrow bugs were fixed in earlier sessions (see history below). i18next is v4 (`_one`/`_other` plurals).
+
+---
+
+## ⏳ GOAL 2 IN PROGRESS — 2026-06-05 (Chunk A: customer↔provider)
+**Method**: API-level state×transition matrix (scripted curl, 5 tokens: demo cust/prov/admin + outsider cust `fábio.nascimento0@test.com` + outsider prov `tatiane.ferreira24@test.com`, all `Demo123!`) verifying DB after each transition; Playwright for semantic-intent UI spot-checks. Harness: `/tmp/h.sh` + `/tmp/matrix.sh` (random per-run slot via `/tmp/off.cnt` to avoid schedule-conflict collisions on reruns). Demo provider profile id = `d8ddddc0-ecfc-403f-ae0c-58b788c50458`.
+**Env note**: STRIPE_SECRET_KEY empty + demo customer has no payment method → escrow-bearing steps (`/start` hold, `/confirm-completion` capture) unreachable in dev; `completed` state unreachable for NEW bookings. Reviews tested vs existing seed completed bookings.
+
+### Booking state machine — VERIFIED CORRECT (matrix all-PASS)
+- pending: prov accept→confirmed, prov reject→cancelled, cust cancel (PUT & DELETE), self-confirm blocked, cust cannot set in_progress/completed.
+- IDOR rock-solid: non-participants get 404 on GET/status/start/complete/confirm-completion across all states.
+- confirmed: cust cannot self-advance; cust update-details allowed; cancel by both sides.
+- in_progress: cust CANNOT cancel (neither PUT nor DELETE — by design); cust cannot complete.
+- pending_completion: cust dispute→in_dispute (isDisputed=true, disputeStatus=open); cust cannot PUT to completed/in_dispute (must use endpoints).
+- schedule conflict on overlapping booking → 409.
+
+### Defects (Chunk A bookings)
+- **DEF-A1 (FIXED, verified)**: `startBooking` + `confirmCompletion` called `getStripeInstance()` as the FIRST line, before owner/state checks → IDOR & wrong-state returned **500** instead of 404/400 (and made endpoints untestable in dev). Fix: moved Stripe init AFTER owner+state(+payment-method) checks in `BookingController.ts`. Now `/start` from wrong state→400, `/confirm` IDOR→404, `/start` valid→400 "Customer has not set up a payment method".
+- **DEF-A2 (ARCHITECTURAL — pending user decision)**: generic `PUT /:id/status` lets provider do `confirmed→in_progress` and `in_progress→cancelled`, bypassing the `/start` escrow hold (verified paymentIntent=NULL). Also `in_progress→cancelled` via PUT would leave a placed hold unreleased (no Stripe refund), while DELETE-cancel correctly blocks in_progress. Decision needed: lock escrow-bearing transitions to the dedicated endpoints (tighten route validator to `confirmed|cancelled` + prune `validateStatusTransition`) vs keep as dev fallback.
+- **Obs**: no-show has no dedicated status/endpoint (possible FR gap). in_progress→cancelled PUT-vs-DELETE inconsistency (part of DEF-A2).
+
+### STALE-SERVING TRAP (recurred): ts-node-dev did NOT pick up the 2nd controller edit (served startBooking-new + confirmCompletion-old simultaneously). Fix: `pkill -f ts-node-dev` then ONE clean `npm run dev`. **Run backend via the Bash tool's `run_in_background:true` (task b3rob24tx) — `nohup … &` gets SIGTERM when the tool shell returns.** Harness `/tmp/quotes.sh`, `/tmp/reviews` inline. Confirm with focused re-test before trusting.
+
+### Quote→booking path — defects (all CONFIRMED empirically)
+- **DEF-A3 (MAJOR, PENDING USER DECISION)**: customer accepts quote → quote=accepted, request=closed, but **NO booking is created** (bookings count 422→422). Neither backend (`updateQuoteStatus`) nor frontend (`handleAcceptQuote`) creates one. The agreed service is never scheduled — quote lifecycle dead-ends. Decision needed: booking status on creation (confirmed vs pending) + scheduledDate source (request.preferredDate? TBD?).
+- **DEF-A4 (FIXED, verified)**: provider-side quote actions compared `quote.providerId` (Provider entity id) to `req.user.userId` (User id) → provider could NOT withdraw/edit own quote (PUT status 403, DELETE 404). Fixed `updateQuoteStatus`/`withdrawQuote`/`updateQuote` in QuoteService to resolve provider.id from userId (also fixed two leftover `providerId` ReferenceErrors in loggers). Verified: withdraw PUT/DELETE 200, edit 200, IDOR 404.
+- **DEF-A5 (FIXED, verified)**: `GET /quotes/requests/:id` had no visibility filter for providers → any provider could read ANY request by id (incl. targeted-at-other + customer PII). Fixed: `getQuoteRequestById` now takes `{customerId|forProviderId}`; controller resolves provider.id and applies broadcast-or-targeted-at-them filter (404 for provider w/o profile). Verified: outProv GET targeted-at-demoProv → 404; demoProv still sees own-targeted.
+- **Targeted vs broadcast (Goal 1 carryover) — VERIFIED CORRECT**: demoProv sees broadcast+own-targeted; outProv sees broadcast only (not targeted-at-other). Provider can't create quote (403); customer can't (403→provider-only); duplicate quote 409; close/already-closed/IDOR-close all correct.
+- **Obs Q-exp**: `expireOldQuotes` / `expireOldQuoteRequests` exist in QuoteService but are **never scheduled** (no cron — only autoCapture + reflection jobs are). Quotes/requests never auto-expire. Minor gap.
+- **Obs**: `searchQuoteRequests` + single GET return full customer object (email/phone) to providers — privacy concern, same family as Goal 1 DEF-1 (not fixed; possibly product-intended for contact).
+
+### Reviews + cross-role notifications — VERIFIED (DEF-A6 fixed)
+- **DEF-A6 (FIXED, verified)**: `addProviderResponse` filtered `review.providerId` (Provider id) by `req.user.userId` (User id) → provider could NEVER respond to a review (FR-069 broken, 400 "not found/unauthorized"). Fixed ReviewService to resolve provider.id. Verified: respond 200, duplicate 400, IDOR(outProv) 400.
+- **createReview authz VERIFIED CORRECT**: only the customer of a COMPLETED booking can review (provider→400, outsider-cust→400, double-review→400, happy→201).
+- **Obs**: `draftReviewResponse` (AI draft, no persistence) fetches review w/o provider-ownership check — any provider can draft for any review. Low sev. `getReviewById` over-hides customer email/phone from the legit provider (providerId vs userId compare) — cosmetic.
+- **Cross-role notifications VERIFIED**: booking create→provider; status change→other party; quote submitted→customer; quote request→targeted provider; review→provider (all land on correct recipient).
+
+### User decisions (2026-06-05) — IMPLEMENTED & verified
+- **A2 = "Lock to dedicated endpoints"**: `PUT /:id/status` validator now `confirmed|cancelled` only; `validateStatusTransition` pruned so confirmed→in_progress, in_progress→*, pending_completion→* are removed (escrow-bearing transitions go ONLY through /start, /complete, /confirm-completion, /dispute). Verified: confirmed→in_progress via PUT now 400; accept & cancel still 200. **Dev tradeoff (accepted): bookings can't progress past `confirmed` without Stripe (no /start hold).**
+- **A3 = "Auto-create CONFIRMED booking"**: `QuoteService.updateQuoteStatus(ACCEPTED)` now calls new `createBookingFromQuote()` → booking status=confirmed, totalAmount=quote.price, estimatedDuration=quote.duration, scheduledDate=request.preferredDate ?? now+7d (with `specialInstructions` note when defaulted), location from request; created directly (NOT via BookingService — preserves quoted price, skips conflict check). Notifies provider "Orçamento aceito". Frontend `MyQuotesPage` now also invalidates `['bookings']` on accept. Verified API (425→426, fields correct) AND **UI E2E**: customer accepts in Orçamentos Recebidos → "Limpeza Residencial R$ 420,00 Confirmada" appears in Minhas Reservas (PT + EN both clean, no raw-key leaks).
+
+### Chunk A — COMPLETE. Defects FIXED & verified: A1, A2, A3, A4, A5, A6 (6 total).
+### New minor findings (logged, NOT fixed):
+- **MyQuotesPage "Orçamentos Recebidos" card shows price as `$420.00`** (USD style) — should be `R$ 420,00` (pt-BR/BRL). The Bookings card renders it correctly, so it's localized to that quote card. Same family as Goal-1 currency fixes.
+- `expireOldQuotes`/`expireOldQuoteRequests` never scheduled (no cron) → no auto-expiry.
+- Booking/quote date renders pt-BR even under EN locale (date formatter pinned to pt-BR); time shows TZ-shifted (13:00Z → "05:00"). Pre-existing, minor.
+- `searchQuoteRequests`/single-GET expose customer email/phone to providers (privacy; possibly product-intended).
+- `draftReviewResponse` lacks provider-ownership check (read-only AI draft, low sev).
+- No-show: no dedicated booking status/endpoint (possible FR gap).
+
+---
+## ✅ GOAL 2 CHUNK B — admin-mediated states — COMPLETE (2026-06-05)
+**Method**: same API matrix harness (`/tmp/h.sh` + `/tmp/cb.sh`) verifying DB after each transition + Playwright UI spot-check of AdminDisputesPage. Backend clean on :3000 (single ts-node-dev), frontend :3001.
+
+### Defects FIXED & verified (2 total: B1, B2)
+- **DEF-B1 (MAJOR, FIXED, verified)**: `AdminController.resolveDispute` called `getStripeInstance()` at the TOP, **outside the try block**, before any validation. With STRIPE_SECRET_KEY absent it throws synchronously → unhandled promise rejection → request **HANGS forever** (no response). The entire dispute-resolve endpoint was dead in dev, and errors were misordered even with Stripe. Fix: moved Stripe init inside `try`, AFTER decision-validation + 404 + IN_DISPUTE-state + no-PaymentIntent checks. Verified API: invalid decision→400, non-existent→404, non-disputed booking→404, valid-but-no-PI→400; AND real UI: admin clicks Resolver → Liberar Pagamento → clean inline error "No Stripe PaymentIntent on this booking" (previously hung). **Same family as DEF-A1** (Stripe-init-before-checks).
+- **DEF-B2 (MAJOR, FIXED, verified)**: expired **temporary** suspension not honoured at login. `authenticate` middleware lazy-reactivates when `suspendedUntil` passes, but `authenticateUser` (login) only checked `!isActive` → a user whose token expired during a time-boxed suspension was **permanently locked out** until manual admin reactivation (defeats the purpose of `suspendedUntil`). Compounded by the **`BasicUser` entity (used by the login path) lacking the suspension columns** — same class as the Phase-19 `passwordResetToken` gap. Fix: added `suspendedUntil`/`suspensionReason`/`suspensionComment` to `BasicUser.ts` (columns already exist in DB, no migration); added symmetric lazy-reactivation to `UserService.authenticateUser`. Verified: expired-temp login→200 + isActive flipped + suspension fields cleared; permanent suspension→401; future-dated temp→401.
+
+### VERIFIED CORRECT (no defect)
+- **Admin endpoint authz — airtight** (`requireAdminRole`): all 7 GET (dashboard/users/disputes/analytics/providers-pending/reviews-flagged/settings) + 4 mutating (user-status/dispute-resolve/provider-verify/review-moderate) → **403** for cust/prov/outcust/outprov; **200**/handler for admin.
+- **Dispute resolution logic**: decision must be capture|refund (else 400); 404 on non-disputed/non-existent (findOne requires status=IN_DISPUTE); admin view loads full relations (customer + provider + provider.user); both-party notification path resolves `provider.userId` correctly — **NO `providerId===userId` bug** (the recurring pattern is absent here).
+- **getDisputes filters**: default=all disputed (2), `?disputeStatus=open` (2), relations present.
+- **Suspend provider**: blocks live token next-request (403 "Account is suspended"), blocks login (401 "account has been suspended"), **removes provider from public search** (`searchProviders` filters `user.isActive=true`, line ~161 — verified suspended profile absent from 23 returned), records reason/comment in DB.
+- **Self-suspend blocked**: admin suspending own account → 400.
+- **Reactivate**: clears all suspension fields; restores login + search visibility.
+- **UI**: AdminDisputesPage renders both disputes (customer/provider/service/reason/status) + resolution dialog fully PT-localized (capture="Liberar ao prestador…CONCLUÍDA" / refund="Reembolsar ao cliente…CANCELADA"), 0 console errors.
+
+### Unreachable in dev (flagged — needs Stripe)
+- Actual **capture/refund money movement** + resulting status→COMPLETED/CANCELLED + disputeStatus='resolved' transition. No STRIPE_SECRET_KEY and the 2 seed disputed bookings have NO paymentIntent (escrow never ran — `/start` hold unreachable, see Chunk A env note). Need Stripe key + an escrow-held booking driven through start→pending_completion→dispute to test the full resolution.
+
+### New minor findings (logged, NOT fixed)
+- Backend error strings surface raw English in the PT UI (e.g. "No Stripe PaymentIntent on this booking") — i18n gap (backend messages not localized).
+- Disputes table + dialog show currency as `R$141.00` (US decimal) — should be `R$ 141,00` (pt-BR). Same family as Goal-1/Chunk-A currency findings.
+- **Suspending a provider does NOT notify their active counterparties** (customers with pending/confirmed bookings) nor cancel/flag those bookings — they just become un-actionable by the suspended provider. Possible product gap (Goal-2 "other party's view updates" rule).
+- Login suspension check runs **before** password validation → reveals "suspended" vs "invalid credentials" to an unauthenticated prober (account-status enumeration). Low sev; same family as existing email-enumeration note.
+- Middleware lazy-reactivation clears only isActive+suspendedUntil (leaves suspensionReason/Comment stale); the new login-path reactivation clears all four. Minor inconsistency — middleware could clear the other two too.
+
+### GOAL 2 COMPLETE — total defects fixed: Chunk A (6: A1–A6) + Chunk B (2: B1–B2) = **8**.
+Recurring root-cause themes across both chunks: (1) **Stripe-init-before-checks** (A1, B1) → always init payment SDK *after* authz/state validation; (2) **Provider-entity-id vs User-id confusion** (A4, A5, A6) — absent in admin handlers (good); (3) **BasicUser missing columns** the login path needs (B2, echoes Phase-19).
+
+---
+
+## CURRENT SESSION: Find Providers E2E Audit (Goal 1 of 2) — 2026-06-04
+**Goal**: Critical E2E test of Find Providers — manual + AI paths, consistency, CX. Fix-as-you-go.
+**Status**: ✅ COMPLETE. 16 defects fixed. Goal 2 (cross-role service lifecycle, every state×transition, fix-as-you-go) is a SEPARATE session — do a `/clear` first; it's the most context-heavy combo and may need chunking (customer↔provider, then admin-mediated).
+
+### Defects fixed this session (Find Providers)
+- **DEF-1 (security)**: public `/api/v1/providers` + `/:id` leaked bcrypt password hash + reset/verification tokens + Stripe IDs + settings + suspension. Fix: `select:false` on password/emailVerificationToken/passwordResetToken in `User.ts` (login paths explicit-select so unaffected); `searchProviders` join trimmed to public cols; `getProvider` controller sanitizes user. Stripe IDs NOT made select:false (would break payments — they're read via plain relation joins).
+- **DEF-5 (major CX)**: `maxPrice` defaulted to 200 in `FindProvidersPage` state, sent as `maxRate`, silently hid ALL providers >R$200 (25% incl. the 4 nearest) with NO UI control. Fix: added Max Price slider (R$50–`MAX_PRICE_CAP`=300; at cap → omit maxRate). 
+- **DEF-6**: "Disponível Agora" switch sent `isVerified` (not availability). Relabeled → "Apenas Verificados"/"Verified Only".
+- **DEF-12 (AI, significant)**: requirements agent resolved relative dates ("esta sexta") to 2024 past dates — prompt said "based on today's date" but never injected it, and example used 2024-11-15. Fix in `requirements.agent.ts buildSystemPrompt`: inject `Today's date is <ISO> (<weekday>)`, reword to pick NEXT future weekday, dynamic example date (today+7).
+- **DEF-9 (AI)**: follow-up question rendered twice (history bubble + active box). Fix: filter active followUpQuestion out of `messages.map` in `AIAssistantTab`.
+- **Display/i18n cluster** (manual cards `FindProvidersPage`, AI cards `AssistantProviderCard`, `ProviderDetailDrawer`, `BookingDialog`, `QuoteRequestDialog`): `//hora` double-slash, `/fixed`/`/hourly` raw rateType, `$`→R$ currency, `NaN` rating→"Novo"/"New". Canonical unit keys now `providers:card.hourly`="/hora"/fixed="fixo"/no_rating; reused everywhere.
+- **AI loading/labels**: progress labels were backend English SSE `event.message`; now driven by localized `event.stage` (added `progressStage` to `useAssistantWorkflow` + `status.recommendation/verification/narrative` keys). Sort buttons Match/Rating/Price + "Sort by" + "N other providers found" + "Quality verified · Score" all localized.
+
+### Key gotchas discovered
+- i18next here is **v4** (no `compatibilityJSON`) → plural suffix must be `_one`/`_other`, NOT `_plural`. All existing `*_plural` keys (reviews_count_plural, completed_jobs_plural, etc.) are DEAD/falling back to singular — app-wide latent bug.
+- Manual search uses `apiService.searchProvidersGPS` → `/locations/providers/search` (returns road-distance + duration), NOT `ProviderService.searchProviders` (`GET /providers/`). Two different search backends.
+- Demo Provider has `rating=NaN` (real value) with totalReviews=10 — aggregate corruption in seed/data.
+
+### Follow-up fixes (user-decided, 2026-06-04 — all verified)
+- **Quote targeting** (decision: target the clicked provider): added persisted `targetProviderIds` jsonb column to `QuoteRequest` (entity + migration `1780601900000` + applied to dev DB). Frontend `QuoteRequestDialog` now takes `providerId` → sends `targetProviderIds:[id]`; `FindProvidersPage` passes the clicked provider (dialog titled "Solicitar Orçamento de {name}"). Backend: `searchQuoteRequests` filters by `forProviderId` (provider sees broadcast + own-targeted only; controller resolves provider.id from userId); service now persists `targetProviderIds` in `create()` (was only in a log line) and notifies targets. **Verified**: provider sees BROADCAST+own-target, NOT others'; UI submit created a request targeted to Mariana Azevedo.
+- **Terminology** (decision: Orçamento): all PT "Cotação"→"Orçamento" across quotes.json/providers.json/common.json with gender agreement (Minhas Cotações→Meus Orçamentos, esta cotação→este orçamento, etc.). EN already "Quote". No hardcoded component strings.
+- **Ver Perfil on manual cards** (decision: yes): `FindProvidersPage` cards now have a "Ver Perfil" button (uses the previously-unused `card.view_profile` key) opening the shared `ProviderDetailDrawer`. Drawer made manual-safe: match-score chip hidden when `matchScore<=0`, NaN rating guarded. Manual provider mapped → `WorkflowProviderResult`.
+- **Plural i18n app-wide** (decision: fix now): converted all 27 `*_plural` keys (9 each × pt/en/es; bookings/messages/notifications/providers) to v4 `_one`/`_other`. See [[project-i18n-plural-v4]].
+- **WATCHER GOTCHA**: there were 3 competing `ts-node-dev` backend processes at session start → stale serving (edits not taking effect). Killed all, started one clean `npm run dev`. If backend edits "don't apply", check for duplicate ts-node-dev procs on :3000.
+
+### New minor findings (logged, not fixed)
+- Quote dialog: frontend marks Endereço/Estado/CEP as required, but backend validator treats them optional (FE stricter than BE).
+- Quote dialog: "Raio de Busca (milhas)" says *miles*; app is metric (km) everywhere else.
+
+### CX findings still open (lower priority — not yet addressed)
+- AI welcome placeholder example says "São Paulo" but all data is Florianópolis.
+- Radius is a square bounding box (`0.009*radius`/axis) so results to ~31km show under "25km" label.
+- `/voice/synthesize` returns 500 (not silent skip) when OpenAI key/availability fails — console error each follow-up.
+
+## CURRENT SESSION: Bug Fixes + AI Quote Flow — 2026-05-31
+**Goal**: Booking bug, notification routing, message auto-select, AI quote flow, service type translation
+**Status**: In progress
+
+### Pending system config (TODO — not yet wired)
+- `VITE_MAX_PROVIDERS_PER_QUOTE` (frontend env var) — controls max providers selectable for a quote request in AI assistant mode. Currently defaults to 5 via `Number(import.meta.env.VITE_MAX_PROVIDERS_PER_QUOTE ?? 5)` in `AIAssistantTab.tsx`. Should be exposed as a proper system config (e.g. from `/api/v1/config` or admin settings) so it can be changed without a redeploy.
+
+### What was built this session
 
 ### What was built / fixed
 

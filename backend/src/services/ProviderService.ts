@@ -143,7 +143,19 @@ export class ProviderService {
 
       let queryBuilder = this.providerRepository
         .createQueryBuilder('provider')
-        .leftJoinAndSelect('provider.user', 'user')
+        // Only expose public user fields on this unauthenticated bulk endpoint —
+        // never email/phone/settings/suspension/stripe IDs (password+tokens are
+        // already select:false at the entity level).
+        .leftJoin('provider.user', 'user')
+        .addSelect([
+          'user.id',
+          'user.firstName',
+          'user.lastName',
+          'user.profileImage',
+          'user.userType',
+          'user.isActive',
+          'user.createdAt',
+        ])
         .leftJoinAndSelect('provider.reviews', 'reviews')
         .where('provider.isActive = :isActive', { isActive: true })
         .andWhere('user.isActive = :userIsActive', { userIsActive: true });

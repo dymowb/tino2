@@ -35,7 +35,7 @@ export class User {
   @IsEmail()
   email: string;
 
-  @Column()
+  @Column({ select: false })
   @IsString()
   password: string;
 
@@ -75,13 +75,13 @@ export class User {
   @Column({ type: 'timestamp', nullable: true })
   suspendedUntil: Date;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, select: false })
   emailVerificationToken: string;
 
   @Column({ type: 'timestamp', nullable: true })
   emailVerificationExpiry: Date;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, select: false })
   passwordResetToken: string;
 
   @Column({ type: 'timestamp', nullable: true })

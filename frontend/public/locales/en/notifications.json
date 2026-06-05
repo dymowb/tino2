@@ -10,7 +10,6 @@
   "delete_all": "Delete All",
   "no_notifications": "No notifications",
   "empty_message": "You're all caught up!",
-
   "types": {
     "all": "All",
     "bookings": "Bookings",
@@ -19,7 +18,6 @@
     "reviews": "Reviews",
     "system": "System"
   },
-
   "booking": {
     "new_booking": "New booking request from {{customer}}",
     "booking_confirmed": "Your booking has been confirmed",
@@ -28,7 +26,6 @@
     "booking_reminder": "Reminder: Booking scheduled for {{time}}",
     "booking_updated": "Booking details updated"
   },
-
   "payment": {
     "payment_received": "Payment received: {{amount}}",
     "payment_sent": "Payment sent successfully",
@@ -37,18 +34,15 @@
     "payout_scheduled": "Payout scheduled for {{date}}",
     "payout_completed": "Payout completed: {{amount}}"
   },
-
   "message": {
     "new_message": "New message from {{sender}}",
     "conversation_started": "{{name}} started a conversation"
   },
-
   "review": {
     "new_review": "New review received from {{customer}}",
     "review_response": "{{provider}} responded to your review",
     "review_reminder": "Don't forget to review your recent service"
   },
-
   "system": {
     "account_verified": "Your account has been verified",
     "password_changed": "Your password was changed",
@@ -56,7 +50,6 @@
     "maintenance": "Scheduled maintenance on {{date}}",
     "new_feature": "Check out our new feature: {{feature}}"
   },
-
   "preferences": {
     "title": "Notification Preferences",
     "description": "Choose how you want to be notified",
@@ -75,7 +68,6 @@
     "success": "Preferences saved successfully",
     "error": "Failed to save preferences"
   },
-
   "history": {
     "title": "History",
     "page_title": "Notification History",
@@ -87,14 +79,16 @@
     "note_label": "Note:",
     "note_message": "Deleted notifications cannot be recovered. Important information should be saved separately if needed for future reference."
   },
-
   "time": {
     "just_now": "Just now",
     "minutes_ago": "{{count}} minute ago",
-    "minutes_ago_plural": "{{count}} minutes ago",
     "hours_ago": "{{count}} hour ago",
-    "hours_ago_plural": "{{count}} hours ago",
     "days_ago": "{{count}} day ago",
-    "days_ago_plural": "{{count}} days ago"
+    "minutes_ago_other": "{{count}} minutes ago",
+    "minutes_ago_one": "{{count}} minute ago",
+    "hours_ago_other": "{{count}} hours ago",
+    "hours_ago_one": "{{count}} hour ago",
+    "days_ago_other": "{{count}} days ago",
+    "days_ago_one": "{{count}} day ago"
   }
 }

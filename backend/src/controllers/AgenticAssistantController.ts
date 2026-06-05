@@ -28,7 +28,7 @@ class AgenticAssistantController {
     logger.debug('New workflow request', { body: req.body, userId: req.user?.userId });
 
     try {
-      const { initialMessage } = req.body;
+      const { initialMessage, locale } = req.body;
       const userId = req.user?.userId;
 
       if (!initialMessage || typeof initialMessage !== 'string') {
@@ -47,7 +47,7 @@ class AgenticAssistantController {
         return;
       }
 
-      const workflow = await workflowStateService.createWorkflow(userId, initialMessage);
+      const workflow = await workflowStateService.createWorkflow(userId, initialMessage, locale);
 
       coordinator.executeWorkflow(workflow.id).catch((error) => {
         logger.error(`Workflow ${workflow.id} execution failed:`, error);
@@ -82,7 +82,7 @@ class AgenticAssistantController {
    *   { type: 'error',    message }          ← on failure
    */
   private async startWorkflowStream(req: AuthenticatedRequest, res: Response): Promise<void> {
-    const { initialMessage } = req.body;
+    const { initialMessage, locale } = req.body;
     const userId = req.user?.userId;
 
     if (!initialMessage || typeof initialMessage !== 'string') {
@@ -105,7 +105,7 @@ class AgenticAssistantController {
     };
 
     try {
-      const workflow = await workflowStateService.createWorkflow(userId, initialMessage);
+      const workflow = await workflowStateService.createWorkflow(userId, initialMessage, locale);
       emit({ type: 'started', workflowId: workflow.id });
 
       // Run pipeline synchronously — onProgress fires before each agent

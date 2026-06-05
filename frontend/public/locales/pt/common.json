@@ -24,13 +24,12 @@
   "try_again": "Tentar novamente",
   "go_back": "Voltar",
   "learn_more": "Saiba mais",
-
   "navigation": {
     "home": "Início",
     "my_memory": "Minha Memória",
     "find_providers": "Buscar Prestadores",
     "my_bookings": "Minhas Reservas",
-    "my_quotes": "Minhas Cotações",
+    "my_quotes": "Meus Orçamentos",
     "messages": "Mensagens",
     "payments": "Pagamentos",
     "my_reviews": "Minhas Avaliações",
@@ -43,9 +42,7 @@
     "register": "Registrar",
     "admin_panel": "Painel Admin"
   },
-
   "change_language": "Mudar Idioma",
-
   "status": {
     "pending": "Pendente",
     "confirmed": "Confirmado",
@@ -57,7 +54,6 @@
     "processing": "Processando",
     "refunded": "Reembolsado"
   },
-
   "time": {
     "today": "Hoje",
     "yesterday": "Ontem",
@@ -70,7 +66,6 @@
     "last_year": "Ano Passado",
     "custom": "Personalizado"
   },
-
   "actions": {
     "download": "Baixar",
     "upload": "Enviar",
@@ -82,7 +77,6 @@
     "undo": "Desfazer",
     "redo": "Refazer"
   },
-
   "validation": {
     "required": "Este campo é obrigatório",
     "invalid_email": "Endereço de e-mail inválido",
@@ -92,7 +86,6 @@
     "must_match": "Os campos devem corresponder",
     "invalid_format": "Formato inválido"
   },
-
   "errors": {
     "generic": "Algo deu errado. Por favor, tente novamente.",
     "network": "Erro de rede. Verifique sua conexão.",
@@ -101,7 +94,6 @@
     "server_error": "Erro do servidor. Tente novamente mais tarde.",
     "timeout": "Tempo esgotado. Tente novamente."
   },
-
   "home": {
     "title": "🏠 Bem-vindo ao Tino 2",
     "subtitle": "Sua plataforma de confiança para serviços domésticos",
@@ -143,7 +135,6 @@
     "stat_providers_label": "Prestadores verificados",
     "all_rating": "Todos"
   },
-
   "payment_status": {
     "pending": "Pendente",
     "paid": "Pago",
@@ -152,19 +143,16 @@
     "refunded": "Reembolsado",
     "held": "Retido em garantia"
   },
-
   "user_type": {
     "customer": "Cliente",
     "provider": "Prestador",
     "admin": "Administrador"
   },
-
   "error_boundary": {
     "title": "Algo deu errado.",
     "message": "Por favor, recarregue a página. Se o problema persistir, entre em contato com o suporte.",
     "retry": "Tentar novamente"
   },
-
   "notifications_panel": {
     "title": "Notificações",
     "unread_one": "{{count}} notificação não lida",

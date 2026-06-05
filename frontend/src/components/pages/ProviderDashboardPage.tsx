@@ -157,7 +157,7 @@ const PendingBookingCard: React.FC<{
             fontSize: '1rem',
             fontWeight: 500,
           }}>
-            {booking.serviceType?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+            {booking.serviceType?.replace(/_/g, ' ').replace(/(^|\s)(\S)/g, (_: string, s: string, c: string) => s + c.toUpperCase())}
           </Typography>
           <Typography variant="caption" color="text.secondary">
             {booking.customer?.firstName || 'Cliente'} · {new Date(booking.scheduledDate).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
@@ -584,7 +584,7 @@ const ProviderDashboardPage: React.FC = () => {
                     <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: getStatusDot(booking.status), flexShrink: 0 }} />
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography sx={{ fontFamily: tokens.font.body, fontSize: '0.875rem', fontWeight: 500 }} noWrap>
-                        {booking.serviceType?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                        {booking.serviceType?.replace(/_/g, ' ').replace(/(^|\s)(\S)/g, (_: string, s: string, c: string) => s + c.toUpperCase())}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         {booking.customer?.firstName || 'Cliente'} · {new Date(booking.scheduledDate).toLocaleDateString('pt-BR')}

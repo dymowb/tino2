@@ -17,7 +17,6 @@
   "conversation_label": "Conversation",
   "select_conversation": "Select a conversation to start messaging",
   "select_conversation_desc": "Choose a conversation from the list to view and send messages",
-
   "conversation": {
     "type_message": "Type a message...",
     "edit_message_placeholder": "Edit message...",
@@ -30,7 +29,6 @@
     "offline": "Offline",
     "typing": "typing...",
     "participants": "{{count}} participant",
-    "participants_plural": "{{count}} participants",
     "replying_to": "Replying to {{name}}",
     "edited": "(edited)",
     "editing": "Editing message",
@@ -38,7 +36,9 @@
     "reply": "Reply",
     "edit": "Edit",
     "delete": "Delete",
-    "conversation_fallback": "Conversation"
+    "conversation_fallback": "Conversation",
+    "participants_other": "{{count}} participants",
+    "participants_one": "{{count}} participant"
   },
   "errors": {
     "send_failed": "Failed to send message",
@@ -46,7 +46,6 @@
     "delete_failed": "Failed to delete message",
     "upload_failed": "Failed to upload file"
   },
-
   "new": {
     "title": "Start New Conversation",
     "select_user": "Select User",
@@ -76,7 +75,6 @@
     "success": "Conversation created successfully",
     "error": "Failed to create conversation"
   },
-
   "actions": {
     "cancel": "Cancel",
     "delete_conversation": "Delete Conversation",
@@ -88,7 +86,6 @@
     "block_user": "Block User",
     "report": "Report"
   },
-
   "status": {
     "sent": "Sent",
     "delivered": "Delivered",

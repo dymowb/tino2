@@ -1,3 +1,4 @@
+import { getLanguageInstruction } from './utils/locale';
 /**
  * Search Agent
  *
@@ -123,7 +124,6 @@ class SearchAgent implements Agent<SearchAgentInput, SearchAgentOutput> {
     temperature: 0.3, // Low temperature for consistent, deterministic search strategy
     systemPrompt: `You are a Search Planning Agent. Your job is to analyze user requirements
 and determine the optimal search strategy for finding service providers.
-Respond ONLY in Brazilian Portuguese (pt-BR).
 
 Consider:
 - Service type matching (exact vs. similar services)

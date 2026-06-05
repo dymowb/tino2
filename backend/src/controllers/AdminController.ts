@@ -573,7 +573,6 @@ export class AdminController {
   //   capture  → provider wins → money moves
   //   refund   → customer wins → authorisation cancelled, card never charged
   resolveDispute = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const stripe = getStripeInstance();
     const bookingRepository = AppDataSource.getRepository(Booking);
 
     try {
@@ -599,6 +598,11 @@ export class AdminController {
         res.status(400).json({ success: false, error: 'No Stripe PaymentIntent on this booking' });
         return;
       }
+
+      // Stripe init AFTER validation + ownership/state checks so that bad-input/404/400
+      // paths never depend on Stripe being configured (and never hang in dev when the
+      // key is absent — the throw used to escape the try block entirely). Same family as DEF-A1.
+      const stripe = getStripeInstance();
 
       if (decision === 'capture') {
         // Provider wins: capture the held funds

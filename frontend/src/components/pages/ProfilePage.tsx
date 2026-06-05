@@ -492,7 +492,7 @@ const ProfilePage: React.FC = () => {
                       onChange={() => handleServiceToggle(service)}
                       style={{ marginRight: '8px' }}
                     />
-                    {service.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    {service.replace(/_/g, ' ').replace(/(^|\s)(\S)/g, (_, s, c) => s + c.toUpperCase())}
                   </label>
                 ))}
               </div>
@@ -507,7 +507,7 @@ const ProfilePage: React.FC = () => {
                     fontSize: '12px',
                     fontWeight: 'bold'
                   }}>
-                    {service.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    {service.replace(/_/g, ' ').replace(/(^|\s)(\S)/g, (_, s, c) => s + c.toUpperCase())}
                   </span>
                 ))}
               </div>

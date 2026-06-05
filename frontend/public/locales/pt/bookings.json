@@ -14,11 +14,12 @@
     "login_required": "Por favor, faça login para ver suas reservas",
     "error_loading": "Falha ao carregar reservas. Por favor, tente novamente.",
     "results_count": "{{count}} Reserva Encontrada",
-    "results_count_plural": "{{count}} Reservas Encontradas",
     "filter_applied": "({{status}})",
     "no_results": "Nenhuma reserva encontrada com seus critérios.",
     "start_booking_prompt": "Comece procurando prestadores de serviços e reservando serviços!",
-    "booking_number": "Reserva #{{id}}"
+    "booking_number": "Reserva #{{id}}",
+    "results_count_other": "{{count}} Reservas Encontradas",
+    "results_count_one": "{{count}} Reserva Encontrada"
   },
   "create": {
     "title": "Criar Nova Reserva",
@@ -115,7 +116,6 @@
     "keep_booking": "Manter Reserva",
     "cancelling": "Cancelando..."
   },
-
   "payment_status": {
     "not_charged": "Não cobrado"
   },

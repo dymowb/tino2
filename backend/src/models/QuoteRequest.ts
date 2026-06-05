@@ -73,6 +73,11 @@ export class QuoteRequest {
   @Column({ type: 'jsonb', nullable: true })
   images: string[];
 
+  // When set, the request is targeted at these specific providers (by provider id).
+  // Null/empty = broadcast to all matching providers. Drives provider-side visibility.
+  @Column({ type: 'jsonb', nullable: true })
+  targetProviderIds: string[];
+
   @Column({ type: 'varchar', enum: UrgencyLevel, default: UrgencyLevel.MEDIUM })
   @IsEnum(UrgencyLevel)
   urgency: UrgencyLevel;

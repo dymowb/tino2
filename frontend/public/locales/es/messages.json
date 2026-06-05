@@ -13,7 +13,6 @@
   "conversation_label": "Conversación",
   "select_conversation": "Selecciona una conversación para empezar a enviar mensajes",
   "select_conversation_desc": "Elige una conversación de la lista para ver y enviar mensajes",
-
   "conversation": {
     "type_message": "Escribe un mensaje...",
     "send": "Enviar",
@@ -25,9 +24,9 @@
     "offline": "Desconectado",
     "typing": "escribiendo...",
     "participants": "{{count}} participante",
-    "participants_plural": "{{count}} participantes"
+    "participants_other": "{{count}} participantes",
+    "participants_one": "{{count}} participante"
   },
-
   "new": {
     "title": "Iniciar Nueva Conversación",
     "select_user": "Seleccionar Usuario",
@@ -57,7 +56,6 @@
     "success": "Conversación creada exitosamente",
     "error": "Error al crear la conversación"
   },
-
   "actions": {
     "cancel": "Cancelar",
     "delete_conversation": "Eliminar Conversación",
@@ -69,7 +67,6 @@
     "block_user": "Bloquear Usuario",
     "report": "Reportar"
   },
-
   "status": {
     "sent": "Enviado",
     "delivered": "Entregado",

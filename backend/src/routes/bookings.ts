@@ -86,7 +86,10 @@ router.put(
   authenticate,
   [
     param('bookingId').isUUID().withMessage('Valid booking ID required'),
-    body('status').isIn(['pending', 'confirmed', 'in_progress', 'completed', 'cancelled']).withMessage('Invalid status'),
+    // Escrow-bearing transitions (in_progress / completion / dispute) must go through the
+    // dedicated endpoints (/start, /complete, /confirm-completion, /dispute) so the payment
+    // hold/capture/refund stays in sync. The generic status route only does accept & cancel.
+    body('status').isIn(['confirmed', 'cancelled']).withMessage('Invalid status'),
     handleValidationErrors,
   ],
   bookingController.updateBookingStatus

@@ -15,7 +15,10 @@
     "analysis": "Analisando resultados...",
     "completed": "Aqui estão suas opções!",
     "failed": "Algo deu errado",
-    "cancelled": "Solicitação cancelada"
+    "cancelled": "Solicitação cancelada",
+    "recommendation": "Montando suas recomendações personalizadas...",
+    "verification": "Verificando recomendações...",
+    "narrative": "Escrevendo sua recomendação..."
   },
   "followUp": {
     "title": "Precisamos de mais informações",
@@ -23,12 +26,29 @@
   },
   "results": {
     "title": "Profissionais Recomendados",
+    "recommendationsTitle": "Suas Principais Recomendações",
+    "bestFor": "Ideal para",
     "matchScore": "{{score}}% compatível",
     "noResults": "Nenhum profissional encontrado. Tente ampliar seus critérios.",
     "rating": "{{rating}} ({{count}} avaliações)",
     "baseRate": "A partir de {{rate}}/{{type}}",
     "backgroundChecked": "Antecedentes Verificados",
-    "insured": "Segurado"
+    "insured": "Segurado",
+    "selectedCount": "{{count}} de {{max}} profissionais selecionados",
+    "clearSelection": "Limpar",
+    "sendQuoteRequest": "Enviar Pedido de Orçamento",
+    "quoteSent": "Pedido de orçamento enviado para {{count}} profissional(is)!",
+    "quoteError": "Falha ao enviar pedido de orçamento. Tente novamente.",
+    "qualityVerified": "Qualidade verificada · Nota {{score}}/10",
+    "qualityConcerns": "Nota de qualidade {{score}}/10 · {{note}}",
+    "someConcerns": "Algumas questões observadas",
+    "otherProvidersFound": "{{count}} outros prestadores encontrados",
+    "sortBy": "Ordenar por:",
+    "sort_match": "Compatibilidade",
+    "sort_rating": "Avaliação",
+    "sort_price": "Preço",
+    "otherProvidersFound_one": "{{count}} outro prestador encontrado",
+    "otherProvidersFound_other": "{{count}} outros prestadores encontrados"
   },
   "actions": {
     "send": "Enviar",
@@ -36,7 +56,29 @@
     "retry": "Tentar Novamente",
     "newSearch": "Nova Busca",
     "viewProfile": "Ver Perfil",
-    "requestQuote": "Solicitar Orçamento"
+    "requestQuote": "Solicitar Orçamento",
+    "addToQuote": "Solicitar Orçamento",
+    "selected": "Selecionado",
+    "maxSelected": "Máximo de profissionais selecionados"
+  },
+  "summary": {
+    "title": "Seus Requisitos",
+    "clickToEdit": "Clique para editar",
+    "notSet": "Não definido",
+    "modified": "Modificado",
+    "modifiedWarning": "Requisitos alterados — os resultados podem não corresponder mais. Refaça a busca para atualizar.",
+    "rerun": "Refazer Busca",
+    "serviceType": "Serviço",
+    "location": "Localização",
+    "date": "Data / Hora",
+    "flexible": "Flexível",
+    "budget": "Orçamento",
+    "description": "Descrição",
+    "descriptionPlaceholder": "Descreva o que você precisa..."
+  },
+  "drawer": {
+    "providerProfile": "Perfil do Profissional",
+    "services": "Serviços Oferecidos"
   },
   "errors": {
     "startFailed": "Falha ao iniciar o assistente. Tente novamente.",
