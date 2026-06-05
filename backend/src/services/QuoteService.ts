@@ -95,6 +95,21 @@ export class QuoteService {
     }
   }
 
+  /**
+   * For provider-facing reads, hide the customer's contact details (email/phone) until
+   * that provider has an ACCEPTED quote on the request — once engaged they need to
+   * coordinate. The customer's name is kept so the request stays meaningful. Mutates in place.
+   */
+  private hideCustomerContactForProvider(qr: QuoteRequest, forProviderId: string): void {
+    const accepted = (qr.quotes || []).some(
+      (q) => q.providerId === forProviderId && q.status === QuoteStatus.ACCEPTED
+    );
+    if (!accepted && qr.customer) {
+      qr.customer.email = undefined as any;
+      qr.customer.phone = undefined as any;
+    }
+  }
+
   async getQuoteRequestById(
     requestId: string,
     access?: { customerId?: string; forProviderId?: string }
@@ -121,7 +136,11 @@ export class QuoteService {
         );
       }
 
-      return await queryBuilder.getOne();
+      const result = await queryBuilder.getOne();
+      if (result && access?.forProviderId) {
+        this.hideCustomerContactForProvider(result, access.forProviderId);
+      }
+      return result;
     } catch (error) {
       logger.error('Error fetching quote request by ID:', error);
       throw error;
@@ -295,6 +314,13 @@ export class QuoteService {
       queryBuilder = queryBuilder.skip(offset).take(limit);
 
       const [quoteRequests, total] = await queryBuilder.getManyAndCount();
+
+      // Provider browsing the list: hide customer contact on requests they haven't won yet.
+      if (forProviderId) {
+        for (const qr of quoteRequests) {
+          this.hideCustomerContactForProvider(qr, forProviderId);
+        }
+      }
 
       logger.info('Quote requests search completed', {
         total,

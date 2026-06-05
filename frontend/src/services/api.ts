@@ -328,6 +328,9 @@ class ApiService {
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
+        // Tell the backend which locale to return server-generated messages in.
+        const lng = (localStorage.getItem('i18nextLng') || 'pt').toLowerCase();
+        config.headers['X-Locale'] = lng.startsWith('en') ? 'en' : 'pt';
         return config;
       },
       (error) => {

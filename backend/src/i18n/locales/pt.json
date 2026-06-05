@@ -1,0 +1,32 @@
+{
+  "common.internal_error": "Erro interno do servidor",
+  "common.not_found": "Não encontrado",
+  "common.unauthorized": "Não autorizado",
+
+  "auth.invalid_credentials": "Credenciais inválidas",
+  "auth.account_suspended": "Sua conta foi suspensa. Entre em contato com o suporte.",
+  "auth.email_not_verified": "Verifique seu endereço de e-mail antes de fazer login.",
+  "auth.login_success": "Login realizado com sucesso",
+
+  "booking.cancel_success": "Reserva cancelada com sucesso",
+  "booking.not_found": "Reserva não encontrada ou acesso negado",
+  "booking.cannot_cancel_status": "Não é possível cancelar a reserva no status atual",
+  "booking.dispute_wrong_status": "Não é possível abrir disputa para uma reserva no status: {{status}}",
+  "booking.dispute_opened": "Disputa aberta. Nossa equipe irá analisar.",
+
+  "dispute.invalid_decision": "A decisão deve ser 'capture' ou 'refund'",
+  "dispute.not_found": "Reserva em disputa não encontrada",
+  "dispute.no_payment_intent": "Nenhum pagamento retido (PaymentIntent) nesta reserva",
+  "dispute.resolved_captured": "Disputa resolvida — pagamento liberado ao prestador",
+  "dispute.resolved_refunded": "Disputa resolvida — retenção cancelada, cliente reembolsado",
+  "dispute.resolved_title": "Disputa resolvida",
+  "dispute.resolved_customer_msg": "Sua disputa para a reserva {{bookingId}} foi resolvida em favor do cliente (pagamento cancelado).",
+  "dispute.resolved_provider_msg": "Sua disputa para a reserva {{bookingId}} foi resolvida em favor do prestador (pagamento liberado).",
+
+  "admin.user_activated": "Usuário ativado com sucesso",
+  "admin.user_suspended": "Usuário suspenso com sucesso",
+  "admin.cannot_suspend_self": "Administradores não podem desativar a própria conta",
+  "admin.user_not_found": "Usuário não encontrado",
+  "admin.booking_cancelled_title": "Reserva cancelada",
+  "admin.booking_cancelled_msg": "Sua reserva de {{service}} foi cancelada porque o prestador não está mais disponível. Você pode reservar outro prestador."
+}

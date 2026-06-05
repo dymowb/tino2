@@ -178,7 +178,7 @@
     "no_notes": "Sem notas",
     "resolve_dialog": {
       "title": "Resolver Disputa",
-      "hold_amount": "Valor retido: R${{amount}} para {{service}}",
+      "hold_amount": "Valor retido: {{amount}} para {{service}}",
       "dispute_reason_label": "Motivo da disputa",
       "no_reason": "Nenhum motivo fornecido",
       "decision_label": "Decisão",

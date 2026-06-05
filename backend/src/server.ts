@@ -21,6 +21,7 @@ import { mongoClient } from '@/config/mongodb';
 import logger from '@/config/logger';
 import { startAutoCaptureJob } from '@/jobs/autoCapture.job';
 import { startReflectionJob } from '@/jobs/reflection.job';
+import { startQuoteExpiryJob } from '@/jobs/quoteExpiry.job';
 import { validateConfig } from '@/config/environment';
 
 async function bootstrap(): Promise<void> {
@@ -51,6 +52,7 @@ async function bootstrap(): Promise<void> {
 
     startAutoCaptureJob();
     startReflectionJob();
+    startQuoteExpiryJob();
 
     const gracefulShutdown = async (): Promise<void> => {
       logger.info('Received shutdown signal. Gracefully shutting down...');

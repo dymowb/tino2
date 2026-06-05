@@ -12,6 +12,7 @@ import notificationService from '@/services/NotificationService';
 import { NotificationType } from '@/models/Notification';
 import logger from '@/config/logger';
 import { AuthenticatedRequest } from '@/types';
+import { t } from '@/i18n';
 
 export class AdminController {
   // GET /api/admin/dashboard - Admin dashboard overview (FR-076)
@@ -178,7 +179,7 @@ export class AdminController {
       if (id === req.user?.userId) {
         res.status(400).json({
           success: false,
-          error: 'Admins cannot deactivate their own account'
+          error: t(req, 'admin.cannot_suspend_self')
         });
         return;
       }
@@ -189,7 +190,7 @@ export class AdminController {
       if (!user) {
         res.status(404).json({
           success: false,
-          error: 'User not found'
+          error: t(req, 'admin.user_not_found')
         });
         return;
       }
@@ -210,14 +211,50 @@ export class AdminController {
 
       await userRepository.save(user);
 
+      // When suspending a PROVIDER, cancel their still-actionable bookings and notify
+      // the affected customers — otherwise those bookings silently strand (the provider
+      // can no longer accept/start them). We only touch PRE-escrow states (pending,
+      // confirmed): in_progress / pending_completion / in_dispute carry a Stripe hold and
+      // must be unwound via the refund/dispute flow, so we leave them for admin handling.
+      let cancelledCount = 0;
+      if (!isActive && user.userType === UserType.PROVIDER) {
+        const provider = await AppDataSource.getRepository(Provider).findOne({ where: { userId: id } });
+        if (provider) {
+          const bookingRepository = AppDataSource.getRepository(Booking);
+          const affected = await bookingRepository.find({
+            where: [
+              { providerId: provider.id, status: BookingStatus.PENDING },
+              { providerId: provider.id, status: BookingStatus.CONFIRMED },
+            ],
+          });
+          for (const booking of affected) {
+            booking.status = BookingStatus.CANCELLED;
+            booking.cancelledAt = new Date();
+            booking.cancellationReason = 'Provider suspended by admin';
+            await bookingRepository.save(booking);
+            cancelledCount++;
+            if (booking.customerId) {
+              await notificationService.createNotification(booking.customerId, {
+                type: NotificationType.BOOKING,
+                title: t(req, 'admin.booking_cancelled_title'),
+                message: t(req, 'admin.booking_cancelled_msg', { service: booking.serviceType }),
+                actionUrl: `/bookings/${booking.id}`,
+                metadata: { bookingId: booking.id },
+              }).catch(() => {});
+            }
+          }
+        }
+      }
+
       res.json({
         success: true,
         data: user,
-        message: `User ${isActive ? 'activated' : 'suspended'} successfully`
+        message: t(req, isActive ? 'admin.user_activated' : 'admin.user_suspended'),
+        ...(cancelledCount > 0 ? { cancelledBookings: cancelledCount } : {}),
       });
 
       logger.info(
-        `User ${id} ${isActive ? 'activated' : 'suspended'} by admin ${req.user?.userId}. Reason: ${suspensionReason || 'Not provided'}. Until: ${suspendedUntil || 'permanent'}`
+        `User ${id} ${isActive ? 'activated' : 'suspended'} by admin ${req.user?.userId}. Reason: ${suspensionReason || 'Not provided'}. Until: ${suspendedUntil || 'permanent'}. Cancelled bookings: ${cancelledCount}`
       );
     } catch (error) {
       logger.error('Error updating user status:', error);
@@ -580,7 +617,7 @@ export class AdminController {
       const { decision, adminNotes } = req.body; // decision: 'capture' | 'refund'
 
       if (!['capture', 'refund'].includes(decision)) {
-        res.status(400).json({ success: false, error: "decision must be 'capture' or 'refund'" });
+        res.status(400).json({ success: false, error: t(req, 'dispute.invalid_decision') });
         return;
       }
 
@@ -590,12 +627,12 @@ export class AdminController {
       });
 
       if (!booking) {
-        res.status(404).json({ success: false, error: 'Disputed booking not found' });
+        res.status(404).json({ success: false, error: t(req, 'dispute.not_found') });
         return;
       }
 
       if (!booking.stripePaymentIntentId) {
-        res.status(400).json({ success: false, error: 'No Stripe PaymentIntent on this booking' });
+        res.status(400).json({ success: false, error: t(req, 'dispute.no_payment_intent') });
         return;
       }
 
@@ -623,11 +660,12 @@ export class AdminController {
       booking.adminNotes = adminNotes || null;
       await bookingRepository.save(booking);
 
-      // Notify both parties
+      // Notify both parties. (Recipient-preferred locale isn't persisted yet, so messages
+      // follow the admin's request locale — a known limitation to revisit with user locale.)
       const providerUserId = booking.provider?.userId;
-      const outcome = decision === 'capture' ? 'in favour of the provider (payment released)' : 'in favour of the customer (payment cancelled)';
-      const title = 'Dispute Resolved';
-      const msg = `Your dispute for booking ${id} has been resolved ${outcome}.`;
+      const title = t(req, 'dispute.resolved_title');
+      const msgKey = decision === 'capture' ? 'dispute.resolved_provider_msg' : 'dispute.resolved_customer_msg';
+      const msg = t(req, msgKey, { bookingId: id });
       if (booking.customerId) {
         await notificationService.createNotification(booking.customerId, { type: NotificationType.BOOKING, title, message: msg, metadata: { bookingId: id } });
       }
@@ -635,7 +673,7 @@ export class AdminController {
         await notificationService.createNotification(providerUserId, { type: NotificationType.BOOKING, title, message: msg, metadata: { bookingId: id } });
       }
 
-      res.json({ success: true, message: `Dispute resolved — ${decision === 'capture' ? 'payment captured' : 'hold cancelled'}`, data: { booking } });
+      res.json({ success: true, message: t(req, decision === 'capture' ? 'dispute.resolved_captured' : 'dispute.resolved_refunded'), data: { booking } });
       logger.info(`Admin ${req.user?.userId} resolved dispute ${id}: ${decision}. Notes: ${adminNotes || 'none'}`);
     } catch (error) {
       logger.error('Error resolving dispute:', error);

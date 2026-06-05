@@ -357,7 +357,7 @@ export class BookingService {
     }
   }
 
-  async cancelBooking(bookingId: string, userId: string, userRole: 'customer' | 'provider'): Promise<Booking> {
+  async cancelBooking(bookingId: string, userId: string, userRole: 'customer' | 'provider', reason?: string): Promise<Booking> {
     try {
       const booking = await this.getBookingById(bookingId, userId);
 
@@ -381,6 +381,10 @@ export class BookingService {
       booking.status = BookingStatus.CANCELLED;
       booking.updatedAt = new Date();
       booking.cancelledAt = new Date();
+      // Persist the reason when supplied (e.g. 'no_show') — previously discarded.
+      if (reason) {
+        booking.cancellationReason = reason;
+      }
 
       const cancelledBooking = await this.bookingRepository.save(booking);
       logger.info(`Booking cancelled`, { bookingId, userId, userRole });

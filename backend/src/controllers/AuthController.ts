@@ -3,6 +3,7 @@ import { userService } from '@/services/UserService';
 import { ApiResponse } from '@/types';
 import logger from '@/config/logger';
 import { UserType } from '@/models/User';
+import { t } from '@/i18n';
 
 export class AuthController {
   async register(req: Request, res: Response): Promise<void> {
@@ -84,7 +85,7 @@ export class AuthController {
 
       const response: ApiResponse = {
         success: true,
-        message: 'Login successful',
+        message: t(req, 'auth.login_success'),
         data: {
           user: {
             id: user.id,
@@ -108,14 +109,18 @@ export class AuthController {
         res.status(403).json({
           success: false,
           error: 'EMAIL_NOT_VERIFIED',
-          message: 'Please verify your email address before logging in.',
+          message: t(req, 'auth.email_not_verified'),
           email: (error as any).email,
         });
         return;
       }
+      // Map the service's known thrown messages to localized strings; anything else
+      // falls back to a generic invalid-credentials message (don't leak internals).
+      const raw = error instanceof Error ? error.message : '';
+      const key = raw.includes('suspended') ? 'auth.account_suspended' : 'auth.invalid_credentials';
       const response: ApiResponse = {
         success: false,
-        error: error instanceof Error ? error.message : 'Login failed',
+        error: t(req, key),
       };
       res.status(401).json(response);
     }

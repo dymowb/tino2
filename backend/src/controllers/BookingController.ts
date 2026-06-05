@@ -11,6 +11,7 @@ import { Provider } from '@/models/Provider';
 import { getStripeInstance, getStripeErrorMessage, calculateFees } from '@/config/stripe';
 import notificationService from '@/services/NotificationService';
 import { NotificationType } from '@/models/Notification';
+import { t } from '@/i18n';
 
 export class BookingController {
   createBooking = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -468,12 +469,13 @@ export class BookingController {
       const cancelledBooking = await bookingService.cancelBooking(
         bookingId,
         userId,
-        userType as 'customer' | 'provider'
+        userType as 'customer' | 'provider',
+        req.body?.reason
       );
 
       const response: ApiResponse = {
         success: true,
-        message: 'Booking cancelled successfully',
+        message: t(req, 'booking.cancel_success'),
         data: { booking: cancelledBooking },
       };
 
@@ -679,9 +681,9 @@ export class BookingController {
       const booking = await bookingRepo.findOne({
         where: { id: bookingId, customerId: req.user.userId },
       });
-      if (!booking) { res.status(404).json({ success: false, message: 'Booking not found' }); return; }
+      if (!booking) { res.status(404).json({ success: false, message: t(req, 'booking.not_found') }); return; }
       if (booking.status !== BookingStatus.PENDING_COMPLETION) {
-        res.status(400).json({ success: false, message: `Cannot dispute booking in status: ${booking.status}` });
+        res.status(400).json({ success: false, message: t(req, 'booking.dispute_wrong_status', { status: booking.status }) });
         return;
       }
 
@@ -696,7 +698,7 @@ export class BookingController {
       // (Admin dispute resolution UI is Phase 15)
       logger.warn(`Booking ${bookingId} disputed by customer ${req.user.userId}: ${reason}`);
 
-      res.json({ success: true, message: 'Dispute raised, admin has been notified', data: { booking } });
+      res.json({ success: true, message: t(req, 'booking.dispute_opened'), data: { booking } });
     } catch (error) {
       logger.error('Error in disputeBooking:', error);
       res.status(500).json({ success: false, message: 'Internal server error' });

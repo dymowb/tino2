@@ -101,6 +101,7 @@ router.delete(
   authenticate,
   [
     param('bookingId').isUUID().withMessage('Valid booking ID required'),
+    body('reason').optional().isString().isLength({ max: 500 }).withMessage('Reason must be under 500 chars'),
     handleValidationErrors,
   ],
   bookingController.cancelBooking

@@ -51,10 +51,13 @@ export const authenticate = async (
       return;
     }
 
-    // Lazy reactivation: suspension expired?
+    // Lazy reactivation: suspension expired? Clear all suspension fields so reads
+    // don't show a stale reason/comment on a now-active account (matches the login path).
     if (!user.isActive && user.suspendedUntil && new Date() > user.suspendedUntil) {
       user.isActive = true;
       user.suspendedUntil = null;
+      user.suspensionReason = null;
+      user.suspensionComment = null;
       await AppDataSource.getRepository(User).save(user);
     }
 

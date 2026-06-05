@@ -178,7 +178,7 @@
     "no_notes": "No notes",
     "resolve_dialog": {
       "title": "Resolve Dispute",
-      "hold_amount": "Hold amount: ${{amount}} for {{service}}",
+      "hold_amount": "Hold amount: {{amount}} for {{service}}",
       "dispute_reason_label": "Dispute reason",
       "no_reason": "No reason provided",
       "decision_label": "Decision",

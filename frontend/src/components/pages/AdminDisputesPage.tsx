@@ -34,6 +34,10 @@ const AdminDisputesPage: React.FC = () => {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<'open' | 'resolved' | 'all'>('open');
 
+  // All platform amounts are BRL; format pt-BR (R$ 1.234,56) to match the rest of the app.
+  const formatCurrency = (v: number | string) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v));
+
   const { data, isLoading } = useQuery({
     queryKey: ['admin-disputes', filter],
     queryFn: async () => {
@@ -112,7 +116,7 @@ const AdminDisputesPage: React.FC = () => {
                 <TableRow key={d.id} hover>
                   <TableCell sx={{ fontFamily: 'monospace', fontSize: 11 }}>{d.id.slice(0, 8)}…</TableCell>
                   <TableCell>{d.serviceType}</TableCell>
-                  <TableCell>R${Number(d.totalAmount).toFixed(2)}</TableCell>
+                  <TableCell>{formatCurrency(d.totalAmount)}</TableCell>
                   <TableCell>
                     <Tooltip title={d.customer?.email}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -173,7 +177,7 @@ const AdminDisputesPage: React.FC = () => {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
               <Alert severity="warning" icon={<AttachMoney />}>
                 {t('disputes.resolve_dialog.hold_amount', {
-                  amount: Number(selected.totalAmount).toFixed(2),
+                  amount: formatCurrency(selected.totalAmount),
                   service: selected.serviceType,
                 })}
               </Alert>
