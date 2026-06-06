@@ -141,8 +141,18 @@ const AIRequirementsSummary: React.FC<Props> = ({
               value={locationDisplay}
               fieldKey="location"
               onSave={v => {
+                // Parse positionally in the SAME order the value is displayed
+                // (neighborhood, city, state) and overwrite all three so editing
+                // replaces rather than leaving a stale neighborhood prepended.
                 const parts = v.split(',').map(s => s.trim());
-                update({ location: { ...requirements.location, city: parts[0], state: parts[1] } });
+                update({
+                  location: {
+                    ...requirements.location,
+                    neighborhood: parts[0] || undefined,
+                    city: parts[1] || undefined,
+                    state: parts[2] || undefined,
+                  },
+                });
               }}
             />
             <Field
