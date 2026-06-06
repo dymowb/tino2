@@ -29,6 +29,7 @@ import {
 } from './types/workflow.types';
 import { RequirementsAgentOutput } from './requirements.agent';
 import { anthropicService, ClaudeModel } from './services/anthropic.service';
+import { parseClaudeJson } from './utils/llm-json';
 import logger from '../config/logger';
 
 // ─── Type Definitions ───────────────────────────────────────────────
@@ -164,22 +165,34 @@ Rules:
       ? `${input.constraintContext}\n\n${langPrompt}`
       : langPrompt;
 
-    const response = await anthropicService.callClaude({
-      model: ClaudeModel.SONNET,
-      systemPrompt,
-      userMessage,
-      maxTokens: this.metadata.maxTokens,
-      temperature: this.metadata.temperature,
-    });
+    const { parsed, response } = await parseClaudeJson<ClaudeRankedProvider[]>(
+      () => anthropicService.callClaude({
+        model: ClaudeModel.SONNET,
+        systemPrompt,
+        userMessage,
+        maxTokens: this.metadata.maxTokens,
+        temperature: this.metadata.temperature,
+      }),
+      'array',
+      { agentName: 'recommendation' }
+    );
 
-    // TODO 5.2d: Extract the JSON array from Claude's response.
-    // Same regex pattern as analysis agent: response.text.match(/\[[\s\S]*\]/)
-    // Throw if no match.
-    const jsonMatch = response.text.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) {
-      throw new Error('Failed to extract recommendation JSON from Claude response');
-    }
-    const claudeRankings: ClaudeRankedProvider[] = JSON.parse(jsonMatch[0]);
+    // Graceful degradation: if the LLM ranking is unparseable even after a
+    // retry, fall back to ranking by analysis matchScore so the customer still
+    // gets recommendations rather than a crashed workflow. Reasoning is a
+    // generic localized line (the rich per-provider reasoning is what we lost).
+    const claudeRankings: ClaudeRankedProvider[] = parsed ?? [...input.analysisResults]
+      .sort((a, b) => b.matchScore - a.matchScore)
+      .slice(0, MAX_RECOMMENDATIONS)
+      .map((a, i) => ({
+        providerId: a.providerId,
+        rank: i + 1,
+        reasoning: input.locale === 'en'
+          ? 'Recommended as one of the closest matches to your requirements.'
+          : 'Recomendado por estar entre as melhores correspondências com os seus requisitos.',
+        tradeoffs: [],
+        bestFor: '',
+      }));
 
     // TODO 5.2e: Assemble full Recommendation objects.
     // For each item in claudeRankings (sorted by rank):

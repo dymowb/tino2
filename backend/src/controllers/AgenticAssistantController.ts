@@ -82,10 +82,13 @@ class AgenticAssistantController {
    *   { type: 'error',    message }          ← on failure
    */
   private async startWorkflowStream(req: AuthenticatedRequest, res: Response): Promise<void> {
-    const { initialMessage, locale } = req.body;
+    const { initialMessage, locale, requirements: seededRequirements } = req.body;
     const userId = req.user?.userId;
 
-    if (!initialMessage || typeof initialMessage !== 'string') {
+    // `seededRequirements` is the re-run path: the user edited the structured
+    // requirements panel, so we seed those directly and skip extraction.
+    // In that case the free-text message is optional.
+    if (!seededRequirements && (!initialMessage || typeof initialMessage !== 'string')) {
       res.status(400).json({ success: false, error: 'initialMessage is required and must be a string' });
       return;
     }
@@ -105,7 +108,12 @@ class AgenticAssistantController {
     };
 
     try {
-      const workflow = await workflowStateService.createWorkflow(userId, initialMessage, locale);
+      const workflow = await workflowStateService.createWorkflow(
+        userId,
+        typeof initialMessage === 'string' ? initialMessage : '',
+        locale,
+        seededRequirements
+      );
       emit({ type: 'started', workflowId: workflow.id });
 
       // Run pipeline synchronously — onProgress fires before each agent

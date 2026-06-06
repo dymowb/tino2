@@ -24,6 +24,7 @@ import {
 } from './types/workflow.types';
 import { RequirementsAgentOutput } from './requirements.agent';
 import { anthropicService, ClaudeModel } from './services/anthropic.service';
+import { parseLlmJson } from './utils/llm-json';
 import logger from '../config/logger';
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -151,30 +152,29 @@ Rules:
     }
 
     // ── Parse Claude response ─────────────────────────────────────────
-    const jsonMatch = response.text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
+    const parsed = parseLlmJson<any>(response.text, 'object');
+    if (!parsed) {
       logger.warn('Verification Agent: could not parse JSON — soft pass');
       return this.timedOutResult(startTime);
     }
 
-    let parsed: any;
-    try {
-      parsed = JSON.parse(jsonMatch[0]);
-    } catch {
-      logger.warn('Verification Agent: JSON.parse failed — soft pass');
-      return this.timedOutResult(startTime);
-    }
+    // Defensive: even valid JSON may omit a check object. Default any missing
+    // check to a soft pass rather than throwing on `undefined.passed`.
+    const softCheck = (c: any): CheckResult => ({
+      passed: c?.passed ?? true,
+      notes: c?.notes ?? '',
+    });
+    const requirementsCoverage = softCheck(parsed.requirementsCoverage);
+    const recommendationQuality = softCheck(parsed.recommendationQuality);
+    const completeness = softCheck(parsed.completeness);
 
     const report: VerificationReport = {
-      passed:
-        parsed.requirementsCoverage.passed &&
-        parsed.recommendationQuality.passed &&
-        parsed.completeness.passed,
-      qualityScore: Math.min(10, Math.max(0, parsed.qualityScore ?? 0)),
-      requirementsCoverage: parsed.requirementsCoverage as CheckResult,
-      recommendationQuality: parsed.recommendationQuality as CheckResult,
-      completeness: parsed.completeness as CheckResult,
-      suggestions: parsed.suggestions ?? [],
+      passed: requirementsCoverage.passed && recommendationQuality.passed && completeness.passed,
+      qualityScore: Math.min(10, Math.max(0, Number(parsed.qualityScore) || 0)),
+      requirementsCoverage,
+      recommendationQuality,
+      completeness,
+      suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
     };
 
     logger.info('Verification Agent completed', {

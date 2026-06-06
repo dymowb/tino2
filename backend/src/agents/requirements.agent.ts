@@ -20,7 +20,7 @@ import {
 } from './types/agent.types';
 import { WorkflowContext } from './types/workflow.types';
 import { anthropicService, ClaudeModel } from './services/anthropic.service';
-import response from 'twilio/lib/http/response';
+import { parseLlmJson } from './utils/llm-json';
 import logger from '../config/logger';
 
 /**
@@ -55,6 +55,14 @@ export interface RequirementsAgentOutput {
   followUpQuestion?: string;
   requirementsSummary?: {
     serviceType: string;
+    /**
+     * Provider-facing summary of the job written from the full conversation —
+     * captures the specific problem and nuances ("blocked toilet in the upstairs
+     * bathroom, started yesterday") that don't map to the structured fields
+     * below. This is what gets sent as the quote-request description, so the
+     * provider understands the actual issue, not just "need a plumber".
+     */
+    description?: string;
     location: {
       neighborhood?: string;
       address?: string;
@@ -137,6 +145,7 @@ If you have all required information:
   "isComplete": true,
   "requirementsSummary": {
     "serviceType": "Plumbing",
+    "description": "Kitchen sink is badly clogged and water is backing up; the customer has already tried a plunger without success and wants a professional to clear the drain.",
     "location": { "neighborhood": "Mission District", "city": "San Francisco", "state": "CA" },
     "timing": { "preferredDate": "${exampleDate}", "isFlexible": true },
     "budget": { "max": 200, "hasFlexibility": true },
@@ -146,6 +155,8 @@ If you have all required information:
   "extractedFacts": ["kitchen sink clogged", "SF location", "flexible on exact time"],
   "missingInformation": []
 }
+
+**The "description" field** is a 1-3 sentence, provider-facing summary of the actual job, synthesized from the WHOLE conversation. Include the specific problem and any nuances the customer mentioned (what is broken, where, since when, symptoms, constraints, access notes). Do NOT restate the location, date/time, or budget — those travel in their own fields. Write it in the same language as the conversation. This is the text a provider reads to understand the job, so make it concrete and useful even when the customer's first message was vague (e.g. "need a plumber" → describe the clog they later clarified).
 
 **Memory Usage:**
 If a <memory> block appears at the top of this system prompt, treat those facts as already known — do NOT ask for information already present in memory.
@@ -350,13 +361,11 @@ Analyze the conversation and respond with JSON following the format specified in
    */
   private parseClaudeResponse(text: string): RequirementsAgentOutput {
     try {
-      // Extract JSON from response (Claude might add markdown code blocks)
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No JSON found in Claude response');
+      // Robust extraction: tolerate code fences, surrounding prose, trailing commas
+      const parsed = parseLlmJson<any>(text, 'object');
+      if (!parsed) {
+        throw new Error('No parseable JSON found in Claude response');
       }
-
-      const parsed = JSON.parse(jsonMatch[0]);
 
       // Validate structure
       if (typeof parsed.isComplete !== 'boolean') {

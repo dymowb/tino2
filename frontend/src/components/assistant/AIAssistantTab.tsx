@@ -112,7 +112,9 @@ const AIAssistantTab: React.FC<AIAssistantTabProps> = ({ onComplete, onReset }) 
     const summary = workflow?.context?.requirements?.requirementsSummary;
     if (summary && !editedRequirements) {
       setEditedRequirements(summary as RequirementsSummary);
-      setEditedDescription(workflow?.context?.userRequest ?? '');
+      // Prefer the AI-generated job summary (captures conversation nuances) over
+      // the raw initial message, which may be as terse as "need a plumber".
+      setEditedDescription((summary as RequirementsSummary).description ?? workflow?.context?.userRequest ?? '');
       setRequirementsModified(false);
     }
     if (workflow?.status === 'completed') onComplete?.();
@@ -451,7 +453,16 @@ const AIAssistantTab: React.FC<AIAssistantTabProps> = ({ onComplete, onReset }) 
             setEditedDescription(d);
             setRequirementsModified(true);
           }}
-          onRerun={() => { reset(); onReset?.(); }}
+          onRerun={() => {
+            // Re-run in place with the edited requirements: seed them so the
+            // backend skips extraction and re-runs search → analysis →
+            // recommendation directly. Fold the (possibly edited) description
+            // into the seeded requirements so it persists across the re-run and
+            // stays in sync with what the provider will see.
+            if (editedRequirements) {
+              startWorkflow(editedDescription, { ...editedRequirements, description: editedDescription });
+            }
+          }}
         />
       )}
 

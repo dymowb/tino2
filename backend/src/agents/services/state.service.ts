@@ -22,6 +22,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { WorkflowState, WorkflowStatus, WorkflowContext } from '../types/workflow.types';
 import { AgentActivity } from '../types/agent.types';
+import { RequirementsAgentOutput } from '../requirements.agent';
 import logger from '../../config/logger';
 
 /**
@@ -102,9 +103,18 @@ export class WorkflowStateService {
    *
    * @param userId - User who initiated this workflow
    * @param userRequest - Initial request message
+   * @param locale - Preferred locale for agent responses
+   * @param seededRequirements - Pre-extracted requirements (re-run path): when
+   *   provided, the requirements are seeded as already-complete so the
+   *   coordinator skips the requirements agent and routes straight to search.
    * @returns Newly created workflow state
    */
-  async createWorkflow(userId: string, userRequest: string, locale?: string): Promise<WorkflowState> {
+  async createWorkflow(
+    userId: string,
+    userRequest: string,
+    locale?: string,
+    seededRequirements?: NonNullable<RequirementsAgentOutput['requirementsSummary']>
+  ): Promise<WorkflowState> {
     const workflowId = uuidv4();
     const now = new Date();
 
@@ -120,6 +130,14 @@ export class WorkflowStateService {
         createdAt: now,
         userRequest,
         locale: locale || 'pt',
+        ...(seededRequirements && {
+          requirements: {
+            isComplete: true,
+            requirementsSummary: seededRequirements,
+            extractedFacts: [],
+            missingInformation: [],
+          },
+        }),
       },
       createdAt: now,
       updatedAt: now,

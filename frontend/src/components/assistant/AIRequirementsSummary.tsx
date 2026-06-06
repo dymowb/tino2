@@ -11,6 +11,8 @@ import { useTranslation } from 'react-i18next';
 
 export interface RequirementsSummary {
   serviceType: string;
+  /** AI-generated, provider-facing summary of the job (nuances not in other fields). */
+  description?: string;
   location: { neighborhood?: string; address?: string; city?: string; state?: string; zipCode?: string };
   timing: { preferredDate?: string; preferredTime?: string; isFlexible: boolean };
   budget?: { min?: number; max?: number; hasFlexibility: boolean };

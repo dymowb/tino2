@@ -7,7 +7,7 @@
  * Follow-up turns (after waiting_for_user): fall back to polling, same as before.
  */
 
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   apiService,
@@ -17,6 +17,7 @@ import {
   Recommendation,
   VerificationReport,
 } from '../services/api';
+import type { RequirementsSummary } from '../components/assistant/AIRequirementsSummary';
 
 /** Message in the conversation history */
 export interface ChatMessage {
@@ -45,7 +46,12 @@ export interface AssistantWorkflowState {
   verification: VerificationReport | undefined;
   currentStep: string | null;
   error: string | null;
-  startWorkflow: (message: string) => void;
+  /**
+   * Start a new workflow. When `requirements` is supplied (re-run path), the
+   * backend seeds them as already-complete and skips requirements extraction,
+   * running search → analysis → recommendation directly on the edited values.
+   */
+  startWorkflow: (message: string, requirements?: RequirementsSummary) => void;
   sendMessage: (message: string) => void;
   cancel: () => void;
   reset: () => void;
@@ -118,8 +124,22 @@ export function useAssistantWorkflow(): AssistantWorkflowState {
   // Effective workflow: polled result (fresher after follow-ups) overrides streamed
   const workflow = polledWorkflow ?? streamedWorkflow;
 
+  // Persist each agent follow-up question into the conversation transcript as it
+  // appears. Both the initial streamed turn and every subsequent polled turn
+  // funnel through here, so multi-turn conversations keep their full history
+  // (previously only the first question was recorded → later ones vanished).
+  const followUpQuestion = workflow?.context?.requirements?.followUpQuestion ?? null;
+  useEffect(() => {
+    if (!followUpQuestion) return;
+    setMessages((prev) =>
+      prev.some((m) => m.role === 'assistant' && m.content === followUpQuestion)
+        ? prev
+        : [...prev, { id: `q-${Date.now()}`, role: 'assistant', content: followUpQuestion, timestamp: new Date() }]
+    );
+  }, [followUpQuestion]);
+
   // ─── Start workflow (streaming) ─────────────────────────────────────
-  const startWorkflow = useCallback(async (message: string) => {
+  const startWorkflow = useCallback(async (message: string, requirements?: RequirementsSummary) => {
     // Reset state for a fresh run
     setIsStreaming(true);
     setNarrative('');
@@ -144,7 +164,11 @@ export function useAssistantWorkflow(): AssistantWorkflowState {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ initialMessage: message, locale: localStorage.getItem('i18nextLng') || 'pt' }),
+        body: JSON.stringify({
+          initialMessage: message,
+          locale: localStorage.getItem('i18nextLng') || 'pt',
+          ...(requirements && { requirements }),
+        }),
         signal: controller.signal,
       });
 
@@ -180,18 +204,10 @@ export function useAssistantWorkflow(): AssistantWorkflowState {
 
             case 'complete':
               setStreamedWorkflow(event.data);
-              // If the workflow paused for a follow-up, add the agent question to messages
-              if (event.data?.context?.requirements?.followUpQuestion) {
-                setMessages((prev) => [
-                  ...prev,
-                  {
-                    id: (Date.now() + 1).toString(),
-                    role: 'assistant',
-                    content: event.data.context.requirements.followUpQuestion,
-                    timestamp: new Date(),
-                  },
-                ]);
-              }
+              // The agent's follow-up question (if any) is appended to `messages`
+              // by the effect below — this keeps the initial turn and every
+              // subsequent polled turn on the same code path, so no question is
+              // dropped from the transcript on multi-turn conversations.
               break;
 
             case 'error':

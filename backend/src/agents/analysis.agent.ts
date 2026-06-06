@@ -1,4 +1,5 @@
 import { getLanguageInstruction } from './utils/locale';
+import { parseClaudeJson } from './utils/llm-json';
 /**
  * Analysis Agent
  *
@@ -284,21 +285,29 @@ Return a JSON array of analysis objects.`,
       ? `${input.constraintContext}\n\n${langPrompt}`
       : langPrompt;
 
-    const response = await anthropicService.callClaude({
-      model: ClaudeModel.HAIKU,
-      systemPrompt,
-      userMessage,
-      maxTokens: this.metadata.maxTokens,
-      temperature: this.metadata.temperature,
-    });
+    const { parsed, response } = await parseClaudeJson<ProviderAnalysis[]>(
+      () => anthropicService.callClaude({
+        model: ClaudeModel.HAIKU,
+        systemPrompt,
+        userMessage,
+        maxTokens: this.metadata.maxTokens,
+        temperature: this.metadata.temperature,
+      }),
+      'array',
+      { agentName: 'analysis' }
+    );
 
-    const analyses = response.text.match(/\[[\s\S]*\]/);
-    if (!analyses) {
-      logger.warn('Failed to extract analysis JSON from Claude response', { response });
-      throw new Error('Failed to extract analysis JSON from Claude response');
-    }
-
-    const parsedAnalyses = JSON.parse(analyses[0]);
+    // Graceful degradation: if the LLM output is unparseable even after a
+    // retry, fall back to a minimal analysis per provider built from the
+    // search data we already have. This keeps the pipeline alive (recommendation
+    // can still rank by matchScore) instead of crashing the whole workflow.
+    const parsedAnalyses: ProviderAnalysis[] = parsed ?? enrichedProviders.map((ep) => ({
+      providerId: ep.provider.providerId,
+      matchScore: ep.provider.matchScore ?? 0.5,
+      strengths: [],
+      concerns: [],
+      reviewSentiment: '',
+    }));
     const executionTimeMs = Date.now() - startTime;
 
     return {
