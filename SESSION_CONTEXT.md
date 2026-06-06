@@ -3,19 +3,34 @@
 > Lean by design (per CLAUDE.md): current status + roadmap + resume point only.
 > Detailed completed-work notes live in `Tests/history/HISTORICAL_CONTEXT.md` and git history.
 
-## Current Status (2026-06-05)
+## Current Status (2026-06-06)
 - **Goal 1 — Find Providers E2E audit**: ✅ complete (16 defects fixed).
 - **Goal 2 — Cross-role service lifecycle E2E audit**: ✅ complete (Chunk A + B = 8 defects, + 7 follow-up improvements). Commits `3f01b0d`, `0215d6a`.
 - **All productionization phases (8–22) and Agentic Memory phases (1–9) are done** — see roadmap tables below.
 - No formal goals/phases pending. Remaining work is loose ends (below).
 
+### Ad-hoc bug fixes — session 2026-06-06 (all committed + pushed, verified in UI)
+- Provider login fired 400s: `GET /reviews/provider/my` was shadowed by `/provider/:providerId` (param route declared first → "my" failed UUID validation). Moved literal route above param route. (`1fca115`)
+- Notifications "mark all read" never reached 0: `read-all` marked only one fetched page; replaced with a bulk `markAllAsRead` UPDATE. (`1fca115`)
+- Quote submit 409/404: provider "Available Requests" listed already-quoted/closed requests; `searchQuoteRequests` now excludes requests the provider already quoted (NOT EXISTS) + dialog invalidates `['available-quote-requests']` on success. (`ba10d97`)
+- Message notification → home: actionUrl was `/messages/<id>` (path) but route reads `?conversationId=` query param; emit `/messages?conversationId=<id>`. (`3f3a605`)
+- MUI Grid warnings in MyQuotesPage (`<Grid xs md>` without `item`). (`3f3a605`)
+- Provider dashboard "Ganhos Totais" wrapped mid-number (`R$ 632,/00`): StatCard now `whiteSpace: nowrap` + length-tiered font. (`cfcbbd8`)
+- CLAUDE.md decluttered (removed status table that belonged in SESSION_CONTEXT). (`d68e563`) See memory [[feedback-doc-separation]].
+
+### ⚠️ Dev-DB data fixes applied this session (NOT in seed — lost on reseed)
+- Demo customer name restored to "Demo Customer" (a profile-update test had overwritten it to "UpdatedFirst UpdatedLast"). Seed already says "Demo Customer".
+- 33 existing message-notification `actionUrl`s migrated `/messages/<id>` → `/messages?conversationId=<id>`. New ones are correct from code.
+- Demo provider's notifications marked all-read during testing.
+
 ## Open loose ends (not pending phases — pick as desired)
-1. **User's manual-test backlog** (`Tests/Pending bugs and features - manual check.md`) — needs the user's review; partly stale (Send Message, Privacy/Notification settings, notification seed all since done). Likely still-open: My Bookings "Message" opens the **wrong conversation**; notification bell doesn't deep-link to the booking; Book Service **address validation/autocomplete** (new feature).
-2. **Finish backend i18n sweep** — the `t(req,key)` layer (`backend/src/i18n/`) is migrated for dispute/admin/booking/auth controllers; ~10 others (payments, messages, providers, users, locations, memory…) still emit English on the same pattern.
+1. **User's manual-test backlog** (`Tests/Pending bugs and features - manual check.md`) — needs the user's review; partly stale. **Still open**: My Bookings "Message" button opens the **wrong conversation** (the `?with=` selection, NOT the notification deep-link which is now fixed); Book Service **address validation/autocomplete** (new feature).
+2. **Finish backend i18n sweep** — the `t(req,key)` layer (`backend/src/i18n/`) is migrated for dispute/admin/booking/auth controllers; ~10 others (payments, messages, providers, users, locations, memory…) still emit English on the same pattern. (Note: quote 409/404 messages e.g. "Quote already submitted" are still English.)
 3. **Stripe money-movement verification** — escrow hold/capture/refund + dispute resolution are unreachable in dev without a real `STRIPE_SECRET_KEY` + a saved test payment method.
 4. **Goal-1 CX findings** (low priority): AI welcome placeholder says "São Paulo" (data is Florianópolis); search radius is a square bounding box under a "25km" label; `/voice/synthesize` 500s instead of silent-skip when OpenAI key absent.
 5. **`VITE_MAX_PROVIDERS_PER_QUOTE`** is a hardcoded frontend env default (5) in `AIAssistantTab.tsx` — should become a proper system/admin config.
 6. **Real-time notification push** uses 30s polling; Socket.IO push not wired.
+7. **Cosmetic**: `validateDOMNesting` warnings (nested `<p>`) on the `/notifications` page (`NotificationCenter`) — pre-existing, harmless.
 
 ## Dev setup (local, Linux)
 - Backend `:3000` — `cd backend && npm run dev`. **Stale-serving trap**: if backend edits don't take effect, `pkill -f ts-node-dev` then ONE clean `npm run dev` (run via the Bash tool's `run_in_background:true`, not `nohup &`).
