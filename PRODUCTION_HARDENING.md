@@ -30,7 +30,7 @@ The `.env` file is correctly in `.gitignore` — API keys are NOT exposed in git
 
 | # | Issue | File(s) | Fix |
 |---|-------|---------|-----|
-| 6 | SQLite instead of PostgreSQL | `backend/src/config/database.ts` | TypeORM supports both; swap `type: 'sqlite'` to `type: 'postgres'` + read `DATABASE_URL` from env. `.env` already has PostgreSQL config — it's just ignored. |
+| 6 | ✅ DONE — SQLite replaced by PostgreSQL everywhere | `backend/src/config/database.ts` | Resolved: `database.ts` always uses PostgreSQL from `DATABASE_URL`; dev runs the `tino2-app-db` Docker container. The SQLite branch and `better-sqlite3` dep were removed. |
 | 7 | `synchronize: true` in dev | `backend/src/config/database.ts:7` | Replace with TypeORM migrations (`npm run typeorm migration:generate`). Never use synchronize in production — it can wipe tables on schema changes. |
 | 8 | Health check doesn't verify DB | `backend/src/app.ts` (health route) | Add DB connectivity check (`AppDataSource.query('SELECT 1')`) and Redis ping to the `/health` response |
 

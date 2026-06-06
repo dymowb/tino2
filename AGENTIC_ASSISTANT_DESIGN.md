@@ -116,7 +116,7 @@ interface AgentActivity {
 #### 1. **IDE MCP** (Built-in to Claude Code)
 **What it does**: Executes code, reads files, queries databases
 **Use cases**:
-- Query SQLite database for providers, reviews, bookings
+- Query PostgreSQL database for providers, reviews, bookings
 - Read provider profile JSON files
 - Execute data analysis scripts
 

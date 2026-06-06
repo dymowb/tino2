@@ -462,8 +462,8 @@ Developer Machine
            │
            ▼
 ┌─────────────────────┐    ┌─────────────────┐
-│  Backend (Node.js)  │───▶│ SQLite Database │
-│  localhost:5000     │    │   (Local File)  │
+│  Backend (Node.js)  │───▶│ PostgreSQL 16   │
+│  localhost:3000     │    │  (Docker :5432) │
 └─────────────────────┘    └─────────────────┘
            │
            ▼

@@ -2,6 +2,42 @@
 
 This document contains detailed historical information moved from SESSION_CONTEXT.md to keep the main context file lean and focused on resuming work.
 
+## Goal 2: Cross-role Service Lifecycle E2E Audit (COMPLETED — 2026-06-05)
+
+Exhaustive every-state×every-transition audit of the booking/quote/dispute lifecycle across customer/provider/admin, fix-as-you-go. Method: API state-transition matrix (5 role tokens incl. outsiders) verifying DB after each transition + Playwright UI spot-checks. **8 defects fixed** (commits `3f01b0d`, `0215d6a`) + 7 follow-up improvements.
+
+**Chunk A (customer↔provider) — 6 defects:**
+- DEF-A1: `startBooking`/`confirmCompletion` called `getStripeInstance()` before owner/state checks → IDOR/wrong-state returned 500. Moved Stripe init after checks.
+- DEF-A2: generic `PUT /:id/status` let provider bypass the escrow hold. Locked validator to `confirmed|cancelled`; pruned `validateStatusTransition` so escrow transitions go only through `/start`,`/complete`,`/confirm-completion`,`/dispute`.
+- DEF-A3: accepting a quote created no booking (lifecycle dead-end). Added `createBookingFromQuote()` → confirmed booking, preserves quoted price, scheduledDate = request.preferredDate ?? now+7d.
+- DEF-A4/A5/A6: `quote/review.providerId` (Provider id) compared to `req.user.userId` (User id) → provider couldn't withdraw/edit own quote (A4), any provider could read any request incl. PII (A5), provider could never respond to a review/FR-069 (A6). All fixed by resolving provider.id from userId. See memory [[project-providerid-vs-userid]].
+- Verified correct: booking state machine, IDOR (404 for non-participants), targeted-vs-broadcast quote visibility, createReview authz, cross-role notifications.
+
+**Chunk B (admin-mediated) — 2 defects:**
+- DEF-B1: `resolveDispute` called `getStripeInstance()` at the top **outside try** → in dev (no key) the request hung forever. Moved Stripe init after validation/state checks. (Same family as A1 → memory [[project-stripe-init-before-checks]].)
+- DEF-B2: expired temporary suspension not honoured at login — middleware lazy-reactivates on `suspendedUntil`, but `authenticateUser` didn't (and `BasicUser` lacked the suspension columns, echoing the Phase-19 gap). Added columns to `BasicUser` + symmetric lazy-reactivation at login.
+- Verified correct: admin authz airtight (`requireAdminRole`), dispute validation/relations, suspend blocks token+login+search, self-suspend blocked.
+- Unreachable in dev (needs Stripe + escrow-held booking): actual capture/refund money movement + resolution status transitions.
+
+**Follow-up improvements (user-decided):** suspend-provider→auto-cancel pre-escrow bookings + notify customers; quote PII hidden from providers until they have an accepted quote; no-show as a persisted cancellation reason; **backend i18n layer** (`backend/src/i18n/`, `t(req,key)` + `X-Locale`, pt/en catalogs) migrated for dispute/admin/booking/auth controllers (rest adopt same pattern incrementally); AdminDisputesPage currency → pt-BR/BRL; quote-expiry cron (hourly) wired; middleware reactivation clears all suspension fields.
+
+## Goal 1: Find Providers E2E Audit (COMPLETED — 2026-06-04)
+
+Critical E2E of Find Providers (manual + AI paths), fix-as-you-go. **16 defects fixed.**
+- DEF-1 (security): public `/providers` leaked password hash + tokens + Stripe IDs → `select:false` on sensitive User cols, trimmed search join, sanitized controller.
+- DEF-5 (CX): `maxPrice` defaulted to 200 silently hid >R$200 providers → added Max Price slider (cap 300).
+- DEF-6: "Disponível Agora" switch sent `isVerified` → relabeled "Apenas Verificados".
+- DEF-12 (AI): requirements agent resolved relative dates to 2024 past dates → inject today's ISO date + pick next future weekday.
+- DEF-9 (AI): follow-up question rendered twice → filter active followUp out of messages.map.
+- Display/i18n cluster (currency `$`→R$, `//hora`, raw rateType, NaN rating→"Novo") across all card surfaces; AI progress labels localized via `event.stage`.
+- Follow-ups: quote **targeting** (persisted `targetProviderIds` jsonb + migration `1780601900000`; providers see broadcast + own-targeted only); PT terminology "Cotação"→"Orçamento"; "Ver Perfil" on manual cards; all 27 `*_plural` keys → v4 `_one`/`_other` (see [[project-i18n-plural-v4]]).
+
+**Key gotchas:** i18next is v4 (`_one`/`_other`, not `_plural`); manual search uses `searchProvidersGPS`→`/locations/...` (road distance) while AI uses `ProviderService.searchProviders`; ts-node-dev stale-serving when multiple procs run — `pkill -f ts-node-dev` + one clean `npm run dev`.
+
+**Open CX findings (lower priority, not addressed):** AI welcome placeholder says "São Paulo" (data is Florianópolis); radius is a square bounding box shown under a "25km" label; `/voice/synthesize` returns 500 (not silent skip) when OpenAI key absent.
+
+> Detailed notes for the intermediate completed work (Voice UI, "Casa" UI Redesign Phases 1–5, Agentic Memory Phases 1–9, PostgreSQL-everywhere migration, Production Hardening Phase 23, productionization Phases 16–22) were previously kept inline in SESSION_CONTEXT.md; they are recorded in git history and the per-phase evidence under `Tests/history/`.
+
 ## Phase 15: Dispute Resolution — Admin Panel (IN PROGRESS)
 
 ### What was built

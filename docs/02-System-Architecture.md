@@ -80,8 +80,7 @@ Testing: Jest 30.0.4 + Supertest 7.1.1
 
 ### Database Stack
 ```yaml
-Development Database: SQLite 3 (better-sqlite3 12.2.0)
-Production Database: PostgreSQL (pg 8.16.3)
+Database (all environments): PostgreSQL 16 (pg 8.16.3) — dev via Docker (tino2-app-db)
 Cache Layer: Redis 5.5.6
 Message Store: MongoDB 6.17.0 with Mongoose 8.16.1
 ```
@@ -194,7 +193,7 @@ Events: {
 
 #### Multi-Database Approach
 ```yaml
-Primary Database (PostgreSQL/SQLite):
+Primary Database (PostgreSQL):
   Purpose: Transactional data, user profiles, bookings
   Characteristics: ACID compliance, complex relationships
   
@@ -288,7 +287,7 @@ Admin Endpoints: User management, system monitoring (planned)
 
 ### Development Environment
 ```yaml
-Database: SQLite (local file-based)
+Database: PostgreSQL 16 via Docker (tino2-app-db)
 Cache: ioredis-mock (in-memory simulation)
 File Storage: Local filesystem
 Real-time: Socket.IO development mode

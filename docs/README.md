@@ -222,7 +222,7 @@ socket.on('quote-notification', handleQuoteAlert);
 ## Deployment Overview
 
 ### Development Environment
-- **Database**: SQLite (local file)
+- **Database**: PostgreSQL 16 (Docker in dev)
 - **Cache**: In-memory Redis mock
 - **File Storage**: Local filesystem
 - **Process**: nodemon + react-scripts

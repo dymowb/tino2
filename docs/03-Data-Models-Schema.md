@@ -15,7 +15,7 @@ Tino 2 implements a **multi-database architecture** optimized for different data
 
 ### Database Distribution
 ```yaml
-Primary Database (PostgreSQL/SQLite):
+Primary Database (PostgreSQL):
   - User management and authentication
   - Service provider profiles and locations
   - Booking and quote management  
@@ -292,7 +292,7 @@ interface Message {
 
 ## Database Schema
 
-### SQL Schema (PostgreSQL/SQLite)
+### SQL Schema (PostgreSQL)
 
 ```sql
 -- Users table
@@ -547,12 +547,11 @@ db.messages.createIndex({
 ### Development to Production Migration
 
 ```sql
--- Migration scripts for production deployment
+-- PostgreSQL everywhere (dev = prod engine); schema changes via TypeORM migrations
 -- 1. Schema creation
--- 2. Data type conversions (SQLite → PostgreSQL)
--- 3. Index creation
--- 4. Constraint validation
--- 5. Data integrity checks
+-- 2. Index creation
+-- 3. Constraint validation
+-- 4. Data integrity checks
 ```
 
 ### Version Control Strategy

@@ -26,8 +26,7 @@
   - Prettier - Code formatter
   - ESLint
 - **Database Tools**: 
-  - DB Browser for SQLite (development)
-  - pgAdmin (production PostgreSQL)
+  - Adminer (bundled in docker-compose, port 8080) or pgAdmin (PostgreSQL)
 - **API Testing**: Postman or Insomnia
 - **Version Control**: Git with GitHub/GitLab
 
@@ -59,7 +58,6 @@ npm install
   "socket.io": "^4.8.1", 
   "jsonwebtoken": "^9.0.2",
   "bcryptjs": "^3.0.2",
-  "better-sqlite3": "^12.2.0",
   "pg": "^8.16.3",
   "redis": "^5.5.6",
   "mongoose": "^8.16.1"
@@ -119,12 +117,8 @@ HOST=localhost
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 JWT_EXPIRE=1h
 
-# Database Configuration
-DB_TYPE=sqlite
-SQLITE_DATABASE=data/development.db
-
-# Production PostgreSQL (comment out for development)
-# DATABASE_URL=postgresql://username:password@localhost:5432/tino2_db
+# Database Configuration (PostgreSQL everywhere — dev via Docker, see docker-compose.yml)
+DATABASE_URL=postgresql://tino:tino@localhost:5432/tino_app
 # DB_HOST=localhost
 # DB_PORT=5432
 # DB_NAME=tino2_db  
@@ -193,18 +187,17 @@ GENERATE_SOURCEMAP=true
 
 ## Database Setup
 
-### Development Database (SQLite)
-The application uses SQLite for development, which requires no additional setup:
+### Development Database (PostgreSQL via Docker)
+The application uses PostgreSQL in all environments. For local dev, start the bundled container:
 
 ```bash
+docker compose up -d postgres-app   # container: tino2-app-db, port 5432
 cd backend
-npm run dev  # Will automatically create SQLite database
+npm run dev
 ```
 
-**Database Location:**
-```
-backend/data/development.db
-```
+**Connection (default dev):** `postgresql://tino:tino@localhost:5432/tino_app`
+Inspect with: `docker exec tino2-app-db psql -U tino -d tino_app`
 
 ### Database Schema Creation
 The database schema is created automatically when the application starts. For manual schema setup:
@@ -306,7 +299,7 @@ npm run dev
 
 [nodemon] starting `node src/server.js`
 Server running on http://localhost:5000
-Database connected: SQLite development.db
+Database connected: PostgreSQL tino_app
 Socket.IO server initialized
 ```
 
