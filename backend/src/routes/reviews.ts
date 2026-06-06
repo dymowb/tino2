@@ -139,6 +139,17 @@ const providerIdValidation = [
     .withMessage('Provider ID must be a valid UUID'),
 ];
 
+// NOTE: the literal `/provider/my` MUST be registered before `/provider/:providerId`,
+// otherwise Express matches the param route first and "my" fails UUID validation (→ 400).
+// It carries its own `authenticate` since it sits above the global `router.use(authenticate)`.
+router.get(
+  '/provider/my',
+  authenticate,
+  reviewSearchValidation,
+  handleValidationErrors,
+  reviewController.getMyProviderReviews
+);
+
 // Public routes (no authentication required)
 router.get(
   '/provider/:providerId',
@@ -214,14 +225,6 @@ router.post(
   uuidParamValidation,
   handleValidationErrors,
   reviewController.draftReviewResponse
-);
-
-router.get(
-  '/provider/my',
-  authenticate,
-  reviewSearchValidation,
-  handleValidationErrors,
-  reviewController.getMyProviderReviews
 );
 
 // General authenticated routes

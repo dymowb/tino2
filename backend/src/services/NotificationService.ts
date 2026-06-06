@@ -142,6 +142,20 @@ export class NotificationService {
       .execute();
   }
 
+  /**
+   * Mark every unread notification for a user as read in a single UPDATE. Must NOT
+   * be implemented as fetch-page-then-mark-by-id — that only clears one page and
+   * leaves anything past the page limit stuck unread (the count never reaches zero).
+   */
+  async markAllAsRead(userId: string): Promise<void> {
+    await this.notificationRepository
+      .createQueryBuilder()
+      .update(Notification)
+      .set({ isRead: true, readAt: new Date() })
+      .where('userId = :userId AND isRead = false', { userId })
+      .execute();
+  }
+
   async deleteNotifications(userId: string, notificationIds: string[]): Promise<void> {
     await this.notificationRepository
       .createQueryBuilder()
