@@ -413,7 +413,9 @@ export class MessageService {
           type: NotificationType.MESSAGE,
           title: 'New Message',
           message: messageData.message.substring(0, 100),
-          actionUrl: `/messages/${messageData.conversationId}`,
+          // MessagingPage selects the conversation from the ?conversationId query param;
+          // a path like /messages/<id> matches no route and falls through to home.
+          actionUrl: `/messages?conversationId=${messageData.conversationId}`,
           metadata: { conversationId: messageData.conversationId },
         }).catch(err => logger.error('Failed to send message notification:', err));
       }

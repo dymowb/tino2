@@ -245,7 +245,7 @@ const MyQuotesPage: React.FC = () => {
             ) : (
               <Grid container spacing={3}>
                 {quoteRequests?.data?.map((request) => (
-                  <Grid xs={12} md={6} key={request.id}>
+                  <Grid item xs={12} md={6} key={request.id}>
                     <Card>
                       <CardContent>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -348,7 +348,7 @@ const MyQuotesPage: React.FC = () => {
             ) : (
               <Grid container spacing={3}>
                 {quotes?.data?.map((quote) => (
-                  <Grid xs={12} md={6} key={quote.id}>
+                  <Grid item xs={12} md={6} key={quote.id}>
                     <Card>
                       <CardContent>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -451,7 +451,7 @@ const MyQuotesPage: React.FC = () => {
             ) : (
               <Grid container spacing={3}>
                 {availableRequests?.data?.map((request) => (
-                  <Grid xs={12} md={6} key={request.id}>
+                  <Grid item xs={12} md={6} key={request.id}>
                     <Card>
                       <CardContent>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -517,7 +517,7 @@ const MyQuotesPage: React.FC = () => {
             ) : (
               <Grid container spacing={3}>
                 {quotes?.data?.map((quote) => (
-                  <Grid xs={12} md={6} key={quote.id}>
+                  <Grid item xs={12} md={6} key={quote.id}>
                     <Card>
                       <CardContent>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -612,7 +612,7 @@ const MyQuotesPage: React.FC = () => {
         <DialogContent>
           <Grid container spacing={2}>
             {quotesToCompare.map((quote) => (
-              <Grid xs={12} md={4} key={quote.id}>
+              <Grid item xs={12} md={4} key={quote.id}>
                 <Card variant="outlined">
                   <CardContent>
                     <Typography variant="h6" sx={{ mb: 2 }}>
