@@ -132,6 +132,9 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
     onSuccess: (newQuote: Quote) => {
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
       queryClient.invalidateQueries({ queryKey: ['quote-requests'] });
+      // Drop the just-quoted request off the provider's "Available Requests" list so
+      // the Submit button can't be clicked again (which would 409 "already submitted").
+      queryClient.invalidateQueries({ queryKey: ['available-quote-requests'] });
       toast.success(t('submission.success'));
       onClose();
       resetForm();

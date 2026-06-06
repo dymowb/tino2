@@ -258,13 +258,25 @@ export class QuoteService {
       }
 
       // Provider visibility: a provider browsing available requests sees broadcast
-      // requests (no targets) plus any request explicitly targeted at them.
+      // requests (no targets) plus any request explicitly targeted at them...
       if (forProviderId) {
         queryBuilder = queryBuilder.andWhere(
           `("quoteRequest"."targetProviderIds" IS NULL
             OR jsonb_array_length("quoteRequest"."targetProviderIds") = 0
             OR "quoteRequest"."targetProviderIds" @> :forProviderTarget)`,
           { forProviderTarget: JSON.stringify([forProviderId]) }
+        );
+        // ...and NOT requests they've already quoted — those live in the provider's
+        // "My Quotes" tab, and re-submitting one returns 409. Keeping them out of the
+        // "available" list is what makes that tab actionable (avoids the 409/404 the
+        // provider hit when the button was shown for already-quoted/closed requests).
+        queryBuilder = queryBuilder.andWhere(
+          `NOT EXISTS (
+             SELECT 1 FROM quotes q2
+             WHERE q2."requestId" = "quoteRequest"."id"
+               AND q2."providerId" = :forProviderExclude
+           )`,
+          { forProviderExclude: forProviderId }
         );
       }
 
