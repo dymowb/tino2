@@ -162,30 +162,11 @@ The application includes Browserbase MCP integration for automated browser testi
 }
 ```
 
-## Known Issues & Fixes (SOP)
+## Known Issues (active)
 
-### Frontend TypeScript Compilation Errors (react-i18next)
-**Status**: ✅ RESOLVED (2026-05-28) — migrated from CRA to Vite, TypeScript upgraded to 5.x.
-`react-i18next.d.ts` workaround has been deleted. `useTranslation('namespace')` and `t('key', fallback)` now type-check correctly with TS5 const type parameters.
+- **`profile.fields.customer`** translation key missing — cosmetic only; shows the raw key in the nav bar after login.
 
-### Missing translation key: `profile.fields.customer`
-**Status**: Known, cosmetic only. Shows raw key in the nav bar after login.
-
-## Feature Status — Residual Caveats
-
-The features once listed here as "intentional gaps" were all subsequently implemented (productionization Phases 8–22; see `SESSION_CONTEXT.md` roadmap table). What remains are **operational caveats**, not missing features — mostly things that need a real API key/credential to exercise:
-
-| Feature | FRs | Built? | Residual caveat |
-|---------|-----|--------|-----------------|
-| Notifications system | FR-010, FR-034, FR-043 | ✅ (Phase 9) | Real-time push not wired — frontend polls every 30s (no Socket.IO push). |
-| Real-time messaging (Socket.IO JWT) | FR-053 | ✅ (Phase 8) | — |
-| Provider availability calendar | FR-019 | ✅ (Phase 11) | — |
-| Email verification on register | FR-002 | ✅ (Phase 16) | Dev uses Ethereal (fake SMTP); preview URL logged at register. |
-| Provider responses to reviews | FR-069 | ✅ (Phase 12) | — |
-| Admin panel | FR-074–081 | ✅ (Phase 13) | — |
-| Stripe / escrow / refunds | FR-057–063 | ✅ (Phase 14) | Needs real `STRIPE_SECRET_KEY` + a saved payment method; escrow hold/capture/refund are **unreachable in dev** without them. |
-| GPS geocoding | FR-022 | ✅ (Phase 17) | Needs Google Maps API key; falls back to city/state text matching when absent. |
-| Message file attachments | FR-050 | ✅ (Phase 18) | — |
+> Feature/phase status and operational caveats (e.g. Stripe/geocoding need real keys; notifications poll) live in `SESSION_CONTEXT.md` — not duplicated here.
 
 ## Testing
 
