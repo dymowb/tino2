@@ -171,8 +171,8 @@ const AIAssistantTab: React.FC<AIAssistantTabProps> = ({ onComplete, onReset }) 
   };
 
   // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!input.trim()) return;
 
     if (!workflow) {
@@ -222,6 +222,14 @@ const AIAssistantTab: React.FC<AIAssistantTabProps> = ({ onComplete, onReset }) 
           rows={3}
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            // Multiline field: Enter submits, Shift+Enter inserts a newline
+            // (matches the single-line follow-up input's Enter-to-send).
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSubmit();
+            }
+          }}
           placeholder={t('welcome.placeholder')}
           disabled={isStarting}
           sx={{ mb: 2 }}
