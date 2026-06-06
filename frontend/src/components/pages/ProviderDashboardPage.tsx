@@ -107,12 +107,20 @@ const StatCard: React.FC<{
         </Typography>
         <Typography sx={{
           fontFamily: tokens.font.display,
-          fontSize: String(value).length > 10 ? '1.375rem' : '2rem',
+          // Scale the number down by length so currency (e.g. "R$ 12.345,67") fits the
+          // narrow 6-across card on one line. Never break mid-number (no wordBreak).
+          fontSize: (() => {
+            const len = String(value).length;
+            if (len <= 6) return '2rem';
+            if (len <= 9) return '1.5rem';
+            if (len <= 12) return '1.2rem';
+            return '1rem';
+          })(),
           fontWeight: 500,
           color: accent,
           lineHeight: 1,
           mb: subtitle ? 0.75 : 0,
-          wordBreak: 'break-all',
+          whiteSpace: 'nowrap',
         }}>
           {value}
         </Typography>
