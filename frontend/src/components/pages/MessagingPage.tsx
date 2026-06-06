@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Box,
@@ -109,6 +109,22 @@ const MessagingPage: React.FC = () => {
     }
   }, [conversationsData, withUserId, directConversationId, bookingId, selectedConversation]);
 
+  // When a conversation is selected (notably via a deep link, e.g. the "Message"
+  // button on My Bookings), scroll its row into view in the left list. Without
+  // this the row is highlighted but may sit far below the fold, so it looks
+  // unselected. Guarded by a ref so we only scroll once per selection — not on
+  // every list refetch/new-message render.
+  const scrolledForRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!selectedConversation) return;
+    if (scrolledForRef.current === selectedConversation) return;
+    const el = document.querySelector(`[data-conv-id="${selectedConversation}"]`);
+    if (el) {
+      el.scrollIntoView({ block: 'nearest' });
+      scrolledForRef.current = selectedConversation;
+    }
+  }, [selectedConversation, conversations]);
+
   // Live updates: refetch the list whenever a message arrives or a conversation changes.
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -184,6 +200,7 @@ const MessagingPage: React.FC = () => {
         transition={{ duration: 0.25, delay: Math.min(index * 0.025, 0.3), ease: [0.16, 1, 0.3, 1] }}
       >
         <Box
+          data-conv-id={c.id}
           onClick={() => setSelectedConversation(c.id)}
           sx={{
             display: 'flex', alignItems: 'center', gap: 1.5,
