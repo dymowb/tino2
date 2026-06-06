@@ -18,6 +18,9 @@
   "select_conversation": "Selecione uma conversa para começar a enviar mensagens",
   "select_conversation_desc": "Escolha uma conversa da lista para ver e enviar mensagens",
   "conversation": {
+    "messaging_closed_completed": "Esta reserva foi concluída — as mensagens estão encerradas.",
+    "messaging_closed_cancelled": "Esta reserva foi cancelada — as mensagens estão encerradas.",
+    "messaging_closed_toast": "As mensagens estão encerradas para esta reserva.",
     "type_message": "Digite uma mensagem...",
     "edit_message_placeholder": "Editar mensagem...",
     "send": "Enviar",

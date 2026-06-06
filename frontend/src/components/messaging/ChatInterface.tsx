@@ -111,7 +111,14 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate, 
       queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
       onConversationUpdate?.();
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      // Booking finalized while the chat was open — refresh so the composer
+      // switches to the closed notice, and explain why.
+      if (error?.response?.status === 403 && error?.response?.data?.message === 'MESSAGING_CLOSED') {
+        toast.error(t('conversation.messaging_closed_toast'));
+        queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
+        return;
+      }
       toast.error(t('errors.send_failed'));
       console.error('Send message error:', error);
     },
@@ -249,6 +256,12 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate, 
   const canEditOrDelete = (m: Message) => m.senderId === currentUser?.id;
 
   const borderCol = isDark ? tokens.color.nightBorder : tokens.color.paperDark;
+
+  // Messaging closes once the linked booking is finalized (completed/cancelled).
+  const messagingClosed = conversationData?.messagingClosed === true;
+  const closedNotice = conversationData?.bookingStatus === 'completed'
+    ? t('conversation.messaging_closed_completed')
+    : t('conversation.messaging_closed_cancelled');
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: isDark ? tokens.color.night : tokens.color.cream }}>
@@ -444,6 +457,12 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate, 
 
       {/* Composer */}
       <Box sx={{ px: 2, py: 1.5, borderTop: `1px solid ${borderCol}`, bgcolor: isDark ? tokens.color.nightCard : tokens.color.paper }}>
+        {messagingClosed ? (
+          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 1.5 }}>
+            {closedNotice}
+          </Typography>
+        ) : (
+        <>
         {pendingAttachments.length > 0 && (
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
             {pendingAttachments.map((att, idx) => {
@@ -508,6 +527,8 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate, 
               {t('conversation.cancel_edit')}
             </Typography>
           </Box>
+        )}
+        </>
         )}
       </Box>
 

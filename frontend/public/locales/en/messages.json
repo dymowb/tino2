@@ -18,6 +18,9 @@
   "select_conversation": "Select a conversation to start messaging",
   "select_conversation_desc": "Choose a conversation from the list to view and send messages",
   "conversation": {
+    "messaging_closed_completed": "This booking is complete — messaging is closed.",
+    "messaging_closed_cancelled": "This booking was cancelled — messaging is closed.",
+    "messaging_closed_toast": "Messaging is closed for this booking.",
     "type_message": "Type a message...",
     "edit_message_placeholder": "Edit message...",
     "send": "Send",

@@ -603,27 +603,30 @@ const MyBookingsPage: React.FC = () => {
 
                     <Box sx={{ flex: 1 }} />
 
-                    <Button
-                      variant="text"
-                      size="small"
-                      startIcon={<Chat fontSize="small" />}
-                      onClick={async () => {
-                        const providerUserId = booking.provider?.userId;
-                        if (!providerUserId) { navigate('/messages'); return; }
-                        try {
-                          const conv = await apiService.createConversation({
-                            participantIds: [providerUserId],
-                            metadata: { bookingId: booking.id, serviceType: booking.serviceType },
-                          });
-                          navigate(`/messages?conversationId=${conv.id}`);
-                        } catch {
-                          navigate(`/messages?with=${providerUserId}`);
-                        }
-                      }}
-                      sx={{ color: 'text.secondary', borderRadius: tokens.radius.full }}
-                    >
-                      {t('bookings:actions.message')}
-                    </Button>
+                    {/* Messaging closes once the booking is finalized (completed/cancelled). */}
+                    {!['completed', 'cancelled'].includes(booking.status) && (
+                      <Button
+                        variant="text"
+                        size="small"
+                        startIcon={<Chat fontSize="small" />}
+                        onClick={async () => {
+                          const providerUserId = booking.provider?.userId;
+                          if (!providerUserId) { navigate('/messages'); return; }
+                          try {
+                            const conv = await apiService.createConversation({
+                              participantIds: [providerUserId],
+                              metadata: { bookingId: booking.id, serviceType: booking.serviceType },
+                            });
+                            navigate(`/messages?conversationId=${conv.id}`);
+                          } catch {
+                            navigate(`/messages?with=${providerUserId}`);
+                          }
+                        }}
+                        sx={{ color: 'text.secondary', borderRadius: tokens.radius.full }}
+                      >
+                        {t('bookings:actions.message')}
+                      </Button>
+                    )}
                   </Box>
                 </Box>
               </motion.div>

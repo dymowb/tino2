@@ -14,6 +14,9 @@
   "select_conversation": "Selecciona una conversación para empezar a enviar mensajes",
   "select_conversation_desc": "Elige una conversación de la lista para ver y enviar mensajes",
   "conversation": {
+    "messaging_closed_completed": "Esta reserva está completada — la mensajería está cerrada.",
+    "messaging_closed_cancelled": "Esta reserva fue cancelada — la mensajería está cerrada.",
+    "messaging_closed_toast": "La mensajería está cerrada para esta reserva.",
     "type_message": "Escribe un mensaje...",
     "send": "Enviar",
     "attach_file": "Adjuntar Archivo",

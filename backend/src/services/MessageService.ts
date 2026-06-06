@@ -4,7 +4,7 @@ import { AppDataSource } from '@/config/database';
 import { Message, MessageType } from '@/models/Message';
 import { Conversation, ConversationType } from '@/models/Conversation';
 import { User } from '@/models/User';
-import { Booking } from '@/models/Booking';
+import { Booking, BookingStatus } from '@/models/Booking';
 import logger from '@/config/logger';
 import notificationService from '@/services/NotificationService';
 import { NotificationType } from '@/models/Notification';
@@ -193,6 +193,26 @@ export class MessageService {
     };
   }
 
+  /**
+   * Messaging is closed once the linked booking reaches a final state
+   * (completed or cancelled). Direct (non-booking) conversations are never
+   * closed. Returns the booking status so the UI can explain why.
+   */
+  private async getBookingMessagingState(
+    metadata: any
+  ): Promise<{ bookingStatus?: string; messagingClosed: boolean }> {
+    const bookingId = metadata?.bookingId;
+    if (!bookingId) return { messagingClosed: false };
+    const booking = await AppDataSource.getRepository(Booking).findOne({
+      where: { id: bookingId },
+      select: ['id', 'status'],
+    });
+    const bookingStatus = booking?.status;
+    const messagingClosed =
+      bookingStatus === BookingStatus.COMPLETED || bookingStatus === BookingStatus.CANCELLED;
+    return { bookingStatus, messagingClosed };
+  }
+
   async isConversationParticipant(conversationId: string, userId: string): Promise<boolean> {
     const conv = await this.conversationRepository
       .createQueryBuilder('conversation')
@@ -218,10 +238,16 @@ export class MessageService {
 
       if (!conversation) return null;
 
+      // Surface whether messaging is closed (booking finalized) so the chat UI
+      // can disable the composer and explain why.
+      const { bookingStatus, messagingClosed } = await this.getBookingMessagingState(conversation.metadata);
+
       return {
         ...conversation,
         participants: (conversation.participants || []).map(toPublicUser),
         messages: (conversation.messages || []).map(toPublicMessage),
+        bookingStatus,
+        messagingClosed,
       };
     } catch (error) {
       logger.error('Error fetching conversation:', error);
@@ -388,6 +414,12 @@ export class MessageService {
       });
       if (!conversation) {
         throw new Error('Conversation not found');
+      }
+
+      // Block sending once the linked booking is finalized (completed/cancelled).
+      const { messagingClosed } = await this.getBookingMessagingState(conversation.metadata);
+      if (messagingClosed) {
+        throw new Error('MESSAGING_CLOSED');
       }
 
       // Find the receiver (for direct conversations; undefined for group/support chats)

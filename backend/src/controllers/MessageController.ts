@@ -160,6 +160,17 @@ export class MessageController {
         message: 'Message sent successfully'
       });
     } catch (error) {
+      // Messaging is closed once the booking is finalized — distinct, expected
+      // case (not a server fault), so return 403 with a stable code the client
+      // can localize.
+      if (error instanceof Error && error.message === 'MESSAGING_CLOSED') {
+        res.status(403).json({
+          success: false,
+          message: 'MESSAGING_CLOSED',
+          error: 'Messaging is closed for this booking',
+        });
+        return;
+      }
       logger.error('Error sending message:', error);
       res.status(500).json({
         success: false,
