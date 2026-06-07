@@ -114,11 +114,13 @@ export class NotificationService {
     type?: NotificationType;
     page?: number;
     limit?: number;
+    unreadOnly?: boolean;
   }): Promise<{ notifications: Notification[]; total: number }> {
     const page = filters.page ?? 1;
     const limit = filters.limit ?? 20;
     const where: any = { userId };
     if (filters.type) where.type = filters.type;
+    if (filters.unreadOnly) where.isRead = false;
 
     const [notifications, total] = await this.notificationRepository.findAndCount({
       where,
@@ -171,17 +173,40 @@ export class NotificationService {
   async getUserPreferences(userId: string): Promise<NotificationPreferences> {
     try {
       const user = await this.userRepository.findOne({ where: { id: userId } });
-      
-      if (!user || !user.settings?.notifications) {
-        // Return default preferences
-        return this.getDefaultPreferences();
-      }
-
-      return user.settings.notifications as unknown as NotificationPreferences;
+      return this.normalizePreferences(user?.settings?.notifications);
     } catch (error) {
       logger.error('Failed to get user preferences:', error);
       return this.getDefaultPreferences();
     }
+  }
+
+  /**
+   * Coerce any stored notification-settings blob into the canonical granular
+   * shape the app expects ({ email: { bookings, … }, sms: {…}, push: {…} }).
+   *
+   * Legacy/older rows stored a flat master toggle per channel
+   * (`{ email: true, sms: true, push: true }`); reading that back verbatim made
+   * `preferences.email.bookings` undefined, which silently disabled real
+   * email/SMS delivery AND rendered an empty preferences UI. We expand a boolean
+   * channel to all-categories=that value and merge object channels over the
+   * defaults so every category key is always present.
+   */
+  private normalizePreferences(stored: any): NotificationPreferences {
+    const defaults = this.getDefaultPreferences();
+    const out: any = {};
+    for (const channel of Object.keys(defaults) as (keyof NotificationPreferences)[]) {
+      const value = stored?.[channel];
+      if (value && typeof value === 'object') {
+        out[channel] = { ...defaults[channel], ...value };
+      } else if (typeof value === 'boolean') {
+        out[channel] = Object.fromEntries(
+          Object.keys(defaults[channel]).map((k) => [k, value])
+        );
+      } else {
+        out[channel] = { ...defaults[channel] };
+      }
+    }
+    return out as NotificationPreferences;
   }
 
   /**
@@ -198,14 +223,17 @@ export class NotificationService {
       }
 
       const currentSettings = (user.settings || {}) as any;
-      const updatedSettings = {
-        ...currentSettings,
-        notifications: {
-          ...this.getDefaultPreferences(),
-          ...currentSettings.notifications,
-          ...preferences,
-        },
-      };
+      // Normalize the existing (possibly legacy) prefs first, then apply the
+      // incoming partial per-channel so a single toggle never collapses a
+      // channel back to a bare boolean or drops sibling categories.
+      const current = this.normalizePreferences(currentSettings.notifications);
+      const merged: any = { ...current };
+      for (const channel of ['email', 'sms', 'push'] as const) {
+        if (preferences[channel]) {
+          merged[channel] = { ...current[channel], ...preferences[channel] };
+        }
+      }
+      const updatedSettings = { ...currentSettings, notifications: merged };
 
       await this.userRepository.update(userId, { settings: updatedSettings });
       logger.info(`Updated notification preferences for user ${userId}`);

@@ -8,6 +8,9 @@
   "mark_as_unread": "Marcar como No Leída",
   "delete": "Eliminar",
   "delete_all": "Eliminar Todas",
+  "deleted": "Notificaciones eliminadas",
+  "delete_failed": "Error al eliminar notificaciones",
+  "refresh": "Actualizar",
   "no_notifications": "No hay notificaciones",
   "empty_message": "¡Estás al día!",
   "types": {
@@ -52,7 +55,17 @@
   },
   "preferences": {
     "title": "Preferencias de Notificaciones",
-    "description": "Elige cómo quieres ser notificado",
+    "description": "Elige qué notificaciones recibes en cada canal. Los cambios se guardan automáticamente.",
+    "categories": {
+      "bookings": "Reservas",
+      "quotes": "Cotizaciones",
+      "payments": "Pagos",
+      "reviews": "Reseñas",
+      "messages": "Mensajes",
+      "marketing": "Marketing y promociones",
+      "reminders": "Recordatorios",
+      "general": "General"
+    },
     "description_detailed": "Las preferencias de notificaciones se gestionan a través de la configuración del centro de notificaciones. Haz clic en cualquier notificación para acceder a los controles de preferencias, o utiliza el botón de configuración en el encabezado del centro de notificaciones.",
     "tip_label": "Consejo:",
     "tip_message": "Puedes personalizar las preferencias de notificaciones por correo electrónico, SMS y push para diferentes tipos de notificaciones, incluyendo reservas, pagos, reseñas y mensajes.",

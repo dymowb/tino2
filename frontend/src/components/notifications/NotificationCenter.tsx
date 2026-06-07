@@ -18,12 +18,6 @@ import {
   Chip,
   Avatar,
   Alert,
-  Switch,
-  FormControlLabel,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Tabs,
   Tab,
   Paper,
@@ -44,7 +38,6 @@ import {
   Star,
   Message,
   Person,
-  Settings,
   Clear,
   MarkEmailRead,
   Delete,
@@ -75,38 +68,6 @@ interface Notification {
   expiresAt?: string;
 }
 
-interface NotificationPreferences {
-  email: {
-    bookings: boolean;
-    payments: boolean;
-    reviews: boolean;
-    messages: boolean;
-    promotions: boolean;
-    system: boolean;
-  };
-  sms: {
-    bookings: boolean;
-    payments: boolean;
-    reviews: boolean;
-    messages: boolean;
-    system: boolean;
-  };
-  push: {
-    bookings: boolean;
-    payments: boolean;
-    reviews: boolean;
-    messages: boolean;
-    promotions: boolean;
-    system: boolean;
-  };
-  frequency: 'immediate' | 'hourly' | 'daily' | 'weekly';
-  quietHours: {
-    enabled: boolean;
-    start: string;
-    end: string;
-  };
-}
-
 interface NotificationCenterProps {
   anchorEl?: HTMLElement | null;
   open?: boolean;
@@ -127,27 +88,31 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
   const queryClient = useQueryClient();
 
   const [selectedTab, setSelectedTab] = useState(0);
-  const [filterType, setFilterType] = useState<string>('all');
-  const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [selectedNotifications, setSelectedNotifications] = useState<string[]>([]);
 
-  // Fetch notifications
+  // Filter tabs → query filter. Order must match the <Tab> order below.
+  // Types use the singular NotificationType enum values (booking, payment, …).
+  const TAB_FILTERS: { type?: string; unreadOnly?: boolean }[] = [
+    {},                     // All
+    { unreadOnly: true },   // Unread
+    { type: 'booking' },    // Bookings
+    { type: 'payment' },    // Payments
+    { type: 'review' },     // Reviews
+    { type: 'message' },    // Messages
+  ];
+  const activeFilter = TAB_FILTERS[selectedTab] ?? {};
+
+  // Fetch notifications for the active filter
   const { data: notifications, isLoading, error, refetch } = useQuery({
-    queryKey: ['notifications', filterType],
+    queryKey: ['notifications', activeFilter.type ?? 'all', activeFilter.unreadOnly ?? false],
     queryFn: () => apiService.getUserNotifications({
-      type: filterType !== 'all' ? filterType : undefined,
+      type: activeFilter.type,
+      unreadOnly: activeFilter.unreadOnly,
       page: 1,
       limit: 50
     }),
     enabled: !!user,
     refetchInterval: 30000 // Refetch every 30 seconds
-  });
-
-  // Fetch notification preferences
-  const { data: preferences } = useQuery({
-    queryKey: ['notification-preferences'],
-    queryFn: () => apiService.getNotificationPreferences(),
-    enabled: !!user
   });
 
   // Mark notifications as read mutation
@@ -170,24 +135,11 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
       apiService.deleteNotifications(notificationIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      toast.success('Notifications deleted');
+      toast.success(t('deleted'));
       setSelectedNotifications([]);
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || 'Failed to delete notifications');
-    },
-  });
-
-  // Update preferences mutation
-  const updatePreferencesMutation = useMutation({
-    mutationFn: (prefs: Partial<NotificationPreferences>) =>
-      apiService.updateNotificationPreferences(prefs),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
-      toast.success(t('preferences.success'));
-    },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.error || 'Failed to update preferences');
+      toast.error(error?.response?.data?.error || t('delete_failed'));
     },
   });
 
@@ -361,103 +313,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
     );
   };
 
-  const renderPreferencesDialog = () => (
-    <Dialog
-      open={preferencesOpen}
-      onClose={() => setPreferencesOpen(false)}
-      maxWidth="md"
-      fullWidth
-      fullScreen={isMobile}
-    >
-      <DialogTitle>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Settings />
-          Notification Preferences
-        </Box>
-      </DialogTitle>
-      <DialogContent>
-        {preferences && (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Email Notifications
-            </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 3 }}>
-              {Object.entries(preferences.email).map(([key, value]) => (
-                <FormControlLabel
-                  key={key}
-                  control={
-                    <Switch
-                      checked={value as boolean}
-                      onChange={(e) => {
-                        const newPrefs = {
-                          ...preferences,
-                          email: { ...preferences.email, [key]: e.target.checked }
-                        };
-                        updatePreferencesMutation.mutate(newPrefs);
-                      }}
-                    />
-                  }
-                  label={key.charAt(0).toUpperCase() + key.slice(1)}
-                />
-              ))}
-            </Box>
-
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              SMS Notifications
-            </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 3 }}>
-              {Object.entries(preferences.sms).map(([key, value]) => (
-                <FormControlLabel
-                  key={key}
-                  control={
-                    <Switch
-                      checked={value as boolean}
-                      onChange={(e) => {
-                        const newPrefs = {
-                          ...preferences,
-                          sms: { ...preferences.sms, [key]: e.target.checked }
-                        };
-                        updatePreferencesMutation.mutate(newPrefs);
-                      }}
-                    />
-                  }
-                  label={key.charAt(0).toUpperCase() + key.slice(1)}
-                />
-              ))}
-            </Box>
-
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Push Notifications
-            </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {Object.entries(preferences.push).map(([key, value]) => (
-                <FormControlLabel
-                  key={key}
-                  control={
-                    <Switch
-                      checked={value as boolean}
-                      onChange={(e) => {
-                        const newPrefs = {
-                          ...preferences,
-                          push: { ...preferences.push, [key]: e.target.checked }
-                        };
-                        updatePreferencesMutation.mutate(newPrefs);
-                      }}
-                    />
-                  }
-                  label={key.charAt(0).toUpperCase() + key.slice(1)}
-                />
-              ))}
-            </Box>
-          </Box>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={() => setPreferencesOpen(false)}>Close</Button>
-      </DialogActions>
-    </Dialog>
-  );
-
   if (compact && anchorEl) {
     return (
       <Menu
@@ -467,7 +322,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
         PaperProps={{ sx: { width: 400, maxHeight: 500 } }}
       >
         <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="h6">Notifications</Typography>
+          <Typography variant="h6">{t('title')}</Typography>
         </Box>
         {renderNotificationsList()}
       </Menu>
@@ -479,14 +334,11 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
       <Paper sx={{ mb: 3 }}>
         <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="h5" fontWeight="bold">
-            Notifications
+            {t('title')}
           </Typography>
           <Box sx={{ display: 'flex', gap: 1 }}>
-            <IconButton onClick={() => refetch()} disabled={isLoading}>
+            <IconButton onClick={() => refetch()} disabled={isLoading} title={t('refresh')}>
               <Refresh />
-            </IconButton>
-            <IconButton onClick={() => setPreferencesOpen(true)}>
-              <Settings />
             </IconButton>
           </Box>
         </Box>
@@ -544,8 +396,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
       <Paper>
         {renderNotificationsList()}
       </Paper>
-
-      {renderPreferencesDialog()}
     </Box>
   );
 };

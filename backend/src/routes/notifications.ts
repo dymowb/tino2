@@ -20,11 +20,12 @@ router.get('/unread/count', authenticate, async (req, res) => {
 // GET /api/v1/notifications?type=&page=&limit=
 router.get('/', authenticate, async (req, res) => {
   try {
-    const { type, page, limit } = req.query;
+    const { type, page, limit, unreadOnly } = req.query;
     const result = await notificationService.getUserNotifications(req.user.id, {
       type: type as NotificationType | undefined,
       page: page ? Number(page) : undefined,
       limit: limit ? Number(limit) : undefined,
+      unreadOnly: unreadOnly === 'true',
     });
     res.json({
       success: true,

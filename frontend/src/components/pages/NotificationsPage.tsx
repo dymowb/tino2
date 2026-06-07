@@ -7,16 +7,28 @@ import {
   Tab,
   Tabs,
   Paper,
+  Stack,
+  Divider,
+  Switch,
+  FormGroup,
+  FormControlLabel,
+  CircularProgress,
   useTheme,
   useMediaQuery
 } from '@mui/material';
 import {
   Notifications,
+  NotificationsActive,
   Settings,
-  History
+  History,
+  Email,
+  Sms
 } from '@mui/icons-material';
 import { useSearchParams } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
+import { apiService } from '../../services/api';
 import NotificationCenter from '../notifications/NotificationCenter';
 import LoadingSpinner from '../common/LoadingSpinner';
 
@@ -152,23 +164,99 @@ const NotificationsPage: React.FC = () => {
   );
 };
 
-// Notification Preferences Panel Component
+// Notification Preferences Panel — per-channel (email/SMS/push) toggles for each
+// notification category. This is the single home for preferences; the controls
+// are rendered dynamically from whatever categories the API returns per channel.
+const CHANNELS: { key: 'email' | 'sms' | 'push'; icon: React.ReactNode }[] = [
+  { key: 'email', icon: <Email fontSize="small" /> },
+  { key: 'sms', icon: <Sms fontSize="small" /> },
+  { key: 'push', icon: <NotificationsActive fontSize="small" /> },
+];
+
 const NotificationPreferencesPanel: React.FC = () => {
   const { t } = useTranslation('notifications');
+  const queryClient = useQueryClient();
+  const PREFS_KEY = ['notification-preferences'];
+
+  const { data: prefs, isLoading } = useQuery({
+    queryKey: PREFS_KEY,
+    queryFn: () => apiService.getNotificationPreferences(),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (next: any) => apiService.updateNotificationPreferences(next),
+    // Optimistic toggle so the switch responds instantly; roll back on error.
+    onMutate: async (next: any) => {
+      await queryClient.cancelQueries({ queryKey: PREFS_KEY });
+      const prev = queryClient.getQueryData(PREFS_KEY);
+      queryClient.setQueryData(PREFS_KEY, next);
+      return { prev };
+    },
+    onError: (_e, _next, ctx: any) => {
+      if (ctx?.prev) queryClient.setQueryData(PREFS_KEY, ctx.prev);
+      toast.error(t('preferences.error'));
+    },
+    onSuccess: () => toast.success(t('preferences.success')),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: PREFS_KEY }),
+  });
+
+  const toggle = (channel: string, category: string, value: boolean) => {
+    if (!prefs) return;
+    updateMutation.mutate({ ...prefs, [channel]: { ...prefs[channel], [category]: value } });
+  };
+
+  // Localized category label, falling back to a humanized key for any
+  // category the catalog doesn't cover yet.
+  const categoryLabel = (key: string) =>
+    t(`preferences.categories.${key}`, key.charAt(0).toUpperCase() + key.slice(1));
+
+  if (isLoading || !prefs) {
+    return (
+      <Paper sx={{ p: 3, display: 'flex', justifyContent: 'center' }}>
+        <CircularProgress size={28} />
+      </Paper>
+    );
+  }
 
   return (
-    <Paper sx={{ p: 3 }}>
-      <Typography variant="h6" sx={{ mb: 3 }}>
+    <Paper sx={{ p: { xs: 2, md: 3 } }}>
+      <Typography variant="h6" sx={{ mb: 0.5 }}>
         {t('preferences.title')}
       </Typography>
-      <Typography variant="body1" color="text.secondary">
-        {t('preferences.description_detailed')}
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        {t('preferences.description')}
       </Typography>
-      <Box sx={{ mt: 3, p: 2, bgcolor: 'info.50', borderRadius: 1, border: 1, borderColor: 'info.200' }}>
-        <Typography variant="body2" color="info.main">
-          <strong>{t('preferences.tip_label')}</strong> {t('preferences.tip_message')}
-        </Typography>
-      </Box>
+
+      <Stack spacing={3}>
+        {CHANNELS.map(({ key: channel, icon }) => {
+          const group = (prefs[channel] && typeof prefs[channel] === 'object') ? prefs[channel] : {};
+          return (
+            <Box key={channel}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, color: 'primary.main' }}>
+                {icon}
+                <Typography variant="subtitle1" fontWeight={600} color="text.primary">
+                  {t(`preferences.${channel}`)}
+                </Typography>
+              </Box>
+              <Divider sx={{ mb: 1 }} />
+              <FormGroup>
+                {Object.entries(group).map(([category, value]) => (
+                  <FormControlLabel
+                    key={category}
+                    control={
+                      <Switch
+                        checked={!!value}
+                        onChange={(e) => toggle(channel, category, e.target.checked)}
+                      />
+                    }
+                    label={categoryLabel(category)}
+                  />
+                ))}
+              </FormGroup>
+            </Box>
+          );
+        })}
+      </Stack>
     </Paper>
   );
 };
