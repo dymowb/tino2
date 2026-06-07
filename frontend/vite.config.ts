@@ -16,6 +16,13 @@ export default defineConfig({
         ws: true,
         changeOrigin: true,
       },
+      // Uploaded files (message attachments, profile images, etc.) are served
+      // by the backend. Without this, /uploads/* hits the SPA fallback (index.html)
+      // → broken images and "clicking an attachment lands on the home screen".
+      '/uploads': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
     },
   },
   build: {

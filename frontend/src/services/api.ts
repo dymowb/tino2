@@ -793,7 +793,9 @@ class ApiService {
     const response = await this.api.post<ApiResponse<{ url: string; originalName: string; mimeType: string; size: number }>>(
       '/messages/messages/upload',
       formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } }
+      // File transfers (up to 10MB) can far exceed the 10s default on slow
+      // connections — give them a generous timeout so they don't abort mid-upload.
+      { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 }
     );
     return response.data.data!;
   }
