@@ -84,7 +84,7 @@ const MessagingPage: React.FC = () => {
 
   const currentUser = apiService.getStoredUser();
 
-  const { data: conversationsData, isLoading, refetch } = useQuery({
+  const { data: conversationsData, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['conversations'],
     queryFn: () => apiService.getConversations({ limit: 50, sortBy: 'lastMessage', sortOrder: 'desc' }),
   });
@@ -112,18 +112,26 @@ const MessagingPage: React.FC = () => {
   // When a conversation is selected (notably via a deep link, e.g. the "Message"
   // button on My Bookings), scroll its row into view in the left list. Without
   // this the row is highlighted but may sit far below the fold, so it looks
-  // unselected. Guarded by a ref so we only scroll once per selection — not on
-  // every list refetch/new-message render.
+  // unselected.
+  //
+  // Crucially we wait until the list fetch has SETTLED (`!isFetching`) before
+  // scrolling. On a deep link the stale cached list often renders first; if we
+  // scrolled then locked, a freshly-created conversation (which sorts to the
+  // top and shifts the target down once the real list arrives) would leave the
+  // target off-screen. Scrolling only after the fresh data lands fixes the
+  // intermittent "highlighted but not in view" case. The ref makes it fire once
+  // per selection so socket-driven refetches don't yank the list around.
   const scrolledForRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!selectedConversation) return;
+    if (!selectedConversation || isFetching) return;
     if (scrolledForRef.current === selectedConversation) return;
     const el = document.querySelector(`[data-conv-id="${selectedConversation}"]`);
-    if (el) {
-      el.scrollIntoView({ block: 'nearest' });
-      scrolledForRef.current = selectedConversation;
-    }
-  }, [selectedConversation, conversations]);
+    if (!el) return; // row not rendered yet — effect re-runs when the list updates
+    requestAnimationFrame(() => {
+      document.querySelector(`[data-conv-id="${selectedConversation}"]`)?.scrollIntoView({ block: 'nearest' });
+    });
+    scrolledForRef.current = selectedConversation;
+  }, [selectedConversation, isFetching, conversations]);
 
   // Live updates: refetch the list whenever a message arrives or a conversation changes.
   useEffect(() => {

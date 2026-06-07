@@ -617,6 +617,11 @@ const MyBookingsPage: React.FC = () => {
                               participantIds: [providerUserId],
                               metadata: { bookingId: booking.id, serviceType: booking.serviceType },
                             });
+                            // Drop the stale conversation list so the messaging page
+                            // loads a fresh list that already includes this (possibly
+                            // brand-new) conversation — otherwise its row may be missing
+                            // or mis-positioned when we try to scroll it into view.
+                            queryClient.invalidateQueries({ queryKey: ['conversations'] });
                             navigate(`/messages?conversationId=${conv.id}`);
                           } catch {
                             navigate(`/messages?with=${providerUserId}`);
