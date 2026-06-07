@@ -173,10 +173,12 @@ const NotificationPreferencesPanel: React.FC = () => {
   const updateMutation = useMutation({
     mutationFn: (next: any) => apiService.updateNotificationPreferences(next),
     // Optimistic toggle so the switch responds instantly; roll back on error.
+    // Apply the cache update synchronously (before the await) so back-to-back
+    // toggles each build on the previous one's result rather than racing.
     onMutate: async (next: any) => {
-      await queryClient.cancelQueries({ queryKey: PREFS_KEY });
       const prev = queryClient.getQueryData(PREFS_KEY);
       queryClient.setQueryData(PREFS_KEY, next);
+      await queryClient.cancelQueries({ queryKey: PREFS_KEY });
       return { prev };
     },
     onError: (_e, _next, ctx: any) => {
@@ -188,8 +190,12 @@ const NotificationPreferencesPanel: React.FC = () => {
   });
 
   const toggle = (channel: string, category: string, value: boolean) => {
-    if (!prefs) return;
-    updateMutation.mutate({ ...prefs, [channel]: { ...prefs[channel], [category]: value } });
+    // Read the freshest prefs from the cache (reflecting any in-flight optimistic
+    // toggles), not the render-time `prefs` closure, so quick successive toggles
+    // don't overwrite each other with a stale snapshot.
+    const base = queryClient.getQueryData<any>(PREFS_KEY) ?? prefs;
+    if (!base) return;
+    updateMutation.mutate({ ...base, [channel]: { ...base[channel], [category]: value } });
   };
 
   // Localized category label, falling back to a humanized key for any
