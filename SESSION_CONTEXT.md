@@ -3,39 +3,35 @@
 > Lean by design (per CLAUDE.md): current status + roadmap + resume point only.
 > Detailed completed-work notes live in `Tests/history/HISTORICAL_CONTEXT.md` and git history.
 
-## Current Status (2026-06-06)
-- **Goal 1 — Find Providers E2E audit**: ✅ complete (16 defects fixed).
-- **Goal 2 — Cross-role service lifecycle E2E audit**: ✅ complete (Chunk A + B = 8 defects, + 7 follow-up improvements). Commits `3f01b0d`, `0215d6a`.
-- **All productionization phases (8–22) and Agentic Memory phases (1–9) are done** — see roadmap tables below.
-- No formal goals/phases pending. Remaining work is loose ends (below).
+## Current Status (2026-06-07)
+- All goals/phases complete (productionization 8–22, Agentic Memory 1–9, Find-Providers + cross-role E2E audits). **No formal goals pending** — remaining work is the loose ends below.
 
-### Ad-hoc bug fixes — session 2026-06-06 (all committed + pushed, verified in UI)
-- Provider login fired 400s: `GET /reviews/provider/my` was shadowed by `/provider/:providerId` (param route declared first → "my" failed UUID validation). Moved literal route above param route. (`1fca115`)
-- Notifications "mark all read" never reached 0: `read-all` marked only one fetched page; replaced with a bulk `markAllAsRead` UPDATE. (`1fca115`)
-- Quote submit 409/404: provider "Available Requests" listed already-quoted/closed requests; `searchQuoteRequests` now excludes requests the provider already quoted (NOT EXISTS) + dialog invalidates `['available-quote-requests']` on success. (`ba10d97`)
-- Message notification → home: actionUrl was `/messages/<id>` (path) but route reads `?conversationId=` query param; emit `/messages?conversationId=<id>`. (`3f3a605`)
-- MUI Grid warnings in MyQuotesPage (`<Grid xs md>` without `item`). (`3f3a605`)
-- Provider dashboard "Ganhos Totais" wrapped mid-number (`R$ 632,/00`): StatCard now `whiteSpace: nowrap` + length-tiered font. (`cfcbbd8`)
-- CLAUDE.md decluttered (removed status table that belonged in SESSION_CONTEXT). (`d68e563`) See memory [[feedback-doc-separation]].
+### This session (2026-06-06→07) — all committed + pushed, verified in UI (EN+PT)
+Git history has the full per-commit detail; one-liners here for resume.
 
-### Notifications overhaul — session 2026-06-06 (committed, verified EN+PT)
-- **Preferences were a dead-end + delivery silently broken**: the `/notifications` "Preferences" tab was placeholder text ("managed through the notification center settings" — circular) + a dangling tip; the only real controls were a cog→dialog in the list that rendered **empty**. Root cause: stored prefs for existing users were legacy flat booleans `{email:true,sms:true,push:true}`, but both the UI and the delivery gating expect the granular shape `preferences.email.bookings` — so `Object.entries(prefs.email)` was empty AND `if (preferences.email.bookings)` was always falsy (real email/SMS never sent). Fixed `NotificationService.getUserPreferences`/`updateUserPreferences` to **normalize** any stored blob into the canonical granular shape (boolean channel → all-categories=that value; object → merged over defaults). Single-toggle saves preserve siblings.
-- **Consolidated preferences into the Preferences tab**: rebuilt `NotificationPreferencesPanel` (in `NotificationsPage`) as real per-channel (email/SMS/push) category toggles, rendered dynamically from the API shape, optimistic save. Removed the redundant/broken cog + preferences `<Dialog>` from `NotificationCenter`.
-- **Filter tabs now filter**: `NotificationCenter`'s tabs (All/Unread/Bookings/Payments/Reviews/Messages) set `selectedTab` but nothing consumed it (query used a never-updated `filterType`). Wired tab→`{type|unreadOnly}`; added `unreadOnly` support to `GET /notifications` + `getUserNotifications`. Translated hardcoded English ("Notifications", delete toasts, refresh) and added `preferences.categories.*` + `refresh/deleted/delete_failed` in en/pt/es.
-- **Removed the stub "History" tab**: it was descriptive retention text only. Folded that retention/deletion info into an ⓘ info Popover in the All Notifications header (reuses the existing `history.*` keys). Page now has 2 tabs (All / Preferences).
+**AI Assistant** (`d6b9956`, `c1d59f0`, `34ad1ab`)
+- Multi-turn follow-up questions no longer vanish from the transcript — unified `useEffect` in `useAssistantWorkflow` persists every `followUpQuestion`.
+- "Re-run Search" now re-runs *in place* by seeding edited structured requirements into a fresh workflow (coordinator skips the requirements agent — no re-extraction/re-asked questions). Backend `createWorkflow(…, seededRequirements?)` + `startWorkflowStream` optional `requirements` body field.
+- Requirements agent emits `requirementsSummary.description` — provider-facing job summary synthesized from the whole conversation; flows into the quote-request `description` (was the terse initial message). Excludes location/date/budget (own fields).
+- Enter sends the first message (welcome textarea was multiline-only; Shift+Enter = newline).
+- Editing the "Localização" field replaces instead of prepending the stale neighborhood (parse positionally matching the display order).
+- **LLM JSON hardening** — new `backend/src/agents/utils/llm-json.ts` (`parseLlmJson` + `parseClaudeJson` with 1 retry, unit-tested). analysis/recommendation/verification/requirements no longer crash the *whole* workflow on an empty/truncated LLM response — they fall back gracefully (was: raw `JSON.parse` → "Unexpected end of JSON input" → error screen).
 
-### AI Assistant fixes — session 2026-06-06 (uncommitted, verified in UI EN/PT-agnostic, no new strings)
-- **Multi-turn questions vanishing**: only the *first* follow-up question was pushed into `messages` (in the SSE `complete` handler); later turns recorded only the user's answer, so previous questions dropped from the transcript. Replaced the one-off append with a unified `useEffect` in `useAssistantWorkflow.ts` that persists every `followUpQuestion` into history as it appears (dedup by content). Verified across 5 turns — full Q/A transcript retained.
-- **"Re-run Search" reset to welcome**: `onRerun` was `reset()` (wiped workflow → welcome screen). Now re-runs *in place* with the edited requirements. Added a re-run path that **seeds structured requirements** into a fresh workflow so the coordinator skips the requirements agent (no re-extraction, no re-asked questions) and runs search→analysis→recommendation directly. Backend: `createWorkflow(…, seededRequirements?)` seeds `context.requirements` as `{isComplete:true,…}`; `startWorkflowStream` accepts optional `requirements` body field (free-text then optional). Frontend: `startWorkflow(message, requirements?)` sends `requirements`; `AIAssistantTab` `onRerun` calls `startWorkflow(editedDescription, {...editedRequirements, description: editedDescription})`. Verified: editing budget R$300→R$800 re-ran in place; narrative/reasoning/quality-score all reflected R$800; no welcome bounce.
-- **LLM JSON hardening (workflow-crash fix)**: analysis & recommendation agents did a raw `JSON.parse` on LLM output — an empty/truncated/rate-limited response threw "Unexpected end of JSON input" and crashed the *whole* workflow into the error screen (losing search/analysis already done). New shared util `backend/src/agents/utils/llm-json.ts`: `parseLlmJson` (strips fences/prose/trailing commas, returns null vs throw — 10/10 unit-tested) + `parseClaudeJson` (call + parse, **1 retry** on parse failure for transient hiccups). Wired into analysis (fallback: minimal per-provider analysis from search matchScore), recommendation (fallback: rank by matchScore + generic localized reasoning), verification (uses parseLlmJson + guards missing check-objects → soft pass instead of `undefined.passed` throw), requirements (robust extract). Also removed a stray dead `twilio/lib/http/response` import in requirements.agent.
-- **Messaging deep-link not selected in list**: clicking "Message" from My Bookings opened the right conversation but its row sat far below the fold in the left list (highlighted, just off-screen) → looked unselected. MessagingPage now `scrollIntoView`s the selected row (guarded by a ref to scroll once per selection). `data-conv-id` added to rows.
-- **Block messaging on finalized bookings**: messages are no longer allowed once the linked booking is `completed`/`cancelled`. Backend authoritative guard in `MessageService.sendMessage` (throws `MESSAGING_CLOSED` → controller 403); `getConversationById` now returns `messagingClosed`+`bookingStatus`. Frontend: MyBookings hides the Message button for final bookings; ChatInterface replaces the composer with a localized notice (en/pt/es `conversation.messaging_closed_*`) and toasts on a 403 race. Verified: cancelled-booking conversation shows the notice + direct API POST returns 403.
-- **AI-generated job description**: the "Seus Requisitos" description (which is what's sent as the quote-request `description`) was seeded from the *initial* message — so nuances clarified across follow-ups ("blocked toilet upstairs, water rises on flush") never reached the provider. Requirements agent now emits `requirementsSummary.description`: a 1-3 sentence provider-facing summary of the job synthesized from the whole conversation, deliberately excluding location/date/budget (those have their own fields). Frontend seeds `editedDescription` from it (falls back to userRequest). **Verified end-to-end**: vague "preciso de um encanador" → clarified nuances → DB `quote_requests.description` stored the full AI summary, not the terse opener.
+**Messaging** (`c888b7b`, `7250c7e`, `36eb8d0`)
+- Deep-linked conversation (My Bookings "Message") now reliably scrolls into view + highlights in the left list — gated on `!isFetching` so it can't lock onto a stale list position; `['conversations']` invalidated on conversation create. (`data-conv-id` on rows.)
+- Messaging blocked once a booking is `completed`/`cancelled`: authoritative backend guard (`MessageService.sendMessage` → `MESSAGING_CLOSED` → 403); `getConversationById` returns `messagingClosed`/`bookingStatus`; MyBookings hides the button; ChatInterface shows a localized closed notice (`conversation.messaging_closed_*` en/pt/es).
 
-### ⚠️ Dev-DB data fixes applied this session (NOT in seed — lost on reseed)
-- Demo customer name restored to "Demo Customer" (a profile-update test had overwritten it to "UpdatedFirst UpdatedLast"). Seed already says "Demo Customer".
-- 33 existing message-notification `actionUrl`s migrated `/messages/<id>` → `/messages?conversationId=<id>`. New ones are correct from code.
-- Demo provider's notifications marked all-read during testing.
+**Notifications** (`d52ac28`, `77260a3`, `59f47e0`)
+- **Preferences were a dead-end + email/SMS delivery silently broken**: existing users' stored prefs were legacy flat booleans `{email:true,…}`, but the UI *and* delivery gating expect granular `prefs.email.bookings` → empty UI AND `if (preferences.email.bookings)` always falsy (real email/SMS never sent). `NotificationService.getUserPreferences`/`updateUserPreferences` now **normalize** any stored blob to the canonical granular shape — fixes both. **No DB migration needed** (normalizes on read; legacy boolean channel → all-categories=that value).
+- Rebuilt the Preferences tab as real per-channel (email/SMS/push) category toggles (optimistic save; race-hardened by reading freshest React-Query cache). Removed the redundant broken cog/`<Dialog>`.
+- Filter tabs (All/Unread/Bookings/Payments/Reviews/Messages) now actually filter (set `selectedTab` but nothing consumed it before); added `unreadOnly` to `GET /notifications`.
+- Removed the stub "History" tab → folded retention info into an ⓘ popover in the All-Notifications header. Translated hardcoded English; added `preferences.categories.*` + `refresh/deleted/delete_failed` in en/pt/es.
+- _Known non-issue: a pathological burst of toggle clicks in a single JS tick can still race (React-Query optimistic update is a microtask); not reproducible by a human, left as-is._
+
+### ⚠️ Dev-DB data state (NOT in seed — lost on reseed)
+- Demo customer name restored to "Demo Customer" (a profile-update test had overwritten it). Seed already says "Demo Customer".
+- 33 message-notification `actionUrl`s migrated `/messages/<id>` → `/messages?conversationId=<id>` (new ones correct from code).
+- Demo customer/provider notifications were marked read and notification *preferences* toggled during testing (currently all-on). Cosmetic only.
 
 ## Open loose ends (not pending phases — pick as desired)
 1. **User's manual-test backlog** (`Tests/Pending bugs and features - manual check.md`) — needs the user's review; partly stale. **Still open**: Book Service **address validation/autocomplete** (new feature). _(Resolved: My Bookings "Message" deep-link now opens + scrolls the correct conversation into view in the left list.)_
