@@ -21,6 +21,7 @@ import {
   Tabs,
   Tab,
   Paper,
+  Popover,
   useTheme,
   useMediaQuery
 } from '@mui/material';
@@ -42,7 +43,8 @@ import {
   MarkEmailRead,
   Delete,
   FilterList,
-  Refresh
+  Refresh,
+  InfoOutlined
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
@@ -89,6 +91,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
   const [selectedTab, setSelectedTab] = useState(0);
   const [selectedNotifications, setSelectedNotifications] = useState<string[]>([]);
+  const [infoAnchor, setInfoAnchor] = useState<HTMLElement | null>(null);
 
   // Filter tabs → query filter. Order must match the <Tab> order below.
   // Types use the singular NotificationType enum values (booking, payment, …).
@@ -340,8 +343,36 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
             <IconButton onClick={() => refetch()} disabled={isLoading} title={t('refresh')}>
               <Refresh />
             </IconButton>
+            <IconButton onClick={(e) => setInfoAnchor(e.currentTarget)} title={t('history.title')}>
+              <InfoOutlined />
+            </IconButton>
           </Box>
         </Box>
+
+        {/* Retention / deletion info — folded in from the old History tab. */}
+        <Popover
+          open={Boolean(infoAnchor)}
+          anchorEl={infoAnchor}
+          onClose={() => setInfoAnchor(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          slotProps={{ paper: { sx: { p: 2, maxWidth: 340 } } }}
+        >
+          <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
+            {t('history.page_title')}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, display: 'block' }}>
+            {t('history.retention_policy')}
+          </Typography>
+          <Box component="ul" sx={{ mt: 0.5, mb: 1.5, pl: 2 }}>
+            <Typography component="li" variant="caption" color="text.secondary">{t('history.retention_30_days')}</Typography>
+            <Typography component="li" variant="caption" color="text.secondary">{t('history.retention_90_days')}</Typography>
+            <Typography component="li" variant="caption" color="text.secondary">{t('history.retention_1_year')}</Typography>
+          </Box>
+          <Typography variant="caption" color="text.secondary">
+            <strong>{t('history.note_label')}</strong> {t('history.note_message')}
+          </Typography>
+        </Popover>
         
         <Box sx={{ px: 2 }}>
           <Tabs

@@ -20,7 +20,6 @@ import {
   Notifications,
   NotificationsActive,
   Settings,
-  History,
   Email,
   Sms
 } from '@mui/icons-material';
@@ -65,8 +64,6 @@ const NotificationsPage: React.FC = () => {
     switch (tab) {
       case 'settings':
         return 1;
-      case 'history':
-        return 2;
       default:
         return 0;
     }
@@ -83,7 +80,7 @@ const NotificationsPage: React.FC = () => {
     setSelectedTab(newValue);
     
     // Update URL params
-    const tabNames = ['notifications', 'settings', 'history'];
+    const tabNames = ['notifications', 'settings'];
     const tabName = tabNames[newValue];
     
     if (tabName === 'notifications') {
@@ -139,12 +136,6 @@ const NotificationsPage: React.FC = () => {
             iconPosition="start"
             sx={{ gap: 1 }}
           />
-          <Tab
-            icon={<History />}
-            label={t('history.title')}
-            iconPosition="start"
-            sx={{ gap: 1 }}
-          />
         </Tabs>
       </Paper>
 
@@ -155,10 +146,6 @@ const NotificationsPage: React.FC = () => {
 
       <TabPanel value={selectedTab} index={1}>
         <NotificationPreferencesPanel />
-      </TabPanel>
-
-      <TabPanel value={selectedTab} index={2}>
-        <NotificationHistoryPanel />
       </TabPanel>
     </Container>
   );
@@ -257,45 +244,6 @@ const NotificationPreferencesPanel: React.FC = () => {
           );
         })}
       </Stack>
-    </Paper>
-  );
-};
-
-// Notification History Panel Component
-const NotificationHistoryPanel: React.FC = () => {
-  const { t } = useTranslation('notifications');
-
-  return (
-    <Paper sx={{ p: 3 }}>
-      <Typography variant="h6" sx={{ mb: 3 }}>
-        {t('history.page_title')}
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-        {t('history.description')}
-      </Typography>
-
-      <Box sx={{ mt: 3 }}>
-        <Typography variant="body2" color="text.secondary">
-          <strong>{t('history.retention_policy')}</strong>
-        </Typography>
-        <Box component="ul" sx={{ mt: 1, pl: 2 }}>
-          <Typography component="li" variant="body2" color="text.secondary">
-            {t('history.retention_30_days')}
-          </Typography>
-          <Typography component="li" variant="body2" color="text.secondary">
-            {t('history.retention_90_days')}
-          </Typography>
-          <Typography component="li" variant="body2" color="text.secondary">
-            {t('history.retention_1_year')}
-          </Typography>
-        </Box>
-      </Box>
-
-      <Box sx={{ mt: 3, p: 2, bgcolor: 'warning.50', borderRadius: 1, border: 1, borderColor: 'warning.200' }}>
-        <Typography variant="body2" color="warning.main">
-          <strong>{t('history.note_label')}</strong> {t('history.note_message')}
-        </Typography>
-      </Box>
     </Paper>
   );
 };
