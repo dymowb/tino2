@@ -72,7 +72,11 @@ export class App {
 
     this.app.use(securityMiddleware);
 
-    this.app.use(rateLimiters.general);
+    // Only rate-limit the API. Applying this globally also throttled static
+    // asset + SPA serving (each page load fires dozens of chunk/image/favicon
+    // requests), so a few reloads from one IP — and households share a NAT IP —
+    // exhausted the budget and 429'd everything, including GET / and favicon.ico.
+    this.app.use('/api', rateLimiters.general);
     this.app.use(sanitizeInput);
     this.app.use(logSuspiciousActivity);
 
