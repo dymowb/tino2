@@ -308,6 +308,9 @@ export interface WorkflowData {
 class ApiService {
   private api: AxiosInstance;
   private baseURL = import.meta.env.VITE_API_URL || '/api/v1';
+  // Single-flight token refresh: concurrent 401s share one refresh call
+  // instead of each firing its own (which previously caused a request storm).
+  private refreshPromise: Promise<string> | null = null;
 
   constructor() {
     this.api = axios.create({
@@ -344,34 +347,38 @@ class ApiService {
       },
       async (error) => {
         const originalRequest = error.config;
+        const url: string = originalRequest?.url || '';
+        // A 401 from the auth endpoints themselves must NOT trigger a refresh:
+        // refreshing the refresh call recurses infinitely (the storm we saw).
+        // A dead refresh token means the session is over — log out once.
+        const isAuthEndpoint =
+          url.includes('/auth/refresh') ||
+          url.includes('/auth/logout') ||
+          url.includes('/auth/login') ||
+          url.includes('/auth/register');
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
           originalRequest._retry = true;
-
           try {
-            const refreshToken = localStorage.getItem('refreshToken');
-            if (refreshToken) {
-              const response = await this.api.post('/auth/refresh', {
-                refreshToken,
-              });
-
-              const { accessToken, refreshToken: newRefreshToken } = response.data.data;
-              localStorage.setItem('accessToken', accessToken);
-              localStorage.setItem('refreshToken', newRefreshToken);
-
-              originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-              return this.api(originalRequest);
-            }
+            const accessToken = await this.refreshAccessToken();
+            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+            return this.api(originalRequest);
           } catch (refreshError) {
             this.logout();
             window.location.href = '/login';
+            return Promise.reject(refreshError);
           }
         }
 
-        if (error.response?.data?.error) {
-          toast.error(error.response.data.error);
-        } else if (error.message) {
-          toast.error(error.message);
+        // Don't surface a toast for a failed refresh/logout — the redirect to
+        // /login already communicates the expired session. (login/register
+        // errors, e.g. "invalid credentials", still toast.)
+        if (!url.includes('/auth/refresh') && !url.includes('/auth/logout')) {
+          if (error.response?.data?.error) {
+            toast.error(error.response.data.error);
+          } else if (error.message) {
+            toast.error(error.message);
+          }
         }
 
         return Promise.reject(error);
@@ -417,6 +424,29 @@ class ApiService {
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
     return response.data.data!;
+  }
+
+  // Refresh the access token, coalescing concurrent callers onto one in-flight
+  // request. Throws if there's no refresh token or the refresh itself fails.
+  private refreshAccessToken(): Promise<string> {
+    if (!this.refreshPromise) {
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (!refreshToken) {
+        return Promise.reject(new Error('No refresh token'));
+      }
+      this.refreshPromise = this.api
+        .post('/auth/refresh', { refreshToken })
+        .then((response) => {
+          const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+          localStorage.setItem('accessToken', accessToken);
+          localStorage.setItem('refreshToken', newRefreshToken);
+          return accessToken as string;
+        })
+        .finally(() => {
+          this.refreshPromise = null;
+        });
+    }
+    return this.refreshPromise;
   }
 
   async logout(): Promise<void> {
