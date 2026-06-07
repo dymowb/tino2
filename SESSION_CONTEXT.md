@@ -6,6 +6,15 @@
 ## Current Status (2026-06-07)
 - All goals/phases complete (productionization 8–22, Agentic Memory 1–9, Find-Providers + cross-role E2E audits). **No formal goals pending** — remaining work is the loose ends below.
 
+### Session 2026-06-07 (b) — 5 deployed-app CX fixes (`043c55a`) + earlier hotfixes (`396e739`,`2nd`,auth-storm) — all deployed to newtino.com, verified
+- **Msg attachments**: upload timeout 10s→60s; Vite proxies `/uploads`→backend (dev only) so attachments render/download instead of hitting SPA fallback.
+- **Rate-limit 429 storm**: scoped general limiter to `/api` (was global → static assets burned the per-IP budget); fixed client token-refresh recursion (refresh/logout 401 re-entered refresh → 990-call storm) via auth-endpoint guard + single-flight refresh.
+- **#1** My Bookings count: `results_count_plural` key doesn't exist (i18next v4 `_one/_other`) → use count-based key.
+- **#2** Stale lists on role switch: `queryClient.clear()` on logout+login (AuthContext).
+- **#3** Notification bell English in PT: `createNotification` now stores i18n key+params in `metadata.i18n`; bell + center translate on render (fallback to stored strings). ~18 sites migrated; `titles/body/statuses` keys in notifications ns (en/pt/es). Old notifications keep original language by design.
+- **#5** Providers couldn't start chats: added "Message Customer" to provider dashboard booking menu (mirrors customer button; open from quote-accept until booking closes).
+- **#4** Mobile CX: provider card actions stack full-width (no label wrap); My Quotes header stacks + scrollable tabs; fixed MUI Rating string-value warning; silenced nested-`<p>` warnings in notification lists.
+
 ### This session (2026-06-06→07) — all committed + pushed, verified in UI (EN+PT)
 Git history has the full per-commit detail; one-liners here for resume.
 
