@@ -76,6 +76,9 @@ export class ReviewService {
       type: NotificationType.REVIEW,
       title: 'New Review Received',
       message: `You received a ${reviewData.rating}-star review`,
+      titleKey: 'titles.new_review',
+      messageKey: 'body.new_review',
+      i18nParams: { rating: reviewData.rating },
       actionUrl: `/reviews/${savedReview.id}`,
       metadata: { reviewId: savedReview.id, rating: reviewData.rating },
     }).catch(err => console.error('Failed to send review notification:', err));

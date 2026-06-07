@@ -82,6 +82,9 @@ export class QuoteService {
             type: NotificationType.BOOKING,
             title: 'New Quote Request',
             message: `A customer is requesting a quote for ${requestData.serviceType}. Respond now to win the job!`,
+            titleKey: 'titles.new_quote_request',
+            messageKey: 'body.quote_request',
+            i18nParams: { service: requestData.serviceType },
             actionUrl: '/quotes',
             metadata: { quoteRequestId: savedRequest.id },
           }).catch(err => logger.error('Failed to notify provider of quote request:', err));
@@ -423,6 +426,9 @@ export class QuoteService {
         type: NotificationType.BOOKING,
         title: 'Nova proposta recebida',
         message: `${provider.businessName} enviou uma proposta para ${quoteData.serviceType}.`,
+        titleKey: 'titles.new_quote',
+        messageKey: 'body.new_quote',
+        i18nParams: { business: provider.businessName, service: quoteData.serviceType },
         actionUrl: '/quotes',
         metadata: { quoteId: savedQuote.id, requestId: quoteData.requestId },
       }).catch(err => logger.error('Failed to notify customer of new quote:', err));
@@ -753,6 +759,9 @@ export class QuoteService {
         type: NotificationType.BOOKING,
         title: 'Orçamento aceito',
         message: `O cliente aceitou seu orçamento de ${quote.serviceType}. Uma reserva foi criada.`,
+        titleKey: 'titles.quote_accepted',
+        messageKey: 'body.quote_accepted',
+        i18nParams: { service: quote.serviceType },
         actionUrl: `/bookings?bookingId=${saved.id}`,
         metadata: { bookingId: saved.id, quoteId: quote.id },
       }).catch(err => logger.error('Failed to notify provider of accepted quote booking:', err));

@@ -164,6 +164,9 @@ class PaymentService {
         type: NotificationType.PAYMENT,
         title: 'Payment Initiated',
         message: `A payment of $${(data.amount / 100).toFixed(2)} has been initiated for your service`,
+        titleKey: 'titles.payment_initiated',
+        messageKey: 'body.payment_initiated',
+        i18nParams: { amount: `$${(data.amount / 100).toFixed(2)}` },
         actionUrl: `/payments/${savedPayment.id}`,
         metadata: { paymentId: savedPayment.id, bookingId: data.bookingId },
       }).catch(err => logger.error('Failed to send payment notification:', err));

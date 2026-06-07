@@ -47,6 +47,9 @@ export async function runAutoCapture(): Promise<void> {
         type: NotificationType.PAYMENT,
         title: 'Payment auto-released',
         message: `No response received within ${days} days — payment has been released to the provider.`,
+        titleKey: 'titles.payment_auto_released',
+        messageKey: 'body.payment_auto_released',
+        i18nParams: { days },
         actionUrl: `/bookings/${booking.id}`,
         metadata: { bookingId: booking.id },
       }).catch(() => {});

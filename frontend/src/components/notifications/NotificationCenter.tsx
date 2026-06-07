@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { getNotificationText, type NotificationI18n } from '../../utils/notificationText';
 import {
   Box,
   Typography,
@@ -65,6 +66,7 @@ interface Notification {
     paymentId?: string;
     reviewId?: string;
     conversationId?: string;
+    i18n?: NotificationI18n;
   };
   createdAt: string;
   expiresAt?: string;
@@ -266,13 +268,15 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 </Badge>
               </ListItemIcon>
               <ListItemText
+                primaryTypographyProps={{ component: 'div' }}
+                secondaryTypographyProps={{ component: 'div' }}
                 primary={
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Typography
                       variant="body2"
                       fontWeight={!notification.isRead ? 'bold' : 'normal'}
                     >
-                      {notification.title}
+                      {getNotificationText(notification, t).title}
                     </Typography>
                     <Chip
                       label={notification.type}
@@ -285,7 +289,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 secondary={
                   <Box>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                      {notification.message}
+                      {getNotificationText(notification, t).message}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       {new Date(notification.createdAt).toLocaleString()}

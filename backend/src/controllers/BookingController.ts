@@ -565,6 +565,8 @@ export class BookingController {
           type: NotificationType.PAYMENT,
           title: 'Payment hold failed',
           message: 'Your booking was cancelled because the payment could not be authorised. Please update your payment method.',
+          titleKey: 'titles.payment_hold_failed',
+          messageKey: 'body.payment_hold_failed',
           actionUrl: `/bookings?bookingId=${bookingId}`,
           metadata: { bookingId },
         }).catch(() => {});
@@ -573,6 +575,8 @@ export class BookingController {
           type: NotificationType.PAYMENT,
           title: 'Booking cancelled',
           message: 'The booking was cancelled because the customer\'s payment method was declined.',
+          titleKey: 'titles.booking_cancelled',
+          messageKey: 'body.booking_cancelled_payment',
           actionUrl: `/bookings?bookingId=${bookingId}`,
           metadata: { bookingId },
         }).catch(() => {});
@@ -622,6 +626,8 @@ export class BookingController {
         type: NotificationType.BOOKING,
         title: 'Service complete — please confirm',
         message: 'Your provider has marked the service as complete. Please confirm or raise a dispute within 3 days.',
+        titleKey: 'titles.service_complete_confirm',
+        messageKey: 'body.service_complete_confirm',
         actionUrl: `/bookings?bookingId=${bookingId}`,
         metadata: { bookingId },
       }).catch(() => {});
@@ -660,6 +666,8 @@ export class BookingController {
         type: NotificationType.PAYMENT,
         title: 'Payment released',
         message: 'The customer confirmed service completion. Payment has been captured.',
+        titleKey: 'titles.payment_released',
+        messageKey: 'body.payment_released',
         actionUrl: `/bookings?bookingId=${bookingId}`,
         metadata: { bookingId },
       }).catch(() => {});

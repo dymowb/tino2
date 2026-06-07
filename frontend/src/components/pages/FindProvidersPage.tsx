@@ -334,13 +334,15 @@ const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onBook, onQuote, 
           sx={{ borderRadius: tokens.radius.full, fontSize: '0.8rem' }}>
           {t('providers:card.view_profile')}
         </Button>
-        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+        {/* Stack full-width on narrow phones (labels like "Solicitar Orçamento"
+            wrap awkwardly in a half-width button); side-by-side from sm up. */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1 }}>
           <Button variant="outlined" color="primary" size="small" onClick={onQuote}
-            sx={{ borderRadius: tokens.radius.full, fontSize: '0.8rem' }}>
+            sx={{ borderRadius: tokens.radius.full, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
             {t('providers:card.request_quote')}
           </Button>
           <Button variant="contained" color="secondary" size="small" endIcon={<ArrowForward sx={{ fontSize: '0.9rem' }} />}
-            onClick={onBook} sx={{ borderRadius: tokens.radius.full, fontSize: '0.8rem' }}>
+            onClick={onBook} sx={{ borderRadius: tokens.radius.full, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
             {t('providers:card.book_now')}
           </Button>
         </Box>

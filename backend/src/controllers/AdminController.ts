@@ -238,6 +238,9 @@ export class AdminController {
                 type: NotificationType.BOOKING,
                 title: t(req, 'admin.booking_cancelled_title'),
                 message: t(req, 'admin.booking_cancelled_msg', { service: booking.serviceType }),
+                titleKey: 'titles.booking_cancelled',
+                messageKey: 'body.booking_cancelled_admin',
+                i18nParams: { service: booking.serviceType },
                 actionUrl: `/bookings/${booking.id}`,
                 metadata: { bookingId: booking.id },
               }).catch(() => {});
@@ -660,17 +663,23 @@ export class AdminController {
       booking.adminNotes = adminNotes || null;
       await bookingRepository.save(booking);
 
-      // Notify both parties. (Recipient-preferred locale isn't persisted yet, so messages
-      // follow the admin's request locale — a known limitation to revisit with user locale.)
+      // Notify both parties. title/message stay as the admin's request-locale
+      // string (email/fallback); titleKey/messageKey let each recipient's UI
+      // render in their own selected language.
       const providerUserId = booking.provider?.userId;
       const title = t(req, 'dispute.resolved_title');
       const msgKey = decision === 'capture' ? 'dispute.resolved_provider_msg' : 'dispute.resolved_customer_msg';
       const msg = t(req, msgKey, { bookingId: id });
+      const i18n = {
+        titleKey: 'titles.dispute_resolved',
+        messageKey: decision === 'capture' ? 'body.dispute_resolved_provider' : 'body.dispute_resolved_customer',
+        i18nParams: { bookingId: id },
+      };
       if (booking.customerId) {
-        await notificationService.createNotification(booking.customerId, { type: NotificationType.BOOKING, title, message: msg, metadata: { bookingId: id } });
+        await notificationService.createNotification(booking.customerId, { type: NotificationType.BOOKING, title, message: msg, ...i18n, metadata: { bookingId: id } });
       }
       if (providerUserId) {
-        await notificationService.createNotification(providerUserId, { type: NotificationType.BOOKING, title, message: msg, metadata: { bookingId: id } });
+        await notificationService.createNotification(providerUserId, { type: NotificationType.BOOKING, title, message: msg, ...i18n, metadata: { bookingId: id } });
       }
 
       res.json({ success: true, message: t(req, decision === 'capture' ? 'dispute.resolved_captured' : 'dispute.resolved_refunded'), data: { booking } });

@@ -95,7 +95,25 @@ export class NotificationService {
     priority?: NotificationPriority;
     actionUrl?: string;
     metadata?: any;
+    // i18n: keys into the frontend `notifications` namespace + interpolation
+    // params, stored in metadata.i18n so the UI can translate on render and
+    // react to language switches. `title`/`message` remain the English
+    // fallback (used by email/SMS and pre-i18n clients).
+    titleKey?: string;
+    messageKey?: string;
+    i18nParams?: Record<string, any>;
   }): Promise<Notification> {
+    const metadata =
+      data.titleKey || data.messageKey
+        ? {
+            ...(data.metadata || {}),
+            i18n: {
+              titleKey: data.titleKey,
+              messageKey: data.messageKey,
+              params: data.i18nParams || {},
+            },
+          }
+        : data.metadata;
     const notification = this.notificationRepository.create({
       userId,
       type: data.type,
@@ -103,7 +121,7 @@ export class NotificationService {
       message: data.message,
       priority: data.priority ?? NotificationPriority.MEDIUM,
       actionUrl: data.actionUrl,
-      metadata: data.metadata,
+      metadata,
     });
     const saved = await this.notificationRepository.save(notification);
     this.io?.to(`user_${userId}`).emit('notification:new', saved);

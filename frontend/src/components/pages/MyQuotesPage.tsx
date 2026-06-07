@@ -209,7 +209,16 @@ const MyQuotesPage: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+      {/* Stack on mobile so the long "Solicitar Novo Orçamento" button doesn't
+          collide with / overlap the title. */}
+      <Box sx={{
+        display: 'flex',
+        flexDirection: { xs: 'column', sm: 'row' },
+        justifyContent: 'space-between',
+        alignItems: { xs: 'stretch', sm: 'center' },
+        gap: 2,
+        mb: 4,
+      }}>
         <Typography variant="h4" component="h1" sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <RequestQuote />
           {user?.userType === 'provider' ? t('page.provider_title') : t('page.customer_title')}
@@ -219,6 +228,7 @@ const MyQuotesPage: React.FC = () => {
             variant="contained"
             startIcon={<RequestQuote />}
             onClick={() => setShowRequestDialog(true)}
+            sx={{ whiteSpace: 'nowrap', flexShrink: 0, alignSelf: { xs: 'flex-start', sm: 'auto' } }}
           >
             {t('page.request_btn')}
           </Button>
@@ -226,7 +236,7 @@ const MyQuotesPage: React.FC = () => {
       </Box>
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs value={tabValue} onChange={handleTabChange}>
+        <Tabs value={tabValue} onChange={handleTabChange} variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile>
           {user?.userType === 'customer' && <Tab value={0} label={t('page.my_requests_tab', { count: quoteRequests?.data?.length || 0 })} />}
           {user?.userType === 'customer' && <Tab value={1} label={t('page.received_quotes_tab', { count: quotes?.data?.length || 0 })} />}
           {user?.userType === 'provider' && <Tab value={0} label={t('page.available_requests_tab', { count: availableRequests?.data?.length || 0 })} />}
@@ -380,7 +390,7 @@ const MyQuotesPage: React.FC = () => {
                                 {quote.provider.businessName}
                               </Typography>
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <Rating value={quote.provider.rating} readOnly size="small" />
+                                <Rating value={Number(quote.provider.rating) || 0} readOnly size="small" />
                                 <Typography variant="caption">
                                   ({quote.provider.totalReviews})
                                 </Typography>
@@ -629,7 +639,7 @@ const MyQuotesPage: React.FC = () => {
 
                     {quote.provider && (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                        <Rating value={quote.provider.rating} readOnly size="small" />
+                        <Rating value={Number(quote.provider.rating) || 0} readOnly size="small" />
                         <Typography variant="body2">
                           ({quote.provider.totalReviews} reviews)
                         </Typography>

@@ -52,9 +52,11 @@ import {
   FilterList,
   Pending,
   PlayArrow,
-  Done
+  Done,
+  Chat
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
@@ -233,6 +235,7 @@ const ProviderDashboardPage: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isDark = theme.palette.mode === 'dark';
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'] as const;
   type Day = typeof DAYS[number];
@@ -328,6 +331,26 @@ const ProviderDashboardPage: React.FC = () => {
   };
   const handleBookingStatusUpdate = (newStatus: string) => {
     if (selectedBooking) updateBookingMutation.mutate({ id: selectedBooking.id, status: newStatus });
+  };
+  // Let the provider start (or reopen) a conversation with the customer for a
+  // booking — the mirror of the customer's "Message" button. Available from the
+  // moment a booking exists (i.e. once the quote is accepted) until it closes.
+  const handleMessageCustomer = async () => {
+    const booking = selectedBooking;
+    handleMenuClose();
+    if (!booking) return;
+    const customerUserId = booking.customer?.userId || booking.customerId;
+    if (!customerUserId) { navigate('/messages'); return; }
+    try {
+      const conv = await apiService.createConversation({
+        participantIds: [customerUserId],
+        metadata: { bookingId: booking.id, serviceType: booking.serviceType },
+      });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      navigate(`/messages?conversationId=${conv.id}`);
+    } catch {
+      navigate(`/messages?with=${customerUserId}`);
+    }
   };
 
   const formatCurrency = (v: any) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v));
@@ -759,6 +782,11 @@ const ProviderDashboardPage: React.FC = () => {
         {selectedBooking?.status === 'in_progress' && (
           <MenuItem onClick={() => handleBookingStatusUpdate('completed')}>
             <CheckCircle sx={{ mr: 1 }} /> {t('dashboard:actions.mark_complete')}
+          </MenuItem>
+        )}
+        {selectedBooking && !['completed', 'cancelled'].includes(selectedBooking.status) && (
+          <MenuItem onClick={handleMessageCustomer}>
+            <Chat sx={{ mr: 1 }} /> {t('dashboard:actions.message_customer')}
           </MenuItem>
         )}
         <MenuItem onClick={handleMenuClose}>

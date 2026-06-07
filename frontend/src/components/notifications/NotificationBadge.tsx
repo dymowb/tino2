@@ -27,6 +27,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { apiService } from '../../services/api';
 import NotificationCenter from './NotificationCenter';
+import { getNotificationText } from '../../utils/notificationText';
 
 interface NotificationBadgeProps {
   maxDisplayCount?: number;
@@ -41,6 +42,7 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
   const navigate = useNavigate();
   const theme = useTheme();
   const { t } = useTranslation('common');
+  const { t: tNotif } = useTranslation('notifications');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -257,6 +259,8 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
                 </Badge>
               </ListItemIcon>
               <ListItemText
+                primaryTypographyProps={{ component: 'div' }}
+                secondaryTypographyProps={{ component: 'div' }}
                 primary={
                   <Typography
                     variant="body2"
@@ -267,7 +271,7 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {notification.title}
+                    {getNotificationText(notification, tNotif).title}
                   </Typography>
                 }
                 secondary={
@@ -282,7 +286,7 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
                         mb: 0.5,
                       }}
                     >
-                      {notification.message}
+                      {getNotificationText(notification, tNotif).message}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       {formatTimeAgo(notification.createdAt)}

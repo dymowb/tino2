@@ -116,6 +116,9 @@ export class BookingService {
         type: NotificationType.BOOKING,
         title: 'New Booking Request',
         message: `${customer.firstName} ${customer.lastName} has requested a booking for ${bookingData.serviceType}`,
+        titleKey: 'titles.new_booking',
+        messageKey: 'body.new_booking',
+        i18nParams: { customer: `${customer.firstName} ${customer.lastName}`, service: bookingData.serviceType },
         actionUrl: `/bookings?bookingId=${savedBooking.id}`,
         metadata: { bookingId: savedBooking.id },
       }).catch(err => logger.error('Failed to send booking notification:', err));
@@ -257,6 +260,9 @@ export class BookingService {
           type: NotificationType.BOOKING,
           title: 'Booking Status Updated',
           message: `Your booking status has been updated to: ${newStatus}`,
+          titleKey: 'titles.booking_updated',
+          messageKey: 'body.booking_updated',
+          i18nParams: { status: newStatus },
           actionUrl: `/bookings?bookingId=${bookingId}`,
           metadata: { bookingId, newStatus },
         }).catch(err => logger.error('Failed to send status notification:', err));
@@ -396,6 +402,8 @@ export class BookingService {
           type: NotificationType.BOOKING,
           title: 'Booking Cancelled',
           message: `A booking has been cancelled by the ${isCustomer ? 'customer' : 'provider'}.`,
+          titleKey: 'titles.booking_cancelled',
+          messageKey: isCustomer ? 'body.booking_cancelled_by_customer' : 'body.booking_cancelled_by_provider',
           actionUrl: `/bookings?bookingId=${bookingId}`,
           metadata: { bookingId },
         }).catch(err => logger.error('Failed to send cancellation notification:', err));

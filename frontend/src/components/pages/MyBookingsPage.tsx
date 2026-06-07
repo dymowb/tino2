@@ -231,7 +231,7 @@ const MyBookingsPage: React.FC = () => {
           </Typography>
           {pagination.total > 0 && (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              {t('bookings:list.' + (pagination.total === 1 ? 'results_count' : 'results_count_plural'), { count: pagination.total })}
+              {t('bookings:list.results_count', { count: pagination.total })}
             </Typography>
           )}
         </Box>

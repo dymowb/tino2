@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { User, AuthResponse, apiService } from '../services/api';
 
 interface AuthContextType {
@@ -27,6 +28,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   const isAuthenticated = !!user;
 
@@ -55,6 +57,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const login = async (email: string, password: string): Promise<User> => {
+    // Drop any cached data from a previous session before loading this one,
+    // so the new user never briefly sees the prior account's lists.
+    queryClient.clear();
     const authResponse: AuthResponse = await apiService.login(email, password);
     setUser(authResponse.user);
     apiService.setStoredUser(authResponse.user);
@@ -80,6 +85,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setUser(null);
       setLoading(false);
+      // Purge React Query cache so the next session doesn't render this user's
+      // cached lists (messages, bookings, etc.) until a manual refresh.
+      queryClient.clear();
     }
   };
 
