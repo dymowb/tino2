@@ -607,7 +607,7 @@ const AIAssistantTab: React.FC<AIAssistantTabProps> = ({ onComplete, onReset }) 
   };
 
   return (
-    <Box sx={{ pb: selectedProviderIds.size > 0 ? 10 : 0 }}>
+    <Box sx={{ pb: selectedProviderIds.size > 0 ? { xs: 20, sm: 10 } : 0 }}>
       {renderContent()}
       <ProviderDetailDrawer
         provider={drawerProvider}
@@ -621,7 +621,11 @@ const AIAssistantTab: React.FC<AIAssistantTabProps> = ({ onComplete, onReset }) 
           elevation={8}
           sx={{
             position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1300,
-            p: 2, display: 'flex', alignItems: 'center', gap: 2,
+            p: 2, display: 'flex', gap: 2,
+            // Stack on phones so the long "Enviar Pedido de Orçamento" button
+            // doesn't overflow the row; side-by-side from sm up.
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: { xs: 'stretch', sm: 'center' },
             borderTop: '1px solid', borderColor: 'divider',
           }}
         >
@@ -644,24 +648,33 @@ const AIAssistantTab: React.FC<AIAssistantTabProps> = ({ onComplete, onReset }) 
               ))}
             </Box>
           </Box>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => setSelectedProviderIds(new Set())}
-            sx={{ whiteSpace: 'nowrap' }}
-          >
-            {t('results.clearSelection', 'Clear')}
-          </Button>
-          <Button
-            variant="contained"
-            size="large"
-            startIcon={isSendingQuote ? <CircularProgress size={16} color="inherit" /> : <RequestQuote />}
-            onClick={handleSendQuote}
-            disabled={isSendingQuote}
-            sx={{ whiteSpace: 'nowrap' }}
-          >
-            {t('results.sendQuoteRequest', 'Send Quote Request')}
-          </Button>
+          {/* On phones stack the buttons (Send on top via column-reverse) so the
+              long PT label gets the full width and never clips; row from sm up. */}
+          <Box sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column-reverse', sm: 'row' },
+            gap: 1,
+            width: { xs: '100%', sm: 'auto' },
+          }}>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => setSelectedProviderIds(new Set())}
+              sx={{ whiteSpace: 'nowrap' }}
+            >
+              {t('results.clearSelection', 'Clear')}
+            </Button>
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={isSendingQuote ? <CircularProgress size={16} color="inherit" /> : <RequestQuote />}
+              onClick={handleSendQuote}
+              disabled={isSendingQuote}
+              sx={{ whiteSpace: 'nowrap' }}
+            >
+              {t('results.sendQuoteRequest', 'Send Quote Request')}
+            </Button>
+          </Box>
         </Paper>
       </Slide>
     </Box>
