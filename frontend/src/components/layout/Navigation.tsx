@@ -49,8 +49,12 @@ const Navigation: React.FC = () => {
   useEffect(() => {
     if (!user) return;
     const unsubscribe = socketService.onNotification(() => {
+      // Refresh both the badge count AND the lists (bell dropdown + center),
+      // so a newly-arrived notification shows up without a manual refresh.
       queryClient.invalidateQueries({ queryKey: ['notification-count'] });
-      toast('Você tem uma nova notificação');
+      queryClient.invalidateQueries({ queryKey: ['recent-notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      toast(t('notifications_panel.new_received'));
     });
     return unsubscribe;
   }, [user, queryClient]);

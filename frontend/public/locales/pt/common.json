@@ -160,6 +160,7 @@
     "unread_one": "{{count}} notificação não lida",
     "unread_other": "{{count}} notificações não lidas",
     "mark_read": "Marcar como lidas",
-    "see_all": "Ver todas"
+    "see_all": "Ver todas",
+    "new_received": "Você tem uma nova notificação"
   }
 }

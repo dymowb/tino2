@@ -160,6 +160,7 @@
     "unread_one": "{{count}} unread notification",
     "unread_other": "{{count}} unread notifications",
     "mark_read": "Mark as read",
-    "see_all": "See all"
+    "see_all": "See all",
+    "new_received": "New notification received"
   }
 }

@@ -127,5 +127,8 @@
       "services_count": "🎯 50+ Servicios",
       "verified_badge": "✅ Proveedores Verificados"
     }
+  },
+  "notifications_panel": {
+    "new_received": "Tienes una nueva notificación"
   }
 }
