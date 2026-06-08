@@ -15,6 +15,12 @@
 - **#5** Providers couldn't start chats: added "Message Customer" to provider dashboard booking menu (mirrors customer button; open from quote-accept until booking closes).
 - **#4** Mobile CX: provider card actions stack full-width (no label wrap); My Quotes header stacks + scrollable tabs; fixed MUI Rating string-value warning; silenced nested-`<p>` warnings in notification lists.
 
+#### Follow-up fixes (same session, separate commits — all deployed + verified)
+- **AI-assistant quote bar overflow (PT)**: sticky selection bar's "Enviar Pedido de Orçamento" clipped on phones; stack the bar + buttons on `xs` (Send full-width on top via `column-reverse`), row from `sm`. Verified 360/390/1100px.
+- **Mobile bottom nav didn't translate**: labels were hardcoded PT → now `t('navigation.*')` (added short `search`/`bookings` keys en/pt/es); update live on language switch.
+- **"New quote received" notification deep-link**: actionUrl was `/quotes` (opened wrong tab). Now `/quotes?tab=received&quoteId=<id>`; `MyQuotesPage` reads `?tab`/`?quoteId` → opens Received tab + scrolls/highlights the quote (`data-quote-id`). Verified end-to-end. (Old notifications keep `/quotes`.)
+- **Notifications not appearing live**: `notification:new` socket handler only invalidated `['notification-count']` → list lagged until poll/refresh. Now also invalidates `['recent-notifications']` + `['notifications']`; i18n'd the toast (`notifications_panel.new_received`). Verified: provider message → customer's open bell shows it <1s, badge 1→2, no refresh.
+
 ### This session (2026-06-06→07) — all committed + pushed, verified in UI (EN+PT)
 Git history has the full per-commit detail; one-liners here for resume.
 
@@ -41,6 +47,7 @@ Git history has the full per-commit detail; one-liners here for resume.
 - Demo customer name restored to "Demo Customer" (a profile-update test had overwritten it). Seed already says "Demo Customer".
 - 33 message-notification `actionUrl`s migrated `/messages/<id>` → `/messages?conversationId=<id>` (new ones correct from code).
 - Demo customer/provider notifications were marked read and notification *preferences* toggled during testing (currently all-on). Cosmetic only.
+- 2026-06-07 verification left a few test artifacts between demo customer/provider: a couple of test quotes (e.g. on request `06a62392…`) and chat messages ("VERIFY_REALTIME_XYZ", "Olá! Recebi sua reserva…"). Cosmetic; gone on reseed.
 
 ## Open loose ends (not pending phases — pick as desired)
 1. **User's manual-test backlog** (`Tests/Pending bugs and features - manual check.md`) — needs the user's review; partly stale. **Still open**: Book Service **address validation/autocomplete** (new feature). _(Resolved: My Bookings "Message" deep-link now opens + scrolls the correct conversation into view in the left list.)_
@@ -48,7 +55,7 @@ Git history has the full per-commit detail; one-liners here for resume.
 3. **Stripe money-movement verification** — escrow hold/capture/refund + dispute resolution are unreachable in dev without a real `STRIPE_SECRET_KEY` + a saved test payment method.
 4. **Goal-1 CX findings** (low priority): AI welcome placeholder says "São Paulo" (data is Florianópolis); search radius is a square bounding box under a "25km" label; `/voice/synthesize` 500s instead of silent-skip when OpenAI key absent.
 5. **`VITE_MAX_PROVIDERS_PER_QUOTE`** is a hardcoded frontend env default (5) in `AIAssistantTab.tsx` — should become a proper system/admin config.
-6. **Real-time notification push** uses 30s polling; Socket.IO push not wired.
+6. **Real-time notification push**: Socket.IO `notification:new` now invalidates badge + list queries so new notifications appear live; 30s polling remains the fallback when the socket is disconnected (no offline/reconnect reconciliation yet).
 7. **Cosmetic**: `validateDOMNesting` warnings (nested `<p>`) on the `/notifications` page (`NotificationCenter`) — pre-existing, harmless.
 
 ## Dev setup (local, Linux)
