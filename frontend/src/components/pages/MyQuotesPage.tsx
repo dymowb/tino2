@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -42,6 +42,7 @@ import {
   Person
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
 import { apiService, QuoteRequest, Quote } from '../../services/api';
@@ -76,6 +77,18 @@ const MyQuotesPage: React.FC = () => {
   const [showCompareDialog, setShowCompareDialog] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
+  const [searchParams] = useSearchParams();
+  const [highlightedQuoteId, setHighlightedQuoteId] = useState<string | null>(null);
+
+  // Deep-link from the "new quote received" notification: open the right tab
+  // (?tab=received) and remember which quote to scroll to / highlight.
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'received') setTabValue(1);
+    else if (tab === 'requests') setTabValue(0);
+    const quoteId = searchParams.get('quoteId');
+    if (quoteId) setHighlightedQuoteId(quoteId);
+  }, [searchParams]);
 
   // Fetch quote requests for customers
   const { data: quoteRequests, isLoading: requestsLoading } = useQuery({
@@ -96,6 +109,17 @@ const MyQuotesPage: React.FC = () => {
     queryKey: ['quotes'],
     queryFn: () => apiService.searchQuotes(),
   });
+
+  // Once the deep-linked quote is in the DOM (right tab + data loaded), scroll
+  // it into view and pulse a highlight, then clear it.
+  useEffect(() => {
+    if (!highlightedQuoteId || tabValue !== 1 || !quotes?.data?.length) return;
+    const el = document.querySelector(`[data-quote-id="${highlightedQuoteId}"]`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const clear = setTimeout(() => setHighlightedQuoteId(null), 2500);
+    return () => clearTimeout(clear);
+  }, [highlightedQuoteId, tabValue, quotes?.data]);
 
   // Update quote status mutation
   const updateQuoteStatusMutation = useMutation({
@@ -359,7 +383,15 @@ const MyQuotesPage: React.FC = () => {
               <Grid container spacing={3}>
                 {quotes?.data?.map((quote) => (
                   <Grid item xs={12} md={6} key={quote.id}>
-                    <Card>
+                    <Card
+                      data-quote-id={quote.id}
+                      sx={{
+                        transition: 'box-shadow 0.3s, outline-color 0.3s',
+                        outline: '2px solid',
+                        outlineColor: highlightedQuoteId === quote.id ? 'primary.main' : 'transparent',
+                        boxShadow: highlightedQuoteId === quote.id ? 6 : undefined,
+                      }}
+                    >
                       <CardContent>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                           <Typography variant="h6">
@@ -528,7 +560,15 @@ const MyQuotesPage: React.FC = () => {
               <Grid container spacing={3}>
                 {quotes?.data?.map((quote) => (
                   <Grid item xs={12} md={6} key={quote.id}>
-                    <Card>
+                    <Card
+                      data-quote-id={quote.id}
+                      sx={{
+                        transition: 'box-shadow 0.3s, outline-color 0.3s',
+                        outline: '2px solid',
+                        outlineColor: highlightedQuoteId === quote.id ? 'primary.main' : 'transparent',
+                        boxShadow: highlightedQuoteId === quote.id ? 6 : undefined,
+                      }}
+                    >
                       <CardContent>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                           <Typography variant="h6">

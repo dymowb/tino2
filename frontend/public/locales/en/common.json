@@ -24,7 +24,6 @@
   "try_again": "Try again",
   "go_back": "Go back",
   "learn_more": "Learn more",
-
   "navigation": {
     "home": "Home",
     "my_memory": "My Memory",
@@ -41,11 +40,11 @@
     "logout": "Logout",
     "login": "Login",
     "register": "Register",
-    "admin_panel": "Admin Panel"
+    "admin_panel": "Admin Panel",
+    "search": "Search",
+    "bookings": "Bookings"
   },
-
   "change_language": "Change Language",
-
   "status": {
     "pending": "Pending",
     "confirmed": "Confirmed",
@@ -57,7 +56,6 @@
     "processing": "Processing",
     "refunded": "Refunded"
   },
-
   "time": {
     "today": "Today",
     "yesterday": "Yesterday",
@@ -70,7 +68,6 @@
     "last_year": "Last Year",
     "custom": "Custom"
   },
-
   "actions": {
     "download": "Download",
     "upload": "Upload",
@@ -82,7 +79,6 @@
     "undo": "Undo",
     "redo": "Redo"
   },
-
   "validation": {
     "required": "This field is required",
     "invalid_email": "Invalid email address",
@@ -92,7 +88,6 @@
     "must_match": "Fields must match",
     "invalid_format": "Invalid format"
   },
-
   "errors": {
     "generic": "Something went wrong. Please try again.",
     "network": "Network error. Please check your connection.",
@@ -101,7 +96,6 @@
     "server_error": "Server error. Please try again later.",
     "timeout": "Request timed out. Please try again."
   },
-
   "home": {
     "title": "🏠 Welcome to Tino 2",
     "subtitle": "Your trusted platform for domestic services",
@@ -143,7 +137,6 @@
     "stat_providers_label": "Verified Providers",
     "all_rating": "All"
   },
-
   "payment_status": {
     "pending": "Pending",
     "paid": "Paid",
@@ -152,19 +145,16 @@
     "refunded": "Refunded",
     "held": "Held in escrow"
   },
-
   "user_type": {
     "customer": "Customer",
     "provider": "Service Provider",
     "admin": "Administrator"
   },
-
   "error_boundary": {
     "title": "Something went wrong.",
     "message": "Please reload the page. If the problem persists, contact support.",
     "retry": "Try again"
   },
-
   "notifications_panel": {
     "title": "Notifications",
     "unread_one": "{{count}} unread notification",

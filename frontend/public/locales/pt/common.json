@@ -40,7 +40,9 @@
     "logout": "Sair",
     "login": "Entrar",
     "register": "Registrar",
-    "admin_panel": "Painel Admin"
+    "admin_panel": "Painel Admin",
+    "search": "Buscar",
+    "bookings": "Reservas"
   },
   "change_language": "Mudar Idioma",
   "status": {

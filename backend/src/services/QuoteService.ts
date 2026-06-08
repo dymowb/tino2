@@ -429,7 +429,9 @@ export class QuoteService {
         titleKey: 'titles.new_quote',
         messageKey: 'body.new_quote',
         i18nParams: { business: provider.businessName, service: quoteData.serviceType },
-        actionUrl: '/quotes',
+        // Deep-link to the "Received quotes" tab and the specific quote so the
+        // customer lands on it (was '/quotes', which opens the requests tab).
+        actionUrl: `/quotes?tab=received&quoteId=${savedQuote.id}`,
         metadata: { quoteId: savedQuote.id, requestId: quoteData.requestId },
       }).catch(err => logger.error('Failed to notify customer of new quote:', err));
 

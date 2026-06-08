@@ -9,6 +9,7 @@ import {
   PersonRounded,
   DashboardRounded,
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { tokens } from '../../theme/theme';
 
@@ -16,6 +17,7 @@ const MobileBottomNav: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
+  const { t } = useTranslation();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { isAuthenticated, user } = useAuth();
   const isDark = theme.palette.mode === 'dark';
@@ -25,20 +27,21 @@ const MobileBottomNav: React.FC = () => {
   // Don't show on admin routes or for admin users
   if (location.pathname.startsWith('/admin') || user.userType === 'admin') return null;
 
+  // Labels come from i18n so they update live on language change.
   const tabs = user.userType === 'provider'
     ? [
-        { label: 'Início', path: '/', icon: <HomeRounded /> },
-        { label: 'Painel', path: '/dashboard', icon: <DashboardRounded /> },
-        { label: 'Reservas', path: '/bookings', icon: <BookOnlineRounded /> },
-        { label: 'Mensagens', path: '/messages', icon: <MessageRounded /> },
-        { label: 'Perfil', path: '/profile', icon: <PersonRounded /> },
+        { label: t('navigation.home'), path: '/', icon: <HomeRounded /> },
+        { label: t('navigation.dashboard'), path: '/dashboard', icon: <DashboardRounded /> },
+        { label: t('navigation.bookings'), path: '/bookings', icon: <BookOnlineRounded /> },
+        { label: t('navigation.messages'), path: '/messages', icon: <MessageRounded /> },
+        { label: t('navigation.profile'), path: '/profile', icon: <PersonRounded /> },
       ]
     : [
-        { label: 'Início', path: '/', icon: <HomeRounded /> },
-        { label: 'Buscar', path: '/providers', icon: <SearchRounded /> },
-        { label: 'Reservas', path: '/bookings', icon: <BookOnlineRounded /> },
-        { label: 'Mensagens', path: '/messages', icon: <MessageRounded /> },
-        { label: 'Perfil', path: '/profile', icon: <PersonRounded /> },
+        { label: t('navigation.home'), path: '/', icon: <HomeRounded /> },
+        { label: t('navigation.search'), path: '/providers', icon: <SearchRounded /> },
+        { label: t('navigation.bookings'), path: '/bookings', icon: <BookOnlineRounded /> },
+        { label: t('navigation.messages'), path: '/messages', icon: <MessageRounded /> },
+        { label: t('navigation.profile'), path: '/profile', icon: <PersonRounded /> },
       ];
 
   const getActiveIndex = () => {

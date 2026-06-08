@@ -24,7 +24,6 @@
   "try_again": "Intentar de nuevo",
   "go_back": "Volver",
   "learn_more": "Saber más",
-
   "navigation": {
     "home": "Inicio",
     "find_providers": "Buscar Proveedores",
@@ -39,9 +38,10 @@
     "settings": "Configuración",
     "logout": "Cerrar Sesión",
     "login": "Iniciar Sesión",
-    "register": "Registrarse"
+    "register": "Registrarse",
+    "search": "Buscar",
+    "bookings": "Reservas"
   },
-
   "status": {
     "pending": "Pendiente",
     "confirmed": "Confirmado",
@@ -53,7 +53,6 @@
     "processing": "Procesando",
     "refunded": "Reembolsado"
   },
-
   "time": {
     "today": "Hoy",
     "yesterday": "Ayer",
@@ -66,7 +65,6 @@
     "last_year": "Año Pasado",
     "custom": "Personalizado"
   },
-
   "actions": {
     "download": "Descargar",
     "upload": "Subir",
@@ -78,7 +76,6 @@
     "undo": "Deshacer",
     "redo": "Rehacer"
   },
-
   "validation": {
     "required": "Este campo es obligatorio",
     "invalid_email": "Dirección de correo electrónico no válida",
@@ -88,7 +85,6 @@
     "must_match": "Los campos deben coincidir",
     "invalid_format": "Formato no válido"
   },
-
   "errors": {
     "generic": "Algo salió mal. Por favor, inténtalo de nuevo.",
     "network": "Error de red. Por favor, verifica tu conexión.",
@@ -97,7 +93,6 @@
     "server_error": "Error del servidor. Por favor, inténtalo más tarde.",
     "timeout": "Se agotó el tiempo de espera. Por favor, inténtalo de nuevo."
   },
-
   "home": {
     "title": "🏠 Bienvenido a Tino 2",
     "subtitle": "Tu plataforma de confianza para servicios domésticos",
