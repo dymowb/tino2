@@ -35,6 +35,7 @@ import AdminProvidersPage from './components/pages/AdminProvidersPage';
 import AdminReviewsPage from './components/pages/AdminReviewsPage';
 import AdminSettingsPage from './components/pages/AdminSettingsPage';
 import AdminDisputesPage from './components/pages/AdminDisputesPage';
+import AdminQuoteRequestsPage from './components/pages/AdminQuoteRequestsPage';
 import MemoryPage from './components/pages/MemoryPage';
 
 // ─── Color mode context ────────────────────────────────────────────────────────
@@ -217,6 +218,7 @@ const AppContent: React.FC = () => {
                 <Route path="providers" element={<AdminProvidersPage />} />
                 <Route path="reviews"   element={<AdminReviewsPage />} />
                 <Route path="disputes"  element={<AdminDisputesPage />} />
+                <Route path="quote-requests" element={<AdminQuoteRequestsPage />} />
                 <Route path="settings"  element={<AdminSettingsPage />} />
               </Route>
 

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { User, AuthResponse, apiService } from '../services/api';
+import { socketService } from '../services/socketService';
 
 interface AuthContextType {
   user: User | null;
@@ -85,6 +86,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setUser(null);
       setLoading(false);
+      // Tear down the realtime socket so its room membership doesn't leak into the
+      // next session (a lingering socket → duplicate live notification delivery).
+      socketService.disconnect();
       // Purge React Query cache so the next session doesn't render this user's
       // cached lists (messages, bookings, etc.) until a manual refresh.
       queryClient.clear();

@@ -56,6 +56,16 @@ class SocketService {
       return;
     }
 
+    // Tear down any existing-but-not-connected socket before creating a new one.
+    // Without this, a re-connect while the previous socket is still connecting
+    // leaves an orphaned socket joined to the user's room, so the server's single
+    // emit is delivered more than once → duplicate live notifications.
+    if (this.socket) {
+      this.socket.removeAllListeners();
+      this.socket.disconnect();
+      this.socket = null;
+    }
+
     this.socket = io(this.baseURL, {
       auth: {
         token,

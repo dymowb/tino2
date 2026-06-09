@@ -204,5 +204,19 @@
     "save": "Save",
     "error_load": "Failed to load settings",
     "error_save": "Failed to save {{key}}"
+  },
+  "quote_requests": {
+    "title": "Quote Requests",
+    "subtitle": "Inspect who each request reached (broadcast vs. targeted) and who responded.",
+    "search_placeholder": "Search by request ID (e.g. 6068582C)",
+    "error": "Failed to load quote requests",
+    "empty": "No quote requests found.",
+    "col_request": "Request",
+    "col_customer": "Customer",
+    "col_sent_to": "Sent to",
+    "col_quotes": "Quotes received",
+    "broadcast": "Broadcast (all matching providers)",
+    "direct": "Direct",
+    "no_quotes": "No quotes yet"
   }
 }

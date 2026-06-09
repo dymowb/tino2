@@ -39,6 +39,9 @@ router.get('/disputes', rateLimiters.general, adminController.getDisputes);
 // PUT /api/admin/disputes/:id/resolve - Resolve dispute (FR-077)
 router.put('/disputes/:id/resolve', rateLimiters.adminStrict, adminController.resolveDispute);
 
+// GET /api/admin/quote-requests - Inspect request targeting + recipients
+router.get('/quote-requests', rateLimiters.general, adminController.getQuoteRequests);
+
 router.get('/settings', rateLimiters.general, adminController.getSettings);
 router.put('/settings/:key', rateLimiters.adminStrict, adminController.updateSetting);
 

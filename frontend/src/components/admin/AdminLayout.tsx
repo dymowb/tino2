@@ -24,6 +24,7 @@ import {
   AdminPanelSettings,
   Settings,
   Gavel,
+  RequestQuote,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -43,6 +44,7 @@ const AdminLayout: React.FC = () => {
     { label: t('admin:providers.title'), path: '/admin/providers', icon: <VerifiedUser /> },
     { label: t('admin:reviews.title'),   path: '/admin/reviews',   icon: <RateReview /> },
     { label: t('admin:disputes.title'),  path: '/admin/disputes',  icon: <Gavel /> },
+    { label: t('admin:quote_requests.title'), path: '/admin/quote-requests', icon: <RequestQuote /> },
     { label: t('admin:settings.title'),  path: '/admin/settings',  icon: <Settings /> },
   ];
 

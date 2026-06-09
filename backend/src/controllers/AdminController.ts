@@ -3,6 +3,7 @@ import { IsNull, Not } from 'typeorm';
 import { AppDataSource } from '@/config/database';
 import { User, UserType } from '@/models/User';
 import { Provider } from '@/models/Provider';
+import { QuoteRequest } from '@/models/QuoteRequest';
 import { Booking, BookingStatus } from '@/models/Booking';
 import { Review } from '@/models/Review';
 import { Payment } from '@/models/Payment';
@@ -717,6 +718,57 @@ export class AdminController {
       res.json({ success: true, data: updated });
     } catch (error) {
       logger.error('Error updating setting:', error);
+      res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  }
+
+  // GET /admin/quote-requests — inspect who each request reached (broadcast vs
+  // targeted providers) and which providers responded. Supports ?search=<id-prefix>.
+  getQuoteRequests = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const search = (req.query.search as string || '').trim();
+      const qb = AppDataSource.getRepository(QuoteRequest)
+        .createQueryBuilder('qr')
+        .leftJoinAndSelect('qr.customer', 'customer')
+        .leftJoinAndSelect('qr.quotes', 'quotes')
+        .leftJoinAndSelect('quotes.provider', 'qprovider')
+        .orderBy('qr.createdAt', 'DESC')
+        .take(50);
+      if (search) {
+        qb.andWhere('CAST(qr.id AS text) ILIKE :s', { s: `${search.toLowerCase()}%` });
+      }
+      const requests = await qb.getMany();
+
+      // Resolve targeted provider ids → business names in one query.
+      const targetIds = [...new Set(requests.flatMap(r => r.targetProviderIds || []))];
+      const targetProviders = targetIds.length
+        ? await AppDataSource.getRepository(Provider).findByIds(targetIds)
+        : [];
+      const nameById = new Map(targetProviders.map(p => [p.id, p.businessName]));
+
+      const data = requests.map(r => ({
+        id: r.id,
+        serviceType: r.serviceType,
+        status: r.status,
+        city: r.location?.city || null,
+        createdAt: r.createdAt,
+        quotesReceived: r.quotesReceived,
+        customer: r.customer
+          ? { name: `${r.customer.firstName} ${r.customer.lastName}`.trim(), email: r.customer.email }
+          : null,
+        targeting: (r.targetProviderIds && r.targetProviderIds.length) ? 'direct' : 'broadcast',
+        targetProviders: (r.targetProviderIds || []).map(id => ({ id, name: nameById.get(id) || id })),
+        quotes: (r.quotes || []).map(q => ({
+          id: q.id,
+          provider: q.provider?.businessName || null,
+          price: Number(q.estimatedPrice),
+          status: q.status,
+        })),
+      }));
+
+      res.json({ success: true, data });
+    } catch (error) {
+      logger.error('Error fetching admin quote requests:', error);
       res.status(500).json({ success: false, error: 'Internal server error' });
     }
   }

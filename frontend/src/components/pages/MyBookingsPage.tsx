@@ -138,6 +138,7 @@ const MyBookingsPage: React.FC = () => {
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [rebookProvider, setRebookProvider] = useState<Provider | null>(null);
   const [rebookServiceType, setRebookServiceType] = useState<string>('');
+  const [rebookLocation, setRebookLocation] = useState<Booking['location'] | null>(null);
   const [showNewRequest, setShowNewRequest] = useState(false);
   const [compareQuotes, setCompareQuotes] = useState<Quote[] | null>(null);
 
@@ -509,7 +510,7 @@ const MyBookingsPage: React.FC = () => {
 
             {(booking.status === 'completed' || booking.status === 'cancelled') && !isProvider && booking.provider && (
               <Button variant="outlined" size="small" startIcon={<Replay fontSize="small" />}
-                onClick={() => { setRebookProvider(booking.provider as Provider); setRebookServiceType(booking.serviceType); }}
+                onClick={() => { setRebookProvider(booking.provider as Provider); setRebookServiceType(booking.serviceType); setRebookLocation(booking.location); }}
                 sx={{ borderColor: tokens.color.earth, color: tokens.color.earth, '&:hover': { bgcolor: `${tokens.color.earth}0D` }, borderRadius: tokens.radius.full, px: 2.5 }}>
                 {t('bookings:actions.rebook')}
               </Button>
@@ -773,9 +774,10 @@ const MyBookingsPage: React.FC = () => {
       {/* Re-book / direct request dialog */}
       <BookingDialog
         open={!!rebookProvider}
-        onClose={() => { setRebookProvider(null); setRebookServiceType(''); }}
+        onClose={() => { setRebookProvider(null); setRebookServiceType(''); setRebookLocation(null); }}
         provider={rebookProvider}
         serviceType={rebookServiceType}
+        initialLocation={rebookLocation}
       />
 
       {/* New broadcast request */}

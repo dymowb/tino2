@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Dialog,
@@ -44,6 +44,9 @@ interface BookingDialogProps {
   onClose: () => void;
   provider: Provider | null;
   serviceType?: string;
+  // When re-booking, prefill the location from the original service so the
+  // customer doesn't re-type the address (still editable).
+  initialLocation?: BookingFormData['location'] | null;
 }
 
 interface BookingFormData {
@@ -132,7 +135,8 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
   open,
   onClose,
   provider,
-  serviceType = ''
+  serviceType = '',
+  initialLocation = null
 }) => {
   const { t, i18n } = useTranslation(['bookings', 'providers']);
   const { user } = useAuth();
@@ -151,6 +155,18 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
     location: { address: '', city: '', state: '', zipCode: '', latitude: 0, longitude: 0 }
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // On open, seed serviceType and (for rebook) the original service's location so
+  // the customer doesn't re-type the address. Editable afterwards.
+  useEffect(() => {
+    if (!open) return;
+    setFormData(prev => ({
+      ...prev,
+      serviceType: serviceType || prev.serviceType,
+      ...(initialLocation ? { location: { ...initialLocation } } : {}),
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // Direct hire is modelled as a single-provider quote request: the provider
   // responds with a quote confirming or countering the customer's proposed terms,

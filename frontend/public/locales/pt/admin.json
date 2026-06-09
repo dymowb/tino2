@@ -204,5 +204,19 @@
     "save": "Salvar",
     "error_load": "Falha ao carregar configurações",
     "error_save": "Falha ao salvar {{key}}"
+  },
+  "quote_requests": {
+    "title": "Pedidos de Orçamento",
+    "subtitle": "Veja quem cada pedido alcançou (transmissão vs. direcionado) e quem respondeu.",
+    "search_placeholder": "Buscar por ID do pedido (ex.: 6068582C)",
+    "error": "Falha ao carregar os pedidos",
+    "empty": "Nenhum pedido encontrado.",
+    "col_request": "Pedido",
+    "col_customer": "Cliente",
+    "col_sent_to": "Enviado para",
+    "col_quotes": "Orçamentos recebidos",
+    "broadcast": "Transmissão (todos os profissionais compatíveis)",
+    "direct": "Direto",
+    "no_quotes": "Sem orçamentos ainda"
   }
 }
