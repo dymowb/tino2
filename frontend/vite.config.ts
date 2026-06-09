@@ -1,6 +1,11 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+// Backend target for the dev proxy. Defaults to :3000, but can be overridden
+// (e.g. VITE_PROXY_TARGET=http://localhost:3002) to point the dev frontend at a
+// separate dev backend without colliding with a PM2/prod backend on :3000.
+const PROXY_TARGET = process.env.VITE_PROXY_TARGET || 'http://localhost:3000';
+
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -8,11 +13,11 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: PROXY_TARGET,
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'http://localhost:3000',
+        target: PROXY_TARGET,
         ws: true,
         changeOrigin: true,
       },
@@ -20,7 +25,7 @@ export default defineConfig({
       // by the backend. Without this, /uploads/* hits the SPA fallback (index.html)
       // → broken images and "clicking an attachment lands on the home screen".
       '/uploads': {
-        target: 'http://localhost:3000',
+        target: PROXY_TARGET,
         changeOrigin: true,
       },
     },

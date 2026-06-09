@@ -40,7 +40,8 @@
     "login": "Iniciar Sesión",
     "register": "Registrarse",
     "search": "Buscar",
-    "bookings": "Reservas"
+    "bookings": "Reservas",
+    "opportunities": "Oportunidades"
   },
   "status": {
     "pending": "Pendiente",

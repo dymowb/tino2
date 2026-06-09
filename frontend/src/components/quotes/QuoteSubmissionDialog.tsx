@@ -98,10 +98,15 @@ const QuoteSubmissionDialog: React.FC<QuoteSubmissionDialogProps> = ({
 
   useEffect(() => {
     if (quoteRequest && open) {
+      // Direct (single-provider) requests carry the customer's proposed terms:
+      // budget.min=max = proposed price, and a 'proposed_duration_hours' requirement.
+      // Pre-fill from them so the provider can confirm in one click or counter.
+      const proposedDurationReq = quoteRequest.requirements?.find(r => r.category === 'proposed_duration_hours');
+      const proposedDuration = proposedDurationReq ? Number(proposedDurationReq.requirement) || 2 : 2;
       setFormData({
         description: `Professional ${quoteRequest.serviceType.replace(/_/g, ' ')} service`,
         estimatedPrice: quoteRequest.budget?.min || 100,
-        estimatedDuration: 2,
+        estimatedDuration: proposedDuration,
         validUntil: addDays(new Date(), 30),
         breakdown: {
           labor: Math.round((quoteRequest.budget?.min || 100) * 0.6),

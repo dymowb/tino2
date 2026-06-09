@@ -94,6 +94,10 @@ export interface Booking {
   id: string;
   customerId: string;
   providerId: string;
+  // Origin link to the quote/request this booking was created from (null for
+  // legacy/direct bookings). Used by the unified hub to dedupe the lifecycle card.
+  quoteId?: string | null;
+  requestId?: string | null;
   provider: Provider;
   customer: User;
   serviceType: string;
@@ -153,6 +157,9 @@ export interface QuoteRequest {
   }>;
   searchRadius: number;
   expiresAt?: string;
+  // Present + non-empty ⇒ a direct request targeted at specific provider(s);
+  // empty/absent ⇒ broadcast to all matching providers.
+  targetProviderIds?: string[] | null;
   quotesReceived: number;
   closedAt?: string;
   closureReason?: string;
@@ -190,6 +197,8 @@ export interface Quote {
   createdAt: string;
   updatedAt: string;
   provider?: Provider;
+  customer?: User;
+  request?: QuoteRequest;
 }
 
 export interface ProviderAnalysis {

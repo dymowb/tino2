@@ -112,7 +112,11 @@
     "view_receipt": "Ver Recibo",
     "get_directions": "Obtener Direcciones",
     "keep_booking": "Mantener Reserva",
-    "cancelling": "Cancelando..."
+    "cancelling": "Cancelando...",
+    "confirm_completion": "Confirmar Finalización",
+    "open_dispute": "Abrir Disputa",
+    "rebook": "Reservar de nuevo",
+    "review_sent": "Reseña enviada"
   },
   "status": {
     "pending": "Pendiente",
@@ -140,7 +144,10 @@
     "cancelled_success": "Reserva cancelada exitosamente",
     "cancelled_error": "Error al cancelar la reserva",
     "review_coming_soon": "Sistema de reseñas - ¡Próximamente en Tarea 6!",
-    "messaging_coming_soon": "Sistema de mensajería - ¡Próximamente en Tarea 4!"
+    "messaging_coming_soon": "Sistema de mensajería - ¡Próximamente en Tarea 4!",
+    "service_started": "Servicio iniciado, pago retenido",
+    "marked_complete": "Marcado como completado",
+    "completion_confirmed": "Servicio confirmado, pago liberado"
   },
   "reschedule": {
     "title": "Reprogramar Reserva",
@@ -157,5 +164,72 @@
     "in_progress": "El servicio está actualmente en progreso",
     "completed": "Esta reserva ha sido completada",
     "cancelled": "Esta reserva fue cancelada"
+  },
+  "hire_request": {
+    "dialog_title": "Solicitar presupuesto a {{provider}}",
+    "summary_title": "Resumen de la solicitud",
+    "proposed_cost": "Presupuesto propuesto",
+    "estimated_cost_caption": "Tu presupuesto propuesto",
+    "submit": "Enviar Solicitud",
+    "sending": "Enviando…",
+    "success": "Solicitud enviada — {{provider}} responderá con un presupuesto.",
+    "error": "No se pudo enviar la solicitud",
+    "terms_note": "Estos son los términos que propones. {{provider}} puede aceptarlos o responder con un presupuesto ajustado — tú confirmas antes de reservar.",
+    "proposed_duration": "Duración propuesta",
+    "proposed_terms_category": "Términos propuestos"
+  },
+  "hub": {
+    "awaiting_quotes": "Esperando presupuestos",
+    "quotes_count_one": "{{count}} presupuesto",
+    "quotes_count_other": "{{count}} presupuestos",
+    "no_quotes_yet": "Aún no hay presupuestos — los profesionales están revisando tu solicitud.",
+    "direct_badge": "Solicitud directa",
+    "open_badge": "Solicitud abierta",
+    "view_quotes": "Ver presupuestos",
+    "hide_quotes": "Ocultar presupuestos",
+    "accept": "Aceptar",
+    "reject": "Rechazar",
+    "message": "Mensaje",
+    "compare": "Comparar",
+    "close_request": "Cancelar solicitud",
+    "valid_until": "Válido hasta {{date}}",
+    "budget_range": "Presupuesto {{min}}–{{max}}",
+    "preferred_date": "Preferencia: {{date}}",
+    "expires": "Expira el {{date}}",
+    "expired": "Expirado",
+    "per_hour": "/h",
+    "new_request": "Nueva solicitud",
+    "empty": "Nada por aquí todavía.",
+    "empty_all": "Aún no tienes solicitudes ni reservas.",
+    "empty_awaiting": "No hay solicitudes abiertas esperando presupuestos.",
+    "empty_active": "No hay reservas activas.",
+    "empty_done": "Aún no hay trabajos completados o cancelados.",
+    "filter": {
+      "all": "Todos",
+      "awaiting": "Esperando presupuestos",
+      "active": "Activos",
+      "done": "Completados",
+      "awaiting_provider": "Esperando respuesta"
+    },
+    "request_closed_note": "Esta solicitud fue cancelada.",
+    "qstatus": {
+      "pending": "Pendiente",
+      "accepted": "Aceptado",
+      "rejected": "Rechazado",
+      "expired": "Expirado",
+      "withdrawn": "Retirado"
+    },
+    "awaiting_response": "Esperando respuesta",
+    "awaiting_customer": "Esperando la decisión del cliente",
+    "withdraw": "Retirar"
+  },
+  "opportunities": {
+    "title": "Oportunidades",
+    "subtitle": "Solicitudes abiertas cerca de ti — presupuesta y gana el trabajo.",
+    "empty": "No hay solicitudes abiertas ahora. Vuelve pronto.",
+    "submit_quote": "Enviar Presupuesto",
+    "respond": "Responder",
+    "proposed_terms": "Términos propuestos por el cliente",
+    "confirm_or_counter": "confirma o envía tu propio presupuesto"
   }
 }

@@ -114,7 +114,9 @@
     "view_receipt": "View Receipt",
     "get_directions": "Get Directions",
     "keep_booking": "Keep Booking",
-    "cancelling": "Cancelling..."
+    "cancelling": "Cancelling...",
+    "confirm_completion": "Confirm Completion",
+    "open_dispute": "Open Dispute"
   },
   "payment_status": {
     "not_charged": "Not charged"
@@ -145,7 +147,10 @@
     "cancelled_success": "Booking cancelled successfully",
     "cancelled_error": "Failed to cancel booking",
     "review_coming_soon": "Review system - Coming in Task 6!",
-    "messaging_coming_soon": "Messaging system - Coming in Task 4!"
+    "messaging_coming_soon": "Messaging system - Coming in Task 4!",
+    "service_started": "Service started, payment held",
+    "marked_complete": "Marked as complete",
+    "completion_confirmed": "Service confirmed, payment released"
   },
   "reschedule": {
     "title": "Reschedule Booking",
@@ -162,5 +167,72 @@
     "in_progress": "Service is currently in progress",
     "completed": "This booking has been completed",
     "cancelled": "This booking was cancelled"
+  },
+  "hire_request": {
+    "dialog_title": "Request a quote from {{provider}}",
+    "summary_title": "Request summary",
+    "proposed_cost": "Proposed budget",
+    "estimated_cost_caption": "Your proposed budget",
+    "submit": "Send Request",
+    "sending": "Sending…",
+    "success": "Request sent — {{provider}} will respond with a quote.",
+    "error": "Failed to send request",
+    "terms_note": "These are your proposed terms. {{provider}} can accept them or reply with an adjusted quote — you confirm before anything is booked.",
+    "proposed_duration": "Proposed duration",
+    "proposed_terms_category": "Proposed terms"
+  },
+  "hub": {
+    "awaiting_quotes": "Awaiting quotes",
+    "quotes_count_one": "{{count}} quote",
+    "quotes_count_other": "{{count}} quotes",
+    "no_quotes_yet": "No quotes yet — providers are reviewing your request.",
+    "direct_badge": "Direct request",
+    "open_badge": "Open request",
+    "view_quotes": "View quotes",
+    "hide_quotes": "Hide quotes",
+    "accept": "Accept",
+    "reject": "Decline",
+    "message": "Message",
+    "compare": "Compare",
+    "close_request": "Cancel request",
+    "valid_until": "Valid until {{date}}",
+    "budget_range": "Budget {{min}}–{{max}}",
+    "preferred_date": "Preferred: {{date}}",
+    "expires": "Expires {{date}}",
+    "expired": "Expired",
+    "per_hour": "/h",
+    "new_request": "New request",
+    "empty": "Nothing here yet.",
+    "empty_all": "You have no requests or bookings yet.",
+    "empty_awaiting": "No open requests awaiting quotes.",
+    "empty_active": "No active bookings.",
+    "empty_done": "No completed or cancelled jobs yet.",
+    "filter": {
+      "all": "All",
+      "awaiting": "Awaiting quotes",
+      "active": "Active",
+      "done": "Completed",
+      "awaiting_provider": "Awaiting response"
+    },
+    "request_closed_note": "This request was cancelled.",
+    "qstatus": {
+      "pending": "Pending",
+      "accepted": "Accepted",
+      "rejected": "Declined",
+      "expired": "Expired",
+      "withdrawn": "Withdrawn"
+    },
+    "awaiting_response": "Awaiting response",
+    "awaiting_customer": "Waiting for the customer to decide",
+    "withdraw": "Withdraw"
+  },
+  "opportunities": {
+    "title": "Opportunities",
+    "subtitle": "Open requests near you — quote to win the job.",
+    "empty": "No open requests right now. Check back soon.",
+    "submit_quote": "Submit Quote",
+    "respond": "Respond",
+    "proposed_terms": "Customer's proposed terms",
+    "confirm_or_counter": "confirm or send your own quote"
   }
 }

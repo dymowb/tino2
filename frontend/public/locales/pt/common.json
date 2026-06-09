@@ -42,7 +42,8 @@
     "register": "Registrar",
     "admin_panel": "Painel Admin",
     "search": "Buscar",
-    "bookings": "Reservas"
+    "bookings": "Reservas",
+    "opportunities": "Oportunidades"
   },
   "change_language": "Mudar Idioma",
   "status": {

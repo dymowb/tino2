@@ -8,6 +8,7 @@ import {
   MessageRounded,
   PersonRounded,
   DashboardRounded,
+  WorkOutlineRounded,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
@@ -30,8 +31,8 @@ const MobileBottomNav: React.FC = () => {
   // Labels come from i18n so they update live on language change.
   const tabs = user.userType === 'provider'
     ? [
-        { label: t('navigation.home'), path: '/', icon: <HomeRounded /> },
         { label: t('navigation.dashboard'), path: '/dashboard', icon: <DashboardRounded /> },
+        { label: t('navigation.opportunities'), path: '/opportunities', icon: <WorkOutlineRounded /> },
         { label: t('navigation.bookings'), path: '/bookings', icon: <BookOnlineRounded /> },
         { label: t('navigation.messages'), path: '/messages', icon: <MessageRounded /> },
         { label: t('navigation.profile'), path: '/profile', icon: <PersonRounded /> },

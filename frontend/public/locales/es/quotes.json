@@ -51,7 +51,6 @@
       "special_skills": "Habilidades Especiales"
     }
   },
-
   "submission": {
     "title": "Enviar Cotización para {{service}}",
     "quote_request_details": "Detalles de la Solicitud de Cotización",
@@ -94,7 +93,6 @@
       "valid_until_future": "La fecha de validez debe estar en el futuro"
     }
   },
-
   "list": {
     "title": "Mis Solicitudes de Cotización",
     "empty": "Aún no tienes solicitudes de cotización",
@@ -106,7 +104,6 @@
     "declined": "Rechazada",
     "search_placeholder": "Buscar cotizaciones..."
   },
-
   "details": {
     "title": "Detalles de la Solicitud de Cotización",
     "request_id": "ID de Solicitud",
@@ -120,7 +117,6 @@
     "no_quotes": "Aún no se han recibido cotizaciones",
     "waiting_for_quotes": "Esperando a que los proveedores envíen cotizaciones..."
   },
-
   "quote_card": {
     "provider": "Proveedor",
     "price": "Precio",
@@ -133,7 +129,6 @@
     "message": "Mensaje al Proveedor",
     "view_profile": "Ver Perfil del Proveedor"
   },
-
   "actions": {
     "compare": "Comparar Cotizaciones",
     "accept_confirm": "¿Aceptar esta cotización?",

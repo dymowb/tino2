@@ -142,7 +142,6 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
   const dateLocale = i18n.language.startsWith('pt') ? ptBR : enUS;
 
   const [step, setStep] = useState(0);
-  const [conflictError, setConflictError] = useState<string | null>(null);
   const [formData, setFormData] = useState<BookingFormData>({
     serviceType,
     scheduledDate: null,
@@ -153,28 +152,26 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const createBookingMutation = useMutation({
-    mutationFn: (bookingData: any) => apiService.createBooking(bookingData),
+  // Direct hire is modelled as a single-provider quote request: the provider
+  // responds with a quote confirming or countering the customer's proposed terms,
+  // and the customer accepts before anything is booked. (Unified lifecycle hub.)
+  const createRequestMutation = useMutation({
+    mutationFn: (requestData: any) => apiService.createQuoteRequest(requestData),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quote-requests'] });
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
-      toast.success(t('create.success'));
+      toast.success(t('hire_request.success', { provider: provider?.businessName }));
       onClose();
       resetForm();
     },
     onError: (error: any) => {
-      const msg = error?.response?.data?.message || error?.response?.data?.error || t('create.error');
-      if (error?.response?.status === 409) {
-        // Keep dialog open and surface conflict inline so user can pick a different time
-        setConflictError(msg);
-      } else {
-        toast.error(msg);
-      }
+      const msg = error?.response?.data?.message || error?.response?.data?.error || t('hire_request.error');
+      toast.error(msg);
     },
   });
 
   const resetForm = () => {
     setStep(0);
-    setConflictError(null);
     setFormData({
       serviceType,
       scheduledDate: null,
@@ -222,17 +219,28 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
 
   const handleSubmit = () => {
     if (!provider) return;
-    const bookingData = {
-      providerId: provider.id,
+    const proposedCost = calculateEstimatedCost();
+    const requestData = {
       serviceType: formData.serviceType,
-      description: formData.description,
-      scheduledDate: formData.scheduledDate!.toISOString(),
-      estimatedDuration: Math.round(formData.estimatedDuration * 60),
-      totalAmount: calculateEstimatedCost(),
-      specialInstructions: formData.specialInstructions || undefined,
-      location: formData.location
+      description: formData.specialInstructions
+        ? `${formData.description}\n\n${formData.specialInstructions}`
+        : formData.description,
+      location: formData.location,
+      preferredDate: formData.scheduledDate!.toISOString(),
+      // Customer's proposed price → budget (min=max). The provider may counter.
+      budget: { min: proposedCost, max: proposedCost, currency: 'BRL' },
+      urgency: 'medium' as const,
+      // Targeting one provider makes this a direct hire (visible only to them).
+      targetProviderIds: [provider.id],
+      // Duration has no dedicated request field — carry it machine-readably so
+      // the provider/hub can display the customer's proposed duration.
+      requirements: [{
+        category: 'proposed_duration_hours',
+        requirement: String(formData.estimatedDuration),
+        mandatory: false,
+      }],
     };
-    createBookingMutation.mutate(bookingData);
+    createRequestMutation.mutate(requestData);
   };
 
   const formatServiceName = (service: string) =>
@@ -261,7 +269,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
           fontWeight: 500,
           mb: 2,
         }}>
-          {t('create.dialog_title', { provider: provider.businessName })}
+          {t('hire_request.dialog_title', { provider: provider.businessName })}
         </Typography>
         <StepIndicator currentStep={step} />
       </DialogTitle>
@@ -269,15 +277,6 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
       <Divider />
 
       <DialogContent sx={{ pt: 3 }}>
-        {conflictError && (
-          <Alert
-            severity="warning"
-            onClose={() => setConflictError(null)}
-            sx={{ mb: 2, borderRadius: tokens.radius.sm }}
-          >
-            {conflictError} — {t('create.validation.try_another_time', 'Tente outro horário.')}
-          </Alert>
-        )}
         <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={dateLocale}>
           <AnimatePresence mode="wait">
             {/* Step 0 — Service details */}
@@ -363,7 +362,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
                       display: 'flex', flexDirection: 'column', justifyContent: 'center',
                     }}>
                       <Typography variant="caption" color="text.secondary" sx={{ mb: 0.25 }}>
-                        Custo Estimado
+                        {t('hire_request.estimated_cost_caption')}
                       </Typography>
                       <Typography sx={{
                         fontFamily: tokens.font.mono,
@@ -404,7 +403,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
                   <Grid xs={12}>
                     <Alert severity="info" icon={false} sx={{ borderRadius: tokens.radius.sm, py: 0.75 }}>
                       <Typography variant="caption" color="text.secondary">
-                        <strong>{t('cancel.policy')}:</strong> {t('cancel.policy_text')}
+                        {t('hire_request.terms_note', { provider: provider.businessName })}
                       </Typography>
                     </Alert>
                   </Grid>
@@ -479,7 +478,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
                 transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
               >
                 <Typography sx={{ fontFamily: tokens.font.display, fontSize: '1.125rem', fontWeight: 500, mb: 2.5 }}>
-                  {t('create.booking_summary')}
+                  {t('hire_request.summary_title')}
                 </Typography>
 
                 <Box sx={{
@@ -516,7 +515,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
                     bgcolor: isDark ? alpha(tokens.color.terra, 0.08) : alpha(tokens.color.terra, 0.05),
                   }}>
                     <Typography sx={{ fontWeight: 600 }}>
-                      {t('create.summary_labels.estimated_cost')}
+                      {t('hire_request.proposed_cost')}
                     </Typography>
                     <Typography sx={{
                       fontFamily: tokens.font.mono,
@@ -578,8 +577,8 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
           <Button
             variant="contained"
             onClick={handleSubmit}
-            disabled={createBookingMutation.isPending}
-            startIcon={createBookingMutation.isPending ? <CircularProgress size={16} color="inherit" /> : <CheckCircle fontSize="small" />}
+            disabled={createRequestMutation.isPending}
+            startIcon={createRequestMutation.isPending ? <CircularProgress size={16} color="inherit" /> : <CheckCircle fontSize="small" />}
             sx={{
               bgcolor: tokens.color.terra,
               '&:hover': { bgcolor: tokens.color.terraDark },
@@ -587,7 +586,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
               px: 3,
             }}
           >
-            {createBookingMutation.isPending ? t('create.creating') : t('create.submit')}
+            {createRequestMutation.isPending ? t('hire_request.sending') : t('hire_request.submit')}
           </Button>
         )}
       </DialogActions>

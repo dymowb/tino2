@@ -85,7 +85,7 @@ export class QuoteService {
             titleKey: 'titles.new_quote_request',
             messageKey: 'body.quote_request',
             i18nParams: { service: requestData.serviceType },
-            actionUrl: '/quotes',
+            actionUrl: '/opportunities',
             metadata: { quoteRequestId: savedRequest.id },
           }).catch(err => logger.error('Failed to notify provider of quote request:', err));
         }
@@ -429,9 +429,9 @@ export class QuoteService {
         titleKey: 'titles.new_quote',
         messageKey: 'body.new_quote',
         i18nParams: { business: provider.businessName, service: quoteData.serviceType },
-        // Deep-link to the "Received quotes" tab and the specific quote so the
-        // customer lands on it (was '/quotes', which opens the requests tab).
-        actionUrl: `/quotes?tab=received&quoteId=${savedQuote.id}`,
+        // Deep-link into the unified Bookings hub: ?quoteId expands the holding
+        // request and highlights the new quote.
+        actionUrl: `/bookings?quoteId=${savedQuote.id}`,
         metadata: { quoteId: savedQuote.id, requestId: quoteData.requestId },
       }).catch(err => logger.error('Failed to notify customer of new quote:', err));
 
@@ -732,6 +732,8 @@ export class QuoteService {
     const booking = bookingRepo.create({
       customerId: quote.customerId,
       providerId: quote.providerId,
+      quoteId: quote.id,
+      requestId: quote.requestId,
       serviceType: quote.serviceType,
       description: quote.description || request?.description || quote.serviceType,
       location: {

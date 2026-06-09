@@ -47,6 +47,16 @@ export class Booking {
   @Column()
   providerId: string;
 
+  // Origin link: when a booking is created by accepting a quote, these point back
+  // to that quote and its request. Null for any legacy/direct bookings created
+  // before the unified-lifecycle refactor. Lets the bookings hub render one
+  // continuous "request → quotes → booking" card instead of duplicates.
+  @Column({ type: 'uuid', nullable: true })
+  quoteId: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  requestId: string | null;
+
   @ManyToOne(() => User, (user) => user.customerBookings)
   @JoinColumn({ name: 'customerId' })
   customer: User;

@@ -16,13 +16,13 @@ import LoginForm from './components/auth/LoginForm';
 import RegisterForm from './components/auth/RegisterForm';
 import FindProvidersPage from './components/pages/FindProvidersPage';
 import MyBookingsPage from './components/pages/MyBookingsPage';
+import OpportunitiesPage from './components/pages/OpportunitiesPage';
 import ProfilePage from './components/pages/ProfilePage';
 import ProviderDashboardPage from './components/pages/ProviderDashboardPage';
 import MessagingPage from './components/pages/MessagingPage';
 import PaymentsPage from './components/pages/PaymentsPage';
 import MyReviewsPage from './components/pages/MyReviewsPage';
 import NotificationsPage from './components/pages/NotificationsPage';
-import MyQuotesPage from './components/pages/MyQuotesPage';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import AdminRoute from './components/auth/AdminRoute';
 import VerifyEmailPage from './components/auth/VerifyEmailPage';
@@ -153,6 +153,13 @@ const pageVariants = {
 };
 const pageTransition = { duration: 0.22, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] };
 
+// Legacy `/quotes` → unified Bookings hub. Preserves the query string so old
+// notification deep-links (?quoteId=…) still land on and highlight the quote.
+const QuotesRedirect: React.FC = () => {
+  const { search } = useLocation();
+  return <Navigate to={`/bookings${search}`} replace />;
+};
+
 // ─── App content (needs Router context) ───────────────────────────────────────
 const AppContent: React.FC = () => {
   const { loading, isAuthenticated } = useAuth();
@@ -193,11 +200,12 @@ const AppContent: React.FC = () => {
               <Route path="/providers"     element={<ProtectedRoute><FindProvidersPage /></ProtectedRoute>} />
               <Route path="/bookings"      element={<ProtectedRoute><MyBookingsPage /></ProtectedRoute>} />
               <Route path="/bookings/:id"  element={<Navigate to="/bookings" replace />} />
+              <Route path="/opportunities" element={<ProtectedRoute><OpportunitiesPage /></ProtectedRoute>} />
               <Route path="/profile"       element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
               <Route path="/dashboard"     element={<ProtectedRoute><ProviderDashboardPage /></ProtectedRoute>} />
               <Route path="/messages"      element={<ProtectedRoute><MessagingPage /></ProtectedRoute>} />
               <Route path="/payments"      element={<ProtectedRoute><PaymentsPage /></ProtectedRoute>} />
-              <Route path="/quotes"        element={<ProtectedRoute><MyQuotesPage /></ProtectedRoute>} />
+              <Route path="/quotes"        element={<ProtectedRoute><QuotesRedirect /></ProtectedRoute>} />
               <Route path="/reviews"       element={<ProtectedRoute><MyReviewsPage /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
               <Route path="/memory"        element={<ProtectedRoute><MemoryPage /></ProtectedRoute>} />

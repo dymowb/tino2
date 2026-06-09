@@ -42,7 +42,8 @@
     "register": "Register",
     "admin_panel": "Admin Panel",
     "search": "Search",
-    "bookings": "Bookings"
+    "bookings": "Bookings",
+    "opportunities": "Opportunities"
   },
   "change_language": "Change Language",
   "status": {

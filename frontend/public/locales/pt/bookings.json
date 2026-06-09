@@ -114,7 +114,9 @@
     "view_receipt": "Ver Recibo",
     "get_directions": "Obter Direções",
     "keep_booking": "Manter Reserva",
-    "cancelling": "Cancelando..."
+    "cancelling": "Cancelando...",
+    "confirm_completion": "Confirmar Conclusão",
+    "open_dispute": "Abrir Disputa"
   },
   "payment_status": {
     "not_charged": "Não cobrado"
@@ -145,7 +147,10 @@
     "cancelled_success": "Reserva cancelada com sucesso",
     "cancelled_error": "Falha ao cancelar reserva",
     "review_coming_soon": "Sistema de avaliações - Em breve na Tarefa 6!",
-    "messaging_coming_soon": "Sistema de mensagens - Em breve na Tarefa 4!"
+    "messaging_coming_soon": "Sistema de mensagens - Em breve na Tarefa 4!",
+    "service_started": "Serviço iniciado, pagamento reservado",
+    "marked_complete": "Marcado como concluído",
+    "completion_confirmed": "Serviço confirmado, pagamento liberado"
   },
   "reschedule": {
     "title": "Reagendar Reserva",
@@ -170,5 +175,72 @@
     "in_progress": "O serviço está atualmente em andamento",
     "completed": "Esta reserva foi concluída",
     "cancelled": "Esta reserva foi cancelada"
+  },
+  "hire_request": {
+    "dialog_title": "Solicitar orçamento de {{provider}}",
+    "summary_title": "Resumo do pedido",
+    "proposed_cost": "Orçamento proposto",
+    "estimated_cost_caption": "Seu orçamento proposto",
+    "submit": "Enviar Pedido",
+    "sending": "Enviando…",
+    "success": "Pedido enviado — {{provider}} responderá com um orçamento.",
+    "error": "Falha ao enviar o pedido",
+    "terms_note": "Estes são os termos que você propõe. {{provider}} pode aceitá-los ou responder com um orçamento ajustado — você confirma antes de qualquer reserva.",
+    "proposed_duration": "Duração proposta",
+    "proposed_terms_category": "Termos propostos"
+  },
+  "hub": {
+    "awaiting_quotes": "Aguardando orçamentos",
+    "quotes_count_one": "{{count}} orçamento",
+    "quotes_count_other": "{{count}} orçamentos",
+    "no_quotes_yet": "Nenhum orçamento ainda — os profissionais estão avaliando seu pedido.",
+    "direct_badge": "Pedido direto",
+    "open_badge": "Pedido aberto",
+    "view_quotes": "Ver orçamentos",
+    "hide_quotes": "Ocultar orçamentos",
+    "accept": "Aceitar",
+    "reject": "Recusar",
+    "message": "Mensagem",
+    "compare": "Comparar",
+    "close_request": "Cancelar pedido",
+    "valid_until": "Válido até {{date}}",
+    "budget_range": "Orçamento {{min}}–{{max}}",
+    "preferred_date": "Preferência: {{date}}",
+    "expires": "Expira em {{date}}",
+    "expired": "Expirado",
+    "per_hour": "/h",
+    "new_request": "Novo pedido",
+    "empty": "Nada por aqui ainda.",
+    "empty_all": "Você ainda não tem pedidos ou reservas.",
+    "empty_awaiting": "Nenhum pedido aberto aguardando orçamentos.",
+    "empty_active": "Nenhuma reserva ativa.",
+    "empty_done": "Nenhum serviço concluído ou cancelado ainda.",
+    "filter": {
+      "all": "Todos",
+      "awaiting": "Aguardando orçamentos",
+      "active": "Ativos",
+      "done": "Concluídos",
+      "awaiting_provider": "Aguardando resposta"
+    },
+    "request_closed_note": "Este pedido foi cancelado.",
+    "qstatus": {
+      "pending": "Pendente",
+      "accepted": "Aceito",
+      "rejected": "Recusado",
+      "expired": "Expirado",
+      "withdrawn": "Retirado"
+    },
+    "awaiting_response": "Aguardando resposta",
+    "awaiting_customer": "Aguardando a decisão do cliente",
+    "withdraw": "Retirar"
+  },
+  "opportunities": {
+    "title": "Oportunidades",
+    "subtitle": "Pedidos abertos perto de você — envie um orçamento e ganhe o trabalho.",
+    "empty": "Nenhum pedido aberto no momento. Volte em breve.",
+    "submit_quote": "Enviar Orçamento",
+    "respond": "Responder",
+    "proposed_terms": "Termos propostos pelo cliente",
+    "confirm_or_counter": "confirme ou envie seu próprio orçamento"
   }
 }

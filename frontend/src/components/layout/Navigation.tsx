@@ -78,7 +78,8 @@ const Navigation: React.FC = () => {
     ? user?.userType === 'provider'
       ? [
           { label: t('navigation.dashboard'), path: '/dashboard' },
-          { label: t('navigation.my_quotes'), path: '/quotes' },
+          { label: t('navigation.my_bookings'), path: '/bookings' },
+          { label: t('navigation.opportunities'), path: '/opportunities' },
           { label: t('navigation.messages'), path: '/messages' },
           { label: t('navigation.my_reviews'), path: '/reviews' },
         ]
