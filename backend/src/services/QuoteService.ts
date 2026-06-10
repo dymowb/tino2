@@ -9,6 +9,7 @@ import { Provider } from '@/models/Provider';
 import logger from '@/config/logger';
 import notificationService from '@/services/NotificationService';
 import serviceCategoryService from '@/services/ServiceCategoryService';
+import locationService from '@/services/LocationService';
 import { NotificationType } from '@/models/Notification';
 import { 
   CreateQuoteRequestRequest, 
@@ -53,13 +54,34 @@ export class QuoteService {
       // request is matchable to providers regardless of how serviceType was phrased.
       const category = await serviceCategoryService.categorize(requestData.serviceType);
 
+      // Geocode the address when coordinates are missing/(0,0), so radius matching
+      // works. Best-effort: on failure we keep the request without coords and matching
+      // safely falls back to category-only.
+      let location = requestData.location;
+      const hasCoords = !!location && Number(location.latitude) !== 0 && Number(location.longitude) !== 0
+        && Number.isFinite(Number(location.latitude)) && Number.isFinite(Number(location.longitude));
+      if (location && !hasCoords) {
+        const addr = [location.address, location.city, location.state, location.zipCode, 'Brazil']
+          .filter(Boolean).map(s => String(s).trim()).filter(Boolean).join(', ');
+        // Only attempt if there's something to geocode beyond the country.
+        if (addr.replace(/,?\s*Brazil$/i, '').trim().length > 2) {
+          try {
+            const geo = await locationService.geocodeAddress(addr);
+            location = { ...location, latitude: geo.location.latitude, longitude: geo.location.longitude };
+            logger.info('Geocoded quote request address', { addr, lat: geo.location.latitude, lng: geo.location.longitude });
+          } catch (err) {
+            logger.warn('Quote request geocoding failed; proceeding without coords', { addr });
+          }
+        }
+      }
+
       // Create quote request
       const quoteRequest = this.quoteRequestRepository.create({
         customerId,
         serviceType: requestData.serviceType,
         category,
         description: requestData.description,
-        location: requestData.location,
+        location,
         preferredDate: requestData.preferredDate,
         budget: requestData.budget,
         images: requestData.images || [],
