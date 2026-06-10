@@ -217,6 +217,9 @@
     "col_quotes": "Orçamentos recebidos",
     "broadcast": "Transmissão (todos os profissionais compatíveis)",
     "direct": "Direto",
-    "no_quotes": "Sem orçamentos ainda"
+    "no_quotes": "Sem orçamentos ainda",
+    "broadcast_count_one": "Transmissão → {{count}} profissional compatível",
+    "broadcast_count_other": "Transmissão → {{count}} profissionais compatíveis",
+    "no_match": "Nenhum profissional compatível (categoria/raio) — não alcança ninguém"
   }
 }

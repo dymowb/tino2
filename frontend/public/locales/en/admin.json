@@ -217,6 +217,9 @@
     "col_quotes": "Quotes received",
     "broadcast": "Broadcast (all matching providers)",
     "direct": "Direct",
-    "no_quotes": "No quotes yet"
+    "no_quotes": "No quotes yet",
+    "broadcast_count_one": "Broadcast → {{count}} provider matched",
+    "broadcast_count_other": "Broadcast → {{count}} providers matched",
+    "no_match": "No providers match (category/radius) — reaches no one"
   }
 }

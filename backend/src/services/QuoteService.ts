@@ -8,6 +8,7 @@ import { User } from '@/models/User';
 import { Provider } from '@/models/Provider';
 import logger from '@/config/logger';
 import notificationService from '@/services/NotificationService';
+import serviceCategoryService from '@/services/ServiceCategoryService';
 import { NotificationType } from '@/models/Notification';
 import { 
   CreateQuoteRequestRequest, 
@@ -48,10 +49,15 @@ export class QuoteService {
       const stalenessDays = stalenessSetting ? Number(stalenessSetting.value) || 7 : 7;
       const expiresAt = requestData.expiresAt || new Date(Date.now() + stalenessDays * 24 * 60 * 60 * 1000);
 
+      // Resolve the (free-form) serviceType to a canonical category up front so the
+      // request is matchable to providers regardless of how serviceType was phrased.
+      const category = await serviceCategoryService.categorize(requestData.serviceType);
+
       // Create quote request
       const quoteRequest = this.quoteRequestRepository.create({
         customerId,
         serviceType: requestData.serviceType,
+        category,
         description: requestData.description,
         location: requestData.location,
         preferredDate: requestData.preferredDate,
@@ -260,14 +266,52 @@ export class QuoteService {
         queryBuilder = queryBuilder.andWhere('quoteRequest.status = :status', { status });
       }
 
-      // Provider visibility: a provider browsing available requests sees broadcast
-      // requests (no targets) plus any request explicitly targeted at them...
+      // Provider visibility: a provider sees requests targeted directly at them
+      // (always), plus BROADCAST requests that match their service categories AND
+      // fall within the request's radius. Fallbacks (safe — never strand a request):
+      // an uncategorised request, or a provider/request without coordinates, skips
+      // that part of the filter rather than hiding the request.
       if (forProviderId) {
+        const provider = await this.providerRepository.findOne({ where: { id: forProviderId } });
+        const providerCategories = provider?.services?.length
+          ? [...await serviceCategoryService.coverageFor(provider.services)]
+          : [];
+        // Treat missing/(0,0) coordinates as "no location" → skip radius (don't strand).
+        const hasProvCoords = !!provider?.location
+          && Number(provider.location.latitude) !== 0 && Number(provider.location.longitude) !== 0;
+        const pLat = hasProvCoords ? provider!.location.latitude : null;
+        const pLng = hasProvCoords ? provider!.location.longitude : null;
+
         queryBuilder = queryBuilder.andWhere(
-          `("quoteRequest"."targetProviderIds" IS NULL
-            OR jsonb_array_length("quoteRequest"."targetProviderIds") = 0
-            OR "quoteRequest"."targetProviderIds" @> :forProviderTarget)`,
-          { forProviderTarget: JSON.stringify([forProviderId]) }
+          `(
+             "quoteRequest"."targetProviderIds" @> :meTarget
+             OR (
+               ("quoteRequest"."targetProviderIds" IS NULL
+                 OR jsonb_array_length("quoteRequest"."targetProviderIds") = 0)
+               AND (
+                 "quoteRequest"."category" IS NULL
+                 OR :provCatCount = 0
+                 OR "quoteRequest"."category" = ANY(:providerCategories)
+               )
+               AND (
+                 CAST(:pLat AS float) IS NULL
+                 OR CAST(:pLng AS float) IS NULL
+                 OR ("quoteRequest"."location"->>'latitude') IS NULL
+                 OR (CAST("quoteRequest"."location"->>'latitude' AS float) = 0
+                     AND CAST("quoteRequest"."location"->>'longitude' AS float) = 0)
+                 OR (
+                   ABS(CAST("quoteRequest"."location"->>'latitude' AS float) - CAST(:pLat AS float)) <= 0.009 * "quoteRequest"."searchRadius"
+                   AND ABS(CAST("quoteRequest"."location"->>'longitude' AS float) - CAST(:pLng AS float)) <= 0.009 * "quoteRequest"."searchRadius"
+                 )
+               )
+             )
+           )`,
+          {
+            meTarget: JSON.stringify([forProviderId]),
+            providerCategories: providerCategories.length ? providerCategories : ['__none__'],
+            provCatCount: providerCategories.length,
+            pLat, pLng,
+          }
         );
         // ...and NOT requests they've already quoted — those live in the provider's
         // "My Quotes" tab, and re-submitting one returns 409. Keeping them out of the

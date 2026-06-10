@@ -10,6 +10,7 @@ import { Payment } from '@/models/Payment';
 import { AppSettings } from '@/models/AppSettings';
 import { getStripeInstance, getStripeErrorMessage } from '@/config/stripe';
 import notificationService from '@/services/NotificationService';
+import serviceCategoryService from '@/services/ServiceCategoryService';
 import { NotificationType } from '@/models/Notification';
 import logger from '@/config/logger';
 import { AuthenticatedRequest } from '@/types';
@@ -746,25 +747,60 @@ export class AdminController {
         : [];
       const nameById = new Map(targetProviders.map(p => [p.id, p.businessName]));
 
-      const data = requests.map(r => ({
-        id: r.id,
-        serviceType: r.serviceType,
-        status: r.status,
-        city: r.location?.city || null,
-        createdAt: r.createdAt,
-        quotesReceived: r.quotesReceived,
-        customer: r.customer
-          ? { name: `${r.customer.firstName} ${r.customer.lastName}`.trim(), email: r.customer.email }
-          : null,
-        targeting: (r.targetProviderIds && r.targetProviderIds.length) ? 'direct' : 'broadcast',
-        targetProviders: (r.targetProviderIds || []).map(id => ({ id, name: nameById.get(id) || id })),
-        quotes: (r.quotes || []).map(q => ({
-          id: q.id,
-          provider: q.provider?.businessName || null,
-          price: Number(q.estimatedPrice),
-          status: q.status,
-        })),
-      }));
+      // For broadcast requests, compute the ACTUAL audience the same way provider
+      // visibility does: active providers whose service categories cover the request's
+      // category AND who are within its radius (mirrors QuoteService matching, incl.
+      // the safe fallbacks). Lets admins confirm a request reached the right providers.
+      const activeProviders = await AppDataSource.getRepository(Provider).find({ where: { isActive: true } });
+      const coverage = new Map<string, Set<string>>();
+      for (const p of activeProviders) {
+        coverage.set(p.id, await serviceCategoryService.coverageFor(p.services || []));
+      }
+      const hasCoords = (lat: number, lng: number) =>
+        Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
+      const matchedFor = (r: QuoteRequest) => {
+        const reqLat = Number(r.location?.latitude);
+        const reqLng = Number(r.location?.longitude);
+        const radius = Number(r.searchRadius) || 25;
+        return activeProviders.filter(p => {
+          const cat = r.category;
+          const cov = coverage.get(p.id)!;
+          const catOk = !cat || cov.size === 0 || cov.has(cat);
+          if (!catOk) return false;
+          const pLat = Number(p.location?.latitude);
+          const pLng = Number(p.location?.longitude);
+          // (0,0)/missing coords → treat as no location → skip the radius filter.
+          if (!hasCoords(pLat, pLng) || !hasCoords(reqLat, reqLng)) return true;
+          return Math.abs(reqLat - pLat) <= 0.009 * radius && Math.abs(reqLng - pLng) <= 0.009 * radius;
+        }).map(p => ({ id: p.id, name: p.businessName }));
+      };
+
+      const data = requests.map(r => {
+        const isDirect = !!(r.targetProviderIds && r.targetProviderIds.length);
+        const matched = isDirect ? null : matchedFor(r);
+        return {
+          id: r.id,
+          serviceType: r.serviceType,
+          category: r.category,
+          status: r.status,
+          city: r.location?.city || null,
+          createdAt: r.createdAt,
+          quotesReceived: r.quotesReceived,
+          customer: r.customer
+            ? { name: `${r.customer.firstName} ${r.customer.lastName}`.trim(), email: r.customer.email }
+            : null,
+          targeting: isDirect ? 'direct' : 'broadcast',
+          targetProviders: (r.targetProviderIds || []).map(id => ({ id, name: nameById.get(id) || id })),
+          matchedProviders: matched,         // null for direct; [{id,name}] for broadcast
+          matchedCount: matched ? matched.length : null,
+          quotes: (r.quotes || []).map(q => ({
+            id: q.id,
+            provider: q.provider?.businessName || null,
+            price: Number(q.estimatedPrice),
+            status: q.status,
+          })),
+        };
+      });
 
       res.json({ success: true, data });
     } catch (error) {

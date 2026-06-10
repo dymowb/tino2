@@ -17,7 +17,10 @@ interface AdminQuoteRequest {
   quotesReceived: number;
   customer: { name: string; email: string } | null;
   targeting: 'broadcast' | 'direct';
+  category: string | null;
   targetProviders: { id: string; name: string }[];
+  matchedProviders: { id: string; name: string }[] | null;
+  matchedCount: number | null;
   quotes: { id: string; provider: string | null; price: number; status: string }[];
 }
 
@@ -93,10 +96,22 @@ const AdminQuoteRequestsPage: React.FC = () => {
                       </>
                     ) : <Typography variant="caption" color="text.secondary">—</Typography>}
                   </TableCell>
-                  <TableCell sx={{ maxWidth: 260 }}>
+                  <TableCell sx={{ maxWidth: 300 }}>
                     {r.targeting === 'broadcast' ? (
-                      <Chip icon={<CampaignOutlined />} size="small" color="info" variant="outlined"
-                        label={t('quote_requests.broadcast', 'Broadcast (all matching providers)')} />
+                      <Stack spacing={0.5}>
+                        <Chip icon={<CampaignOutlined />} size="small" color="info" variant="outlined"
+                          sx={{ alignSelf: 'flex-start' }}
+                          label={t('quote_requests.broadcast_count', { count: r.matchedCount ?? 0, defaultValue: 'Broadcast → {{count}} matched' })} />
+                        {(r.matchedProviders || []).length === 0 ? (
+                          <Typography variant="caption" color="error">
+                            {t('quote_requests.no_match', 'No providers match (category/radius) — reaches no one')}
+                          </Typography>
+                        ) : (
+                          <Typography variant="caption" color="text.secondary">
+                            {(r.matchedProviders || []).map(p => p.name).join(', ')}
+                          </Typography>
+                        )}
+                      </Stack>
                     ) : (
                       <Stack spacing={0.5}>
                         <Chip icon={<PersonPinCircleOutlined />} size="small" color="warning" variant="outlined"

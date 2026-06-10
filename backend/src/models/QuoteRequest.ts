@@ -45,6 +45,11 @@ export class QuoteRequest {
   @IsString()
   serviceType: string;
 
+  // Canonical category (from service_categories) resolved from serviceType. Drives
+  // provider matching for broadcast requests. Null = uncategorised → broadcast-all.
+  @Column({ type: 'varchar', nullable: true })
+  category: string | null;
+
   @Column({ type: 'text' })
   @IsString()
   description: string;
