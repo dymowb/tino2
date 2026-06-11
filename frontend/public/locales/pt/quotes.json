@@ -18,7 +18,7 @@
     "budget_range": "Faixa de Orçamento",
     "budget_display": "Orçamento: R${{min}} - R${{max}}",
     "preferred_start_date": "Data de Início Preferida (Opcional)",
-    "search_radius": "Raio de Busca (milhas)",
+    "search_radius": "Raio de Busca (km)",
     "search_radius_help": "Até que distância devemos procurar prestadores?",
     "special_requirements": "Requisitos Especiais (Opcional)",
     "category": "Categoria",

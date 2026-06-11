@@ -52,7 +52,7 @@
     "rating": "{{rating}} estrelas",
     "reviews_count": "{{count}} avaliação",
     "reviews": "avaliações",
-    "distance_away": "{{distance}} milhas de distância",
+    "distance_away": "{{distance}} km de distância",
     "responds_in": "Responde em {{time}}",
     "responds_in_hours": "Responde em {{time}}h",
     "completed_jobs": "{{count}} trabalho concluído",

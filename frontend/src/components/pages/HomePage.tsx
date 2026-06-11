@@ -12,13 +12,15 @@ import { tokens } from '../../theme/theme';
 
 const ease: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
+// `slug` flows to /providers?service=<slug> → the AI assistant uses it to show a
+// service-specific example prompt (welcome.examples.<slug>).
 const services = [
-  { Icon: CleaningServices, nameKey: 'home.services.house_cleaning', accent: tokens.color.earth,     span: 2 },
-  { Icon: Plumbing,         nameKey: 'home.services.plumbing',       accent: '#2A7BB5',               span: 1 },
-  { Icon: ElectricalServices, nameKey: 'home.services.electrical',   accent: tokens.color.gold,      span: 1 },
-  { Icon: Carpenter,        nameKey: 'home.services.handyman',        accent: tokens.color.stone,     span: 1 },
-  { Icon: LocalFlorist,     nameKey: 'home.services.gardening',       accent: '#5A8A3F',              span: 1 },
-  { Icon: Build,            nameKey: 'home.services.repairs',         accent: tokens.color.terra,     span: 2 },
+  { Icon: CleaningServices, nameKey: 'home.services.house_cleaning', slug: 'house_cleaning', accent: tokens.color.earth,     span: 2 },
+  { Icon: Plumbing,         nameKey: 'home.services.plumbing',       slug: 'plumbing',       accent: '#2A7BB5',               span: 1 },
+  { Icon: ElectricalServices, nameKey: 'home.services.electrical',   slug: 'electrical',     accent: tokens.color.gold,      span: 1 },
+  { Icon: Carpenter,        nameKey: 'home.services.handyman',        slug: 'handyman',       accent: tokens.color.stone,     span: 1 },
+  { Icon: LocalFlorist,     nameKey: 'home.services.gardening',       slug: 'gardening',      accent: '#5A8A3F',              span: 1 },
+  { Icon: Build,            nameKey: 'home.services.repairs',         slug: 'repairs',        accent: tokens.color.terra,     span: 2 },
 ];
 
 const featurePillars = [
@@ -302,7 +304,7 @@ const HomePage: React.FC = () => {
                   initial={{ opacity: 0, y: 18 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.45, delay: i * 0.07, ease }}
-                  onClick={() => navigate('/providers')}
+                  onClick={() => navigate(`/providers?service=${svc.slug}`)}
                   sx={{
                     gridColumn: { xs: '1', sm: isWide ? 'span 2' : 'span 1', md: isWide ? 'span 2' : 'span 1' },
                     position: 'relative',

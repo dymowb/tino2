@@ -5,7 +5,6 @@
   "save_changes": "Guardar Cambios",
   "saving": "Guardando...",
   "cancel": "Cancelar",
-
   "sections": {
     "basic_information": "Información Básica",
     "provider_information": "Información del Proveedor",
@@ -16,7 +15,6 @@
     "security": "Seguridad",
     "preferences": "Preferencias"
   },
-
   "fields": {
     "first_name": "Nombre",
     "last_name": "Apellido",
@@ -36,15 +34,15 @@
     "availability": "Disponibilidad",
     "description": "Descripción",
     "no_description": "No se proporcionó descripción",
-    "services_offered": "Servicios Ofrecidos"
+    "services_offered": "Servicios Ofrecidos",
+    "service_radius": "Radio de Servicio",
+    "completed_jobs": "trabajos hechos"
   },
-
   "availability_status": {
     "available": "Disponible",
     "busy": "Ocupado",
     "offline": "Desconectado"
   },
-
   "password": {
     "change_password": "Cambiar Contraseña",
     "description": "Por favor ingresa tu contraseña actual y elige una nueva contraseña segura.",
@@ -75,7 +73,6 @@
       "must_be_different": "La nueva contraseña debe ser diferente de la actual"
     }
   },
-
   "settings": {
     "notification_settings": "Configuración de Notificaciones",
     "privacy_settings": "Configuración de Privacidad",
@@ -92,7 +89,6 @@
     "public": "Público",
     "private": "Privado"
   },
-
   "delete_account": {
     "title": "Eliminar Cuenta",
     "button": "Eliminar Mi Cuenta",
@@ -140,7 +136,6 @@
       "messages_detail": "Todo el historial de conversaciones será eliminado permanentemente"
     }
   },
-
   "messages": {
     "update_success": "Perfil actualizado exitosamente",
     "update_error": "Error al actualizar el perfil",

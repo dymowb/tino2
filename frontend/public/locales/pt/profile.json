@@ -34,7 +34,9 @@
     "availability": "Disponibilidade",
     "description": "Descrição",
     "no_description": "Nenhuma descrição fornecida",
-    "services_offered": "Serviços Oferecidos"
+    "services_offered": "Serviços Oferecidos",
+    "service_radius": "Raio de Atendimento",
+    "completed_jobs": "serviços feitos"
   },
   "availability_status": {
     "available": "Disponível",
@@ -143,7 +145,6 @@
     "notifications_pending": "Integração de preferências de notificação pendente",
     "privacy_pending": "Integração de configurações de privacidade pendente"
   },
-
   "privacy": {
     "visibility_title": "Visibilidade do Perfil",
     "visibility_public": "Perfil público",

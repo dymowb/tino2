@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Tabs, Tab, Box, Typography, TextField, FormControl,
@@ -380,6 +381,11 @@ const FindProvidersPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [aiCompleted, setAiCompleted] = useState(false);
 
+  // Deep-link from Home "Popular Services": ?service=<slug> lands on the AI tab
+  // (index 0) and seeds a service-specific example prompt in the assistant.
+  const [urlParams] = useSearchParams();
+  const serviceExample = urlParams.get('service') || undefined;
+
   const { data: serviceCatalog = [] } = useQuery({
     queryKey: ['service-catalog'],
     queryFn: () => apiService.getServiceCatalog(),
@@ -497,7 +503,7 @@ const FindProvidersPage: React.FC = () => {
         </Tabs>
       )}
 
-      {activeTab === 0 && <AIAssistantTab onComplete={() => setAiCompleted(true)} onReset={() => setAiCompleted(false)} />}
+      {activeTab === 0 && <AIAssistantTab serviceExample={serviceExample} onComplete={() => setAiCompleted(true)} onReset={() => setAiCompleted(false)} />}
 
       {activeTab === 1 && (
         <>

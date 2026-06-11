@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
@@ -10,7 +10,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { apiService } from '../../services/api';
+import { apiService, User } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface PrivacySettingsDialogProps {
@@ -24,6 +24,39 @@ const PrivacySettingsDialog: React.FC<PrivacySettingsDialogProps> = ({ open, onC
   const navigate = useNavigate();
   const [profilePublic, setProfilePublic] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  // Keep the full settings blob so saving privacy doesn't wipe notification prefs
+  // (PUT /auth/profile replaces the whole `settings` jsonb column).
+  const [settings, setSettings] = useState<User['settings']>();
+
+  // Load the user's actual stored visibility when the dialog opens.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    apiService.getProfile().then(p => {
+      if (cancelled) return;
+      setSettings(p.settings);
+      setProfilePublic(p.settings?.privacy?.showProfile ?? true);
+    }).catch(() => { /* keep defaults */ });
+    return () => { cancelled = true; };
+  }, [open]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const merged: User['settings'] = {
+        notifications: settings?.notifications ?? { email: true, sms: true, push: true },
+        privacy: { showLocation: settings?.privacy?.showLocation ?? true, showProfile: profilePublic },
+      };
+      await apiService.updateProfile({ settings: merged });
+      toast.success(t('profile:messages.update_success'));
+      onClose();
+    } catch {
+      toast.error(t('profile:messages.update_error'));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleExportData = async () => {
     setExporting(true);
@@ -149,8 +182,13 @@ const PrivacySettingsDialog: React.FC<PrivacySettingsDialogProps> = ({ open, onC
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={onClose}>{t('common:close')}</Button>
-        <Button variant="contained" onClick={onClose}>
+        <Button onClick={onClose} disabled={saving}>{t('common:close')}</Button>
+        <Button
+          variant="contained"
+          onClick={handleSave}
+          disabled={saving}
+          startIcon={saving ? <CircularProgress size={14} color="inherit" /> : undefined}
+        >
           {t('common:save')}
         </Button>
       </DialogActions>

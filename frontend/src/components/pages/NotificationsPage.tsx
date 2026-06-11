@@ -13,6 +13,7 @@ import {
   FormGroup,
   FormControlLabel,
   CircularProgress,
+  IconButton,
   useTheme,
   useMediaQuery
 } from '@mui/material';
@@ -21,9 +22,10 @@ import {
   NotificationsActive,
   Settings,
   Email,
-  Sms
+  Sms,
+  ArrowBack
 } from '@mui/icons-material';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
@@ -54,9 +56,15 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index, ...other })
 const NotificationsPage: React.FC = () => {
   const { t } = useTranslation('notifications');
   const { user } = useAuth();
+  const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // This page is always reached from within the app (notification bell or the
+  // Profile → Notification Settings action). Give it an explicit way back so it
+  // doesn't feel like a dead-end, especially on mobile (it's not in the bottom nav).
+  const goBack = () => (window.history.length > 1 ? navigate(-1) : navigate('/profile'));
 
   // Get initial tab from URL params
   const initialTab = searchParams.get('tab');
@@ -99,10 +107,15 @@ const NotificationsPage: React.FC = () => {
     <Container maxWidth="lg" sx={{ py: 3 }}>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" fontWeight="bold" sx={{ mb: 1 }}>
-          <Notifications sx={{ mr: 2, verticalAlign: 'middle' }} />
-          {t('title')}
-        </Typography>
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+          <IconButton onClick={goBack} aria-label={t('back')} edge="start">
+            <ArrowBack />
+          </IconButton>
+          <Typography variant="h4" component="h1" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center' }}>
+            <Notifications sx={{ mr: 2, verticalAlign: 'middle' }} />
+            {t('title')}
+          </Typography>
+        </Stack>
         <Typography variant="subtitle1" color="text.secondary">
           {t('subtitle')}
         </Typography>

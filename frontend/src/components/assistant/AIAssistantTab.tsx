@@ -44,9 +44,12 @@ const MAX_PROVIDERS = Number(import.meta.env.VITE_MAX_PROVIDERS_PER_QUOTE ?? 5);
 interface AIAssistantTabProps {
   onComplete?: () => void;
   onReset?: () => void;
+  // Service slug from Home "Popular Services" (?service=<slug>) used to show a
+  // service-specific example prompt in the welcome textarea.
+  serviceExample?: string;
 }
 
-const AIAssistantTab: React.FC<AIAssistantTabProps> = ({ onComplete, onReset }) => {
+const AIAssistantTab: React.FC<AIAssistantTabProps> = ({ onComplete, onReset, serviceExample }) => {
   const { t } = useTranslation('assistant');
   const {
     workflow,
@@ -230,7 +233,9 @@ const AIAssistantTab: React.FC<AIAssistantTabProps> = ({ onComplete, onReset }) 
               handleSubmit();
             }
           }}
-          placeholder={t('welcome.placeholder')}
+          placeholder={serviceExample
+            ? t(`welcome.examples.${serviceExample}`, { defaultValue: t('welcome.placeholder') })
+            : t('welcome.placeholder')}
           disabled={isStarting}
           sx={{ mb: 2 }}
         />

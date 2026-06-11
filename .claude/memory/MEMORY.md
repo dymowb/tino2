@@ -11,6 +11,7 @@
 - [providerId vs userId auth bug](project_providerid_vs_userid.md) — entity.providerId stores Provider id, not User id; provider-scoped authz must resolve provider.id from userId first. Recurred 3×.
 - [Stripe init before checks](project_stripe_init_before_checks.md) — getStripeInstance() throws in dev (no key); calling it before guard clauses hangs/500s the endpoint. Init payment SDK last. Recurred 2× (A1, B1).
 - [LLM JSON parse crashes workflow](project_llm_json_parse.md) — never raw JSON.parse LLM output; empty/truncated responses crash the whole agent pipeline. Use parseLlmJson/parseClaudeJson (utils/llm-json.ts) + a fallback for null.
+- [getProfile omits settings / stubbed save paths](project_getprofile_omits_settings.md) — GET /auth/profile dropped settings; PrivacySettingsDialog Save was a no-op. Verify the full read+write loop for any settings feature.
 
 ## Historical (completed — kept for reference)
 - [Beta launch plan](project_beta_plan.md) — Ordered plan for beta launch (password recovery, hardening, Florianópolis seed + PT_BR). Done.

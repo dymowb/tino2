@@ -147,5 +147,6 @@
     "hours_ago_one": "{{count}} hour ago",
     "days_ago_other": "{{count}} days ago",
     "days_ago_one": "{{count}} day ago"
-  }
+  },
+  "back": "Back"
 }

@@ -214,7 +214,9 @@ export class AuthController {
           lastName: user.lastName,
           phone: user.phone,
           userType: user.userType,
-          // Note: isVerified, profileImage, settings not available in BasicUser
+          isVerified: user.isVerified,
+          profileImage: user.profileImage,
+          settings: user.settings,
           createdAt: user.createdAt,
         },
       };

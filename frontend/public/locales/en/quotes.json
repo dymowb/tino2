@@ -18,7 +18,7 @@
     "budget_range": "Budget Range",
     "budget_display": "Budget: R${{min}} - R${{max}}",
     "preferred_start_date": "Preferred Start Date (Optional)",
-    "search_radius": "Search Radius (miles)",
+    "search_radius": "Search Radius (km)",
     "search_radius_help": "How far should we search for providers?",
     "special_requirements": "Special Requirements (Optional)",
     "category": "Category",

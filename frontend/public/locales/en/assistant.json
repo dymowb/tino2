@@ -6,7 +6,15 @@
   "welcome": {
     "title": "Find the Right Provider",
     "subtitle": "Describe what you need and our AI will find the best matches for you.",
-    "placeholder": "e.g., I need a plumber to fix a leaking kitchen faucet in Austin, TX. My budget is $150-200 and I need it done this week."
+    "placeholder": "e.g., I need a plumber to fix a leaking kitchen faucet in Florianópolis. My budget is R$150-300 and I need it done this week.",
+    "examples": {
+      "house_cleaning": "e.g., I need a deep clean for a 2-bedroom apartment in downtown Florianópolis. Budget R$150-250, sometime this week.",
+      "plumbing": "e.g., I need a plumber to fix a leaking kitchen faucet in Florianópolis. Budget R$150-300, this week.",
+      "electrical": "e.g., I need an electrician to install three outlets and replace a breaker in Florianópolis. Budget R$200-400.",
+      "handyman": "e.g., I need a handyman to assemble furniture and mount shelves on the wall in Florianópolis. Budget R$100-200.",
+      "gardening": "e.g., I need a gardener to mow the lawn and trim the hedges at a house in Florianópolis. Budget R$120-250.",
+      "repairs": "e.g., I need a technician to repair a washing machine that won't spin in Florianópolis. Budget R$150-350."
+    }
   },
   "status": {
     "starting": "Starting your request...",

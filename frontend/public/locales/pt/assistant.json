@@ -6,7 +6,15 @@
   "welcome": {
     "title": "Encontre o Profissional Certo",
     "subtitle": "Descreva o que você precisa e nossa IA encontrará as melhores opções para você.",
-    "placeholder": "ex: Preciso de um encanador para consertar uma torneira da cozinha que está vazando em São Paulo. Meu orçamento é R$300-500 e preciso para esta semana."
+    "placeholder": "ex: Preciso de um encanador para consertar uma torneira da cozinha que está vazando em Florianópolis. Meu orçamento é R$150-300 e preciso para esta semana.",
+    "examples": {
+      "house_cleaning": "ex: Preciso de uma faxina completa em um apartamento de 2 quartos no Centro, Florianópolis. Orçamento de R$150-250 para esta semana.",
+      "plumbing": "ex: Preciso de um encanador para consertar uma torneira da cozinha que está vazando em Florianópolis. Orçamento de R$150-300 para esta semana.",
+      "electrical": "ex: Preciso de um eletricista para instalar três tomadas e trocar um disjuntor no Estreito, Florianópolis. Orçamento de R$200-400.",
+      "handyman": "ex: Preciso de um marido de aluguel para montar móveis e fixar prateleiras na parede em Florianópolis. Orçamento de R$100-200.",
+      "gardening": "ex: Preciso de um jardineiro para aparar a grama e podar os arbustos em uma casa nos Ingleses, Florianópolis. Orçamento de R$120-250.",
+      "repairs": "ex: Preciso de um técnico para consertar uma máquina de lavar que não centrifuga em Florianópolis. Orçamento de R$150-350."
+    }
   },
   "status": {
     "starting": "Iniciando sua solicitação...",

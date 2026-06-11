@@ -6,7 +6,15 @@
   "welcome": {
     "title": "Encuentra al Profesional Adecuado",
     "subtitle": "Describe lo que necesitas y nuestra IA encontrará las mejores opciones para ti.",
-    "placeholder": "ej: Necesito un plomero para arreglar un grifo de cocina que gotea en Ciudad de México. Mi presupuesto es $3000-5000 y lo necesito esta semana."
+    "placeholder": "ej: Necesito un plomero para arreglar un grifo de cocina que gotea en Florianópolis. Mi presupuesto es R$150-300 y lo necesito esta semana.",
+    "examples": {
+      "house_cleaning": "ej: Necesito una limpieza profunda en un apartamento de 2 habitaciones en el centro de Florianópolis. Presupuesto R$150-250, esta semana.",
+      "plumbing": "ej: Necesito un plomero para arreglar un grifo de cocina que gotea en Florianópolis. Presupuesto R$150-300, esta semana.",
+      "electrical": "ej: Necesito un electricista para instalar tres tomas y cambiar un disyuntor en Florianópolis. Presupuesto R$200-400.",
+      "handyman": "ej: Necesito un manitas para montar muebles y fijar estantes en la pared en Florianópolis. Presupuesto R$100-200.",
+      "gardening": "ej: Necesito un jardinero para cortar el césped y podar los setos en una casa en Florianópolis. Presupuesto R$120-250.",
+      "repairs": "ej: Necesito un técnico para reparar una lavadora que no centrifuga en Florianópolis. Presupuesto R$150-350."
+    }
   },
   "status": {
     "starting": "Iniciando tu solicitud...",

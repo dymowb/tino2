@@ -1,611 +1,350 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-hot-toast';
+import {
+  Box, Container, Typography, TextField, Button, Stack, Avatar, Chip,
+  Autocomplete, CircularProgress, Alert, InputAdornment, Rating, useTheme, alpha,
+} from '@mui/material';
+import {
+  Edit, Save, Close, Lock, Notifications, Shield, DeleteOutline,
+  Person, Star, WorkOutline,
+} from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
-import { apiService } from '../../services/api';
+import { apiService, User, Provider } from '../../services/api';
+import { tokens } from '../../theme/theme';
 import PasswordChangeDialog from '../profile/PasswordChangeDialog';
 import AccountDeletionDialog from '../profile/AccountDeletionDialog';
 import PrivacySettingsDialog from '../profile/PrivacySettingsDialog';
 
-interface UserProfile {
-  id: number;
-  email: string;
-  first_name: string;
-  last_name: string;
-  user_type: 'customer' | 'provider';
-  phone: string;
-  profile_image: string;
-  created_at: string;
-}
-
-interface ProviderProfile {
-  id: number;
-  business_name: string;
-  description: string;
-  services: string[];
-  hourly_rate: number;
-  latitude: number;
-  longitude: number;
-  availability_status: 'available' | 'busy' | 'offline';
-  rating: number;
-  total_reviews: number;
-  profile_image: string;
-  is_active: boolean;
-}
-
 const ProfilePage: React.FC = () => {
-  const { t, i18n } = useTranslation(['profile']);
+  const { t, i18n } = useTranslation(['profile', 'common']);
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [providerProfile, setProviderProfile] = useState<ProviderProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>('');
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  const queryClient = useQueryClient();
+
+  const isProvider = user?.userType === 'provider';
+
   const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [deletionDialogOpen, setDeletionDialogOpen] = useState(false);
   const [privacyDialogOpen, setPrivacyDialogOpen] = useState(false);
 
-  // Form states
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    phone: '',
-    businessName: '',
-    description: '',
-    services: [] as string[],
-    hourlyRate: 0,
-    availabilityStatus: 'available' as 'available' | 'busy' | 'offline'
+  const [form, setForm] = useState({
+    firstName: '', lastName: '', phone: '',
+    businessName: '', description: '', services: [] as string[],
+    hourlyRate: 0, serviceRadius: 25,
   });
 
-  const serviceTypes = [
-    'house_cleaning',
-    'plumbing',
-    'electrical',
-    'carpentry',
-    'painting',
-    'gardening',
-    'hvac',
-    'appliance_repair'
-  ];
+  // ── Data ──────────────────────────────────────────────────────────────────
+  const { data: profile, isLoading: profileLoading, error: profileError } =
+    useQuery<User>({ queryKey: ['profile'], queryFn: () => apiService.getProfile() });
 
-  const availabilityOptions = [
-    { value: 'available', label: 'Available', color: '#27ae60' },
-    { value: 'busy', label: 'Busy', color: '#f39c12' },
-    { value: 'offline', label: 'Offline', color: '#e74c3c' }
-  ];
+  const { data: providerData, isLoading: providerLoading } = useQuery({
+    queryKey: ['my-provider'],
+    queryFn: () => apiService.getMyProviderProfile(),
+    enabled: isProvider,
+  });
+  const provider: Provider | undefined = providerData?.data?.provider;
 
+  const { data: serviceCatalog = [] } = useQuery({
+    queryKey: ['service-catalog'],
+    queryFn: () => apiService.getServiceCatalog(),
+    enabled: isProvider,
+  });
+
+  // Seed the editable form whenever fresh data arrives (and on entering edit mode).
   useEffect(() => {
-    loadProfile();
-  }, []);
-
-  const loadProfile = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      // Load user profile using API service
-      const userInfo = await apiService.getProfile();
-
-      const profileData: any = {
-        id: userInfo.id,
-        email: userInfo.email,
-        first_name: userInfo.firstName || '',
-        last_name: userInfo.lastName || '',
-        user_type: userInfo.userType || 'customer',
-        phone: userInfo.phone || '',
-        profile_image: userInfo.profileImage || '',
-        created_at: userInfo.createdAt || new Date().toISOString()
-      };
-
-      setUserProfile(profileData);
-      setFormData(prev => ({
-        ...prev,
-        firstName: userInfo.firstName || '',
-        lastName: userInfo.lastName || '',
-        phone: userInfo.phone || ''
-      }));
-
-      // Load provider profile if user is a provider
-      if (userInfo.userType === 'provider') {
-        // Provider profile would be loaded here if endpoint exists
-        // For now, we'll skip this as it's not in the API service
-      }
-    } catch (error: any) {
-      setError(error.message || 'Failed to load profile');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleServiceToggle = (service: string) => {
-    setFormData(prev => ({
-      ...prev,
-      services: prev.services.includes(service)
-        ? prev.services.filter(s => s !== service)
-        : [...prev.services, service]
+    setForm(f => ({
+      ...f,
+      firstName: profile?.firstName || '',
+      lastName: profile?.lastName || '',
+      phone: profile?.phone || '',
+      businessName: provider?.businessName || '',
+      description: provider?.description || '',
+      services: provider?.services || [],
+      hourlyRate: Number(provider?.pricing?.baseRate) || 0,
+      serviceRadius: Number(provider?.serviceRadius) || 25,
     }));
-  };
+  }, [profile, provider]);
 
-  const saveProfile = async () => {
-    setSaving(true);
-    try {
-      // Update user profile using API service
+  // ── Save ──────────────────────────────────────────────────────────────────
+  const saveMutation = useMutation({
+    mutationFn: async () => {
       await apiService.updateProfile({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phone: formData.phone
+        firstName: form.firstName,
+        lastName: form.lastName,
+        phone: form.phone,
       });
-
-      // Update provider profile if user is a provider
-      // Provider profile updates would go here if endpoint exists
-
-      // Reload profile data
-      await loadProfile();
+      if (isProvider && provider) {
+        await apiService.updateProviderProfile(provider.id, {
+          businessName: form.businessName,
+          description: form.description,
+          services: form.services,
+          serviceRadius: form.serviceRadius,
+          pricing: {
+            baseRate: form.hourlyRate,
+            currency: provider.pricing?.currency || 'BRL',
+            rateType: provider.pricing?.rateType || 'hourly',
+          },
+        });
+      }
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
+      await queryClient.invalidateQueries({ queryKey: ['my-provider'] });
       setEditing(false);
+      toast.success(t('profile:messages.update_success'));
+    },
+    onError: () => toast.error(t('profile:messages.update_error')),
+  });
 
-    } catch (error: any) {
-      setError(error.message || 'Failed to save profile');
-    } finally {
-      setSaving(false);
-    }
-  };
+  const onField = (field: keyof typeof form, value: any) =>
+    setForm(prev => ({ ...prev, [field]: value }));
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'pt-BR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
+  const formatDate = (s?: string) =>
+    s ? new Date(s).toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'pt-BR',
+      { year: 'numeric', month: 'long', day: 'numeric' }) : t('profile:fields.not_provided');
 
-  const formatUserType = (type: string) => t(`common:user_type.${type}`, type);
+  const currency = (n: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(n) || 0);
 
-  const getAvailabilityColor = (status: string) => {
-    const option = availabilityOptions.find(opt => opt.value === status);
-    return option ? option.color : '#7f8c8d';
-  };
+  const cardSx = {
+    borderRadius: tokens.radius.lg,
+    border: `1px solid ${isDark ? tokens.color.nightBorder : tokens.color.paperDark}`,
+    bgcolor: isDark ? tokens.color.nightCard : tokens.color.paper,
+    p: { xs: 2.5, md: 3.5 },
+  } as const;
 
-  if (loading) {
+  const sectionTitleSx = {
+    fontFamily: tokens.font.display, fontWeight: 600, fontSize: '1.15rem', mb: 0.5,
+  } as const;
+
+  const isLoading = profileLoading || (isProvider && providerLoading);
+
+  if (isLoading) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <p>{t('profile:loading')}</p>
-      </div>
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
+        <CircularProgress />
+      </Box>
     );
   }
 
-  if (error) {
+  if (profileError) {
     return (
-      <div style={{ padding: '20px' }}>
-        <div style={{ 
-          backgroundColor: '#e74c3c', 
-          color: 'white', 
-          padding: '15px', 
-          borderRadius: '4px' 
-        }}>
-          {error}
-        </div>
-      </div>
+      <Container maxWidth="md" sx={{ py: 4 }}>
+        <Alert severity="error">{t('profile:messages.update_error')}</Alert>
+      </Container>
     );
   }
+
+  // ── Field renderer (label + value or input) ─────────────────────────────────
+  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <Box>
+      <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', letterSpacing: '0.04em', textTransform: 'uppercase', fontSize: '0.68rem' }}>
+        {label}
+      </Typography>
+      <Box sx={{ mt: 0.75 }}>{children}</Box>
+    </Box>
+  );
+
+  const readValue = (v?: React.ReactNode) => (
+    <Typography variant="body1" sx={{ color: v ? 'text.primary' : 'text.disabled' }}>
+      {v || t('profile:fields.not_provided')}
+    </Typography>
+  );
+
+  const gridSx = { display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 3 };
 
   return (
-    <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-        <h1 style={{ color: '#2c3e50', margin: 0 }}>{t('profile:title')}</h1>
+    <Container maxWidth="md" sx={{ py: { xs: 3, md: 5 } }}>
+      {/* Header — stacks on mobile so PT button labels never overflow */}
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={2}
+        justifyContent="space-between"
+        alignItems={{ xs: 'stretch', sm: 'center' }}
+        sx={{ mb: 4 }}
+      >
+        <Typography sx={{ fontFamily: tokens.font.display, fontWeight: 600, fontSize: { xs: '1.6rem', md: '2rem' } }}>
+          {t('profile:title')}
+        </Typography>
         {!editing ? (
-          <button
-            onClick={() => setEditing(true)}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#3498db',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 'bold'
-            }}
+          <Button
+            variant="contained" startIcon={<Edit />} onClick={() => setEditing(true)}
+            sx={{ borderRadius: tokens.radius.full, alignSelf: { xs: 'stretch', sm: 'auto' } }}
           >
             {t('profile:edit_profile')}
-          </button>
+          </Button>
         ) : (
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button
-              onClick={saveProfile}
-              disabled={saving}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: saving ? '#95a5a6' : '#27ae60',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: saving ? 'not-allowed' : 'pointer',
-                fontWeight: 'bold'
-              }}
+          <Stack direction="row" spacing={1.5} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+            <Button
+              variant="contained" startIcon={saveMutation.isPending ? <CircularProgress size={16} color="inherit" /> : <Save />}
+              onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}
+              sx={{ borderRadius: tokens.radius.full, flex: { xs: 1, sm: 'none' } }}
             >
-              {saving ? t('profile:saving') : t('profile:save_changes')}
-            </button>
-            <button
-              onClick={() => {
-                setEditing(false);
-                loadProfile(); // Reset form data
-              }}
-              disabled={saving}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: '#95a5a6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: saving ? 'not-allowed' : 'pointer',
-                fontWeight: 'bold'
-              }}
+              {saveMutation.isPending ? t('profile:saving') : t('profile:save_changes')}
+            </Button>
+            <Button
+              variant="outlined" startIcon={<Close />} disabled={saveMutation.isPending}
+              onClick={() => { setEditing(false); }}
+              sx={{ borderRadius: tokens.radius.full, flex: { xs: 1, sm: 'none' } }}
             >
               {t('profile:cancel')}
-            </button>
-          </div>
+            </Button>
+          </Stack>
         )}
-      </div>
+      </Stack>
 
-      {/* Basic Profile Information */}
-      <div style={{
-        backgroundColor: 'white',
-        padding: '20px',
-        borderRadius: '8px',
-        marginBottom: '20px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-      }}>
-        <h3 style={{ color: '#34495e', marginBottom: '20px' }}>{t('profile:sections.basic_information')}</h3>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              {t('profile:fields.first_name')}:
-            </label>
-            {editing ? (
-              <input
-                type="text"
-                value={formData.firstName}
-                onChange={(e) => handleInputChange('firstName', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px'
-                }}
+      <Stack spacing={3}>
+        {/* Basic information */}
+        <Box sx={cardSx}>
+          <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
+            <Avatar
+              src={profile?.profileImage}
+              sx={{ width: 56, height: 56, bgcolor: alpha(tokens.color.earth, 0.15), color: tokens.color.earth, fontFamily: tokens.font.display, fontWeight: 600 }}
+            >
+              {(profile?.firstName?.[0] || '') + (profile?.lastName?.[0] || '') || <Person />}
+            </Avatar>
+            <Box>
+              <Typography sx={sectionTitleSx}>{t('profile:sections.basic_information')}</Typography>
+              <Chip
+                size="small"
+                label={t(`common:user_type.${profile?.userType}`, profile?.userType || '')}
+                sx={{ textTransform: 'capitalize', bgcolor: alpha(tokens.color.terra, 0.12), color: tokens.color.terra, fontWeight: 600 }}
               />
-            ) : (
-              <p style={{ margin: '0', color: '#555' }}>{userProfile?.first_name}</p>
-            )}
-          </div>
+            </Box>
+          </Stack>
 
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              {t('profile:fields.last_name')}:
-            </label>
-            {editing ? (
-              <input
-                type="text"
-                value={formData.lastName}
-                onChange={(e) => handleInputChange('lastName', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px'
-                }}
-              />
-            ) : (
-              <p style={{ margin: '0', color: '#555' }}>{userProfile?.last_name}</p>
-            )}
-          </div>
+          <Box sx={gridSx}>
+            <Field label={t('profile:fields.first_name')}>
+              {editing
+                ? <TextField fullWidth size="small" value={form.firstName} onChange={e => onField('firstName', e.target.value)} />
+                : readValue(profile?.firstName)}
+            </Field>
+            <Field label={t('profile:fields.last_name')}>
+              {editing
+                ? <TextField fullWidth size="small" value={form.lastName} onChange={e => onField('lastName', e.target.value)} />
+                : readValue(profile?.lastName)}
+            </Field>
+            <Field label={t('profile:fields.email')}>{readValue(profile?.email)}</Field>
+            <Field label={t('profile:fields.phone')}>
+              {editing
+                ? <TextField fullWidth size="small" type="tel" value={form.phone} onChange={e => onField('phone', e.target.value)} />
+                : readValue(profile?.phone)}
+            </Field>
+            <Field label={t('profile:fields.member_since')}>{readValue(formatDate(profile?.createdAt))}</Field>
+          </Box>
+        </Box>
 
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              {t('profile:fields.email')}:
-            </label>
-            <p style={{ margin: '0', color: '#555' }}>{userProfile?.email}</p>
-          </div>
+        {/* Provider information */}
+        {isProvider && provider && (
+          <Box sx={cardSx}>
+            <Typography sx={{ ...sectionTitleSx, mb: 3 }}>{t('profile:sections.provider_information')}</Typography>
 
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              {t('profile:fields.phone')}:
-            </label>
-            {editing ? (
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px'
-                }}
-              />
-            ) : (
-              <p style={{ margin: '0', color: '#555' }}>{userProfile?.phone || t('profile:fields.not_provided')}</p>
-            )}
-          </div>
+            {/* Read-only stats */}
+            <Stack direction="row" spacing={3} sx={{ mb: 3, flexWrap: 'wrap', gap: 2 }}>
+              <Stack direction="row" spacing={0.75} alignItems="center">
+                <Star sx={{ fontSize: 18, color: tokens.color.gold }} />
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {(Number(provider.rating) || 0).toFixed(1)}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  ({provider.totalReviews} {t('profile:fields.reviews')})
+                </Typography>
+              </Stack>
+              <Stack direction="row" spacing={0.75} alignItems="center">
+                <WorkOutline sx={{ fontSize: 18, color: tokens.color.earth }} />
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>{Math.round(Number(provider.completedJobs)) || 0}</Typography>
+                <Typography variant="body2" color="text.secondary">{t('profile:fields.completed_jobs')}</Typography>
+              </Stack>
+            </Stack>
 
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              {t('profile:fields.account_type')}:
-            </label>
-            <p style={{ margin: '0', color: '#555', textTransform: 'capitalize' }}>
-              {formatUserType(userProfile?.user_type || '')}
-            </p>
-          </div>
+            <Box sx={gridSx}>
+              <Field label={t('profile:fields.business_name')}>
+                {editing
+                  ? <TextField fullWidth size="small" value={form.businessName} onChange={e => onField('businessName', e.target.value)} />
+                  : readValue(provider.businessName)}
+              </Field>
+              <Field label={t('profile:fields.hourly_rate')}>
+                {editing
+                  ? <TextField fullWidth size="small" type="number" value={form.hourlyRate}
+                      onChange={e => onField('hourlyRate', parseFloat(e.target.value) || 0)}
+                      InputProps={{ startAdornment: <InputAdornment position="start">R$</InputAdornment> }} />
+                  : readValue(`${currency(Number(provider.pricing?.baseRate))}/h`)}
+              </Field>
+              <Field label={t('profile:fields.service_radius')}>
+                {editing
+                  ? <TextField fullWidth size="small" type="number" value={form.serviceRadius}
+                      onChange={e => onField('serviceRadius', parseFloat(e.target.value) || 0)}
+                      InputProps={{ endAdornment: <InputAdornment position="end">km</InputAdornment> }} />
+                  : readValue(`${Number(provider.serviceRadius) || 0} km`)}
+              </Field>
+            </Box>
 
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              {t('profile:fields.member_since')}:
-            </label>
-            <p style={{ margin: '0', color: '#555' }}>
-              {userProfile?.created_at ? formatDate(userProfile.created_at) : t('profile:fields.not_provided')}
-            </p>
-          </div>
-        </div>
-      </div>
+            <Box sx={{ mt: 3 }}>
+              <Field label={t('profile:fields.description')}>
+                {editing
+                  ? <TextField fullWidth size="small" multiline minRows={3} value={form.description} onChange={e => onField('description', e.target.value)} />
+                  : readValue(provider.description || t('profile:fields.no_description'))}
+              </Field>
+            </Box>
 
-      {/* Provider Profile Information */}
-      {user?.userType === 'provider' && (
-        <div style={{
-          backgroundColor: 'white',
-          padding: '20px',
-          borderRadius: '8px',
-          marginBottom: '20px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-        }}>
-          <h3 style={{ color: '#34495e', marginBottom: '20px' }}>{t('profile:sections.provider_information')}</h3>
+            <Box sx={{ mt: 3 }}>
+              <Field label={t('profile:fields.services_offered')}>
+                {editing ? (
+                  <Autocomplete
+                    multiple options={serviceCatalog} value={form.services}
+                    onChange={(_, v) => onField('services', v)}
+                    renderTags={(value, getTagProps) =>
+                      value.map((opt, i) => <Chip label={opt} size="small" {...getTagProps({ index: i })} key={opt} />)}
+                    renderInput={params => <TextField {...params} size="small" placeholder={t('profile:fields.services_offered')} />}
+                  />
+                ) : (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {(provider.services || []).length
+                      ? provider.services.map(s => (
+                          <Chip key={s} label={s} size="small"
+                            sx={{ bgcolor: alpha(tokens.color.earth, 0.12), color: isDark ? tokens.color.paper : tokens.color.earth }} />
+                        ))
+                      : readValue(undefined)}
+                  </Box>
+                )}
+              </Field>
+            </Box>
+          </Box>
+        )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '20px' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                {t('profile:fields.business_name')}:
-              </label>
-              {editing ? (
-                <input
-                  type="text"
-                  value={formData.businessName}
-                  onChange={(e) => handleInputChange('businessName', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px'
-                  }}
-                />
-              ) : (
-                <p style={{ margin: '0', color: '#555' }}>{providerProfile?.business_name}</p>
-              )}
-            </div>
+        {/* Account actions */}
+        <Box sx={cardSx}>
+          <Typography sx={{ ...sectionTitleSx, mb: 2.5 }}>{t('profile:sections.account_actions')}</Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 1.5 }}>
+            {[
+              { icon: <Lock />, label: t('profile:password.change_password'), onClick: () => setPasswordDialogOpen(true) },
+              { icon: <Notifications />, label: t('profile:settings.notification_settings'), onClick: () => navigate('/notifications?tab=settings') },
+              { icon: <Shield />, label: t('profile:settings.privacy_settings'), onClick: () => setPrivacyDialogOpen(true) },
+              { icon: <DeleteOutline />, label: t('profile:delete_account.button'), onClick: () => setDeletionDialogOpen(true), color: 'error' as const },
+            ].map(a => (
+              <Button
+                key={a.label}
+                variant="outlined" color={a.color || 'primary'} startIcon={a.icon} onClick={a.onClick}
+                fullWidth
+                sx={{ borderRadius: tokens.radius.lg, justifyContent: 'flex-start', px: 2, py: 1.25, textTransform: 'none', fontWeight: 600 }}
+              >
+                {a.label}
+              </Button>
+            ))}
+          </Box>
+        </Box>
+      </Stack>
 
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                {t('profile:fields.hourly_rate')}:
-              </label>
-              {editing ? (
-                <input
-                  type="number"
-                  value={formData.hourlyRate}
-                  onChange={(e) => handleInputChange('hourlyRate', parseFloat(e.target.value) || 0)}
-                  min="0"
-                  step="0.01"
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px'
-                  }}
-                />
-              ) : (
-                <p style={{ margin: '0', color: '#555' }}>${providerProfile?.hourly_rate}/hour</p>
-              )}
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                {t('profile:fields.rating')}:
-              </label>
-              <p style={{ margin: '0', color: '#555' }}>
-                ⭐ {providerProfile?.rating} ({providerProfile?.total_reviews} {t('profile:fields.reviews')})
-              </p>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                {t('profile:fields.availability')}:
-              </label>
-              {editing ? (
-                <select
-                  value={formData.availabilityStatus}
-                  onChange={(e) => handleInputChange('availabilityStatus', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px'
-                  }}
-                >
-                  {availabilityOptions.map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <span style={{
-                  backgroundColor: getAvailabilityColor(providerProfile?.availability_status || 'offline'),
-                  color: 'white',
-                  padding: '4px 12px',
-                  borderRadius: '20px',
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  textTransform: 'capitalize'
-                }}>
-                  {providerProfile?.availability_status}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              {t('profile:fields.description')}:
-            </label>
-            {editing ? (
-              <textarea
-                value={formData.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-                rows={4}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  resize: 'vertical'
-                }}
-              />
-            ) : (
-              <p style={{ margin: '0', color: '#555', lineHeight: '1.5' }}>
-                {providerProfile?.description || t('profile:fields.no_description')}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
-              {t('profile:fields.services_offered')}:
-            </label>
-            {editing ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
-                {serviceTypes.map(service => (
-                  <label key={service} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={formData.services.includes(service)}
-                      onChange={() => handleServiceToggle(service)}
-                      style={{ marginRight: '8px' }}
-                    />
-                    {service.replace(/_/g, ' ').replace(/(^|\s)(\S)/g, (_, s, c) => s + c.toUpperCase())}
-                  </label>
-                ))}
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {(providerProfile?.services || []).map((service, index) => (
-                  <span key={index} style={{
-                    backgroundColor: '#3498db',
-                    color: 'white',
-                    padding: '4px 12px',
-                    borderRadius: '20px',
-                    fontSize: '12px',
-                    fontWeight: 'bold'
-                  }}>
-                    {service.replace(/_/g, ' ').replace(/(^|\s)(\S)/g, (_, s, c) => s + c.toUpperCase())}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Account Actions */}
-      <div style={{
-        backgroundColor: 'white',
-        padding: '20px',
-        borderRadius: '8px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-      }}>
-        <h3 style={{ color: '#34495e', marginBottom: '20px' }}>{t('profile:sections.account_actions')}</h3>
-
-        <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => setPasswordDialogOpen(true)}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#f39c12',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 'bold'
-            }}
-          >
-            {t('profile:password.change_password')}
-          </button>
-
-          <button
-            onClick={() => navigate('/notifications?tab=settings')}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#9b59b6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 'bold'
-            }}
-          >
-            {t('profile:settings.notification_settings')}
-          </button>
-
-          <button
-            onClick={() => setPrivacyDialogOpen(true)}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#16a085',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 'bold'
-            }}
-          >
-            {t('profile:settings.privacy_settings')}
-          </button>
-
-          <button
-            onClick={() => setDeletionDialogOpen(true)}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#e74c3c',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 'bold'
-            }}
-          >
-            {t('profile:delete_account.button')}
-          </button>
-        </div>
-      </div>
-
-      {/* Password Change Dialog */}
-      <PasswordChangeDialog
-        open={passwordDialogOpen}
-        onClose={() => setPasswordDialogOpen(false)}
-      />
-
-      {/* Privacy Settings Dialog */}
-      <PrivacySettingsDialog
-        open={privacyDialogOpen}
-        onClose={() => setPrivacyDialogOpen(false)}
-      />
-
-      {/* Account Deletion Dialog */}
-      <AccountDeletionDialog
-        open={deletionDialogOpen}
-        onClose={() => setDeletionDialogOpen(false)}
-      />
-    </div>
+      <PasswordChangeDialog open={passwordDialogOpen} onClose={() => setPasswordDialogOpen(false)} />
+      <PrivacySettingsDialog open={privacyDialogOpen} onClose={() => setPrivacyDialogOpen(false)} />
+      <AccountDeletionDialog open={deletionDialogOpen} onClose={() => setDeletionDialogOpen(false)} />
+    </Container>
   );
 };
 

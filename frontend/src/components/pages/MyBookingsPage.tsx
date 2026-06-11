@@ -305,13 +305,39 @@ const MyBookingsPage: React.FC = () => {
     return out.sort((a, b) => b.ts - a.ts);
   }, [isProvider, requestsData, quotesData, bookings]);
 
-  // Auto-expand the request holding a deep-linked quote.
+  // A deep-linked quote (notification → /bookings?quoteId=) may already be ACCEPTED
+  // by the time the customer clicks it — its request is then closed and rendered as
+  // a booking, not a quote. Resolve that booking so we highlight/scroll it instead.
+  const quoteBookingId = useMemo(() => {
+    if (!highlightQuoteId) return null;
+    return bookings.find(b => b.quoteId === highlightQuoteId)?.id || null;
+  }, [highlightQuoteId, bookings]);
+
+  // Effective booking to highlight: explicit ?bookingId=, or the booking a
+  // deep-linked (now-accepted) quote turned into.
+  const effectiveBookingHighlight = highlightBookingId || quoteBookingId;
+
+  // Auto-expand the request holding a still-pending deep-linked quote.
   React.useEffect(() => {
-    if (!highlightQuoteId) return;
+    if (!highlightQuoteId || quoteBookingId) return; // accepted → handled as a booking
     const quotes = Array.isArray(quotesData?.data) ? quotesData!.data : [];
     const q = quotes.find(x => x.id === highlightQuoteId);
     if (q) setExpandedRequests(prev => new Set(prev).add(q.requestId));
-  }, [highlightQuoteId, quotesData]);
+  }, [highlightQuoteId, quoteBookingId, quotesData]);
+
+  // Robust scroll-into-view for the deep-link target. Runs on mount AND on in-app
+  // navigation (query-param change) AND after the holding request expands — covers
+  // the case where the user clicks a notification while already on this page.
+  React.useEffect(() => {
+    const selector = effectiveBookingHighlight
+      ? `#booking-${effectiveBookingHighlight}`
+      : highlightQuoteId ? `[data-quote-id="${highlightQuoteId}"]` : null;
+    if (!selector) return;
+    const tid = setTimeout(() => {
+      document.querySelector(selector)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 400);
+    return () => clearTimeout(tid);
+  }, [effectiveBookingHighlight, highlightQuoteId, expandedRequests, jobs]);
 
   // Stage classification, symmetric across roles:
   //  awaiting = open request (customer) / pending sent quote (provider)
@@ -352,19 +378,14 @@ const MyBookingsPage: React.FC = () => {
       >
         <Box
           id={`booking-${booking.id}`}
-          ref={(el: HTMLElement | null) => {
-            if (el && highlightBookingId === booking.id) {
-              setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
-            }
-          }}
           sx={{
             borderRadius: tokens.radius.lg,
             border: `1px solid ${isDark ? tokens.color.nightBorder : tokens.color.paperDark}`,
             bgcolor: isDark ? tokens.color.nightCard : tokens.color.paper,
             overflow: 'hidden',
-            borderLeft: `4px solid ${highlightBookingId === booking.id ? tokens.color.gold : borderColor}`,
+            borderLeft: `4px solid ${effectiveBookingHighlight === booking.id ? tokens.color.gold : borderColor}`,
             transition: 'box-shadow 0.2s ease',
-            outline: highlightBookingId === booking.id ? `2px solid ${tokens.color.gold}` : 'none',
+            outline: effectiveBookingHighlight === booking.id ? `2px solid ${tokens.color.gold}` : 'none',
             '&:hover': { boxShadow: `0 4px 24px ${alpha(borderColor, 0.15)}` },
           }}>
           {/* Card header */}

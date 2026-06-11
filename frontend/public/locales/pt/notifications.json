@@ -147,5 +147,6 @@
     "hours_ago_one": "{{count}} hora atrás",
     "days_ago_other": "{{count}} dias atrás",
     "days_ago_one": "{{count}} dia atrás"
-  }
+  },
+  "back": "Voltar"
 }

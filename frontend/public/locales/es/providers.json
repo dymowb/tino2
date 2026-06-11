@@ -47,7 +47,7 @@
     "rating": "{{rating}} estrellas",
     "reviews_count": "{{count}} reseña",
     "reviews": "reseñas",
-    "distance_away": "a {{distance}} millas",
+    "distance_away": "a {{distance}} km",
     "responds_in": "Responde en {{time}}",
     "responds_in_hours": "Responde en {{time}}h",
     "completed_jobs": "{{count}} trabajo completado",

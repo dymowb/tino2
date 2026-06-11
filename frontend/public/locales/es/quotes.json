@@ -17,7 +17,7 @@
     "budget_range": "Rango de Presupuesto",
     "budget_display": "Presupuesto: ${{min}} - ${{max}}",
     "preferred_start_date": "Fecha de Inicio Preferida (Opcional)",
-    "search_radius": "Radio de Búsqueda (millas)",
+    "search_radius": "Radio de Búsqueda (km)",
     "search_radius_help": "¿Qué tan lejos debemos buscar proveedores?",
     "special_requirements": "Requisitos Especiales (Opcional)",
     "category": "Categoría",
