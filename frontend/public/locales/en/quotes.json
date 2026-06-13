@@ -53,7 +53,8 @@
       "city_required": "City is required",
       "state_required": "State is required",
       "zip_required": "ZIP code is required",
-      "budget_min_max": "Minimum budget must be less than maximum budget"
+      "budget_min_max": "Minimum budget must be less than maximum budget",
+      "address_unresolved": "Select a valid address from the suggestions (or one we can locate on the map)."
     },
     "requirement_categories": {
       "experience": "Experience",

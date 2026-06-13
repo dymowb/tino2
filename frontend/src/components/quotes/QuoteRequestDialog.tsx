@@ -40,6 +40,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { apiService, QuoteRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import AddressAutocomplete from '../common/AddressAutocomplete';
 
 interface QuoteRequestDialogProps {
   open: boolean;
@@ -173,15 +174,10 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
     }
     if (!formData.location.address.trim()) {
       newErrors.address = t('request.validation.address_required');
-    }
-    if (!formData.location.city.trim()) {
-      newErrors.city = t('request.validation.city_required');
-    }
-    if (!formData.location.state.trim()) {
-      newErrors.state = t('request.validation.state_required');
-    }
-    if (!formData.location.zipCode.trim()) {
-      newErrors.zipCode = t('request.validation.zip_required');
+    } else if (formData.location.latitude === 0 || formData.location.longitude === 0) {
+      // Address typed but not resolved to real coordinates — block so the request
+      // is geocoded and matchable (no more (0,0) rows).
+      newErrors.address = t('request.validation.address_unresolved');
     }
     if (formData.budget.min >= formData.budget.max) {
       newErrors.budget = t('request.validation.budget_min_max');
@@ -336,13 +332,18 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
             </Grid>
 
             <Grid item xs={12}>
-              <TextField
-                fullWidth
+              <AddressAutocomplete
                 label={t('request.street_address')}
                 value={formData.location.address}
-                onChange={(e) => setFormData({
+                resolved={formData.location.latitude !== 0 && formData.location.longitude !== 0}
+                onResolved={(loc) => setFormData({
                   ...formData,
-                  location: { ...formData.location, address: e.target.value }
+                  location: { ...formData.location, ...loc },
+                })}
+                onTextChange={(text) => setFormData({
+                  ...formData,
+                  // editing the text invalidates the previously resolved coords
+                  location: { ...formData.location, address: text, latitude: 0, longitude: 0 },
                 })}
                 error={!!errors.address}
                 helperText={errors.address}

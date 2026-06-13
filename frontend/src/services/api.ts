@@ -566,6 +566,24 @@ class ApiService {
     return response.data.data;
   }
 
+  // Address typeahead — returns [] gracefully if Places API is unavailable (the
+  // caller then falls back to free-text + geocode validation).
+  async addressAutocomplete(input: string): Promise<Array<{ description: string; placeId: string }>> {
+    try {
+      const response = await this.api.get<ApiResponse<Array<{ description: string; placeId: string }>>>(
+        `/locations/autocomplete?input=${encodeURIComponent(input)}`
+      );
+      return response.data.data ?? [];
+    } catch {
+      return [];
+    }
+  }
+
+  async resolvePlace(placeId: string): Promise<{ address: string; city: string; state: string; zipCode: string; latitude: number; longitude: number }> {
+    const response = await this.api.get<ApiResponse<any>>(`/locations/resolve-place/${placeId}`);
+    return response.data.data;
+  }
+
   async reverseGeocode(latitude: number, longitude: number): Promise<any> {
     const response = await this.api.post<ApiResponse<any>>('/locations/reverse-geocode', {
       latitude,

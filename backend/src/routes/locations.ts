@@ -8,6 +8,10 @@ const router = Router();
 router.post('/geocode', LocationController.geocodeAddress);
 router.post('/reverse-geocode', LocationController.reverseGeocode);
 
+// --- Address autocomplete (typeahead) ---
+router.get('/autocomplete', LocationController.autocomplete);
+router.get('/resolve-place/:placeId', LocationController.resolvePlace);
+
 // --- Distance ---
 router.post('/distance', LocationController.calculateDistance);
 

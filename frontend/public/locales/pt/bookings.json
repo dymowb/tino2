@@ -61,7 +61,8 @@
       "address_required": "O endereço é obrigatório",
       "city_required": "A cidade é obrigatória",
       "state_required": "O estado é obrigatório",
-      "zip_required": "O CEP é obrigatório"
+      "zip_required": "O CEP é obrigatório",
+      "address_unresolved": "Selecione um endereço válido nas sugestões (ou um que possamos localizar no mapa)."
     },
     "summary_labels": {
       "provider": "Prestador:",

@@ -131,5 +131,8 @@
   },
   "notifications_panel": {
     "new_received": "Tienes una nueva notificación"
+  },
+  "address": {
+    "placeholder": "Empieza a escribir una dirección…"
   }
 }

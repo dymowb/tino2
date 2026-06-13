@@ -294,6 +294,63 @@ export class LocationService {
   }
 
   /**
+   * Address autocomplete predictions for a typed query. Biased to Brazil so local
+   * results rank first. Returns lightweight {description, placeId} — call
+   * resolvePlace(placeId) on selection to get precise coords + components.
+   */
+  async autocomplete(input: string): Promise<Array<{ description: string; placeId: string }>> {
+    if (!input || input.trim().length < 3) return [];
+    try {
+      const response = await this.client.placeAutocomplete({
+        params: {
+          input,
+          components: ['country:br'],
+          key: config.external.googleMapsApiKey,
+        } as any,
+        timeout: 3000,        // fail fast
+        retryConfig: { retries: 0 } as any, // don't back-off-retry a 403 (Places disabled)
+      } as any);
+      if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
+        throw new Error(`Autocomplete failed: ${response.data.status}`);
+      }
+      return (response.data.predictions || []).map(p => ({ description: p.description, placeId: p.place_id }));
+    } catch (error) {
+      logger.error('Autocomplete error:', error);
+      throw new Error('Failed to fetch address suggestions');
+    }
+  }
+
+  /**
+   * Resolve a place_id (from autocomplete) to a precise, structured address with
+   * coordinates. Pulls address_components + geometry so the caller gets the same
+   * shape as geocodeAddress (street/city/state/zip/country + lat/lng).
+   */
+  async resolvePlace(placeId: string): Promise<Location> {
+    try {
+      const response = await this.client.placeDetails({
+        params: {
+          place_id: placeId,
+          fields: ['address_component', 'geometry', 'formatted_address'],
+          key: config.external.googleMapsApiKey,
+        },
+      });
+      if (response.data.status !== 'OK') {
+        throw new Error(`Place details failed: ${response.data.status}`);
+      }
+      const result = response.data.result;
+      const parsed = this.parseAddressComponents(result);
+      return {
+        latitude: result.geometry!.location.lat,
+        longitude: result.geometry!.location.lng,
+        ...parsed,
+      };
+    } catch (error) {
+      logger.error('Resolve place error:', error);
+      throw new Error('Failed to resolve place');
+    }
+  }
+
+  /**
    * Calculate straight-line distance between two points (Haversine formula)
    */
   calculateStraightLineDistance(

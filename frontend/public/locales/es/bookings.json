@@ -61,7 +61,8 @@
       "address_required": "La dirección es requerida",
       "city_required": "La ciudad es requerida",
       "state_required": "El estado es requerido",
-      "zip_required": "El código postal es requerido"
+      "zip_required": "El código postal es requerido",
+      "address_unresolved": "Selecciona una dirección válida de las sugerencias (o una que podamos ubicar en el mapa)."
     },
     "summary_labels": {
       "provider": "Proveedor:",

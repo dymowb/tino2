@@ -40,7 +40,8 @@
       "city_required": "La ciudad es obligatoria",
       "state_required": "El estado/provincia es obligatorio",
       "zip_required": "El código postal es obligatorio",
-      "budget_min_max": "El presupuesto mínimo debe ser menor que el presupuesto máximo"
+      "budget_min_max": "El presupuesto mínimo debe ser menor que el presupuesto máximo",
+      "address_unresolved": "Selecciona una dirección válida de las sugerencias (o una que podamos ubicar en el mapa)."
     },
     "requirement_categories": {
       "experience": "Experiencia",

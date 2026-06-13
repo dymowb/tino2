@@ -38,6 +38,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { apiService, Provider, Booking } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { tokens } from '../../theme/theme';
+import AddressAutocomplete from '../common/AddressAutocomplete';
 
 interface BookingDialogProps {
   open: boolean;
@@ -211,6 +212,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
     }
     if (s === 1) {
       if (!formData.location.address.trim()) newErrors.address = t('create.validation.address_required');
+      else if (formData.location.latitude === 0 || formData.location.longitude === 0) newErrors.address = t('create.validation.address_unresolved');
       if (!formData.location.city.trim()) newErrors.city = t('create.validation.city_required');
       if (!formData.location.state.trim()) newErrors.state = t('create.validation.state_required');
       if (!formData.location.zipCode.trim()) newErrors.zipCode = t('create.validation.zip_required');
@@ -441,11 +443,12 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
                 </Typography>
                 <Grid container spacing={2.5}>
                   <Grid xs={12}>
-                    <TextField
-                      fullWidth
+                    <AddressAutocomplete
                       label={t('create.address')}
                       value={formData.location.address}
-                      onChange={(e) => setFormData({ ...formData, location: { ...formData.location, address: e.target.value } })}
+                      resolved={formData.location.latitude !== 0 && formData.location.longitude !== 0}
+                      onResolved={(loc) => setFormData({ ...formData, location: { ...formData.location, ...loc } })}
+                      onTextChange={(text) => setFormData({ ...formData, location: { ...formData.location, address: text, latitude: 0, longitude: 0 } })}
                       error={!!errors.address}
                       helperText={errors.address}
                     />

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import LocationService from '../services/LocationService';
 import ProviderSearchService from '../services/ProviderSearchService';
 import { LocationSearchParams } from '../services/ProviderSearchService';
+import logger from '@/config/logger';
 
 class LocationController {
   
@@ -302,6 +303,39 @@ class LocationController {
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to get place details',
+      });
+    }
+  };
+
+  // GET /locations/autocomplete?input=...
+  autocomplete = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const input = (req.query.input as string) || '';
+      const predictions = await LocationService.autocomplete(input);
+      res.json({ success: true, data: predictions });
+    } catch (error) {
+      // Autocomplete is best-effort: if Places API is unavailable (e.g. not
+      // enabled for the key → 403), degrade to no suggestions rather than a 500.
+      // The client falls back to free-text + geocode validation.
+      logger.warn('Autocomplete unavailable, returning empty:', error instanceof Error ? error.message : error);
+      res.json({ success: true, data: [] });
+    }
+  };
+
+  // GET /locations/resolve-place/:placeId → structured address + coords
+  resolvePlace = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { placeId } = req.params;
+      if (!placeId) {
+        res.status(400).json({ success: false, error: 'Place ID is required' });
+        return;
+      }
+      const location = await LocationService.resolvePlace(placeId);
+      res.json({ success: true, data: location });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to resolve place',
       });
     }
   };

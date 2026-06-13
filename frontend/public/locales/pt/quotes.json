@@ -53,7 +53,8 @@
       "city_required": "A cidade é obrigatória",
       "state_required": "O estado é obrigatório",
       "zip_required": "O CEP é obrigatório",
-      "budget_min_max": "O orçamento mínimo deve ser menor que o orçamento máximo"
+      "budget_min_max": "O orçamento mínimo deve ser menor que o orçamento máximo",
+      "address_unresolved": "Selecione um endereço válido nas sugestões (ou um que possamos localizar no mapa)."
     },
     "requirement_categories": {
       "experience": "Experiência",

@@ -163,5 +163,8 @@
     "mark_read": "Mark as read",
     "see_all": "See all",
     "new_received": "New notification received"
+  },
+  "address": {
+    "placeholder": "Start typing an address…"
   }
 }
