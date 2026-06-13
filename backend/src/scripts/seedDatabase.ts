@@ -1002,6 +1002,10 @@ async function runSeeder(): Promise<void> {
       { key: 'quote_staleness_days', value: '7', description: 'Days before a quote request expires and is no longer open to providers' },
       ['key']
     );
+    await settingsRepo.upsert(
+      { key: 'max_providers_per_quote', value: '5', description: 'Max providers a customer can select to request quotes from in one AI-assisted search' },
+      ['key']
+    );
     logger.info('App settings seeded');
 
     logger.info('Database seeding completed! 🎉');

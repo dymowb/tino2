@@ -25,19 +25,23 @@ const PrivacySettingsDialog: React.FC<PrivacySettingsDialogProps> = ({ open, onC
   const [profilePublic, setProfilePublic] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   // Keep the full settings blob so saving privacy doesn't wipe notification prefs
   // (PUT /auth/profile replaces the whole `settings` jsonb column).
   const [settings, setSettings] = useState<User['settings']>();
 
-  // Load the user's actual stored visibility when the dialog opens.
+  // Load the user's actual stored visibility when the dialog opens. `loading`
+  // gates the toggle so it doesn't flash the default before the real value lands.
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
+    setLoading(true);
     apiService.getProfile().then(p => {
       if (cancelled) return;
       setSettings(p.settings);
       setProfilePublic(p.settings?.privacy?.showProfile ?? true);
-    }).catch(() => { /* keep defaults */ });
+    }).catch(() => { /* keep defaults */ })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [open]);
 
@@ -101,11 +105,13 @@ const PrivacySettingsDialog: React.FC<PrivacySettingsDialogProps> = ({ open, onC
           </Box>
           <FormControlLabel
             control={
-              <Switch
-                checked={profilePublic}
-                onChange={e => setProfilePublic(e.target.checked)}
-                color="primary"
-              />
+              loading
+                ? <CircularProgress size={20} sx={{ mx: 1.25, my: 0.75 }} />
+                : <Switch
+                    checked={profilePublic}
+                    onChange={e => setProfilePublic(e.target.checked)}
+                    color="primary"
+                  />
             }
             label={
               <Box>
@@ -186,7 +192,7 @@ const PrivacySettingsDialog: React.FC<PrivacySettingsDialogProps> = ({ open, onC
         <Button
           variant="contained"
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || loading}
           startIcon={saving ? <CircularProgress size={14} color="inherit" /> : undefined}
         >
           {t('common:save')}

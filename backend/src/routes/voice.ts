@@ -16,6 +16,10 @@ function getOpenAI(): OpenAI {
   return new OpenAI({ apiKey: key });
 }
 
+// Voice is an optional enhancement. When no OpenAI key is configured (e.g. dev),
+// degrade silently with 204 so the client just skips voice instead of surfacing a 500.
+const hasOpenAI = () => !!process.env.OPENAI_API_KEY;
+
 // POST /api/v1/voice/transcribe
 // Accepts audio blob (webm/ogg/wav/mp4), returns {transcript}
 router.post(
@@ -23,6 +27,7 @@ router.post(
   authenticate,
   upload.single('audio'),
   async (req: Request, res: Response) => {
+    if (!hasOpenAI()) { res.status(204).end(); return; }
     if (!req.file) {
       res.status(400).json({ success: false, error: 'No audio file provided' });
       return;
@@ -53,6 +58,7 @@ router.post(
   '/synthesize',
   authenticate,
   async (req: Request, res: Response) => {
+    if (!hasOpenAI()) { res.status(204).end(); return; }
     const { text } = req.body as { text?: string };
     if (!text?.trim()) {
       res.status(400).json({ success: false, error: 'No text provided' });

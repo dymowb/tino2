@@ -28,6 +28,7 @@ import adminRoutes from '@/routes/admin';
 import agenticAssistantRoutes from '@/routes/agentic-assistant.routes';
 import memoryRoutes from '@/routes/memory.routes';
 import voiceRoutes from '@/routes/voice';
+import configRoutes from '@/routes/config';
 import messageService from '@/services/MessageService';
 import notificationService from '@/services/NotificationService';
 import jwt from './utils/jwt';
@@ -118,6 +119,7 @@ export class App {
     this.app.use(`/api/${config.server.apiVersion}/agentic-assistant`, agenticAssistantRoutes);
     this.app.use(`/api/${config.server.apiVersion}/memory`, memoryRoutes);
     this.app.use(`/api/${config.server.apiVersion}/voice`, voiceRoutes);
+    this.app.use(`/api/${config.server.apiVersion}/config`, configRoutes);
     this.app.use(`/api/${config.server.apiVersion}/admin`, adminRoutes);
 
     if (process.env.NODE_ENV === 'production') {

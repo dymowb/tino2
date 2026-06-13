@@ -299,9 +299,10 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
         ) : (
           <MenuItem disabled>
             <ListItemText
+              primaryTypographyProps={{ component: 'div' }}
               primary={
                 <Typography variant="body2" textAlign="center" color="text.secondary">
-                  Nenhuma notificação
+                  {tNotif('no_notifications')}
                 </Typography>
               }
             />
@@ -314,6 +315,7 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
             <Divider />
             <MenuItem onClick={handleViewAllNotifications}>
               <ListItemText
+                primaryTypographyProps={{ component: 'div' }}
                 primary={
                   <Typography
                     variant="body2"

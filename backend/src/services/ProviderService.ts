@@ -5,6 +5,13 @@ import { User, UserType } from '@/models/User';
 import logger from '@/config/logger';
 import { CreateProviderRequest, UpdateProviderRequest, ProviderSearchQuery } from '@/types';
 
+// Great-circle distance (km) from the search center (:cLat,:cLng) to a provider's
+// stored lat/lng. LEAST/GREATEST clamp the acos argument so float rounding can't
+// push it outside [-1,1] (which would raise a domain error). Used for both the
+// radius filter and the distance sort so "25km" means a real 25km circle, not the
+// square bounding box (whose corners reach ~1.4× the radius).
+const HAVERSINE_KM = `(6371 * acos(LEAST(1, GREATEST(-1, cos(radians(:cLat)) * cos(radians(CAST(provider.location->>'latitude' AS float))) * cos(radians(CAST(provider.location->>'longitude' AS float)) - radians(:cLng)) + sin(radians(:cLat)) * sin(radians(CAST(provider.location->>'latitude' AS float)))))))`;
+
 export class ProviderService {
   private providerRepository: Repository<Provider>;
   private userRepository: Repository<User>;
@@ -156,7 +163,10 @@ export class ProviderService {
           'user.isActive',
           'user.createdAt',
         ])
-        .leftJoinAndSelect('provider.reviews', 'reviews')
+        // NB: no reviews join here — this list uses the denormalized
+        // provider.rating/totalReviews, and joining the one-to-many collection
+        // breaks distance-sorted pagination (TypeORM can't ORDER BY a computed
+        // expression through its distinct two-query path).
         .where('provider.isActive = :isActive', { isActive: true })
         .andWhere('user.isActive = :userIsActive', { userIsActive: true });
 
@@ -172,17 +182,20 @@ export class ProviderService {
         queryBuilder = queryBuilder.andWhere(`(${serviceCondition})`, serviceParams);
       }
 
-      // Filter by GPS bounding box when coordinates are available
+      // Filter by location: a cheap lat/lng bounding box pre-filters candidates
+      // (index/scan-friendly), then a true Haversine distance enforces an actual
+      // circular radius — the bbox alone is a square, so its corners would admit
+      // providers up to ~1.4× the requested radius away.
       if (latitude && longitude) {
-        const latDiff = 0.009 * radius; // roughly 1km = 0.009 degrees
+        const latDiff = 0.009 * radius; // ~1km ≈ 0.009°; generous square pre-filter
         const lngDiff = 0.009 * radius;
-        queryBuilder = queryBuilder.andWhere(
-          `CAST(provider.location->>'latitude' AS float) BETWEEN :minLat AND :maxLat`,
-          { minLat: latitude - latDiff, maxLat: latitude + latDiff }
-        ).andWhere(
-          `CAST(provider.location->>'longitude' AS float) BETWEEN :minLng AND :maxLng`,
-          { minLng: longitude - lngDiff, maxLng: longitude + lngDiff }
-        );
+        queryBuilder = queryBuilder
+          .andWhere(`CAST(provider.location->>'latitude' AS float) BETWEEN :minLat AND :maxLat`,
+            { minLat: latitude - latDiff, maxLat: latitude + latDiff })
+          .andWhere(`CAST(provider.location->>'longitude' AS float) BETWEEN :minLng AND :maxLng`,
+            { minLng: longitude - lngDiff, maxLng: longitude + lngDiff })
+          .andWhere(`${HAVERSINE_KM} <= :radiusKm`)
+          .setParameters({ cLat: latitude, cLng: longitude, radiusKm: radius });
       } else if (city) {
         // Fallback: city/state text match when GPS coordinates are not available
         queryBuilder = queryBuilder.andWhere(
@@ -218,33 +231,40 @@ export class ProviderService {
         );
       }
 
-      // Apply sorting
-      switch (sortBy) {
-        case 'rating':
-          queryBuilder = queryBuilder.orderBy('provider.rating', 'DESC');
-          break;
-        case 'price':
-          queryBuilder = queryBuilder.orderBy(`CAST(provider.pricing->>'baseRate' AS float)`, 'ASC');
-          break;
-        case 'distance':
-        default:
-          if (latitude && longitude) {
-            // Sort by Euclidean distance on lat/lng — good approximation for intra-city searches
-            queryBuilder = queryBuilder.orderBy(
-              `SQRT(POW(CAST(provider.location->>'latitude' AS float) - :sortLat, 2) + POW(CAST(provider.location->>'longitude' AS float) - :sortLng, 2))`,
-              'ASC'
-            ).setParameter('sortLat', latitude).setParameter('sortLng', longitude);
-          } else {
-            queryBuilder = queryBuilder.orderBy('provider.rating', 'DESC');
-          }
-          break;
-      }
-
-      // Apply pagination
+      // Distance sort is done in JS (the radius WHERE already bounds the set to a
+      // small list): TypeORM's join+pagination order-by can't take a computed SQL
+      // expression. Other sorts use DB order + DB pagination as usual.
       const offset = (page - 1) * limit;
-      queryBuilder = queryBuilder.skip(offset).take(limit);
+      let providers: Provider[];
+      let total: number;
 
-      const [providers, total] = await queryBuilder.getManyAndCount();
+      if (sortBy === 'distance' && latitude && longitude) {
+        const all = await queryBuilder.getMany();
+        const dist = (p: Provider) => {
+          const loc: any = p.location || {};
+          const la = Number(loc.latitude), lo = Number(loc.longitude);
+          if (!la || !lo) return Number.POSITIVE_INFINITY;
+          const toRad = (d: number) => (d * Math.PI) / 180;
+          const dLat = toRad(la - latitude), dLng = toRad(lo - longitude);
+          const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(latitude)) * Math.cos(toRad(la)) * Math.sin(dLng / 2) ** 2;
+          return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        };
+        all.sort((a, b) => dist(a) - dist(b));
+        total = all.length;
+        providers = all.slice(offset, offset + limit);
+      } else {
+        switch (sortBy) {
+          case 'price':
+            queryBuilder = queryBuilder.orderBy(`CAST(provider.pricing->>'baseRate' AS float)`, 'ASC');
+            break;
+          case 'rating':
+          default:
+            queryBuilder = queryBuilder.orderBy('provider.rating', 'DESC');
+            break;
+        }
+        [providers, total] = await queryBuilder.skip(offset).take(limit).getManyAndCount();
+      }
 
       logger.info(`Provider search completed`, {
         total,

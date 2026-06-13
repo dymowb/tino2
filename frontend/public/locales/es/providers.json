@@ -67,7 +67,9 @@
     "reviews_count_other": "{{count}} reseñas",
     "reviews_count_one": "{{count}} reseña",
     "completed_jobs_other": "{{count}} trabajos completados",
-    "completed_jobs_one": "{{count}} trabajo completado"
+    "completed_jobs_one": "{{count}} trabajo completado",
+    "request_quote_tip": "Pide un precio: describe el trabajo y el profesional responde con un presupuesto.",
+    "book_now_tip": "Propón términos concretos (fecha, horas, presupuesto); el profesional confirma o contraoferta."
   },
   "profile": {
     "title": "Perfil del Proveedor",

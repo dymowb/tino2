@@ -10,6 +10,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   Box,
   Typography,
@@ -38,8 +39,6 @@ import AIRequirementsSummary, { RequirementsSummary } from './AIRequirementsSumm
 import ProviderDetailDrawer from './ProviderDetailDrawer';
 import VoiceMicButton from './VoiceMicButton';
 import { toast } from 'react-hot-toast';
-
-const MAX_PROVIDERS = Number(import.meta.env.VITE_MAX_PROVIDERS_PER_QUOTE ?? 5);
 
 interface AIAssistantTabProps {
   onComplete?: () => void;
@@ -92,10 +91,20 @@ const AIAssistantTab: React.FC<AIAssistantTabProps> = ({ onComplete, onReset, se
   // Sort order for the "all providers" section below recommendations
   const [providerSort, setProviderSort] = useState<'match' | 'rating' | 'price'>('match');
 
+  // Max selectable providers per quote — admin-tunable (app_settings) rather than a
+  // build-time env constant. Cached long; falls back to 5 while loading/on error.
+  const { data: appConfig } = useQuery({
+    queryKey: ['app-config'],
+    queryFn: () => apiService.getAppConfig(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const MAX_PROVIDERS = appConfig?.maxProvidersPerQuote ?? 5;
+
   // TTS: speak assistant text via the /voice/synthesize endpoint
   const speakText = useCallback(async (text: string) => {
     try {
       const blob = await apiService.voiceSynthesize(text);
+      if (!blob || blob.size === 0) return; // voice not configured server-side
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
       audio.onended = () => URL.revokeObjectURL(url);

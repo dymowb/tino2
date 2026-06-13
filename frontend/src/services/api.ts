@@ -1341,6 +1341,7 @@ class ApiService {
       const err = await res.json().catch(() => ({ error: res.statusText }));
       throw new Error(err.error ?? res.statusText);
     }
+    if (res.status === 204) return ''; // voice not configured server-side → no transcript
     const json = await res.json();
     return json.data?.transcript ?? '';
   }
@@ -1353,7 +1354,19 @@ class ApiService {
       body: JSON.stringify({ text }),
     });
     if (!res.ok) throw new Error(res.statusText);
+    if (res.status === 204) return new Blob([]); // voice not configured → empty (caller skips)
     return res.blob();
+  }
+
+  // Public, read-only client config (admin-tunable app_settings). Falls back to
+  // sane defaults if the request fails so the UI never blocks on it.
+  async getAppConfig(): Promise<{ maxProvidersPerQuote: number }> {
+    try {
+      const res = await this.api.get<ApiResponse<{ maxProvidersPerQuote: number }>>('/config');
+      return res.data.data ?? { maxProvidersPerQuote: 5 };
+    } catch {
+      return { maxProvidersPerQuote: 5 };
+    }
   }
 }
 

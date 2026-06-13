@@ -16,6 +16,11 @@ export interface GeocodingResult {
   location: Location;
   placeId: string;
   formattedAddress: string;
+  // Precision signals: `partialMatch` true and/or APPROXIMATE location_type mean
+  // Google fell back to a region/country centroid (e.g. junk input → Brazil's
+  // centroid). Callers validating real addresses should reject those.
+  partialMatch?: boolean;
+  locationType?: string;
 }
 
 export interface DistanceResult {
@@ -71,6 +76,8 @@ export class LocationService {
         },
         placeId: result.place_id,
         formattedAddress: result.formatted_address,
+        partialMatch: (result as any).partial_match === true,
+        locationType: result.geometry.location_type as string,
       };
     } catch (error) {
       logger.error('Geocoding error:', error);

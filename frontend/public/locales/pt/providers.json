@@ -74,7 +74,9 @@
     "reviews_count_other": "{{count}} avaliações",
     "reviews_count_one": "{{count}} avaliação",
     "completed_jobs_other": "{{count}} trabalhos concluídos",
-    "completed_jobs_one": "{{count}} trabalho concluído"
+    "completed_jobs_one": "{{count}} trabalho concluído",
+    "request_quote_tip": "Peça um preço: descreva o serviço e o prestador responde com um orçamento.",
+    "book_now_tip": "Proponha termos específicos (data, horas, orçamento); o prestador confirma ou contrapropõe."
   },
   "profile": {
     "title": "Perfil do Prestador",

@@ -74,7 +74,9 @@
     "reviews_count_other": "{{count}} reviews",
     "reviews_count_one": "{{count}} review",
     "completed_jobs_other": "{{count}} completed jobs",
-    "completed_jobs_one": "{{count}} completed job"
+    "completed_jobs_one": "{{count}} completed job",
+    "request_quote_tip": "Ask for a price: describe the job and the provider replies with a quote.",
+    "book_now_tip": "Propose specific terms (date, hours, budget); the provider confirms or counters."
   },
   "profile": {
     "title": "Provider Profile",
