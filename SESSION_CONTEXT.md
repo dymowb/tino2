@@ -3,7 +3,16 @@
 > Lean by design (per CLAUDE.md): current status + roadmap + resume point only.
 > Detailed completed-work notes live in `Tests/history/HISTORICAL_CONTEXT.md` and git history.
 
-## Current Status (2026-06-11)
+## Current Status (2026-06-15) — Loose-ends cleanup (committed; deploy pending)
+Autonomous pass clearing SESSION_CONTEXT loose ends. Commits on **main**: `901cc17` (WS4), `ecc62f1` (WS1), `d0721a7` (WS3), `1de7daf` (WS5), `dc846e8` (WS2 script). Dev servers :3001→dev :3002; prod :3000 untouched until deploy.
+
+- **WS4 — quick fixes (done, verified):** (a) `/voice/*` → 204 silent-skip when no OPENAI key (verified 204). (b) Provider search now a **true Haversine circular radius** (was a square bbox); distance sort done in JS over the radius-bounded set because TypeORM can't ORDER BY a computed expr through join+pagination — also dropped the unused `reviews` join. Verified radius narrows 1→0, 5→6, 25→24, 100→24. (c) `VITE_MAX_PROVIDERS_PER_QUOTE` → `app_settings.max_providers_per_quote` via new public `GET /api/v1/config`; `AIAssistantTab` reads it (verified `{maxProvidersPerQuote:5}`). (d) Geocoding now surfaces `partialMatch`/`locationType`; `backfillRequestGeocodes` script geocoded the 2 real legacy (0,0) requests, left 4 junk at 0,0. (e) FindProviders request-button tooltips. (f) Fixed nested-`<p>` in bell dropdown. (g) Privacy dialog spinner while loading.
+- **WS1 — address autocomplete + validation (done, verified):** backend `LocationService.autocomplete` (Places, BR-biased, **fail-fast** 3s/no-retry so it degrades instantly) + `resolvePlace`; routes `/locations/autocomplete` (degrades to 200 [] if Places unavailable) + `/locations/resolve-place/:id`. New `AddressAutocomplete` component wired into QuoteRequestDialog + BookingDialog: resolving auto-fills city/state/zip+coords (✓ check), submit blocked until coords resolve (kills (0,0) at source). **Verified live:** real address → ROOFTOP coords + autofill; junk → no resolve → blocked. ⚠️ **Places API is NOT enabled for the Maps key (403)** → suggestions dropdown is empty; validation works via Geocoding API (enabled). Enable "Places API" in GCP to light up suggestions.
+- **WS3 — backend i18n sweep (partial):** QuoteController + UserController user-facing success/not-found/access/conflict strings → `t(req,key)` (incl. quote 409 "already submitted"); verified PT vs EN via X-Locale. **Residual loose end:** payments/messages/providers/locations/memory controllers' bulk 500-catch internals still English (low value; app is PT-default).
+- **WS5 — notification reconnect reconciliation (done):** `socketService.onConnect` → invalidate notification queries on re-connect (skips initial). tsc clean; app renders 0 errors.
+- **WS2 — Stripe money-movement (BLOCKED):** test keys written to dev `.env`; escrow code reviewed correct; `verifyStripeFlow` script ready — but **Stripe rejects the provided test key (Invalid API Key)**. Needs a valid `sk_test_` to complete live hold/capture/refund verification. (Webhook-signature path also needs `STRIPE_WEBHOOK_SECRET`.)
+
+### Current Status (2026-06-11)
 - 4 CX fixes done + verified live (customer & provider, EN+PT). **Not committed** (user reviews first). Dev servers still on :3001→:3002; prod :3000 untouched.
 
 ### Session 2026-06-11 — 4 CX fixes (verified, not committed)
@@ -117,13 +126,14 @@ Git history has the full per-commit detail; one-liners here for resume.
 - 2026-06-07 verification left a few test artifacts between demo customer/provider: a couple of test quotes (e.g. on request `06a62392…`) and chat messages ("VERIFY_REALTIME_XYZ", "Olá! Recebi sua reserva…"). Cosmetic; gone on reseed.
 
 ## Open loose ends (not pending phases — pick as desired)
-1. **User's manual-test backlog** (`Tests/Pending bugs and features - manual check.md`) — needs the user's review; partly stale. **Still open**: Book Service **address validation/autocomplete** (new feature). _(Resolved: My Bookings "Message" deep-link now opens + scrolls the correct conversation into view in the left list.)_
-2. **Finish backend i18n sweep** — the `t(req,key)` layer (`backend/src/i18n/`) is migrated for dispute/admin/booking/auth controllers; ~10 others (payments, messages, providers, users, locations, memory…) still emit English on the same pattern. (Note: quote 409/404 messages e.g. "Quote already submitted" are still English.)
-3. **Stripe money-movement verification** — escrow hold/capture/refund + dispute resolution are unreachable in dev without a real `STRIPE_SECRET_KEY` + a saved test payment method.
-4. **Goal-1 CX findings** (low priority): AI welcome placeholder says "São Paulo" (data is Florianópolis); search radius is a square bounding box under a "25km" label; `/voice/synthesize` 500s instead of silent-skip when OpenAI key absent.
-5. **`VITE_MAX_PROVIDERS_PER_QUOTE`** is a hardcoded frontend env default (5) in `AIAssistantTab.tsx` — should become a proper system/admin config.
-6. **Real-time notification push**: Socket.IO `notification:new` now invalidates badge + list queries so new notifications appear live; 30s polling remains the fallback when the socket is disconnected (no offline/reconnect reconciliation yet).
-7. **Cosmetic**: `validateDOMNesting` warnings (nested `<p>`) on the `/notifications` page (`NotificationCenter`) — pre-existing, harmless.
+1. ✅ **Address validation/autocomplete** — done (WS1, `ecc62f1`). Validation live; **Places suggestions need "Places API" enabled in GCP** for the Maps key (currently 403).
+2. ⚠️ **Backend i18n sweep — partial** (WS3, `d0721a7`): quote + user controllers done. **Still English:** payments, messages, providers, locations, memory controllers' bulk 500-catch internals (low value).
+3. ⚠️ **Stripe money-movement verification — BLOCKED** (WS2, `dc846e8`): `verifyStripeFlow` script ready, escrow code correct, but the provided test key is **rejected by Stripe (Invalid API Key)**. Needs a valid `sk_test_` (+ `STRIPE_WEBHOOK_SECRET` for the webhook path).
+4. ✅ **Goal-1 CX findings** — all done: "São Paulo"→Florianópolis (prev session); square-box radius → true Haversine circle (WS4); `/voice/*` 500 → 204 silent-skip (WS4).
+5. ✅ **`VITE_MAX_PROVIDERS_PER_QUOTE`** → admin-tunable `app_settings.max_providers_per_quote` via `GET /api/v1/config` (WS4).
+6. ✅ **Notification reconnect reconciliation** — done (WS5, `1de7daf`); 30s poll remains as additional fallback.
+7. ✅ **Nested `<p>` warnings** — fixed in the bell dropdown (WS4). (NotificationCenter already used `component:'div'`.)
+8. **Service Types display in PT when EN selected** — accepted won't-fix (domain data, no locale layer).
 
 ## Dev setup (local, Linux)
 - Backend `:3000` — `cd backend && npm run dev`. **Stale-serving trap**: if backend edits don't take effect, `pkill -f ts-node-dev` then ONE clean `npm run dev` (run via the Bash tool's `run_in_background:true`, not `nohup &`).
