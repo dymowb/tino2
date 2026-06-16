@@ -67,8 +67,16 @@ export class App {
     }));
 
     this.app.use(compression());
-    this.app.use(express.json({ limit: '10mb' }));
-    this.app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+    // The Stripe webhook route needs the UNPARSED raw body for signature
+    // verification (it has its own express.raw()). The global JSON parser would
+    // otherwise consume the stream first → "payload provided as parsed object" →
+    // every webhook 400s. Skip body parsing for that one path.
+    const stripeWebhookPath = `/api/${config.server.apiVersion}/payments/webhook/stripe`;
+    const skipWebhook = (parser: express.RequestHandler): express.RequestHandler =>
+      (req, res, next) => (req.path === stripeWebhookPath ? next() : parser(req, res, next));
+    this.app.use(skipWebhook(express.json({ limit: '10mb' })));
+    this.app.use(skipWebhook(express.urlencoded({ extended: true, limit: '10mb' })));
     this.app.use(cookieParser());
 
     this.app.use(securityMiddleware);
