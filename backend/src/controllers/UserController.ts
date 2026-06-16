@@ -9,6 +9,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
 import { userService } from '@/services/UserService';
+import { t } from '@/i18n';
 
 // Configure multer for profile image uploads
 const storage = multer.diskStorage({
@@ -59,7 +60,7 @@ class UserController {
       if (!user) {
         res.status(404).json({
           success: false,
-          error: 'User not found'
+          error: t(req, 'common.user_not_found')
         });
         return;
       }
@@ -74,7 +75,7 @@ class UserController {
       logger.error('Error retrieving user profile:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        error: t(req, 'common.internal_error')
       });
     }
   }
@@ -89,7 +90,7 @@ class UserController {
       if (!user) {
         res.status(404).json({
           success: false,
-          error: 'User not found'
+          error: t(req, 'common.user_not_found')
         });
         return;
       }
@@ -105,7 +106,7 @@ class UserController {
         const validationErrors = errors.map(error => Object.values(error.constraints || {})).flat();
         res.status(400).json({
           success: false,
-          error: 'Validation failed',
+          error: t(req, 'common.validation_failed'),
           details: validationErrors
         });
         return;
@@ -133,7 +134,7 @@ class UserController {
       logger.error('Error updating user profile:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        error: t(req, 'common.internal_error')
       });
     }
   }
@@ -145,13 +146,13 @@ class UserController {
 
       res.json({
         success: true,
-        message: 'Account deactivated successfully'
+        message: t(req, 'user.account_deactivated')
       });
     } catch (error) {
       logger.error('Error deactivating user account:', error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Internal server error'
+        error: error instanceof Error ? error.message : t(req, 'common.internal_error')
       });
     }
   }
@@ -164,7 +165,7 @@ class UserController {
       if (!req.file) {
         res.status(400).json({
           success: false,
-          error: 'No image file provided'
+          error: t(req, 'user.no_image')
         });
         return;
       }
@@ -175,7 +176,7 @@ class UserController {
       if (!user) {
         res.status(404).json({
           success: false,
-          error: 'User not found'
+          error: t(req, 'common.user_not_found')
         });
         return;
       }
@@ -206,7 +207,7 @@ class UserController {
       logger.error('Error uploading profile image:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        error: t(req, 'common.internal_error')
       });
     }
   }
@@ -225,7 +226,7 @@ class UserController {
       if (!user) {
         res.status(404).json({
           success: false,
-          error: 'User not found'
+          error: t(req, 'common.user_not_found')
         });
         return;
       }
@@ -234,7 +235,7 @@ class UserController {
       if (user.settings?.privacy?.showProfile === false) {
         res.status(403).json({
           success: false,
-          error: 'Profile is private'
+          error: t(req, 'user.profile_private')
         });
         return;
       }
@@ -249,7 +250,7 @@ class UserController {
       logger.error('Error retrieving user by ID:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        error: t(req, 'common.internal_error')
       });
     }
   }
@@ -264,7 +265,7 @@ class UserController {
       if (!user) {
         res.status(404).json({
           success: false,
-          error: 'User not found'
+          error: t(req, 'common.user_not_found')
         });
         return;
       }
@@ -311,7 +312,7 @@ class UserController {
       logger.error('Error updating user settings:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        error: t(req, 'common.internal_error')
       });
     }
   }

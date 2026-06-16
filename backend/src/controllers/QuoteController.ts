@@ -7,6 +7,7 @@ import { ApiResponse, AuthenticatedRequest } from '@/types';
 import { AppDataSource } from '@/config/database';
 import { User } from '@/models/User';
 import { QuoteStatus } from '@/models/Quote';
+import { t } from '@/i18n';
 
 export class QuoteController {
   // Quote Request Endpoints
@@ -16,7 +17,7 @@ export class QuoteController {
       if (!errors.isEmpty()) {
         const response: ApiResponse = {
           success: false,
-          message: 'Validation failed',
+          message: t(req, 'common.validation_failed'),
           errors: errors.array(),
         };
         res.status(400).json(response);
@@ -27,7 +28,7 @@ export class QuoteController {
       if (!customerId) {
         const response: ApiResponse = {
           success: false,
-          message: 'User authentication required',
+          message: t(req, 'common.auth_required'),
         };
         res.status(401).json(response);
         return;
@@ -37,7 +38,7 @@ export class QuoteController {
       if (req.user?.userType !== 'customer') {
         const response: ApiResponse = {
           success: false,
-          message: 'Customer access required',
+          message: t(req, 'common.customer_access_required'),
         };
         res.status(403).json(response);
         return;
@@ -54,7 +55,7 @@ export class QuoteController {
 
       const response: ApiResponse = {
         success: true,
-        message: 'Quote request created successfully',
+        message: t(req, 'quote.request_created'),
         data: { quoteRequest },
       };
 
@@ -89,7 +90,7 @@ export class QuoteController {
       if (!userId) {
         const response: ApiResponse = {
           success: false,
-          message: 'User authentication required',
+          message: t(req, 'common.auth_required'),
         };
         res.status(401).json(response);
         return;
@@ -104,7 +105,7 @@ export class QuoteController {
       } else if (req.user?.userType === 'provider') {
         const provider = await providerService.getProviderByUserId(userId);
         if (!provider) {
-          res.status(404).json({ success: false, message: 'Quote request not found or access denied' });
+          res.status(404).json({ success: false, message: t(req, 'quote.request_not_found') });
           return;
         }
         access = { forProviderId: provider.id };
@@ -115,7 +116,7 @@ export class QuoteController {
       if (!quoteRequest) {
         const response: ApiResponse = {
           success: false,
-          message: 'Quote request not found or access denied',
+          message: t(req, 'quote.request_not_found'),
         };
         res.status(404).json(response);
         return;
@@ -132,7 +133,7 @@ export class QuoteController {
 
       const response: ApiResponse = {
         success: false,
-        message: 'Failed to retrieve quote request',
+        message: t(req, 'quote.retrieve_request_failed'),
       };
 
       res.status(500).json(response);
@@ -145,7 +146,7 @@ export class QuoteController {
       if (!errors.isEmpty()) {
         const response: ApiResponse = {
           success: false,
-          message: 'Validation failed',
+          message: t(req, 'common.validation_failed'),
           errors: errors.array(),
         };
         res.status(400).json(response);
@@ -158,7 +159,7 @@ export class QuoteController {
       if (!customerId) {
         const response: ApiResponse = {
           success: false,
-          message: 'User authentication required',
+          message: t(req, 'common.auth_required'),
         };
         res.status(401).json(response);
         return;
@@ -168,7 +169,7 @@ export class QuoteController {
       if (req.user?.userType !== 'customer') {
         const response: ApiResponse = {
           success: false,
-          message: 'Customer access required',
+          message: t(req, 'common.customer_access_required'),
         };
         res.status(403).json(response);
         return;
@@ -187,7 +188,7 @@ export class QuoteController {
 
       const response: ApiResponse = {
         success: true,
-        message: 'Quote request updated successfully',
+        message: t(req, 'quote.request_updated'),
         data: { quoteRequest: updatedRequest },
       };
 
@@ -226,7 +227,7 @@ export class QuoteController {
       if (!customerId) {
         const response: ApiResponse = {
           success: false,
-          message: 'User authentication required',
+          message: t(req, 'common.auth_required'),
         };
         res.status(401).json(response);
         return;
@@ -236,7 +237,7 @@ export class QuoteController {
       if (req.user?.userType !== 'customer') {
         const response: ApiResponse = {
           success: false,
-          message: 'Customer access required',
+          message: t(req, 'common.customer_access_required'),
         };
         res.status(403).json(response);
         return;
@@ -246,7 +247,7 @@ export class QuoteController {
 
       const response: ApiResponse = {
         success: true,
-        message: 'Quote request closed successfully',
+        message: t(req, 'quote.request_closed'),
         data: { quoteRequest: closedRequest },
       };
 
@@ -284,7 +285,7 @@ export class QuoteController {
       if (!userId) {
         const response: ApiResponse = {
           success: false,
-          message: 'User authentication required',
+          message: t(req, 'common.auth_required'),
         };
         res.status(401).json(response);
         return;
@@ -324,7 +325,7 @@ export class QuoteController {
 
       const response: ApiResponse = {
         success: false,
-        message: 'Failed to search quote requests',
+        message: t(req, 'quote.search_requests_failed'),
       };
 
       res.status(500).json(response);
@@ -338,7 +339,7 @@ export class QuoteController {
       if (!errors.isEmpty()) {
         const response: ApiResponse = {
           success: false,
-          message: 'Validation failed',
+          message: t(req, 'common.validation_failed'),
           errors: errors.array(),
         };
         res.status(400).json(response);
@@ -349,7 +350,7 @@ export class QuoteController {
       if (!providerId) {
         const response: ApiResponse = {
           success: false,
-          message: 'User authentication required',
+          message: t(req, 'common.auth_required'),
         };
         res.status(401).json(response);
         return;
@@ -359,7 +360,7 @@ export class QuoteController {
       if (req.user?.userType !== 'provider') {
         const response: ApiResponse = {
           success: false,
-          message: 'Provider access required',
+          message: t(req, 'common.provider_access_required'),
         };
         res.status(403).json(response);
         return;
@@ -375,7 +376,7 @@ export class QuoteController {
 
       const response: ApiResponse = {
         success: true,
-        message: 'Quote created successfully',
+        message: t(req, 'quote.created'),
         data: { quote },
       };
 
@@ -383,19 +384,19 @@ export class QuoteController {
     } catch (error) {
       logger.error('Error in createQuote controller:', error);
 
-      let message = 'Failed to create quote';
+      let message = t(req, 'quote.create_failed');
       let statusCode = 500;
 
       if (error instanceof Error) {
         if (error.message.includes('not found')) {
           statusCode = 404;
-          message = error.message;
+          message = t(req, 'quote.request_not_found');
         } else if (error.message.includes('inactive') || error.message.includes('not accepting')) {
           statusCode = 400;
-          message = error.message;
+          message = t(req, 'quote.provider_unavailable');
         } else if (error.message.includes('already submitted')) {
           statusCode = 409;
-          message = error.message;
+          message = t(req, 'quote.already_submitted');
         }
       }
 
@@ -416,7 +417,7 @@ export class QuoteController {
       if (!userId) {
         const response: ApiResponse = {
           success: false,
-          message: 'User authentication required',
+          message: t(req, 'common.auth_required'),
         };
         res.status(401).json(response);
         return;
@@ -427,7 +428,7 @@ export class QuoteController {
       if (!quote) {
         const response: ApiResponse = {
           success: false,
-          message: 'Quote not found or access denied',
+          message: t(req, 'quote.not_found'),
         };
         res.status(404).json(response);
         return;
@@ -444,7 +445,7 @@ export class QuoteController {
 
       const response: ApiResponse = {
         success: false,
-        message: 'Failed to retrieve quote',
+        message: t(req, 'quote.retrieve_failed'),
       };
 
       res.status(500).json(response);
@@ -457,7 +458,7 @@ export class QuoteController {
       if (!errors.isEmpty()) {
         const response: ApiResponse = {
           success: false,
-          message: 'Validation failed',
+          message: t(req, 'common.validation_failed'),
           errors: errors.array(),
         };
         res.status(400).json(response);
@@ -470,7 +471,7 @@ export class QuoteController {
       if (!providerId) {
         const response: ApiResponse = {
           success: false,
-          message: 'User authentication required',
+          message: t(req, 'common.auth_required'),
         };
         res.status(401).json(response);
         return;
@@ -480,7 +481,7 @@ export class QuoteController {
       if (req.user?.userType !== 'provider') {
         const response: ApiResponse = {
           success: false,
-          message: 'Provider access required',
+          message: t(req, 'common.provider_access_required'),
         };
         res.status(403).json(response);
         return;
@@ -496,7 +497,7 @@ export class QuoteController {
 
       const response: ApiResponse = {
         success: true,
-        message: 'Quote updated successfully',
+        message: t(req, 'quote.updated'),
         data: { quote: updatedQuote },
       };
 
@@ -532,7 +533,7 @@ export class QuoteController {
       if (!errors.isEmpty()) {
         const response: ApiResponse = {
           success: false,
-          message: 'Validation failed',
+          message: t(req, 'common.validation_failed'),
           errors: errors.array(),
         };
         res.status(400).json(response);
@@ -547,7 +548,7 @@ export class QuoteController {
       if (!userId || !userType) {
         const response: ApiResponse = {
           success: false,
-          message: 'User authentication required',
+          message: t(req, 'common.auth_required'),
         };
         res.status(401).json(response);
         return;
@@ -570,7 +571,7 @@ export class QuoteController {
 
       const response: ApiResponse = {
         success: true,
-        message: `Quote status updated to ${status}`,
+        message: t(req, 'quote.status_updated', { status }),
         data: { quote: updatedQuote, requiresPaymentSetup },
       };
 
@@ -611,7 +612,7 @@ export class QuoteController {
       if (!userId) {
         const response: ApiResponse = {
           success: false,
-          message: 'User authentication required',
+          message: t(req, 'common.auth_required'),
         };
         res.status(401).json(response);
         return;
@@ -645,7 +646,7 @@ export class QuoteController {
 
       const response: ApiResponse = {
         success: false,
-        message: 'Failed to search quotes',
+        message: t(req, 'quote.search_failed'),
       };
 
       res.status(500).json(response);
@@ -660,7 +661,7 @@ export class QuoteController {
       if (!providerId) {
         const response: ApiResponse = {
           success: false,
-          message: 'User authentication required',
+          message: t(req, 'common.auth_required'),
         };
         res.status(401).json(response);
         return;
@@ -670,7 +671,7 @@ export class QuoteController {
       if (req.user?.userType !== 'provider') {
         const response: ApiResponse = {
           success: false,
-          message: 'Provider access required',
+          message: t(req, 'common.provider_access_required'),
         };
         res.status(403).json(response);
         return;
@@ -680,7 +681,7 @@ export class QuoteController {
 
       const response: ApiResponse = {
         success: true,
-        message: 'Quote withdrawn successfully',
+        message: t(req, 'quote.withdrawn'),
         data: { quote: withdrawnQuote },
       };
 
@@ -718,7 +719,7 @@ export class QuoteController {
       if (!userId) {
         const response: ApiResponse = {
           success: false,
-          message: 'User authentication required',
+          message: t(req, 'common.auth_required'),
         };
         res.status(401).json(response);
         return;
@@ -756,7 +757,7 @@ export class QuoteController {
 
       const response: ApiResponse = {
         success: false,
-        message: 'Failed to retrieve quotes for request',
+        message: t(req, 'quote.retrieve_for_request_failed'),
       };
 
       res.status(500).json(response);
