@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -46,18 +46,35 @@ const Navigation: React.FC = () => {
   const { mode, toggleColorMode } = useColorMode();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
+  const invalidateNotifications = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['notification-count'] });
+    queryClient.invalidateQueries({ queryKey: ['recent-notifications'] });
+    queryClient.invalidateQueries({ queryKey: ['notifications'] });
+  }, [queryClient]);
+
   useEffect(() => {
     if (!user) return;
     const unsubscribe = socketService.onNotification(() => {
       // Refresh both the badge count AND the lists (bell dropdown + center),
       // so a newly-arrived notification shows up without a manual refresh.
-      queryClient.invalidateQueries({ queryKey: ['notification-count'] });
-      queryClient.invalidateQueries({ queryKey: ['recent-notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      invalidateNotifications();
       toast(t('notifications_panel.new_received'));
     });
     return unsubscribe;
-  }, [user, queryClient]);
+  }, [user, invalidateNotifications, t]);
+
+  // Reconnect reconciliation: while the socket was disconnected we may have missed
+  // notification:new events. The socket 'connect' fires on every (re)connection —
+  // skip the first (initial) connect and refetch on subsequent ones to catch up.
+  const seenFirstConnect = useRef(false);
+  useEffect(() => {
+    if (!user) return;
+    const unsub = socketService.onConnect(() => {
+      if (!seenFirstConnect.current) { seenFirstConnect.current = true; return; }
+      invalidateNotifications();
+    });
+    return unsub;
+  }, [user, invalidateNotifications]);
 
   const handleUserMenuOpen = (event: React.MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget);
   const handleUserMenuClose = () => setAnchorEl(null);
