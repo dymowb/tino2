@@ -100,6 +100,11 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate, 
     queryKey: ['messages', conversationId],
     queryFn: () => apiService.getMessages(conversationId, { limit: 100, sortOrder: 'asc' }),
     enabled: !!conversationId,
+    // Always pull fresh on open. The global staleTime (5min) otherwise serves a
+    // cached list, so a message that arrived while this chat was closed (its
+    // socket event never reached us) wouldn't show until a manual refresh.
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   const sendMessageMutation = useMutation({
