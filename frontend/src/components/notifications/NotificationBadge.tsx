@@ -21,7 +21,7 @@ import {
   Refresh,
   Circle
 } from '@mui/icons-material';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
@@ -43,8 +43,19 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
   const theme = useTheme();
   const { t } = useTranslation('common');
   const { t: tNotif } = useTranslation('notifications');
+  const queryClient = useQueryClient();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  // Mark notification(s) read (fire-and-forget on click) + refresh badge/lists.
+  const markReadMutation = useMutation({
+    mutationFn: (ids: string[]) => apiService.markNotificationsRead(ids),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notification-count'] });
+      queryClient.invalidateQueries({ queryKey: ['recent-notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
 
   // Fetch unread notification count
   const { data: notificationCount, refetch: refetchCount } = useQuery({
@@ -224,6 +235,7 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
             <MenuItem
               key={notification.id}
               onClick={() => {
+                if (!notification.isRead) markReadMutation.mutate([notification.id]);
                 if (notification.actionUrl) {
                   navigate(notification.actionUrl);
                 } else {
