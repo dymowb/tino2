@@ -4,6 +4,7 @@ import { AppDataSource } from '@/config/database';
 import { AuthenticatedRequest } from '@/types';
 import { memoryRetriever } from '@/services/memory/MemoryRetriever';
 import logger from '@/config/logger';
+import { t } from '@/i18n';
 
 type MemoryType = 'semantic' | 'episodic' | 'procedural';
 
@@ -50,7 +51,7 @@ class MemoryController {
       res.json({ success: true, data: { semantic, episodic, procedural, isOptedOut } });
     } catch (err) {
       logger.error('[MemoryController] getMyMemories failed', err);
-      res.status(500).json({ success: false, error: 'Failed to retrieve memories' });
+      res.status(500).json({ success: false, error: t(req, 'memory.retrieve_failed') });
     }
   };
 
@@ -59,7 +60,7 @@ class MemoryController {
     const { type, id } = req.params;
 
     if (!isMemoryEnabled() || !MemoryDataSource.isInitialized) {
-      res.status(503).json({ success: false, error: 'Memory system unavailable' });
+      res.status(503).json({ success: false, error: t(req, 'memory.unavailable') });
       return;
     }
 
@@ -89,12 +90,12 @@ class MemoryController {
           rowsAffected = pr[1];
           break;
         default:
-          res.status(400).json({ success: false, error: 'Invalid memory type. Use: semantic, episodic, procedural' });
+          res.status(400).json({ success: false, error: t(req, 'memory.invalid_type') });
           return;
       }
 
       if (rowsAffected === 0) {
-        res.status(404).json({ success: false, error: 'Memory not found' });
+        res.status(404).json({ success: false, error: t(req, 'memory.not_found') });
         return;
       }
 
@@ -102,7 +103,7 @@ class MemoryController {
       res.json({ success: true });
     } catch (err) {
       logger.error('[MemoryController] deleteMemory failed', err);
-      res.status(500).json({ success: false, error: 'Failed to delete memory' });
+      res.status(500).json({ success: false, error: t(req, 'memory.delete_failed') });
     }
   };
 
@@ -111,7 +112,7 @@ class MemoryController {
     const { optOut } = req.body;
 
     if (typeof optOut !== 'boolean') {
-      res.status(400).json({ success: false, error: 'optOut must be a boolean' });
+      res.status(400).json({ success: false, error: t(req, 'memory.optout_boolean') });
       return;
     }
 
@@ -143,7 +144,7 @@ class MemoryController {
       res.json({ success: true, optOut });
     } catch (err) {
       logger.error('[MemoryController] setOptOut failed', err);
-      res.status(500).json({ success: false, error: 'Failed to update opt-out setting' });
+      res.status(500).json({ success: false, error: t(req, 'memory.optout_update_failed') });
     }
   };
 
@@ -224,7 +225,7 @@ class MemoryController {
       });
     } catch (err) {
       logger.error('[MemoryController] getMyStats failed', err);
-      res.status(500).json({ success: false, error: 'Failed to retrieve stats' });
+      res.status(500).json({ success: false, error: t(req, 'memory.stats_failed') });
     }
   };
 
@@ -309,7 +310,7 @@ class MemoryController {
       });
     } catch (err) {
       logger.error('[MemoryController] getSystemStats failed', err);
-      res.status(500).json({ success: false, error: 'Failed to retrieve system stats' });
+      res.status(500).json({ success: false, error: t(req, 'memory.system_stats_failed') });
     }
   };
 
@@ -320,7 +321,7 @@ class MemoryController {
     const { query, userId } = req.body as { query: string; userId?: string };
 
     if (!query || typeof query !== 'string') {
-      res.status(400).json({ success: false, error: 'query (string) is required' });
+      res.status(400).json({ success: false, error: t(req, 'memory.query_required') });
       return;
     }
 
@@ -328,7 +329,7 @@ class MemoryController {
     const targetUserId = userId && req.user!.userType === 'admin' ? userId : requestingUserId;
 
     if (!isMemoryEnabled() || !MemoryDataSource.isInitialized) {
-      res.status(503).json({ success: false, error: 'Memory system unavailable' });
+      res.status(503).json({ success: false, error: t(req, 'memory.unavailable') });
       return;
     }
 
@@ -351,7 +352,7 @@ class MemoryController {
       });
     } catch (err) {
       logger.error('[MemoryController] testRecall failed', err);
-      res.status(500).json({ success: false, error: 'Recall test failed' });
+      res.status(500).json({ success: false, error: t(req, 'memory.recall_failed') });
     }
   };
 }

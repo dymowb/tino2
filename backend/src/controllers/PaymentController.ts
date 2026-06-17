@@ -9,6 +9,7 @@ import logger from '@/config/logger';
 import { AuthenticatedRequest } from '@/types';
 import PaymentService from '@/services/PaymentService';
 import { getStripeInstance, getStripeErrorMessage } from '@/config/stripe';
+import { t } from '@/i18n';
 
 // Lazy accessor — avoids crash-at-startup when STRIPE_SECRET_KEY is absent
 const stripe = () => getStripeInstance();
@@ -62,7 +63,7 @@ class PaymentController {
       logger.error('Error retrieving payments:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        error: t(req, 'common.internal_error')
       });
     }
   }
@@ -85,7 +86,7 @@ class PaymentController {
       if (!payment) {
         res.status(404).json({
           success: false,
-          error: 'Payment not found'
+          error: t(req, 'payment.not_found')
         });
         return;
       }
@@ -100,7 +101,7 @@ class PaymentController {
       logger.error('Error retrieving payment:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        error: t(req, 'common.internal_error')
       });
     }
   }
@@ -110,7 +111,7 @@ class PaymentController {
     try {
       const userRepository = AppDataSource.getRepository(User);
       const user = await userRepository.findOne({ where: { id: req.user.userId } });
-      if (!user) { res.status(404).json({ success: false, error: 'User not found' }); return; }
+      if (!user) { res.status(404).json({ success: false, error: t(req, 'common.user_not_found') }); return; }
 
       // Get or create Stripe customer
       let stripeCustomerId = user.stripeCustomerId;
@@ -141,7 +142,7 @@ class PaymentController {
   public async savePaymentMethod(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { paymentMethodId } = req.body;
-      if (!paymentMethodId) { res.status(400).json({ success: false, error: 'paymentMethodId required' }); return; }
+      if (!paymentMethodId) { res.status(400).json({ success: false, error: t(req, 'payment.method_id_required') }); return; }
 
       // Verify the payment method belongs to this customer via Stripe
       const pm = await stripe().paymentMethods.retrieve(paymentMethodId);
@@ -149,7 +150,7 @@ class PaymentController {
       const user = await userRepository.findOne({ where: { id: req.user.userId } });
 
       if (!user || pm.customer !== user.stripeCustomerId) {
-        res.status(403).json({ success: false, error: 'Payment method does not belong to this customer' });
+        res.status(403).json({ success: false, error: t(req, 'payment.method_not_owned') });
         return;
       }
 
@@ -178,7 +179,7 @@ class PaymentController {
       if (validationErrors.length > 0) {
         res.status(400).json({
           success: false,
-          error: 'Validation failed',
+          error: t(req, 'common.validation_failed'),
           details: validationErrors
         });
         return;
@@ -233,7 +234,7 @@ class PaymentController {
     } catch (error) {
       logger.error('Error confirming payment:', error);
       const errMsg = error instanceof Error ? error.message : 'Unknown error';
-      if (errMsg === 'Payment not found') {
+      if (errMsg === t(req, 'payment.not_found')) {
         res.status(404).json({ success: false, error: errMsg });
       } else if (errMsg.includes('Unauthorized')) {
         res.status(403).json({ success: false, error: errMsg });
@@ -269,7 +270,7 @@ class PaymentController {
     } catch (error) {
       logger.error('Error processing refund:', error);
       const errMsg = error instanceof Error ? error.message : 'Unknown error';
-      if (errMsg === 'Payment not found') {
+      if (errMsg === t(req, 'payment.not_found')) {
         res.status(404).json({ success: false, error: errMsg });
       } else if (errMsg.includes('Unauthorized') || errMsg.includes('only refund')) {
         res.status(403).json({ success: false, error: errMsg });
@@ -293,7 +294,7 @@ class PaymentController {
       if (req.user.userId !== customerId && req.user.userType !== 'admin') {
         res.status(403).json({
           success: false,
-          error: 'Unauthorized access'
+          error: t(req, 'common.unauthorized_access')
         });
         return;
       }
@@ -315,7 +316,7 @@ class PaymentController {
       logger.error('Error retrieving customer payments:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        error: t(req, 'common.internal_error')
       });
     }
   }
@@ -329,7 +330,7 @@ class PaymentController {
       if (req.user.userId !== providerId && req.user.userType !== 'admin') {
         res.status(403).json({
           success: false,
-          error: 'Unauthorized access'
+          error: t(req, 'common.unauthorized_access')
         });
         return;
       }
@@ -351,7 +352,7 @@ class PaymentController {
       logger.error('Error retrieving provider payments:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        error: t(req, 'common.internal_error')
       });
     }
   }
@@ -379,7 +380,7 @@ class PaymentController {
       logger.error('Error handling Stripe webhook:', error);
       res.status(500).json({
         success: false,
-        error: 'Webhook handling failed'
+        error: t(req, 'payment.webhook_failed')
       });
     }
   }

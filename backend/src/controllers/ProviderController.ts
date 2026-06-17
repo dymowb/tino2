@@ -6,6 +6,7 @@ import reviewService from '@/services/ReviewService';
 import logger from '@/config/logger';
 import { ApiResponse, AuthenticatedRequest } from '@/types';
 import { AvailabilitySchema } from '@/schemas/availability.schema';
+import { t } from '@/i18n';
 
 export class ProviderController {
   createProvider = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -14,7 +15,7 @@ export class ProviderController {
       if (!errors.isEmpty()) {
         const response: ApiResponse = {
           success: false,
-          message: 'Validation failed',
+          message: t(req, 'common.validation_failed'),
           errors: errors.array().reduce((acc, err) => {
             const field = err.type === 'field' ? err.path : 'unknown';
             if (!acc[field]) acc[field] = [];
@@ -30,7 +31,7 @@ export class ProviderController {
       if (!userId) {
         const response: ApiResponse = {
           success: false,
-          message: 'User authentication required',
+          message: t(req, 'common.auth_required'),
         };
         res.status(401).json(response);
         return;
@@ -40,7 +41,7 @@ export class ProviderController {
 
       const response: ApiResponse = {
         success: true,
-        message: 'Provider profile created successfully',
+        message: t(req, 'provider.created'),
         data: { provider },
       };
 
@@ -79,7 +80,7 @@ export class ProviderController {
       if (!provider) {
         const response: ApiResponse = {
           success: false,
-          message: 'Provider not found',
+          message: t(req, 'provider.not_found'),
         };
         res.status(404).json(response);
         return;
@@ -114,7 +115,7 @@ export class ProviderController {
 
       const response: ApiResponse = {
         success: false,
-        message: 'Failed to retrieve provider',
+        message: t(req, 'provider.retrieve_failed'),
       };
 
       res.status(500).json(response);
@@ -127,7 +128,7 @@ export class ProviderController {
       if (!userId) {
         const response: ApiResponse = {
           success: false,
-          message: 'User authentication required',
+          message: t(req, 'common.auth_required'),
         };
         res.status(401).json(response);
         return;
@@ -138,7 +139,7 @@ export class ProviderController {
       if (!provider) {
         const response: ApiResponse = {
           success: false,
-          message: 'Provider profile not found',
+          message: t(req, 'provider.profile_not_found'),
         };
         res.status(404).json(response);
         return;
@@ -155,7 +156,7 @@ export class ProviderController {
 
       const response: ApiResponse = {
         success: false,
-        message: 'Failed to retrieve provider profile',
+        message: t(req, 'provider.profile_retrieve_failed'),
       };
 
       res.status(500).json(response);
@@ -168,7 +169,7 @@ export class ProviderController {
       if (!errors.isEmpty()) {
         const response: ApiResponse = {
           success: false,
-          message: 'Validation failed',
+          message: t(req, 'common.validation_failed'),
           errors: errors.array().reduce((acc, err) => {
             const field = err.type === 'field' ? err.path : 'unknown';
             if (!acc[field]) acc[field] = [];
@@ -186,7 +187,7 @@ export class ProviderController {
       if (!userId) {
         const response: ApiResponse = {
           success: false,
-          message: 'User authentication required',
+          message: t(req, 'common.auth_required'),
         };
         res.status(401).json(response);
         return;
@@ -197,7 +198,7 @@ export class ProviderController {
       if (!existingProvider || existingProvider.userId !== userId) {
         const response: ApiResponse = {
           success: false,
-          message: 'Provider not found or access denied',
+          message: t(req, 'provider.not_found_or_denied'),
         };
         res.status(404).json(response);
         return;
@@ -207,7 +208,7 @@ export class ProviderController {
 
       const response: ApiResponse = {
         success: true,
-        message: 'Provider profile updated successfully',
+        message: t(req, 'provider.updated'),
         data: { provider: updatedProvider },
       };
 
@@ -217,7 +218,7 @@ export class ProviderController {
 
       const response: ApiResponse = {
         success: false,
-        message: 'Failed to update provider profile',
+        message: t(req, 'provider.update_failed'),
       };
 
       res.status(500).json(response);
@@ -258,7 +259,7 @@ export class ProviderController {
 
       const response: ApiResponse = {
         success: false,
-        message: 'Failed to search providers',
+        message: t(req, 'provider.search_failed'),
       };
 
       res.status(500).json(response);
@@ -275,7 +276,7 @@ export class ProviderController {
       if (req.user?.userType !== 'admin') {
         const response: ApiResponse = {
           success: false,
-          message: 'Admin access required',
+          message: t(req, 'common.admin_access_required'),
         };
         res.status(403).json(response);
         return;
@@ -318,7 +319,7 @@ export class ProviderController {
       if (!userId) {
         const response: ApiResponse = {
           success: false,
-          message: 'User authentication required',
+          message: t(req, 'common.auth_required'),
         };
         res.status(401).json(response);
         return;
@@ -329,7 +330,7 @@ export class ProviderController {
       if (!existingProvider || existingProvider.userId !== userId) {
         const response: ApiResponse = {
           success: false,
-          message: 'Provider not found or access denied',
+          message: t(req, 'provider.not_found_or_denied'),
         };
         res.status(404).json(response);
         return;
@@ -342,7 +343,7 @@ export class ProviderController {
       if (!imageUrls || !Array.isArray(imageUrls)) {
         const response: ApiResponse = {
           success: false,
-          message: 'Image URLs array is required',
+          message: t(req, 'provider.image_urls_required'),
         };
         res.status(400).json(response);
         return;
@@ -352,7 +353,7 @@ export class ProviderController {
 
       const response: ApiResponse = {
         success: true,
-        message: 'Portfolio images uploaded successfully',
+        message: t(req, 'provider.portfolio_uploaded'),
         data: { provider: updatedProvider },
       };
 
@@ -362,7 +363,7 @@ export class ProviderController {
 
       const response: ApiResponse = {
         success: false,
-        message: 'Failed to upload portfolio images',
+        message: t(req, 'provider.portfolio_upload_failed'),
       };
 
       res.status(500).json(response);
@@ -373,7 +374,7 @@ export class ProviderController {
     try {
       const userId = req.user?.userId;
       if (!userId) {
-        res.status(401).json({ success: false, message: 'User authentication required' });
+        res.status(401).json({ success: false, message: t(req, 'common.auth_required') });
         return;
       }
 
@@ -381,7 +382,7 @@ export class ProviderController {
       const parsed = AvailabilitySchema.safeParse(req.body);
       if (!parsed.success) {
         const errors = parsed.error.flatten().fieldErrors;
-        res.status(400).json({ success: false, message: 'Validation failed', errors });
+        res.status(400).json({ success: false, message: t(req, 'common.validation_failed'), errors });
         return;
       }
 
@@ -393,7 +394,7 @@ export class ProviderController {
       res.status(200).json(response);
     } catch (error) {
       logger.error('Error updating availability:', error);
-      res.status(500).json({ success: false, message: 'Failed to update availability' });
+      res.status(500).json({ success: false, message: t(req, 'provider.availability_update_failed') });
     }
   };
 
@@ -405,7 +406,7 @@ export class ProviderController {
       if (!userId) {
         const response: ApiResponse = {
           success: false,
-          message: 'User authentication required',
+          message: t(req, 'common.auth_required'),
         };
         res.status(401).json(response);
         return;
@@ -416,7 +417,7 @@ export class ProviderController {
       if (!existingProvider || existingProvider.userId !== userId) {
         const response: ApiResponse = {
           success: false,
-          message: 'Provider not found or access denied',
+          message: t(req, 'provider.not_found_or_denied'),
         };
         res.status(404).json(response);
         return;
@@ -426,7 +427,7 @@ export class ProviderController {
 
       const response: ApiResponse = {
         success: true,
-        message: 'Provider profile deactivated successfully',
+        message: t(req, 'provider.deactivated'),
       };
 
       res.status(200).json(response);
@@ -435,7 +436,7 @@ export class ProviderController {
 
       const response: ApiResponse = {
         success: false,
-        message: 'Failed to deactivate provider profile',
+        message: t(req, 'provider.deactivate_failed'),
       };
 
       res.status(500).json(response);
@@ -449,7 +450,7 @@ export class ProviderController {
       if (!userId) {
         const response: ApiResponse = {
           success: false,
-          message: 'User authentication required',
+          message: t(req, 'common.auth_required'),
         };
         res.status(401).json(response);
         return;
@@ -461,7 +462,7 @@ export class ProviderController {
       if (!provider) {
         const response: ApiResponse = {
           success: false,
-          message: 'Provider profile not found',
+          message: t(req, 'provider.profile_not_found'),
         };
         res.status(404).json(response);
         return;
@@ -516,7 +517,7 @@ export class ProviderController {
 
       const response: ApiResponse = {
         success: false,
-        message: 'Failed to fetch dashboard statistics',
+        message: t(req, 'provider.dashboard_stats_failed'),
       };
 
       res.status(500).json(response);
@@ -530,7 +531,7 @@ export class ProviderController {
       res.status(200).json(response);
     } catch (error) {
       logger.error('Error in getServiceCatalog controller:', error);
-      res.status(500).json({ success: false, message: 'Failed to load service catalog' });
+      res.status(500).json({ success: false, message: t(req, 'provider.catalog_failed') });
     }
   }
 }

@@ -6,6 +6,7 @@ import logger from '@/config/logger';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
+import { t } from '@/i18n';
 
 // Configure multer for message file/image uploads
 const messageStorage = multer.diskStorage({
@@ -45,7 +46,7 @@ export class MessageController {
       if (!errors.isEmpty()) {
         res.status(400).json({
           success: false,
-          message: 'Validation failed',
+          message: t(req, 'common.validation_failed'),
           errors: errors.mapped()
         });
         return;
@@ -59,13 +60,13 @@ export class MessageController {
       res.status(201).json({
         success: true,
         data: conversation,
-        message: 'Conversation created successfully'
+        message: t(req, 'message.conversation_created')
       });
     } catch (error) {
       logger.error('Error creating conversation:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to create conversation',
+        message: t(req, 'message.conversation_create_failed'),
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
@@ -81,7 +82,7 @@ export class MessageController {
       if (!conversation) {
         res.status(404).json({
           success: false,
-          message: 'Conversation not found or access denied'
+          message: t(req, 'message.conversation_not_found')
         });
         return;
       }
@@ -89,13 +90,13 @@ export class MessageController {
       res.json({
         success: true,
         data: conversation,
-        message: 'Conversation retrieved successfully'
+        message: t(req, 'message.conversation_retrieved')
       });
     } catch (error) {
       logger.error('Error getting conversation:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to retrieve conversation',
+        message: t(req, 'message.conversation_retrieve_failed'),
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
@@ -125,13 +126,13 @@ export class MessageController {
           total: result.total,
           pages: Math.ceil(result.total / result.limit)
         },
-        message: 'Conversations retrieved successfully'
+        message: t(req, 'message.conversations_retrieved')
       });
     } catch (error) {
       logger.error('Error getting user conversations:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to retrieve conversations',
+        message: t(req, 'message.conversations_retrieve_failed'),
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
@@ -143,7 +144,7 @@ export class MessageController {
       if (!errors.isEmpty()) {
         res.status(400).json({
           success: false,
-          message: 'Validation failed',
+          message: t(req, 'common.validation_failed'),
           errors: errors.mapped()
         });
         return;
@@ -157,7 +158,7 @@ export class MessageController {
       res.status(201).json({
         success: true,
         data: message,
-        message: 'Message sent successfully'
+        message: t(req, 'message.sent')
       });
     } catch (error) {
       // Messaging is closed once the booking is finalized — distinct, expected
@@ -167,14 +168,14 @@ export class MessageController {
         res.status(403).json({
           success: false,
           message: 'MESSAGING_CLOSED',
-          error: 'Messaging is closed for this booking',
+          error: t(req, 'message.messaging_closed'),
         });
         return;
       }
       logger.error('Error sending message:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to send message',
+        message: t(req, 'message.send_failed'),
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
@@ -188,7 +189,7 @@ export class MessageController {
       // Only conversation participants may read messages — prevents admin eavesdropping
       const isParticipant = await messageService.isConversationParticipant(conversationId, userId);
       if (!isParticipant) {
-        res.status(403).json({ success: false, message: 'Access denied' });
+        res.status(403).json({ success: false, message: t(req, 'common.access_denied') });
         return;
       }
 
@@ -215,13 +216,13 @@ export class MessageController {
           total: result.total,
           pages: Math.ceil(result.total / result.limit)
         },
-        message: 'Messages retrieved successfully'
+        message: t(req, 'message.retrieved')
       });
     } catch (error) {
       logger.error('Error getting conversation messages:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to retrieve messages',
+        message: t(req, 'message.retrieve_failed'),
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
@@ -243,7 +244,7 @@ export class MessageController {
       logger.error('Error marking messages as read:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to mark messages as read',
+        message: t(req, 'message.mark_read_failed'),
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
@@ -255,7 +256,7 @@ export class MessageController {
       if (!errors.isEmpty()) {
         res.status(400).json({
           success: false,
-          message: 'Validation failed',
+          message: t(req, 'common.validation_failed'),
           errors: errors.mapped()
         });
         return;
@@ -270,13 +271,13 @@ export class MessageController {
       res.json({
         success: true,
         data: message,
-        message: 'Message updated successfully'
+        message: t(req, 'message.updated')
       });
     } catch (error) {
       logger.error('Error updating message:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to update message',
+        message: t(req, 'message.update_failed'),
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
@@ -291,13 +292,13 @@ export class MessageController {
 
       res.json({
         success: true,
-        message: 'Message deleted successfully'
+        message: t(req, 'message.deleted')
       });
     } catch (error) {
       logger.error('Error deleting message:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to delete message',
+        message: t(req, 'message.delete_failed'),
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
@@ -312,13 +313,13 @@ export class MessageController {
       res.json({
         success: true,
         data: { unreadCount: count },
-        message: 'Unread message count retrieved successfully'
+        message: t(req, 'message.unread_count_retrieved')
       });
     } catch (error) {
       logger.error('Error getting unread message count:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to get unread message count',
+        message: t(req, 'message.unread_count_failed'),
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
@@ -329,7 +330,7 @@ export class MessageController {
     async (req: AuthenticatedRequest, res: Response): Promise<void> => {
       try {
         if (!req.file) {
-          res.status(400).json({ success: false, message: 'No file uploaded' });
+          res.status(400).json({ success: false, message: t(req, 'message.no_file') });
           return;
         }
         const url = `/uploads/messages/${req.file.filename}`;
@@ -344,7 +345,7 @@ export class MessageController {
         });
       } catch (error) {
         logger.error('Error uploading message attachment:', error);
-        res.status(500).json({ success: false, message: 'Failed to upload file' });
+        res.status(500).json({ success: false, message: t(req, 'message.upload_failed') });
       }
     },
   ];

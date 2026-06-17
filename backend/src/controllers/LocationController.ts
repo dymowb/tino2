@@ -3,6 +3,7 @@ import LocationService from '../services/LocationService';
 import ProviderSearchService from '../services/ProviderSearchService';
 import { LocationSearchParams } from '../services/ProviderSearchService';
 import logger from '@/config/logger';
+import { t } from '@/i18n';
 
 class LocationController {
   
@@ -16,7 +17,7 @@ class LocationController {
       if (!address || typeof address !== 'string') {
         res.status(400).json({
           success: false,
-          error: 'Address is required',
+          error: t(req, 'location.address_required'),
         });
         return;
       }
@@ -45,7 +46,7 @@ class LocationController {
       if (typeof latitude !== 'number' || typeof longitude !== 'number') {
         res.status(400).json({
           success: false,
-          error: 'Valid latitude and longitude are required',
+          error: t(req, 'location.coords_required'),
         });
         return;
       }
@@ -74,7 +75,7 @@ class LocationController {
       if (!origin?.lat || !origin?.lng || !destination?.lat || !destination?.lng) {
         res.status(400).json({
           success: false,
-          error: 'Valid origin and destination coordinates are required',
+          error: t(req, 'location.od_coords_required'),
         });
         return;
       }
@@ -118,7 +119,7 @@ class LocationController {
       if (isNaN(params.latitude) || isNaN(params.longitude)) {
         res.status(400).json({
           success: false,
-          error: 'Valid latitude and longitude are required',
+          error: t(req, 'location.coords_required'),
         });
         return;
       }
@@ -154,7 +155,7 @@ class LocationController {
       if (!address || typeof address !== 'string') {
         res.status(400).json({
           success: false,
-          error: 'Address is required',
+          error: t(req, 'location.address_required'),
         });
         return;
       }
@@ -196,7 +197,7 @@ class LocationController {
       if (isNaN(latitude) || isNaN(longitude)) {
         res.status(400).json({
           success: false,
-          error: 'Valid latitude and longitude are required',
+          error: t(req, 'location.coords_required'),
         });
         return;
       }
@@ -227,7 +228,7 @@ class LocationController {
       if (isNaN(latitude) || isNaN(longitude)) {
         res.status(400).json({
           success: false,
-          error: 'Valid latitude and longitude are required',
+          error: t(req, 'location.coords_required'),
         });
         return;
       }
@@ -259,7 +260,7 @@ class LocationController {
       if (isNaN(latitude) || isNaN(longitude)) {
         res.status(400).json({
           success: false,
-          error: 'Valid latitude and longitude are required',
+          error: t(req, 'location.coords_required'),
         });
         return;
       }
@@ -288,7 +289,7 @@ class LocationController {
       if (!placeId) {
         res.status(400).json({
           success: false,
-          error: 'Place ID is required',
+          error: t(req, 'location.place_id_required'),
         });
         return;
       }
@@ -327,7 +328,7 @@ class LocationController {
     try {
       const { placeId } = req.params;
       if (!placeId) {
-        res.status(400).json({ success: false, error: 'Place ID is required' });
+        res.status(400).json({ success: false, error: t(req, 'location.place_id_required') });
         return;
       }
       const location = await LocationService.resolvePlace(placeId);
