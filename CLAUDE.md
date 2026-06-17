@@ -164,9 +164,9 @@ The application includes Browserbase MCP integration for automated browser testi
 
 ## Known Issues (active)
 
-- **`profile.fields.customer`** translation key missing — cosmetic only; shows the raw key in the nav bar after login.
+- _None currently._ (Resolved: the `profile.fields.customer/provider` nav-bar keys now exist in en/pt.)
 
-> Feature/phase status and operational caveats (e.g. Stripe/geocoding need real keys; notifications poll) live in `SESSION_CONTEXT.md` — not duplicated here.
+> Feature/phase status and operational caveats live in `SESSION_CONTEXT.md` — not duplicated here. Stripe (test mode) + Google Maps/Places keys are now configured and live on prod.
 
 ## Testing
 

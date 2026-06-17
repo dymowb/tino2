@@ -3,8 +3,10 @@
 > Lean by design (per CLAUDE.md): current status + roadmap + resume point only.
 > Detailed completed-work notes live in `Tests/history/HISTORICAL_CONTEXT.md` and git history.
 
-## Current Status (2026-06-15) — Loose-ends cleanup (committed; deploy pending)
-Autonomous pass clearing SESSION_CONTEXT loose ends. Commits on **main**: `901cc17` (WS4), `ecc62f1` (WS1), `d0721a7` (WS3), `1de7daf` (WS5), `dc846e8` (WS2 script). Dev servers :3001→dev :3002; prod :3000 untouched until deploy.
+## Current Status (2026-06-16) — Loose-ends cleanup ✅ COMPLETE + deployed to prod
+All plan workstreams done, committed to **main**, and live on newtino.com. Commits: `901cc17` WS4, `ecc62f1` WS1, `d0721a7`+`faeab25` WS3 (i18n now fully swept), `1de7daf` WS5, `dc846e8`/`6d495ef` WS2 (escrow+webhooks), `5cdcdb3` notification mark-read, plus the Places key + Stripe key/webhook env fixes. Dev servers :3001→dev :3002; prod :3000.
+
+- **Notification mark-as-read on click (done, `5cdcdb3`):** bell dropdown never marked read (only navigated) → added `markNotificationsRead` mutation on click; notifications page awaited the mutation before its full-page nav so the reload can't abort it. Verified: bell 3→2, page 2→1, persisted in DB.
 
 - **WS4 — quick fixes (done, verified):** (a) `/voice/*` → 204 silent-skip when no OPENAI key (verified 204). (b) Provider search now a **true Haversine circular radius** (was a square bbox); distance sort done in JS over the radius-bounded set because TypeORM can't ORDER BY a computed expr through join+pagination — also dropped the unused `reviews` join. Verified radius narrows 1→0, 5→6, 25→24, 100→24. (c) `VITE_MAX_PROVIDERS_PER_QUOTE` → `app_settings.max_providers_per_quote` via new public `GET /api/v1/config`; `AIAssistantTab` reads it (verified `{maxProvidersPerQuote:5}`). (d) Geocoding now surfaces `partialMatch`/`locationType`; `backfillRequestGeocodes` script geocoded the 2 real legacy (0,0) requests, left 4 junk at 0,0. (e) FindProviders request-button tooltips. (f) Fixed nested-`<p>` in bell dropdown. (g) Privacy dialog spinner while loading.
 - **WS1 — address autocomplete + validation (done, verified):** backend `LocationService.autocomplete` (Places, BR-biased, **fail-fast** 3s/no-retry so it degrades instantly) + `resolvePlace`; routes `/locations/autocomplete` (degrades to 200 [] if Places unavailable) + `/locations/resolve-place/:id`. New `AddressAutocomplete` component wired into QuoteRequestDialog + BookingDialog: resolving auto-fills city/state/zip+coords (✓ check), submit blocked until coords resolve (kills (0,0) at source). **Verified live:** real address → ROOFTOP coords + autofill; junk → no resolve → blocked. ✅ **Places autocomplete now LIVE** (2026-06-15): root cause was the old Maps key lacked the *legacy* "Places API" (the SDK uses `maps/api/place/autocomplete/json`, not "Places API (New)"). New key `AIzaSyBK1j…` in `.env` → dropdown returns 5 predictions; verified on dev + prod (newtino.com).
@@ -135,7 +137,8 @@ Git history has the full per-commit detail; one-liners here for resume.
 7. ✅ **Nested `<p>` warnings** — fixed in the bell dropdown (WS4). (NotificationCenter already used `component:'div'`.)
 8. **Service Types display in PT when EN selected** — accepted won't-fix (domain data, no locale layer).
 
-## Dev setup (local, Linux)
+## 🆕 Open bug (logged 2026-06-16, not yet fixed)
+- **New chat message not delivered live to an OPEN conversation.** Repro: provider sends a message; customer's bell correctly shows +1; clicking it opens the chat scrolled to the bottom but the **new message isn't shown until a manual refresh**. So the notification/badge path works, but the message list in an already-open `ChatInterface` isn't appending the inbound `message:new` socket event (or the deep-linked conversation loads a cached/stale message list before the new message is fetched). Likely in `ChatInterface`/messaging socket handler — the `message:new` handler should append to the active conversation's message query cache (and/or invalidate `['messages', conversationId]`). See `Tests/Pending bugs and features - manual check.md` (New).
 - Backend `:3000` — `cd backend && npm run dev`. **Stale-serving trap**: if backend edits don't take effect, `pkill -f ts-node-dev` then ONE clean `npm run dev` (run via the Bash tool's `run_in_background:true`, not `nohup &`).
 - Frontend `:3001` — `cd frontend && npm run dev`.
 - Postgres in Docker: container `tino2-app-db` (`docker exec tino2-app-db psql -U tino -d tino_app …`).
