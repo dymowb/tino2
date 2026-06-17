@@ -81,7 +81,7 @@ Tracks all UX tests, their status, and which feature areas they exercise.
 | H1 | Page loads, AI + Browse tabs render | ✅ Pass | `providers` |
 | H2 | Search by keyword filters results | ✅ Pass | `providers` |
 | H3 | Filter by service type (Autocomplete) | ✅ Pass | `providers` |
-| H4 | Filter by location | ⚠️ Skip | `providers` — GPS not configured (expected) |
+| H4 | Filter by location | ✅ Pass | `providers` — GPS now configured; Haversine radius filter verified on prod (Florianópolis 2km→2, 10km→15, 50km→24; São Paulo 10km→0) |
 | H5 | Provider card shows name, rating, services, price | ✅ Pass | `providers` |
 | H6 | Click provider card → provider detail page | ✅ Pass | `providers` |
 

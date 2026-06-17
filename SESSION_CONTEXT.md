@@ -137,8 +137,9 @@ Git history has the full per-commit detail; one-liners here for resume.
 7. ✅ **Nested `<p>` warnings** — fixed in the bell dropdown (WS4). (NotificationCenter already used `component:'div'`.)
 8. **Service Types display in PT when EN selected** — accepted won't-fix (domain data, no locale layer).
 
-## 🆕 Open bug (logged 2026-06-16, not yet fixed)
-- **New chat message not delivered live to an OPEN conversation.** Repro: provider sends a message; customer's bell correctly shows +1; clicking it opens the chat scrolled to the bottom but the **new message isn't shown until a manual refresh**. So the notification/badge path works, but the message list in an already-open `ChatInterface` isn't appending the inbound `message:new` socket event (or the deep-linked conversation loads a cached/stale message list before the new message is fetched). Likely in `ChatInterface`/messaging socket handler — the `message:new` handler should append to the active conversation's message query cache (and/or invalidate `['messages', conversationId]`). See `Tests/Pending bugs and features - manual check.md` (New).
+## 🆕 Bug logged 2026-06-16 — ✅ FIXED + deployed (`8c8ba0b`)
+- **New chat message not shown on opening a conversation (needed manual refresh).** Root cause: global React Query `staleTime: 5min` served the **cached** message list on re-open, so a message that arrived while the chat was closed (its `message:new` socket event never reached the unmounted `ChatInterface`) didn't show until a manual refresh. Fix: `staleTime:0` + `refetchOnMount:'always'` on the `['messages', conversationId]` query in `ChatInterface` — opening a conversation always pulls fresh; live socket-append still handles messages arriving while it's open. Verified: inserted an inbound message while chat closed → appears on re-open with no refresh.
+- **H4 (Filter by location)** — was skipped (GPS unconfigured); GPS/Maps now live → re-ran + ✅ Pass (radius narrows correctly on prod). TEST_REGISTRY updated.
 - Backend `:3000` — `cd backend && npm run dev`. **Stale-serving trap**: if backend edits don't take effect, `pkill -f ts-node-dev` then ONE clean `npm run dev` (run via the Bash tool's `run_in_background:true`, not `nohup &`).
 - Frontend `:3001` — `cd frontend && npm run dev`.
 - Postgres in Docker: container `tino2-app-db` (`docker exec tino2-app-db psql -U tino -d tino_app …`).
