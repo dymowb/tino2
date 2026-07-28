@@ -6,7 +6,9 @@ export const rateLimiter = (options: Partial<Options>) =>
     standardHeaders: true,
     legacyHeaders: false,
     handler: (_req: Request, res: Response) => {
-      res.status(429).json({ success: false, message: 'Too many requests, please try again later.' });
+      res
+        .status(429)
+        .json({ success: false, message: 'Too many requests, please try again later.' });
     },
     ...options,
   });

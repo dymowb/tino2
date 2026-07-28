@@ -16,12 +16,15 @@ export class ProviderController {
         const response: ApiResponse = {
           success: false,
           message: t(req, 'common.validation_failed'),
-          errors: errors.array().reduce((acc, err) => {
-            const field = err.type === 'field' ? err.path : 'unknown';
-            if (!acc[field]) acc[field] = [];
-            acc[field].push(err.msg);
-            return acc;
-          }, {} as Record<string, string[]>),
+          errors: errors.array().reduce(
+            (acc, err) => {
+              const field = err.type === 'field' ? err.path : 'unknown';
+              if (!acc[field]) acc[field] = [];
+              acc[field].push(err.msg);
+              return acc;
+            },
+            {} as Record<string, string[]>
+          ),
         };
         res.status(400).json(response);
         return;
@@ -56,7 +59,10 @@ export class ProviderController {
         if (error.message.includes('already exists')) {
           statusCode = 409;
           message = error.message;
-        } else if (error.message.includes('not found') || error.message.includes('not a provider')) {
+        } else if (
+          error.message.includes('not found') ||
+          error.message.includes('not a provider')
+        ) {
           statusCode = 400;
           message = error.message;
         }
@@ -69,7 +75,7 @@ export class ProviderController {
 
       res.status(statusCode).json(response);
     }
-  }
+  };
 
   getProvider = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -120,7 +126,7 @@ export class ProviderController {
 
       res.status(500).json(response);
     }
-  }
+  };
 
   getMyProvider = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -161,7 +167,7 @@ export class ProviderController {
 
       res.status(500).json(response);
     }
-  }
+  };
 
   updateProvider = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -170,12 +176,15 @@ export class ProviderController {
         const response: ApiResponse = {
           success: false,
           message: t(req, 'common.validation_failed'),
-          errors: errors.array().reduce((acc, err) => {
-            const field = err.type === 'field' ? err.path : 'unknown';
-            if (!acc[field]) acc[field] = [];
-            acc[field].push(err.msg);
-            return acc;
-          }, {} as Record<string, string[]>),
+          errors: errors.array().reduce(
+            (acc, err) => {
+              const field = err.type === 'field' ? err.path : 'unknown';
+              if (!acc[field]) acc[field] = [];
+              acc[field].push(err.msg);
+              return acc;
+            },
+            {} as Record<string, string[]>
+          ),
         };
         res.status(400).json(response);
         return;
@@ -223,7 +232,7 @@ export class ProviderController {
 
       res.status(500).json(response);
     }
-  }
+  };
 
   searchProviders = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -239,7 +248,8 @@ export class ProviderController {
 
       // Parse boolean values
       if (query.isInsured) query.isInsured = query.isInsured === 'true';
-      if (query.isBackgroundChecked) query.isBackgroundChecked = query.isBackgroundChecked === 'true';
+      if (query.isBackgroundChecked)
+        query.isBackgroundChecked = query.isBackgroundChecked === 'true';
 
       // Parse array values
       if (query.services && typeof query.services === 'string') {
@@ -264,7 +274,7 @@ export class ProviderController {
 
       res.status(500).json(response);
     }
-  }
+  };
 
   verifyProvider = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -309,7 +319,7 @@ export class ProviderController {
 
       res.status(statusCode).json(response);
     }
-  }
+  };
 
   uploadPortfolio = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -368,7 +378,7 @@ export class ProviderController {
 
       res.status(500).json(response);
     }
-  }
+  };
 
   updateAvailability = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -382,7 +392,9 @@ export class ProviderController {
       const parsed = AvailabilitySchema.safeParse(req.body);
       if (!parsed.success) {
         const errors = parsed.error.flatten().fieldErrors;
-        res.status(400).json({ success: false, message: t(req, 'common.validation_failed'), errors });
+        res
+          .status(400)
+          .json({ success: false, message: t(req, 'common.validation_failed'), errors });
         return;
       }
 
@@ -394,7 +406,9 @@ export class ProviderController {
       res.status(200).json(response);
     } catch (error) {
       logger.error('Error updating availability:', error);
-      res.status(500).json({ success: false, message: t(req, 'provider.availability_update_failed') });
+      res
+        .status(500)
+        .json({ success: false, message: t(req, 'provider.availability_update_failed') });
     }
   };
 
@@ -441,7 +455,7 @@ export class ProviderController {
 
       res.status(500).json(response);
     }
-  }
+  };
 
   getDashboardStats = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -476,22 +490,30 @@ export class ProviderController {
 
       const allBookingsQuery = { providerId: provider.id, limit: 1000, dateFrom };
       const pendingQuery = { providerId: provider.id, status: 'pending', limit: 1000, dateFrom };
-      const completedQuery = { providerId: provider.id, status: 'completed', limit: 1000, dateFrom };
+      const completedQuery = {
+        providerId: provider.id,
+        status: 'completed',
+        limit: 1000,
+        dateFrom,
+      };
 
       const allBookingsResult = await bookingService.searchBookings(allBookingsQuery);
       const pendingResult = await bookingService.searchBookings(pendingQuery);
       const completedResult = await bookingService.searchBookings(completedQuery);
 
       // Calculate total earnings
-      const totalEarnings = completedResult.bookings.reduce((sum: number, booking: any) =>
-        sum + parseFloat(booking.totalAmount || 0), 0
+      const totalEarnings = completedResult.bookings.reduce(
+        (sum: number, booking: any) => sum + parseFloat(booking.totalAmount || 0),
+        0
       );
 
       // Get provider reviews to calculate average rating
       const reviews = await reviewService.getProviderReviews(provider.id, { page: 1, limit: 1000 });
-      const avgRating = reviews.data && reviews.data.length > 0
-        ? reviews.data.reduce((sum: number, r: any) => sum + parseFloat(r.rating || 0), 0) / reviews.data.length
-        : null;
+      const avgRating =
+        reviews.data && reviews.data.length > 0
+          ? reviews.data.reduce((sum: number, r: any) => sum + parseFloat(r.rating || 0), 0) /
+            reviews.data.length
+          : null;
 
       const total = allBookingsResult.total;
       const completed = completedResult.total;
@@ -503,7 +525,7 @@ export class ProviderController {
         totalEarnings,
         averageRating: avgRating !== null ? Math.round(avgRating * 10) / 10 : null,
         totalReviews: reviews.pagination?.total || 0,
-        responseRate: 95 // Placeholder
+        responseRate: 95, // Placeholder
       };
 
       const response: ApiResponse = {
@@ -522,7 +544,7 @@ export class ProviderController {
 
       res.status(500).json(response);
     }
-  }
+  };
 
   getServiceCatalog = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -533,7 +555,7 @@ export class ProviderController {
       logger.error('Error in getServiceCatalog controller:', error);
       res.status(500).json({ success: false, message: t(req, 'provider.catalog_failed') });
     }
-  }
+  };
 }
 
 export default new ProviderController();

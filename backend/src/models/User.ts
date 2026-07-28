@@ -67,7 +67,7 @@ export class User {
   isActive: boolean;
 
   @Column({ nullable: true })
-  suspensionReason: string;   // enum values: 'policy_violation' | 'payment_issue' | 'abuse' | 'spam' | 'other'
+  suspensionReason: string; // enum values: 'policy_violation' | 'payment_issue' | 'abuse' | 'spam' | 'other'
 
   @Column({ type: 'text', nullable: true })
   suspensionComment: string;

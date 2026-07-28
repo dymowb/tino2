@@ -26,7 +26,9 @@ class PaymentController {
       let whereConditions: any[];
       if (req.user.userType === 'provider') {
         const providerRepository = AppDataSource.getRepository(Provider);
-        const providerEntity = await providerRepository.findOne({ where: { userId: req.user.userId } });
+        const providerEntity = await providerRepository.findOne({
+          where: { userId: req.user.userId },
+        });
         const providerEntityId = providerEntity?.id ?? req.user.userId;
         whereConditions = [{ providerId: providerEntityId }];
       } else {
@@ -54,8 +56,8 @@ class PaymentController {
             limit: Number(limit),
             total,
             pages: Math.ceil(total / Number(limit)),
-          }
-        }
+          },
+        },
       });
 
       logger.info(`Payments retrieved for user ${req.user.userId}`);
@@ -63,7 +65,7 @@ class PaymentController {
       logger.error('Error retrieving payments:', error);
       res.status(500).json({
         success: false,
-        error: t(req, 'common.internal_error')
+        error: t(req, 'common.internal_error'),
       });
     }
   }
@@ -78,7 +80,9 @@ class PaymentController {
         where: {
           id,
           // Ensure user can only access their own payments
-          ...(req.user.userType === 'customer' ? { customerId: req.user.userId } : { providerId: req.user.userId })
+          ...(req.user.userType === 'customer'
+            ? { customerId: req.user.userId }
+            : { providerId: req.user.userId }),
         },
         relations: ['customer', 'provider', 'booking', 'booking.customer'],
       });
@@ -86,14 +90,14 @@ class PaymentController {
       if (!payment) {
         res.status(404).json({
           success: false,
-          error: t(req, 'payment.not_found')
+          error: t(req, 'payment.not_found'),
         });
         return;
       }
 
       res.json({
         success: true,
-        data: payment
+        data: payment,
       });
 
       logger.info(`Payment ${id} retrieved by user ${req.user.userId}`);
@@ -101,7 +105,7 @@ class PaymentController {
       logger.error('Error retrieving payment:', error);
       res.status(500).json({
         success: false,
-        error: t(req, 'common.internal_error')
+        error: t(req, 'common.internal_error'),
       });
     }
   }
@@ -111,7 +115,10 @@ class PaymentController {
     try {
       const userRepository = AppDataSource.getRepository(User);
       const user = await userRepository.findOne({ where: { id: req.user.userId } });
-      if (!user) { res.status(404).json({ success: false, error: t(req, 'common.user_not_found') }); return; }
+      if (!user) {
+        res.status(404).json({ success: false, error: t(req, 'common.user_not_found') });
+        return;
+      }
 
       // Get or create Stripe customer
       let stripeCustomerId = user.stripeCustomerId;
@@ -142,7 +149,10 @@ class PaymentController {
   public async savePaymentMethod(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { paymentMethodId } = req.body;
-      if (!paymentMethodId) { res.status(400).json({ success: false, error: t(req, 'payment.method_id_required') }); return; }
+      if (!paymentMethodId) {
+        res.status(400).json({ success: false, error: t(req, 'payment.method_id_required') });
+        return;
+      }
 
       // Verify the payment method belongs to this customer via Stripe
       const pm = await stripe().paymentMethods.retrieve(paymentMethodId);
@@ -173,14 +183,14 @@ class PaymentController {
         customerId: req.user.userId,
         amount,
         currency,
-        paymentMethod
+        paymentMethod,
       });
 
       if (validationErrors.length > 0) {
         res.status(400).json({
           success: false,
           error: t(req, 'common.validation_failed'),
-          details: validationErrors
+          details: validationErrors,
         });
         return;
       }
@@ -191,7 +201,7 @@ class PaymentController {
         customerId: req.user.userId,
         amount,
         currency,
-        paymentMethod
+        paymentMethod,
       });
 
       res.json({
@@ -202,18 +212,17 @@ class PaymentController {
           amount: result.payment.amount,
           platformFee: result.payment.platformFee,
           processingFee: result.payment.processingFee,
-          providerAmount: result.payment.providerAmount
-        }
+          providerAmount: result.payment.providerAmount,
+        },
       });
-
     } catch (error) {
       logger.error('Error creating payment intent:', error);
-      
+
       const errorMessage = getStripeErrorMessage(error);
-      
+
       res.status(500).json({
         success: false,
-        error: errorMessage
+        error: errorMessage,
       });
     }
   }
@@ -228,9 +237,8 @@ class PaymentController {
 
       res.json({
         success: true,
-        data: payment
+        data: payment,
       });
-
     } catch (error) {
       logger.error('Error confirming payment:', error);
       const errMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -255,7 +263,7 @@ class PaymentController {
         paymentId: id,
         amount,
         reason,
-        requestedBy: req.user.userId
+        requestedBy: req.user.userId,
       });
 
       res.json({
@@ -263,10 +271,9 @@ class PaymentController {
         data: {
           payment,
           refundAmount: payment.refundAmount,
-          status: payment.status
-        }
+          status: payment.status,
+        },
       });
-
     } catch (error) {
       logger.error('Error processing refund:', error);
       const errMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -279,7 +286,7 @@ class PaymentController {
       } else {
         res.status(500).json({
           success: false,
-          error: getStripeErrorMessage(error)
+          error: getStripeErrorMessage(error),
         });
       }
     }
@@ -294,7 +301,7 @@ class PaymentController {
       if (req.user.userId !== customerId && req.user.userType !== 'admin') {
         res.status(403).json({
           success: false,
-          error: t(req, 'common.unauthorized_access')
+          error: t(req, 'common.unauthorized_access'),
         });
         return;
       }
@@ -303,12 +310,12 @@ class PaymentController {
       const payments = await paymentRepository.find({
         where: { customerId },
         relations: ['provider', 'booking'],
-        order: { createdAt: 'DESC' }
+        order: { createdAt: 'DESC' },
       });
 
       res.json({
         success: true,
-        data: payments
+        data: payments,
       });
 
       logger.info(`Customer payments retrieved for ${customerId}`);
@@ -316,7 +323,7 @@ class PaymentController {
       logger.error('Error retrieving customer payments:', error);
       res.status(500).json({
         success: false,
-        error: t(req, 'common.internal_error')
+        error: t(req, 'common.internal_error'),
       });
     }
   }
@@ -330,7 +337,7 @@ class PaymentController {
       if (req.user.userId !== providerId && req.user.userType !== 'admin') {
         res.status(403).json({
           success: false,
-          error: t(req, 'common.unauthorized_access')
+          error: t(req, 'common.unauthorized_access'),
         });
         return;
       }
@@ -339,12 +346,12 @@ class PaymentController {
       const payments = await paymentRepository.find({
         where: { providerId },
         relations: ['customer', 'booking'],
-        order: { createdAt: 'DESC' }
+        order: { createdAt: 'DESC' },
       });
 
       res.json({
         success: true,
-        data: payments
+        data: payments,
       });
 
       logger.info(`Provider payments retrieved for ${providerId}`);
@@ -352,7 +359,7 @@ class PaymentController {
       logger.error('Error retrieving provider payments:', error);
       res.status(500).json({
         success: false,
-        error: t(req, 'common.internal_error')
+        error: t(req, 'common.internal_error'),
       });
     }
   }
@@ -380,7 +387,7 @@ class PaymentController {
       logger.error('Error handling Stripe webhook:', error);
       res.status(500).json({
         success: false,
-        error: t(req, 'payment.webhook_failed')
+        error: t(req, 'payment.webhook_failed'),
       });
     }
   }

@@ -1,11 +1,12 @@
 import cron from 'node-cron';
 import { AppDataSource } from '@/config/database';
-import { Booking, BookingStatus } from '@/models/Booking';
+import { Booking, BookingStatus, PaymentStatus } from '@/models/Booking';
 import { AppSettings } from '@/models/AppSettings';
 import { getStripeInstance } from '@/config/stripe';
 import notificationService from '@/services/NotificationService';
 import { NotificationType } from '@/models/Notification';
 import logger from '@/config/logger';
+import { instrumentJob } from '@/observability/jobMetrics';
 
 const DEFAULT_AUTO_CAPTURE_DAYS = 3;
 
@@ -35,24 +36,29 @@ export async function runAutoCapture(): Promise<void> {
     .leftJoinAndSelect('booking.provider', 'provider')
     .getMany();
 
-  logger.info(`Auto-capture job: found ${staleBookings.length} stale booking(s) (cutoff: ${days} days)`);
+  logger.info(
+    `Auto-capture job: found ${staleBookings.length} stale booking(s) (cutoff: ${days} days)`
+  );
 
   for (const booking of staleBookings) {
     try {
       await stripe.paymentIntents.capture(booking.stripePaymentIntentId);
       booking.status = BookingStatus.COMPLETED;
+      booking.paymentStatus = PaymentStatus.PAID;
       await bookingRepo.save(booking);
 
-      notificationService.createNotification(booking.customerId, {
-        type: NotificationType.PAYMENT,
-        title: 'Payment auto-released',
-        message: `No response received within ${days} days — payment has been released to the provider.`,
-        titleKey: 'titles.payment_auto_released',
-        messageKey: 'body.payment_auto_released',
-        i18nParams: { days },
-        actionUrl: `/bookings/${booking.id}`,
-        metadata: { bookingId: booking.id },
-      }).catch(() => {});
+      notificationService
+        .createNotification(booking.customerId, {
+          type: NotificationType.PAYMENT,
+          title: 'Payment auto-released',
+          message: `No response received within ${days} days — payment has been released to the provider.`,
+          titleKey: 'titles.payment_auto_released',
+          messageKey: 'body.payment_auto_released',
+          i18nParams: { days },
+          actionUrl: `/bookings/${booking.id}`,
+          metadata: { bookingId: booking.id },
+        })
+        .catch(() => {});
 
       logger.info(`Auto-captured payment for booking ${booking.id}`);
     } catch (err) {
@@ -64,8 +70,9 @@ export async function runAutoCapture(): Promise<void> {
 // Runs daily at 2am — off-peak to avoid contention with user activity
 export function startAutoCaptureJob(): void {
   cron.schedule('0 2 * * *', async () => {
-    logger.info('Running auto-capture job...');
-    await runAutoCapture();
+    await instrumentJob('auto-capture', runAutoCapture).catch((error) =>
+      logger.error('Auto-capture job failed', { error })
+    );
   });
   logger.info('Auto-capture cron job scheduled (daily at 02:00)');
 }

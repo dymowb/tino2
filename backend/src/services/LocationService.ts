@@ -148,7 +148,7 @@ export class LocationService {
       }
 
       return {
-        distance: Math.round(element.distance.value / 1000 * 100) / 100, // Convert to km with 2 decimal places
+        distance: Math.round((element.distance.value / 1000) * 100) / 100, // Convert to km with 2 decimal places
         duration: Math.round(element.duration.value / 60), // Convert to minutes
         distanceText: element.distance.text,
         durationText: element.duration.text,
@@ -174,7 +174,7 @@ export class LocationService {
 
       for (let i = 0; i < destinations.length; i += batchSize) {
         const batch = destinations.slice(i, i + batchSize);
-        
+
         const response = await this.client.distancematrix({
           params: {
             origins: [origin],
@@ -193,7 +193,7 @@ export class LocationService {
         for (const element of elements) {
           if (element.status === 'OK') {
             results.push({
-              distance: Math.round(element.distance.value / 1000 * 100) / 100,
+              distance: Math.round((element.distance.value / 1000) * 100) / 100,
               duration: Math.round(element.duration.value / 60),
               distanceText: element.distance.text,
               durationText: element.duration.text,
@@ -239,7 +239,7 @@ export class LocationService {
         throw new Error(`Nearby search failed: ${response.data.status}`);
       }
 
-      const results = response.data.results.map(place => ({
+      const results = response.data.results.map((place) => ({
         placeId: place.place_id!,
         name: place.name!,
         location: {
@@ -251,10 +251,10 @@ export class LocationService {
           zipCode: '',
           country: '',
         },
-        distance: this.calculateStraightLineDistance(
-          location,
-          { lat: place.geometry!.location.lat, lng: place.geometry!.location.lng }
-        ),
+        distance: this.calculateStraightLineDistance(location, {
+          lat: place.geometry!.location.lat,
+          lng: place.geometry!.location.lng,
+        }),
         rating: place.rating,
         types: place.types || [],
       }));
@@ -277,7 +277,15 @@ export class LocationService {
       const response = await this.client.placeDetails({
         params: {
           place_id: placeId,
-          fields: ['name', 'formatted_address', 'geometry', 'rating', 'user_ratings_total', 'formatted_phone_number', 'website'],
+          fields: [
+            'name',
+            'formatted_address',
+            'geometry',
+            'rating',
+            'user_ratings_total',
+            'formatted_phone_number',
+            'website',
+          ],
           key: config.external.googleMapsApiKey,
         },
       });
@@ -307,13 +315,16 @@ export class LocationService {
           components: ['country:br'],
           key: config.external.googleMapsApiKey,
         } as any,
-        timeout: 3000,        // fail fast
+        timeout: 3000, // fail fast
         retryConfig: { retries: 0 } as any, // don't back-off-retry a 403 (Places disabled)
       } as any);
       if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
         throw new Error(`Autocomplete failed: ${response.data.status}`);
       }
-      return (response.data.predictions || []).map(p => ({ description: p.description, placeId: p.place_id }));
+      return (response.data.predictions || []).map((p) => ({
+        description: p.description,
+        placeId: p.place_id,
+      }));
     } catch (error) {
       logger.error('Autocomplete error:', error);
       throw new Error('Failed to fetch address suggestions');
@@ -360,11 +371,14 @@ export class LocationService {
     const R = 6371; // Earth's radius in kilometers
     const dLat = this.toRadians(point2.lat - point1.lat);
     const dLng = this.toRadians(point2.lng - point1.lng);
-    
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos(this.toRadians(point1.lat)) * Math.cos(this.toRadians(point2.lat)) *
-              Math.sin(dLng / 2) * Math.sin(dLng / 2);
-    
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(this.toRadians(point1.lat)) *
+        Math.cos(this.toRadians(point2.lat)) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return Math.round(R * c * 100) / 100; // Distance in km with 2 decimal places
   }

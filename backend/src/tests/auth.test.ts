@@ -1,179 +1,97 @@
 import request from 'supertest';
 import App from '@/app';
-import { UserType } from '@/models/User';
+import { AppDataSource } from '@/config/database';
+import { BasicUser } from '@/models/BasicUser';
 
-describe('Authentication', () => {
-  let app: App;
-  let server: any;
+const validUser = (suffix: string, userType: 'customer' | 'provider' = 'customer') => ({
+  email: `${suffix}@example.com`,
+  password: 'TestPassword123!',
+  firstName: 'Test',
+  lastName: 'User',
+  phone: '+15555550123',
+  userType,
+});
 
-  beforeAll(() => {
-    app = new App();
-    server = app.app;
+describe('authentication integration', () => {
+  const server = new App().app;
+
+  async function registerAndVerify(suffix: string, userType: 'customer' | 'provider' = 'customer') {
+    const user = validUser(suffix, userType);
+    await request(server).post('/api/v1/auth/register').send(user).expect(201);
+
+    const repository = AppDataSource.getRepository(BasicUser);
+    const stored = await repository.findOneByOrFail({ email: user.email });
+    expect(stored.emailVerificationToken).toBeTruthy();
+
+    await request(server)
+      .get('/api/v1/auth/verify-email')
+      .query({ token: stored.emailVerificationToken })
+      .expect(200);
+
+    const login = await request(server)
+      .post('/api/v1/auth/login')
+      .send({ email: user.email, password: user.password })
+      .expect(200);
+
+    return { user, stored, token: login.body.data.accessToken as string };
+  }
+
+  test('registers without issuing credentials before email verification', async () => {
+    const user = validUser('register');
+    const response = await request(server).post('/api/v1/auth/register').send(user).expect(201);
+
+    expect(response.body).toMatchObject({
+      success: true,
+      data: { email: user.email, firstName: user.firstName },
+    });
+    expect(response.body.data.accessToken).toBeUndefined();
   });
 
-  describe('POST /api/v1/auth/register', () => {
-    it('should register a new customer', async () => {
-      const userData = {
-        email: 'test@example.com',
-        password: 'TestPassword123!',
-        firstName: 'John',
-        lastName: 'Doe',
-        phone: '+1234567890',
-        userType: UserType.CUSTOMER,
-      };
+  test('rejects invalid registration and duplicate email', async () => {
+    await request(server)
+      .post('/api/v1/auth/register')
+      .send({ ...validUser('weak'), password: '123' })
+      .expect(400);
 
-      const response = await request(server)
-        .post('/api/v1/auth/register')
-        .send(userData)
-        .expect(201);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.user.email).toBe(userData.email);
-      expect(response.body.data.accessToken).toBeDefined();
-      expect(response.body.data.refreshToken).toBeDefined();
-    });
-
-    it('should register a new provider', async () => {
-      const userData = {
-        email: 'provider@example.com',
-        password: 'TestPassword123!',
-        firstName: 'Jane',
-        lastName: 'Smith',
-        phone: '+1987654321',
-        userType: UserType.PROVIDER,
-      };
-
-      const response = await request(server)
-        .post('/api/v1/auth/register')
-        .send(userData)
-        .expect(201);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.user.email).toBe(userData.email);
-      expect(response.body.data.user.userType).toBe(UserType.PROVIDER);
-    });
-
-    it('should not register user with invalid email', async () => {
-      const userData = {
-        email: 'invalid-email',
-        password: 'TestPassword123!',
-        firstName: 'John',
-        lastName: 'Doe',
-        userType: UserType.CUSTOMER,
-      };
-
-      const response = await request(server)
-        .post('/api/v1/auth/register')
-        .send(userData)
-        .expect(400);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.errors.email).toBeDefined();
-    });
-
-    it('should not register user with weak password', async () => {
-      const userData = {
-        email: 'test@example.com',
-        password: '123',
-        firstName: 'John',
-        lastName: 'Doe',
-        userType: UserType.CUSTOMER,
-      };
-
-      const response = await request(server)
-        .post('/api/v1/auth/register')
-        .send(userData)
-        .expect(400);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.errors.password).toBeDefined();
-    });
+    const user = validUser('duplicate');
+    await request(server).post('/api/v1/auth/register').send(user).expect(201);
+    await request(server).post('/api/v1/auth/register').send(user).expect(400);
   });
 
-  describe('POST /api/v1/auth/login', () => {
-    let testUser = {
-      email: 'login-test@example.com',
-      password: 'TestPassword123!',
-      firstName: 'Login',
-      lastName: 'Test',
-      userType: UserType.CUSTOMER,
-    };
+  test('blocks login until email is verified', async () => {
+    const user = validUser('unverified');
+    await request(server).post('/api/v1/auth/register').send(user).expect(201);
+    const response = await request(server)
+      .post('/api/v1/auth/login')
+      .send({ email: user.email, password: user.password })
+      .expect(403);
 
-    beforeEach(async () => {
-      await request(server).post('/api/v1/auth/register').send(testUser);
-    });
-
-    it('should login with valid credentials', async () => {
-      const response = await request(server)
-        .post('/api/v1/auth/login')
-        .send({
-          email: testUser.email,
-          password: testUser.password,
-        })
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.user.email).toBe(testUser.email);
-      expect(response.body.data.accessToken).toBeDefined();
-      expect(response.body.data.refreshToken).toBeDefined();
-    });
-
-    it('should not login with invalid password', async () => {
-      const response = await request(server)
-        .post('/api/v1/auth/login')
-        .send({
-          email: testUser.email,
-          password: 'wrongpassword',
-        })
-        .expect(401);
-
-      expect(response.body.success).toBe(false);
-    });
-
-    it('should not login with non-existent email', async () => {
-      const response = await request(server)
-        .post('/api/v1/auth/login')
-        .send({
-          email: 'nonexistent@example.com',
-          password: testUser.password,
-        })
-        .expect(401);
-
-      expect(response.body.success).toBe(false);
-    });
+    expect(response.body.error).toBe('EMAIL_NOT_VERIFIED');
   });
 
-  describe('GET /api/v1/auth/profile', () => {
-    let accessToken: string;
+  test('verifies, logs in, and returns the authenticated profile', async () => {
+    const { user, token } = await registerAndVerify('verified');
+    const response = await request(server)
+      .get('/api/v1/auth/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
 
-    beforeEach(async () => {
-      const userData = {
-        email: 'profile-test@example.com',
-        password: 'TestPassword123!',
-        firstName: 'Profile',
-        lastName: 'Test',
-        userType: UserType.CUSTOMER,
-      };
+    expect(response.body.data).toMatchObject({ email: user.email, isVerified: true });
+  });
 
-      const registerResponse = await request(server).post('/api/v1/auth/register').send(userData);
+  test('rejects invalid credentials and missing tokens', async () => {
+    await request(server)
+      .post('/api/v1/auth/login')
+      .send({ email: 'missing@example.com', password: 'WrongPassword123!' })
+      .expect(401);
+    await request(server).get('/api/v1/auth/profile').expect(401);
+  });
 
-      accessToken = registerResponse.body.data.accessToken;
-    });
-
-    it('should get user profile with valid token', async () => {
-      const response = await request(server)
-        .get('/api/v1/auth/profile')
-        .set('Authorization', `Bearer ${accessToken}`)
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.email).toBe('profile-test@example.com');
-    });
-
-    it('should not get profile without token', async () => {
-      const response = await request(server).get('/api/v1/auth/profile').expect(401);
-
-      expect(response.body.success).toBe(false);
-    });
+  test('enforces admin RBAC for authenticated customers', async () => {
+    const { token } = await registerAndVerify('customer-rbac');
+    await request(server)
+      .get('/api/v1/admin/dashboard')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(403);
   });
 });

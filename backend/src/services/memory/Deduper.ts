@@ -27,7 +27,11 @@ interface NearestMemory {
 }
 
 export class Deduper {
-  async process(candidate: SemanticCandidate, userId: string, sourceContent?: string): Promise<DedupResult> {
+  async process(
+    candidate: SemanticCandidate,
+    userId: string,
+    sourceContent?: string
+  ): Promise<DedupResult> {
     const { threshold, minConfidence } = memoryConfig.dedup;
 
     if (candidate.confidence < minConfidence) {
@@ -36,7 +40,11 @@ export class Deduper {
         action: 'discarded',
         sourceContent: sourceContent ?? candidate.content,
         extractedContent: candidate.content,
-        dedupDecision: { reason: 'confidence_below_minimum', threshold: minConfidence, actual: candidate.confidence },
+        dedupDecision: {
+          reason: 'confidence_below_minimum',
+          threshold: minConfidence,
+          actual: candidate.confidence,
+        },
       });
       return { action: 'discarded' };
     }
@@ -54,7 +62,7 @@ export class Deduper {
           AND (expires_at IS NULL OR expires_at > NOW())
         ORDER BY embedding <=> $1::vector
         LIMIT 5`,
-      [pgEmbedding, userId],
+      [pgEmbedding, userId]
     );
 
     const best = nearest[0];
@@ -68,7 +76,7 @@ export class Deduper {
             SET confidence = $1, importance = $2, last_accessed_at = NOW(),
                 access_count = access_count + 1
           WHERE id = $3`,
-        [newConfidence, newImportance, best.id],
+        [newConfidence, newImportance, best.id]
       );
 
       await this.log({
@@ -87,7 +95,9 @@ export class Deduper {
         },
       });
 
-      logger.debug(`[Deduper] merged "${candidate.content.slice(0, 60)}" → ${best.id} (sim=${best.similarity.toFixed(3)})`);
+      logger.debug(
+        `[Deduper] merged "${candidate.content.slice(0, 60)}" → ${best.id} (sim=${best.similarity.toFixed(3)})`
+      );
       return { action: 'merged', memoryId: best.id };
     }
 
@@ -99,7 +109,14 @@ export class Deduper {
               (user_id, content, embedding, confidence, importance, source_type, expires_at)
        VALUES ($1, $2, $3::vector, $4, $5, 'extraction', $6)
        RETURNING id`,
-      [userId, candidate.content, pgEmbedding, candidate.confidence, candidate.importance, expiresAt],
+      [
+        userId,
+        candidate.content,
+        pgEmbedding,
+        candidate.confidence,
+        candidate.importance,
+        expiresAt,
+      ]
     );
 
     const memoryId = rows[0].id;
@@ -138,7 +155,7 @@ export class Deduper {
           sourceContent: params.sourceContent,
           extractedContent: params.extractedContent,
           dedupDecision: params.dedupDecision,
-        }),
+        })
       );
     } catch (err) {
       logger.error('[Deduper] Failed to write memory log', err);

@@ -173,11 +173,13 @@ export class ProviderService {
       // Filter by services — cast jsonb to text then use ILIKE (PostgreSQL-compatible)
       if (services && services.length > 0) {
         const serviceParams: Record<string, string> = {};
-        const serviceCondition = services.map((service, index) => {
-          const paramName = `service_${index}`;
-          serviceParams[paramName] = `%${service.replace(/_/g, ' ')}%`;
-          return `provider.services::text ILIKE :${paramName}`;
-        }).join(' OR ');
+        const serviceCondition = services
+          .map((service, index) => {
+            const paramName = `service_${index}`;
+            serviceParams[paramName] = `%${service.replace(/_/g, ' ')}%`;
+            return `provider.services::text ILIKE :${paramName}`;
+          })
+          .join(' OR ');
 
         queryBuilder = queryBuilder.andWhere(`(${serviceCondition})`, serviceParams);
       }
@@ -190,18 +192,21 @@ export class ProviderService {
         const latDiff = 0.009 * radius; // ~1km ≈ 0.009°; generous square pre-filter
         const lngDiff = 0.009 * radius;
         queryBuilder = queryBuilder
-          .andWhere(`CAST(provider.location->>'latitude' AS float) BETWEEN :minLat AND :maxLat`,
-            { minLat: latitude - latDiff, maxLat: latitude + latDiff })
-          .andWhere(`CAST(provider.location->>'longitude' AS float) BETWEEN :minLng AND :maxLng`,
-            { minLng: longitude - lngDiff, maxLng: longitude + lngDiff })
+          .andWhere(`CAST(provider.location->>'latitude' AS float) BETWEEN :minLat AND :maxLat`, {
+            minLat: latitude - latDiff,
+            maxLat: latitude + latDiff,
+          })
+          .andWhere(`CAST(provider.location->>'longitude' AS float) BETWEEN :minLng AND :maxLng`, {
+            minLng: longitude - lngDiff,
+            maxLng: longitude + lngDiff,
+          })
           .andWhere(`${HAVERSINE_KM} <= :radiusKm`)
           .setParameters({ cLat: latitude, cLng: longitude, radiusKm: radius });
       } else if (city) {
         // Fallback: city/state text match when GPS coordinates are not available
-        queryBuilder = queryBuilder.andWhere(
-          `LOWER(provider.location->>'city') = LOWER(:city)`,
-          { city }
-        );
+        queryBuilder = queryBuilder.andWhere(`LOWER(provider.location->>'city') = LOWER(:city)`, {
+          city,
+        });
         if (state) {
           queryBuilder = queryBuilder.andWhere(
             `LOWER(provider.location->>'state') = LOWER(:state)`,
@@ -242,11 +247,14 @@ export class ProviderService {
         const all = await queryBuilder.getMany();
         const dist = (p: Provider) => {
           const loc: any = p.location || {};
-          const la = Number(loc.latitude), lo = Number(loc.longitude);
+          const la = Number(loc.latitude),
+            lo = Number(loc.longitude);
           if (!la || !lo) return Number.POSITIVE_INFINITY;
           const toRad = (d: number) => (d * Math.PI) / 180;
-          const dLat = toRad(la - latitude), dLng = toRad(lo - longitude);
-          const a = Math.sin(dLat / 2) ** 2 +
+          const dLat = toRad(la - latitude),
+            dLng = toRad(lo - longitude);
+          const a =
+            Math.sin(dLat / 2) ** 2 +
             Math.cos(toRad(latitude)) * Math.cos(toRad(la)) * Math.sin(dLng / 2) ** 2;
           return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         };
@@ -256,7 +264,10 @@ export class ProviderService {
       } else {
         switch (sortBy) {
           case 'price':
-            queryBuilder = queryBuilder.orderBy(`CAST(provider.pricing->>'baseRate' AS float)`, 'ASC');
+            queryBuilder = queryBuilder.orderBy(
+              `CAST(provider.pricing->>'baseRate' AS float)`,
+              'ASC'
+            );
             break;
           case 'rating':
           default:

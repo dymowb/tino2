@@ -1,0 +1,94 @@
+name: Quality
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      postgres-test:
+        image: postgres:16
+        env:
+          POSTGRES_USER: tino_test
+          POSTGRES_PASSWORD: tino_test
+          POSTGRES_DB: tino_test
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U tino_test -d tino_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+      postgres-memory:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: tino_memory_test
+          POSTGRES_PASSWORD: tino_memory_test
+          POSTGRES_DB: tino_memory_test
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd "pg_isready -U tino_memory_test -d tino_memory_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
+    env:
+      CI: "true"
+      NODE_ENV: test
+      DATABASE_URL: postgresql://tino_test:tino_test@127.0.0.1:5434/tino_test
+      TEST_DATABASE_URL: postgresql://tino_test:tino_test@127.0.0.1:5434/tino_test
+      MEMORY_DATABASE_URL: postgresql://tino_memory_test:tino_memory_test@127.0.0.1:5435/tino_memory_test
+      JWT_SECRET: ci-only-secret-that-is-never-used-outside-tests
+      REDIS_ENABLED: "false"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm ci --prefix backend
+          npm ci --prefix frontend
+
+      - name: Dependency security
+        run: |
+          npm audit --omit=dev --omit=optional --audit-level=high
+          npm audit --prefix backend --omit=dev --omit=optional --audit-level=high
+
+      - name: Backend quality and integration tests
+        run: |
+          npm run typecheck --prefix backend
+          npm run format:check --prefix backend
+          npm run lint --prefix backend
+          npm test --prefix backend
+
+      - name: Frontend unit tests and build
+        run: |
+          npm test --prefix frontend
+          npm run build --prefix frontend
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Chromium product suite
+        run: npm run test:ci
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: |
+            test-results/
+            Tests/results/

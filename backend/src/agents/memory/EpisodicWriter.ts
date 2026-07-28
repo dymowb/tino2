@@ -44,14 +44,16 @@ export class EpisodicWriter {
           Math.min(1, Math.max(0, params.importance)),
           occurredAt,
           expiresAt,
-        ],
+        ]
       );
 
       const episodeId = rows[0].id;
 
       await this.log(params.userId, episodeId, params.summary, params.workflowId);
 
-      logger.debug(`[EpisodicWriter] created episode ${episodeId} for user ${params.userId}: "${params.summary.slice(0, 80)}"`);
+      logger.debug(
+        `[EpisodicWriter] created episode ${episodeId} for user ${params.userId}: "${params.summary.slice(0, 80)}"`
+      );
       return episodeId;
     } catch (err) {
       logger.error('[EpisodicWriter] write failed', err);
@@ -59,7 +61,12 @@ export class EpisodicWriter {
     }
   }
 
-  private async log(userId: string, episodeId: string, summary: string, workflowId: string): Promise<void> {
+  private async log(
+    userId: string,
+    episodeId: string,
+    summary: string,
+    workflowId: string
+  ): Promise<void> {
     try {
       const repo = MemoryDataSource.getRepository(MemoryWriteLog);
       await repo.save(
@@ -71,7 +78,7 @@ export class EpisodicWriter {
           sourceContent: workflowId,
           extractedContent: summary,
           dedupDecision: { reason: 'episodic_write' },
-        }),
+        })
       );
     } catch (err) {
       logger.error('[EpisodicWriter] Failed to write memory log', err);

@@ -34,7 +34,7 @@ class AgenticAssistantController {
       if (!initialMessage || typeof initialMessage !== 'string') {
         res.status(400).json({
           success: false,
-          error: 'initialMessage is required and must be a string'
+          error: 'initialMessage is required and must be a string',
         });
         return;
       }
@@ -42,7 +42,7 @@ class AgenticAssistantController {
       if (!userId) {
         res.status(401).json({
           success: false,
-          error: 'User not authenticated'
+          error: 'User not authenticated',
         });
         return;
       }
@@ -89,7 +89,9 @@ class AgenticAssistantController {
     // requirements panel, so we seed those directly and skip extraction.
     // In that case the free-text message is optional.
     if (!seededRequirements && (!initialMessage || typeof initialMessage !== 'string')) {
-      res.status(400).json({ success: false, error: 'initialMessage is required and must be a string' });
+      res
+        .status(400)
+        .json({ success: false, error: 'initialMessage is required and must be a string' });
       return;
     }
     if (!userId) {
@@ -170,7 +172,7 @@ Top recommendation: ${topRec.provider.businessName ?? topRec.provider.providerId
       if (!userId) {
         res.status(401).json({
           success: false,
-          error: 'User not authenticated'
+          error: 'User not authenticated',
         });
         return;
       }
@@ -234,7 +236,7 @@ Top recommendation: ${topRec.provider.businessName ?? topRec.provider.providerId
       if (!userId) {
         res.status(401).json({
           success: false,
-          error: 'User not authenticated'
+          error: 'User not authenticated',
         });
         return;
       }
@@ -260,7 +262,11 @@ Top recommendation: ${topRec.provider.businessName ?? topRec.provider.providerId
       }
 
       // Check if workflow can accept messages
-      const acceptableStatuses = [WorkflowStatus.ACTIVE, WorkflowStatus.PENDING, WorkflowStatus.WAITING_FOR_USER];
+      const acceptableStatuses = [
+        WorkflowStatus.ACTIVE,
+        WorkflowStatus.PENDING,
+        WorkflowStatus.WAITING_FOR_USER,
+      ];
       if (!acceptableStatuses.includes(workflow.status)) {
         res.status(400).json({
           success: false,
@@ -327,7 +333,7 @@ Top recommendation: ${topRec.provider.businessName ?? topRec.provider.providerId
       if (!userId) {
         res.status(401).json({
           success: false,
-          error: 'User not authenticated'
+          error: 'User not authenticated',
         });
         return;
       }
@@ -383,11 +389,15 @@ Top recommendation: ${topRec.provider.businessName ?? topRec.provider.providerId
   public async memoryDebug(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const userId = req.user?.userId;
-      if (!userId) { res.status(401).json({ success: false, error: 'Not authenticated' }); return; }
+      if (!userId) {
+        res.status(401).json({ success: false, error: 'Not authenticated' });
+        return;
+      }
 
-      const query = typeof req.query.query === 'string' && req.query.query.trim()
-        ? req.query.query.trim()
-        : 'Preciso de uma faxineira';
+      const query =
+        typeof req.query.query === 'string' && req.query.query.trim()
+          ? req.query.query.trim()
+          : 'Preciso de uma faxineira';
 
       const memories = await memoryRetriever.retrieve(query, userId, 'debug');
       const memoryBlock = contextInjector.format(memories);
@@ -400,9 +410,19 @@ Top recommendation: ${topRec.provider.businessName ?? topRec.provider.providerId
           query,
           userId,
           memories: {
-            semantic: memories.semantic.map(m => ({ content: m.content, score: m.score.toFixed(4) })),
-            episodic: memories.episodic.map(e => ({ summary: e.summary, occurredAt: e.occurredAt, score: e.score.toFixed(4) })),
-            procedural: memories.procedural.map(p => ({ promptFragment: p.promptFragment, confidence: p.confidence })),
+            semantic: memories.semantic.map((m) => ({
+              content: m.content,
+              score: m.score.toFixed(4),
+            })),
+            episodic: memories.episodic.map((e) => ({
+              summary: e.summary,
+              occurredAt: e.occurredAt,
+              score: e.score.toFixed(4),
+            })),
+            procedural: memories.procedural.map((p) => ({
+              promptFragment: p.promptFragment,
+              confidence: p.confidence,
+            })),
           },
           memoryBlock: memoryBlock ?? '(no memories — empty)',
           fullSystemPromptPreview: memoryBlock
@@ -424,7 +444,10 @@ Top recommendation: ${topRec.provider.businessName ?? topRec.provider.providerId
   public async runReflection(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const userId = req.user?.userId;
-      if (!userId) { res.status(401).json({ success: false, error: 'Not authenticated' }); return; }
+      if (!userId) {
+        res.status(401).json({ success: false, error: 'Not authenticated' });
+        return;
+      }
 
       const result = await runReflectionForUser(userId);
 
@@ -446,7 +469,7 @@ Top recommendation: ${topRec.provider.businessName ?? topRec.provider.providerId
       if (!userId) {
         res.status(401).json({
           success: false,
-          error: 'User not authenticated'
+          error: 'User not authenticated',
         });
         return;
       }

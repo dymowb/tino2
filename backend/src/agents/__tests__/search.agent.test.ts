@@ -6,21 +6,19 @@
 
 import { searchAgent } from '../search.agent';
 import { WorkflowContext } from '../types/workflow.types';
-import { AppDataSource } from '@/config/database';
+import { anthropicService } from '../services/anthropic.service';
 
 describe('Search Agent', () => {
-  beforeAll(async () => {
-    // Initialize database connection
-    if (!AppDataSource.isInitialized) {
-      await AppDataSource.initialize();
-    }
-  });
-
-  afterAll(async () => {
-    // Close database connection
-    if (AppDataSource.isInitialized) {
-      await AppDataSource.destroy();
-    }
+  beforeEach(() => {
+    jest.spyOn(anthropicService, 'callClaude').mockImplementation(async (request) => {
+      const serviceType = request.userMessage.match(/Service type= "([^"]+)"/)?.[1] ?? '';
+      return {
+        text: JSON.stringify(serviceType ? [serviceType] : []),
+        usage: { inputTokens: 1, outputTokens: 1 },
+        model: 'test',
+        stopReason: 'end_turn',
+      };
+    });
   });
 
   it('should find providers for a simple search (plumbing)', async () => {

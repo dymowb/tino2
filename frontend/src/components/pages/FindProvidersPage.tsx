@@ -491,7 +491,11 @@ const FindProvidersPage: React.FC = () => {
         }}>
           {t('providers:search.title')}
         </Typography>
-        <Typography variant="h3" sx={{ fontFamily: tokens.font.display, fontWeight: 500 }}>
+        <Typography
+          variant="h3"
+          component="h1"
+          sx={{ fontFamily: tokens.font.display, fontWeight: 500 }}
+        >
           {t('providers:search.title')}
         </Typography>
       </Box>

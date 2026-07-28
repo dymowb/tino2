@@ -75,7 +75,7 @@ export class HealthController {
         message: 'Server is running',
         timestamp: new Date().toISOString(),
         version: process.env.npm_package_version || '1.0.0',
-        environment: process.env.NODE_ENV || 'development'
+        environment: process.env.NODE_ENV || 'development',
       };
 
       res.status(200).json(health);
@@ -84,7 +84,7 @@ export class HealthController {
         success: false,
         message: 'Server health check failed',
         timestamp: new Date().toISOString(),
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   };
@@ -110,25 +110,31 @@ export class HealthController {
           stripe: await HealthController.checkStripeHealth(),
           googlemaps: await HealthController.checkGoogleMapsHealth(),
           twilio: await HealthController.checkTwilioHealth(),
-          sendgrid: await HealthController.checkSendGridHealth()
+          sendgrid: await HealthController.checkSendGridHealth(),
         },
         performance: {
           memoryUsage: process.memoryUsage(),
           cpuUsage: HealthController.cpuStart ? process.cpuUsage(HealthController.cpuStart) : null,
-          eventLoopLag: await HealthController.measureEventLoopLag()
+          eventLoopLag: await HealthController.measureEventLoopLag(),
         },
         metrics: {
           activeConnections: 0, // Would be populated by actual connection tracking
           totalRequests: HealthController.requestCount,
-          errorRate: HealthController.requestCount > 0 ? (HealthController.errorCount / HealthController.requestCount) * 100 : 0,
-          averageResponseTime: HealthController.requestCount > 0 ? HealthController.totalResponseTime / HealthController.requestCount : 0
-        }
+          errorRate:
+            HealthController.requestCount > 0
+              ? (HealthController.errorCount / HealthController.requestCount) * 100
+              : 0,
+          averageResponseTime:
+            HealthController.requestCount > 0
+              ? HealthController.totalResponseTime / HealthController.requestCount
+              : 0,
+        },
       };
 
       // Determine overall health status
       const serviceStatuses = Object.values(health.services);
-      const unhealthyServices = serviceStatuses.filter(service => service.status === 'unhealthy');
-      const degradedServices = serviceStatuses.filter(service => service.status === 'degraded');
+      const unhealthyServices = serviceStatuses.filter((service) => service.status === 'unhealthy');
+      const degradedServices = serviceStatuses.filter((service) => service.status === 'degraded');
 
       if (unhealthyServices.length > 0) {
         health.status = 'unhealthy';
@@ -140,9 +146,9 @@ export class HealthController {
       const responseTime = Date.now() - startTime;
       HealthController.updateMetrics(responseTime, health.success);
 
-      const statusCode = health.status === 'healthy' ? 200 : health.status === 'degraded' ? 200 : 503;
+      const statusCode =
+        health.status === 'healthy' ? 200 : health.status === 'degraded' ? 200 : 503;
       res.status(statusCode).json(health);
-
     } catch (error) {
       const responseTime = Date.now() - startTime;
       HealthController.updateMetrics(responseTime, false);
@@ -152,7 +158,7 @@ export class HealthController {
         status: 'unhealthy',
         message: 'Health check failed',
         timestamp: new Date().toISOString(),
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   };
@@ -165,10 +171,10 @@ export class HealthController {
       // Check critical services required for the application to serve requests
       const criticalChecks = await Promise.all([
         HealthController.checkDatabaseHealth(),
-        HealthController.checkRedisHealth()
+        HealthController.checkRedisHealth(),
       ]);
 
-      const failedChecks = criticalChecks.filter(check => check.status === 'unhealthy');
+      const failedChecks = criticalChecks.filter((check) => check.status === 'unhealthy');
 
       if (failedChecks.length > 0) {
         res.status(503).json({
@@ -176,7 +182,7 @@ export class HealthController {
           ready: false,
           message: 'Application not ready',
           timestamp: new Date().toISOString(),
-          failedChecks: failedChecks.length
+          failedChecks: failedChecks.length,
         });
         return;
       }
@@ -185,16 +191,15 @@ export class HealthController {
         success: true,
         ready: true,
         message: 'Application ready',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-
     } catch (error) {
       res.status(503).json({
         success: false,
         ready: false,
         message: 'Readiness check failed',
         timestamp: new Date().toISOString(),
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   };
@@ -219,7 +224,7 @@ export class HealthController {
           message: 'Memory usage exceeded limits',
           timestamp: new Date().toISOString(),
           memoryUsageMB: currentMemoryMB,
-          memoryLimitMB
+          memoryLimitMB,
         });
         return;
       }
@@ -230,16 +235,15 @@ export class HealthController {
         message: 'Application alive',
         timestamp: new Date().toISOString(),
         uptime,
-        memoryUsageMB: currentMemoryMB
+        memoryUsageMB: currentMemoryMB,
       });
-
     } catch (error) {
       res.status(503).json({
         success: false,
         alive: false,
         message: 'Liveness check failed',
         timestamp: new Date().toISOString(),
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   };
@@ -255,7 +259,7 @@ export class HealthController {
         return {
           status: 'unhealthy',
           message: 'Database not initialized',
-          responseTime: Date.now() - startTime
+          responseTime: Date.now() - startTime,
         };
       }
 
@@ -270,16 +274,15 @@ export class HealthController {
         responseTime,
         details: {
           isInitialized: AppDataSource.isInitialized,
-          driver: AppDataSource.driver.constructor.name
-        }
+          driver: AppDataSource.driver.constructor.name,
+        },
       };
-
     } catch (error) {
       return {
         status: 'unhealthy',
         message: 'Database connection failed',
         responseTime: Date.now() - startTime,
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -305,15 +308,14 @@ export class HealthController {
       return {
         status: responseTime < 50 ? 'healthy' : 'degraded',
         message: 'Redis connection successful',
-        responseTime
+        responseTime,
       };
-
     } catch (error) {
       return {
         status: 'unhealthy',
         message: 'Redis connection failed',
         responseTime: Date.now() - startTime,
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -347,15 +349,14 @@ export class HealthController {
           uptime,
           memoryUsageMB: memoryMB,
           nodeVersion: process.version,
-          platform: process.platform
-        }
+          platform: process.platform,
+        },
       };
-
     } catch (error) {
       return {
         status: 'unhealthy',
         message: 'Application health check failed',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -371,16 +372,16 @@ export class HealthController {
         return {
           status: 'degraded',
           message: 'Stripe not configured',
-          responseTime: Date.now() - startTime
+          responseTime: Date.now() - startTime,
         };
       }
 
       // Check Stripe API availability with a simple request
       const response = await axios.get('https://api.stripe.com/v1/account', {
         headers: {
-          'Authorization': `Bearer ${process.env.STRIPE_SECRET_KEY}`
+          Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}`,
         },
-        timeout: 5000
+        timeout: 5000,
       });
 
       const responseTime = Date.now() - startTime;
@@ -390,16 +391,15 @@ export class HealthController {
         message: 'Stripe API accessible',
         responseTime,
         details: {
-          statusCode: response.status
-        }
+          statusCode: response.status,
+        },
       };
-
     } catch (error) {
       return {
         status: 'unhealthy',
         message: 'Stripe API check failed',
         responseTime: Date.now() - startTime,
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -415,7 +415,7 @@ export class HealthController {
         return {
           status: 'degraded',
           message: 'Google Maps not configured',
-          responseTime: Date.now() - startTime
+          responseTime: Date.now() - startTime,
         };
       }
 
@@ -423,9 +423,9 @@ export class HealthController {
       const response = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
         params: {
           address: 'Seattle, WA',
-          key: process.env.GOOGLE_MAPS_API_KEY
+          key: process.env.GOOGLE_MAPS_API_KEY,
         },
-        timeout: 5000
+        timeout: 5000,
       });
 
       const responseTime = Date.now() - startTime;
@@ -435,16 +435,15 @@ export class HealthController {
         message: 'Google Maps API accessible',
         responseTime,
         details: {
-          status: response.data.status
-        }
+          status: response.data.status,
+        },
       };
-
     } catch (error) {
       return {
         status: 'unhealthy',
         message: 'Google Maps API check failed',
         responseTime: Date.now() - startTime,
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -460,19 +459,24 @@ export class HealthController {
         return {
           status: 'degraded',
           message: 'Twilio not configured',
-          responseTime: Date.now() - startTime
+          responseTime: Date.now() - startTime,
         };
       }
 
       // Check Twilio API status
-      const authString = Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64');
+      const authString = Buffer.from(
+        `${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`
+      ).toString('base64');
 
-      const response = await axios.get(`https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}.json`, {
-        headers: {
-          'Authorization': `Basic ${authString}`
-        },
-        timeout: 5000
-      });
+      const response = await axios.get(
+        `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}.json`,
+        {
+          headers: {
+            Authorization: `Basic ${authString}`,
+          },
+          timeout: 5000,
+        }
+      );
 
       const responseTime = Date.now() - startTime;
 
@@ -481,16 +485,15 @@ export class HealthController {
         message: 'Twilio API accessible',
         responseTime,
         details: {
-          statusCode: response.status
-        }
+          statusCode: response.status,
+        },
       };
-
     } catch (error) {
       return {
         status: 'unhealthy',
         message: 'Twilio API check failed',
         responseTime: Date.now() - startTime,
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -506,16 +509,16 @@ export class HealthController {
         return {
           status: 'degraded',
           message: 'SendGrid not configured',
-          responseTime: Date.now() - startTime
+          responseTime: Date.now() - startTime,
         };
       }
 
       // Check SendGrid API status
       const response = await axios.get('https://api.sendgrid.com/v3/user/account', {
         headers: {
-          'Authorization': `Bearer ${process.env.SENDGRID_API_KEY}`
+          Authorization: `Bearer ${process.env.SENDGRID_API_KEY}`,
         },
-        timeout: 5000
+        timeout: 5000,
       });
 
       const responseTime = Date.now() - startTime;
@@ -525,16 +528,15 @@ export class HealthController {
         message: 'SendGrid API accessible',
         responseTime,
         details: {
-          statusCode: response.status
-        }
+          statusCode: response.status,
+        },
       };
-
     } catch (error) {
       return {
         status: 'unhealthy',
         message: 'SendGrid API check failed',
         responseTime: Date.now() - startTime,
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }

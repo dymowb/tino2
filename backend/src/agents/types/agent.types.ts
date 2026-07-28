@@ -21,12 +21,12 @@
  *    ❌ status = 'completed' (typo risk: 'complted')
  */
 export enum AgentStatus {
-  IDLE = 'idle',           // Agent initialized but not started
-  THINKING = 'thinking',   // Agent is processing (LLM call in progress)
-  ACTING = 'acting',       // Agent is using tools (MCP calls)
+  IDLE = 'idle', // Agent initialized but not started
+  THINKING = 'thinking', // Agent is processing (LLM call in progress)
+  ACTING = 'acting', // Agent is using tools (MCP calls)
   REFLECTING = 'reflecting', // Agent is evaluating its own output
   COMPLETED = 'completed', // Agent finished successfully
-  FAILED = 'failed',       // Agent encountered an error
+  FAILED = 'failed', // Agent encountered an error
 }
 
 /**
@@ -324,12 +324,7 @@ export interface WorkflowContext {
  */
 
 export function isAgentResult<T>(value: unknown): value is AgentResult<T> {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'output' in value &&
-    'activity' in value
-  );
+  return typeof value === 'object' && value !== null && 'output' in value && 'activity' in value;
 }
 
 export function isAgentActivity(value: unknown): value is AgentActivity {

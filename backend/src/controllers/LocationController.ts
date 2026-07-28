@@ -6,7 +6,6 @@ import logger from '@/config/logger';
 import { t } from '@/i18n';
 
 class LocationController {
-  
   /**
    * Geocode an address to get coordinates
    */
@@ -106,9 +105,24 @@ class LocationController {
         serviceType: req.query.serviceType as string,
         minRating: req.query.minRating ? parseFloat(req.query.minRating as string) : undefined,
         maxRate: req.query.maxRate ? parseFloat(req.query.maxRate as string) : undefined,
-        isInsured: req.query.isInsured === 'true' ? true : req.query.isInsured === 'false' ? false : undefined,
-        isBackgroundChecked: req.query.isBackgroundChecked === 'true' ? true : req.query.isBackgroundChecked === 'false' ? false : undefined,
-        isVerified: req.query.isVerified === 'true' ? true : req.query.isVerified === 'false' ? false : undefined,
+        isInsured:
+          req.query.isInsured === 'true'
+            ? true
+            : req.query.isInsured === 'false'
+              ? false
+              : undefined,
+        isBackgroundChecked:
+          req.query.isBackgroundChecked === 'true'
+            ? true
+            : req.query.isBackgroundChecked === 'false'
+              ? false
+              : undefined,
+        isVerified:
+          req.query.isVerified === 'true'
+            ? true
+            : req.query.isVerified === 'false'
+              ? false
+              : undefined,
         sortBy: req.query.sortBy as 'distance' | 'rating' | 'price' | 'responseTime',
         sortOrder: req.query.sortOrder as 'asc' | 'desc',
         page: req.query.page ? parseInt(req.query.page as string) : 1,
@@ -125,7 +139,11 @@ class LocationController {
       }
 
       // Handle availability filter if provided
-      if (req.query.availabilityDate && req.query.availabilityStartTime && req.query.availabilityEndTime) {
+      if (
+        req.query.availabilityDate &&
+        req.query.availabilityStartTime &&
+        req.query.availabilityEndTime
+      ) {
         params.availability = {
           date: new Date(req.query.availabilityDate as string),
           startTime: req.query.availabilityStartTime as string,
@@ -164,9 +182,24 @@ class LocationController {
         serviceType: req.query.serviceType as string,
         minRating: req.query.minRating ? parseFloat(req.query.minRating as string) : undefined,
         maxRate: req.query.maxRate ? parseFloat(req.query.maxRate as string) : undefined,
-        isInsured: req.query.isInsured === 'true' ? true : req.query.isInsured === 'false' ? false : undefined,
-        isBackgroundChecked: req.query.isBackgroundChecked === 'true' ? true : req.query.isBackgroundChecked === 'false' ? false : undefined,
-        isVerified: req.query.isVerified === 'true' ? true : req.query.isVerified === 'false' ? false : undefined,
+        isInsured:
+          req.query.isInsured === 'true'
+            ? true
+            : req.query.isInsured === 'false'
+              ? false
+              : undefined,
+        isBackgroundChecked:
+          req.query.isBackgroundChecked === 'true'
+            ? true
+            : req.query.isBackgroundChecked === 'false'
+              ? false
+              : undefined,
+        isVerified:
+          req.query.isVerified === 'true'
+            ? true
+            : req.query.isVerified === 'false'
+              ? false
+              : undefined,
         sortBy: req.query.sortBy as 'distance' | 'rating' | 'price' | 'responseTime',
         sortOrder: req.query.sortOrder as 'asc' | 'desc',
         page: req.query.page ? parseInt(req.query.page as string) : 1,
@@ -202,7 +235,12 @@ class LocationController {
         return;
       }
 
-      const result = await ProviderSearchService.findNearestProviders(latitude, longitude, count, serviceType);
+      const result = await ProviderSearchService.findNearestProviders(
+        latitude,
+        longitude,
+        count,
+        serviceType
+      );
 
       res.json({
         success: true,
@@ -233,7 +271,11 @@ class LocationController {
         return;
       }
 
-      const result = await ProviderSearchService.getProvidersInServiceArea(latitude, longitude, serviceType);
+      const result = await ProviderSearchService.getProvidersInServiceArea(
+        latitude,
+        longitude,
+        serviceType
+      );
 
       res.json({
         success: true,
@@ -265,7 +307,11 @@ class LocationController {
         return;
       }
 
-      const result = await LocationService.nearbySearch({ lat: latitude, lng: longitude }, radius, type);
+      const result = await LocationService.nearbySearch(
+        { lat: latitude, lng: longitude },
+        radius,
+        type
+      );
 
       res.json({
         success: true,
@@ -318,7 +364,10 @@ class LocationController {
       // Autocomplete is best-effort: if Places API is unavailable (e.g. not
       // enabled for the key → 403), degrade to no suggestions rather than a 500.
       // The client falls back to free-text + geocode validation.
-      logger.warn('Autocomplete unavailable, returning empty:', error instanceof Error ? error.message : error);
+      logger.warn(
+        'Autocomplete unavailable, returning empty:',
+        error instanceof Error ? error.message : error
+      );
       res.json({ success: true, data: [] });
     }
   };

@@ -24,9 +24,9 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
+    const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
     cb(null, filename);
-  }
+  },
 });
 
 const upload = multer({
@@ -44,7 +44,7 @@ const upload = multer({
     } else {
       cb(new Error('Only image files are allowed'));
     }
-  }
+  },
 });
 
 class UserController {
@@ -54,20 +54,31 @@ class UserController {
       const userRepository = AppDataSource.getRepository(User);
       const user = await userRepository.findOne({
         where: { id: req.user.id },
-        select: ['id', 'email', 'firstName', 'lastName', 'phone', 'profileImage', 'userType', 'settings', 'createdAt', 'updatedAt']
+        select: [
+          'id',
+          'email',
+          'firstName',
+          'lastName',
+          'phone',
+          'profileImage',
+          'userType',
+          'settings',
+          'createdAt',
+          'updatedAt',
+        ],
       });
 
       if (!user) {
         res.status(404).json({
           success: false,
-          error: t(req, 'common.user_not_found')
+          error: t(req, 'common.user_not_found'),
         });
         return;
       }
 
       res.json({
         success: true,
-        data: user
+        data: user,
       });
 
       logger.info(`User profile retrieved for user ${req.user.id}`);
@@ -75,7 +86,7 @@ class UserController {
       logger.error('Error retrieving user profile:', error);
       res.status(500).json({
         success: false,
-        error: t(req, 'common.internal_error')
+        error: t(req, 'common.internal_error'),
       });
     }
   }
@@ -90,7 +101,7 @@ class UserController {
       if (!user) {
         res.status(404).json({
           success: false,
-          error: t(req, 'common.user_not_found')
+          error: t(req, 'common.user_not_found'),
         });
         return;
       }
@@ -103,11 +114,13 @@ class UserController {
       // Validate the updated user
       const errors = await validate(user);
       if (errors.length > 0) {
-        const validationErrors = errors.map(error => Object.values(error.constraints || {})).flat();
+        const validationErrors = errors
+          .map((error) => Object.values(error.constraints || {}))
+          .flat();
         res.status(400).json({
           success: false,
           error: t(req, 'common.validation_failed'),
-          details: validationErrors
+          details: validationErrors,
         });
         return;
       }
@@ -125,8 +138,8 @@ class UserController {
           profileImage: user.profileImage,
           userType: user.userType,
           settings: user.settings,
-          updatedAt: user.updatedAt
-        }
+          updatedAt: user.updatedAt,
+        },
       });
 
       logger.info(`User profile updated for user ${req.user.id}`);
@@ -134,7 +147,7 @@ class UserController {
       logger.error('Error updating user profile:', error);
       res.status(500).json({
         success: false,
-        error: t(req, 'common.internal_error')
+        error: t(req, 'common.internal_error'),
       });
     }
   }
@@ -146,13 +159,13 @@ class UserController {
 
       res.json({
         success: true,
-        message: t(req, 'user.account_deactivated')
+        message: t(req, 'user.account_deactivated'),
       });
     } catch (error) {
       logger.error('Error deactivating user account:', error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : t(req, 'common.internal_error')
+        error: error instanceof Error ? error.message : t(req, 'common.internal_error'),
       });
     }
   }
@@ -165,7 +178,7 @@ class UserController {
       if (!req.file) {
         res.status(400).json({
           success: false,
-          error: t(req, 'user.no_image')
+          error: t(req, 'user.no_image'),
         });
         return;
       }
@@ -176,7 +189,7 @@ class UserController {
       if (!user) {
         res.status(404).json({
           success: false,
-          error: t(req, 'common.user_not_found')
+          error: t(req, 'common.user_not_found'),
         });
         return;
       }
@@ -184,7 +197,11 @@ class UserController {
       // Delete old profile image if it exists
       if (user.profileImage) {
         try {
-          const oldImagePath = path.join(__dirname, '../../uploads/profiles', path.basename(user.profileImage));
+          const oldImagePath = path.join(
+            __dirname,
+            '../../uploads/profiles',
+            path.basename(user.profileImage)
+          );
           await fs.unlink(oldImagePath);
         } catch (error) {
           logger.warn(`Failed to delete old profile image: ${error}`);
@@ -198,8 +215,8 @@ class UserController {
       res.json({
         success: true,
         data: {
-          profileImage: user.profileImage
-        }
+          profileImage: user.profileImage,
+        },
       });
 
       logger.info(`Profile image updated for user ${req.user.id}`);
@@ -207,7 +224,7 @@ class UserController {
       logger.error('Error uploading profile image:', error);
       res.status(500).json({
         success: false,
-        error: t(req, 'common.internal_error')
+        error: t(req, 'common.internal_error'),
       });
     }
   }
@@ -220,13 +237,13 @@ class UserController {
 
       const user = await userRepository.findOne({
         where: { id, isActive: true },
-        select: ['id', 'firstName', 'lastName', 'profileImage', 'userType', 'createdAt']
+        select: ['id', 'firstName', 'lastName', 'profileImage', 'userType', 'createdAt'],
       });
 
       if (!user) {
         res.status(404).json({
           success: false,
-          error: t(req, 'common.user_not_found')
+          error: t(req, 'common.user_not_found'),
         });
         return;
       }
@@ -235,14 +252,14 @@ class UserController {
       if (user.settings?.privacy?.showProfile === false) {
         res.status(403).json({
           success: false,
-          error: t(req, 'user.profile_private')
+          error: t(req, 'user.profile_private'),
         });
         return;
       }
 
       res.json({
         success: true,
-        data: user
+        data: user,
       });
 
       logger.info(`Public user profile retrieved for user ${id}`);
@@ -250,7 +267,7 @@ class UserController {
       logger.error('Error retrieving user by ID:', error);
       res.status(500).json({
         success: false,
-        error: t(req, 'common.internal_error')
+        error: t(req, 'common.internal_error'),
       });
     }
   }
@@ -265,7 +282,7 @@ class UserController {
       if (!user) {
         res.status(404).json({
           success: false,
-          error: t(req, 'common.user_not_found')
+          error: t(req, 'common.user_not_found'),
         });
         return;
       }
@@ -276,26 +293,29 @@ class UserController {
           notifications: {
             email: true,
             sms: true,
-            push: true
+            push: true,
           },
           privacy: {
             showProfile: true,
-            showLocation: true
-          }
+            showLocation: true,
+          },
         };
       }
 
       // Update notifications settings
       if (notifications) {
-        if (notifications.email !== undefined) user.settings.notifications.email = notifications.email;
+        if (notifications.email !== undefined)
+          user.settings.notifications.email = notifications.email;
         if (notifications.sms !== undefined) user.settings.notifications.sms = notifications.sms;
         if (notifications.push !== undefined) user.settings.notifications.push = notifications.push;
       }
 
       // Update privacy settings
       if (privacy) {
-        if (privacy.showProfile !== undefined) user.settings.privacy.showProfile = privacy.showProfile;
-        if (privacy.showLocation !== undefined) user.settings.privacy.showLocation = privacy.showLocation;
+        if (privacy.showProfile !== undefined)
+          user.settings.privacy.showProfile = privacy.showProfile;
+        if (privacy.showLocation !== undefined)
+          user.settings.privacy.showLocation = privacy.showLocation;
       }
 
       await userRepository.save(user);
@@ -303,8 +323,8 @@ class UserController {
       res.json({
         success: true,
         data: {
-          settings: user.settings
-        }
+          settings: user.settings,
+        },
       });
 
       logger.info(`User settings updated for user ${req.user.id}`);
@@ -312,7 +332,7 @@ class UserController {
       logger.error('Error updating user settings:', error);
       res.status(500).json({
         success: false,
-        error: t(req, 'common.internal_error')
+        error: t(req, 'common.internal_error'),
       });
     }
   }

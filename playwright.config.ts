@@ -12,7 +12,7 @@ export default defineConfig({
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
   /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI ? 1 : 4,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
     ['html', { outputFolder: 'Tests/results/reports' }],
@@ -22,7 +22,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:3001',
+    baseURL: 'http://127.0.0.1:3101',
     
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -41,68 +41,61 @@ export default defineConfig({
     navigationTimeout: 30000,
   },
 
-  /* Global setup and teardown - temporarily disabled for initial setup */
-  // globalSetup: require.resolve('./Tests/playwright-config/global-setup.ts'),
-  // globalTeardown: require.resolve('./Tests/playwright-config/global-teardown.ts'),
-
-  /* Configure projects for major browsers */
   projects: [
-    {
-      name: 'setup',
-      testMatch: /.*\.setup\.ts/,
-    },
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      dependencies: ['setup'],
     },
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
-      dependencies: ['setup'],
     },
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
-      dependencies: ['setup'],
     },
 
     /* Test against mobile viewports. */
     {
       name: 'Mobile Chrome',
       use: { ...devices['Pixel 5'] },
-      dependencies: ['setup'],
     },
     {
       name: 'Mobile Safari',
       use: { ...devices['iPhone 12'] },
-      dependencies: ['setup'],
-    },
-
-    /* Test against branded browsers. */
-    {
-      name: 'Microsoft Edge',
-      use: { ...devices['Desktop Edge'], channel: 'msedge' },
-      dependencies: ['setup'],
-    },
-    {
-      name: 'Google Chrome',
-      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-      dependencies: ['setup'],
     },
   ],
 
-  /* Run your local dev server before starting the tests - temporarily disabled */
-  // webServer: [
-  //   {
-  //     command: 'cd backend && npm run dev',
-  //     port: 3000,
-  //     reuseExistingServer: !process.env.CI,
-  //   },
-  //   {
-  //     command: 'cd frontend && npm start',
-  //     port: 3001,
-  //     reuseExistingServer: !process.env.CI,
-  //   },
-  // ],
+  webServer: [
+    {
+      command:
+        'if [ "${CI:-false}" != "true" ]; then docker compose up -d --wait postgres-test postgres-memory-test; fi; cd backend && npm run migration:run && npm run seed && npm run dev',
+      url: 'http://127.0.0.1:3100/health',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      env: {
+        ...process.env,
+        NODE_ENV: 'test',
+        PORT: '3100',
+        DATABASE_URL: 'postgresql://tino_test:tino_test@127.0.0.1:5434/tino_test',
+        TEST_DATABASE_URL: 'postgresql://tino_test:tino_test@127.0.0.1:5434/tino_test',
+        MEMORY_DATABASE_URL:
+          'postgresql://tino_memory_test:tino_memory_test@127.0.0.1:5435/tino_memory_test',
+        JWT_SECRET: 'playwright-test-secret-that-is-never-used-outside-tests',
+        REDIS_ENABLED: 'false',
+        ALLOWED_ORIGINS: 'http://127.0.0.1:3101,http://localhost:3101',
+      },
+    },
+    {
+      command: 'cd frontend && npm run dev',
+      url: 'http://127.0.0.1:3101',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      env: {
+        ...process.env,
+        VITE_PROXY_TARGET: 'http://127.0.0.1:3100',
+        VITE_PORT: '3101',
+      },
+    },
+  ],
 });

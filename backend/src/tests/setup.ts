@@ -1,51 +1,23 @@
 import 'reflect-metadata';
 
-// For now, create a minimal test setup
-// In a full implementation, you would set up test database connections
-
-// Set up test environment variables
 process.env.NODE_ENV = 'test';
-process.env.JWT_SECRET = 'test-jwt-secret';
+process.env.JWT_SECRET = 'test-jwt-secret-that-is-long-enough-for-tests-only';
 process.env.STRIPE_SECRET_KEY = 'sk_test_fake_key';
 process.env.REDIS_ENABLED = 'false';
 
-// Mock external dependencies for testing
-jest.mock('typeorm', () => ({
-  getRepository: jest.fn().mockImplementation(() => ({
-    find: jest.fn().mockResolvedValue([]),
-    findOne: jest.fn().mockResolvedValue(null),
-    create: jest.fn().mockImplementation((data) => ({ id: 'test-id', ...data })),
-    save: jest.fn().mockImplementation((entity) => entity),
-    update: jest.fn().mockResolvedValue({ affected: 1 }),
-    delete: jest.fn().mockResolvedValue({ affected: 1 }),
-    count: jest.fn().mockResolvedValue(0),
-    remove: jest.fn().mockImplementation((entity) => entity),
-    createQueryBuilder: jest.fn().mockReturnValue({
-      select: jest.fn().mockReturnThis(),
-      addSelect: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      andWhere: jest.fn().mockReturnThis(),
-      groupBy: jest.fn().mockReturnThis(),
-      orderBy: jest.fn().mockReturnThis(),
-      skip: jest.fn().mockReturnThis(),
-      take: jest.fn().mockReturnThis(),
-      getRawOne: jest.fn().mockResolvedValue({}),
-      getRawMany: jest.fn().mockResolvedValue([]),
-      getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
-    })
-  })),
-  Entity: () => jest.fn(),
-  PrimaryGeneratedColumn: () => jest.fn(),
-  Column: () => jest.fn(),
-  CreateDateColumn: () => jest.fn(),
-  UpdateDateColumn: () => jest.fn(),
-  ManyToOne: () => jest.fn(),
-  OneToMany: () => jest.fn(),
-  JoinColumn: () => jest.fn(),
-  Index: () => jest.fn(),
-}));
+const testDatabaseUrl =
+  process.env.TEST_DATABASE_URL ?? 'postgresql://tino_test:tino_test@localhost:5434/tino_test';
+const configuredDatabaseUrl = process.env.DATABASE_URL;
 
-// Mock Stripe
+if (configuredDatabaseUrl && configuredDatabaseUrl === testDatabaseUrl) {
+  throw new Error('TEST_DATABASE_URL must not equal the configured application DATABASE_URL');
+}
+if (!/localhost:5434\/tino_test$/.test(testDatabaseUrl) && process.env.CI !== 'true') {
+  throw new Error('Refusing to run tests against a non-local, non-test PostgreSQL database');
+}
+
+process.env.DATABASE_URL = testDatabaseUrl;
+
 jest.mock('stripe', () => {
   return jest.fn().mockImplementation(() => ({
     paymentIntents: {
@@ -58,6 +30,8 @@ jest.mock('stripe', () => {
         id: 'pi_test_123',
         status: 'succeeded',
       }),
+      capture: jest.fn().mockResolvedValue({ id: 'pi_test_123', status: 'succeeded' }),
+      cancel: jest.fn().mockResolvedValue({ id: 'pi_test_123', status: 'canceled' }),
     },
     refunds: {
       create: jest.fn().mockResolvedValue({
@@ -67,32 +41,49 @@ jest.mock('stripe', () => {
       }),
     },
     webhooks: {
-      constructEvent: jest.fn(),
+      constructEvent: jest.fn(() => {
+        throw new Error('Invalid Stripe signature');
+      }),
     },
   }));
 });
 
-// Mock logger
 jest.mock('@/config/logger', () => ({
-  info: jest.fn(),
-  error: jest.fn(),
-  warn: jest.fn(),
-  debug: jest.fn(),
+  __esModule: true,
+  default: {
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn(),
+  },
 }));
 
-beforeAll(async () => {
-  // Test setup
-});
+const { AppDataSource } = require('@/config/database') as typeof import('@/config/database');
 
-afterAll(async () => {
-  // Test cleanup
+beforeAll(async () => {
+  if (!AppDataSource.isInitialized) {
+    await AppDataSource.initialize();
+  }
+  await AppDataSource.runMigrations();
 });
 
 beforeEach(async () => {
-  // Reset mocks before each test
+  const tables = await AppDataSource.query(
+    `SELECT tablename FROM pg_tables
+     WHERE schemaname = 'public'
+       AND tablename NOT IN ('migrations', 'typeorm_metadata')`
+  );
+  if (tables.length > 0) {
+    const quoted = tables
+      .map(({ tablename }: { tablename: string }) => `"${tablename}"`)
+      .join(', ');
+    await AppDataSource.query(`TRUNCATE TABLE ${quoted} RESTART IDENTITY CASCADE`);
+  }
   jest.clearAllMocks();
 });
 
-afterEach(async () => {
-  // Test cleanup after each test
+afterAll(async () => {
+  if (AppDataSource.isInitialized) {
+    await AppDataSource.destroy();
+  }
 });

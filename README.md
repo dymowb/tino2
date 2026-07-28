@@ -5,7 +5,7 @@ A full-stack platform connecting customers with service providers for household 
 ## Tech Stack
 
 - **Backend**: Node.js 22, Express, TypeScript, TypeORM
-- **Frontend**: React 18, TypeScript (Create React App)
+- **Frontend**: React 18, TypeScript, Vite
 - **Databases**: PostgreSQL 16 (app data) + PostgreSQL/pgvector (agentic memory) — both via Docker
 - **AI**: Anthropic Claude API, Voyage AI embeddings, pgvector semantic search
 - **Auth**: JWT, bcrypt
@@ -59,7 +59,6 @@ bash start-servers.sh
 | `VOYAGE_API_KEY` | [voyageai.com](https://www.voyageai.com) | Memory system (semantic search) |
 | `STRIPE_SECRET_KEY` + `STRIPE_PUBLISHABLE_KEY` | [dashboard.stripe.com](https://dashboard.stripe.com) | Payments |
 | `GOOGLE_MAPS_API_KEY` | Google Cloud Console | GPS features (degrades gracefully without it) |
-| `BROWSERBASE_API_KEY` + `BROWSERBASE_PROJECT_ID` | [browserbase.com](https://browserbase.com) | Browser automation only — optional |
 
 ## Demo Accounts
 
@@ -96,7 +95,31 @@ npm run migration:generate     # generate migration from entity changes
 npm run memory:migration:run   # apply pgvector memory migrations
 npm test                       # Jest
 npm run lint                   # ESLint
+npm run format:check           # Prettier verification
 ```
+
+## Quality Checks
+
+Use Node 22 (`nvm use`) throughout. Backend integration tests use the disposable
+PostgreSQL service on port 5434:
+
+```bash
+cd backend && npm run test:db:up && npm test
+
+# Frontend component and decision-logic tests
+npm test --prefix frontend
+
+# From the repository root (isolated app ports 3100/3101)
+npm run test:ci                # Chromium product suite
+npm test                       # Full desktop/mobile browser matrix
+```
+
+GitHub Actions runs clean installs, dependency security, backend quality and
+integration tests, frontend tests/build, and Chromium validation.
+
+Every HTTP response includes an `x-request-id` for log correlation. Runtime
+health and latest background-job outcomes are exposed by `/health`; the
+machine-readable API contract is available at `/api/v1/openapi.json`.
 
 ## Project Documentation
 
@@ -116,6 +139,7 @@ npm run lint                   # ESLint
 - **Streaming AI search**: SSE-based provider search with live token streaming from Claude
 - **Real-time messaging**: Socket.IO with JWT auth
 - **Stripe escrow flow**: hold on booking → capture on completion → refund on dispute
+- **Operational visibility**: structured JSON logs, request correlation, job metrics, and optional Sentry reporting
 - **Admin panel**: user/provider management, dispute resolution, platform settings
 - **i18n**: full pt-BR / en-US coverage via react-i18next
 

@@ -71,7 +71,7 @@ class PaymentService {
       // Validate booking exists and belongs to customer
       const booking = await this.bookingRepository.findOne({
         where: { id: data.bookingId, customerId: data.customerId },
-        relations: ['provider', 'customer']
+        relations: ['provider', 'customer'],
       });
 
       if (!booking) {
@@ -84,7 +84,7 @@ class PaymentService {
 
       // Check if payment already exists
       const existingPayment = await this.paymentRepository.findOne({
-        where: { bookingId: data.bookingId }
+        where: { bookingId: data.bookingId },
       });
 
       if (existingPayment && existingPayment.status !== PaymentStatus.FAILED) {
@@ -95,7 +95,7 @@ class PaymentService {
       const platformFeeRate = parseFloat(process.env.PLATFORM_FEE_RATE || '0.05');
       const stripeFeeRate = parseFloat(process.env.STRIPE_FEE_RATE || '0.029');
       const stripeFeeFixed = parseFloat(process.env.STRIPE_FEE_FIXED || '0.30');
-      
+
       const platformFee = Math.round(data.amount * platformFeeRate * 100) / 100;
       const stripeFee = Math.round((data.amount * stripeFeeRate + stripeFeeFixed) * 100) / 100;
       const providerAmount = Math.round((data.amount - platformFee - stripeFee) * 100) / 100;
@@ -107,14 +107,14 @@ class PaymentService {
           email: booking.customer.email,
           name: `${booking.customer.firstName} ${booking.customer.lastName}`,
           metadata: {
-            userId: booking.customer.id
-          }
+            userId: booking.customer.id,
+          },
         });
         stripeCustomerId = customer.id;
-        
+
         // Update user with Stripe customer ID
         await this.userRepository.update(booking.customerId, {
-          stripeCustomerId
+          stripeCustomerId,
         });
       }
 
@@ -153,30 +153,32 @@ class PaymentService {
         metadata: {
           requiresCapture: true,
           escrowHold: true,
-          stripeCustomerId
-        }
+          stripeCustomerId,
+        },
       });
 
       const savedPayment = await this.paymentRepository.save(payment);
 
       // Notify provider of incoming payment
-      notificationService.createNotification(booking.provider.userId, {
-        type: NotificationType.PAYMENT,
-        title: 'Payment Initiated',
-        message: `A payment of $${(data.amount / 100).toFixed(2)} has been initiated for your service`,
-        titleKey: 'titles.payment_initiated',
-        messageKey: 'body.payment_initiated',
-        i18nParams: { amount: `$${(data.amount / 100).toFixed(2)}` },
-        actionUrl: `/payments/${savedPayment.id}`,
-        metadata: { paymentId: savedPayment.id, bookingId: data.bookingId },
-      }).catch(err => logger.error('Failed to send payment notification:', err));
+      notificationService
+        .createNotification(booking.provider.userId, {
+          type: NotificationType.PAYMENT,
+          title: 'Payment Initiated',
+          message: `A payment of $${(data.amount / 100).toFixed(2)} has been initiated for your service`,
+          titleKey: 'titles.payment_initiated',
+          messageKey: 'body.payment_initiated',
+          i18nParams: { amount: `$${(data.amount / 100).toFixed(2)}` },
+          actionUrl: `/payments/${savedPayment.id}`,
+          metadata: { paymentId: savedPayment.id, bookingId: data.bookingId },
+        })
+        .catch((err) => logger.error('Failed to send payment notification:', err));
 
       logger.info(`Payment intent created: ${paymentIntent.id} for booking ${data.bookingId}`);
 
       return {
         clientSecret: paymentIntent.client_secret!,
         paymentIntentId: paymentIntent.id,
-        payment: savedPayment
+        payment: savedPayment,
       };
     } catch (error) {
       logger.error('Error creating payment intent:', error);
@@ -193,7 +195,7 @@ class PaymentService {
     try {
       const payment = await this.paymentRepository.findOne({
         where: { id: paymentId },
-        relations: ['booking', 'customer', 'provider']
+        relations: ['booking', 'customer', 'provider'],
       });
 
       if (!payment) {
@@ -210,13 +212,15 @@ class PaymentService {
       }
 
       // Capture the payment intent
-      const paymentIntent = await this.getStripe().paymentIntents.capture(payment.stripePaymentIntentId);
+      const paymentIntent = await this.getStripe().paymentIntents.capture(
+        payment.stripePaymentIntentId
+      );
 
       if (paymentIntent.status === 'succeeded') {
         payment.status = PaymentStatus.SUCCEEDED;
         payment.completedAt = new Date();
         payment.paidAt = new Date();
-        
+
         // Update metadata with charge information (charges removed from PaymentIntent in newer SDK)
         const charge = (paymentIntent as any).charges?.data?.[0];
         if (charge) {
@@ -225,7 +229,7 @@ class PaymentService {
             ...payment.metadata,
             last4: charge.payment_method_details?.card?.last4,
             cardBrand: charge.payment_method_details?.card?.brand,
-            receipt_url: charge.receipt_url || undefined
+            receipt_url: charge.receipt_url || undefined,
           };
         }
 
@@ -233,7 +237,7 @@ class PaymentService {
 
         // Update booking status to indicate payment is complete
         await this.bookingRepository.update(payment.bookingId, {
-          status: BookingStatus.CONFIRMED
+          status: BookingStatus.CONFIRMED,
         });
 
         logger.info(`Payment confirmed and captured: ${paymentId}`);
@@ -256,7 +260,7 @@ class PaymentService {
     try {
       const payment = await this.paymentRepository.findOne({
         where: { id: data.paymentId },
-        relations: ['booking', 'customer']
+        relations: ['booking', 'customer'],
       });
 
       if (!payment) {
@@ -279,20 +283,21 @@ class PaymentService {
         reason: (data.reason as any) || 'requested_by_customer',
         metadata: {
           paymentId: data.paymentId,
-          requestedBy: data.requestedBy
-        }
+          requestedBy: data.requestedBy,
+        },
       });
 
       // Update payment record
-      payment.status = refundAmount && refundAmount < payment.amount * 100 
-        ? PaymentStatus.PARTIALLY_REFUNDED 
-        : PaymentStatus.REFUNDED;
+      payment.status =
+        refundAmount && refundAmount < payment.amount * 100
+          ? PaymentStatus.PARTIALLY_REFUNDED
+          : PaymentStatus.REFUNDED;
       payment.refundedAt = new Date();
       payment.refundAmount = refund.amount / 100;
       payment.stripeRefundId = refund.id;
       payment.metadata = {
         ...payment.metadata,
-        refund_reason: data.reason
+        refund_reason: data.reason,
       };
 
       await this.paymentRepository.save(payment);
@@ -300,7 +305,7 @@ class PaymentService {
       // Update booking status if fully refunded
       if (payment.status === PaymentStatus.REFUNDED) {
         await this.bookingRepository.update(payment.bookingId, {
-          status: BookingStatus.CANCELLED
+          status: BookingStatus.CANCELLED,
         });
       }
 
@@ -330,7 +335,8 @@ class PaymentService {
 
     const { page = 1, limit = 10, status, startDate, endDate } = options;
 
-    const queryBuilder = this.paymentRepository.createQueryBuilder('payment')
+    const queryBuilder = this.paymentRepository
+      .createQueryBuilder('payment')
       .leftJoinAndSelect('payment.booking', 'booking')
       .leftJoinAndSelect('payment.customer', 'customer')
       .leftJoinAndSelect('payment.provider', 'provider');
@@ -369,8 +375,8 @@ class PaymentService {
         page,
         limit,
         total,
-        pages: Math.ceil(total / limit)
-      }
+        pages: Math.ceil(total / limit),
+      },
     };
   }
 
@@ -384,7 +390,8 @@ class PaymentService {
   ): Promise<PaymentSummary> {
     this.initRepositories();
 
-    const queryBuilder = this.paymentRepository.createQueryBuilder('payment')
+    const queryBuilder = this.paymentRepository
+      .createQueryBuilder('payment')
       .where('payment.status = :status', { status: PaymentStatus.SUCCEEDED });
 
     // Filter by user if not admin
@@ -409,9 +416,12 @@ class PaymentService {
     const refundedPayments = await this.paymentRepository.find({
       where: {
         status: PaymentStatus.REFUNDED,
-        ...(userType === 'customer' ? { customerId: userId } : 
-           userType === 'provider' ? { providerId: userId } : {})
-      }
+        ...(userType === 'customer'
+          ? { customerId: userId }
+          : userType === 'provider'
+            ? { providerId: userId }
+            : {}),
+      },
     });
 
     const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0);
@@ -425,7 +435,7 @@ class PaymentService {
       platformFees,
       refundedAmount,
       paymentCount,
-      averagePayment
+      averagePayment,
     };
   }
 
@@ -440,7 +450,7 @@ class PaymentService {
         case 'payment_intent.succeeded':
           await this.handlePaymentSucceeded(event.data.object as Stripe.PaymentIntent);
           break;
-        
+
         case 'payment_intent.payment_failed':
           await this.handlePaymentFailed(event.data.object as Stripe.PaymentIntent);
           break;
@@ -461,10 +471,10 @@ class PaymentService {
   private async handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent): Promise<void> {
     await this.paymentRepository.update(
       { stripePaymentIntentId: paymentIntent.id },
-      { 
-        status: PaymentStatus.SUCCEEDED, 
+      {
+        status: PaymentStatus.SUCCEEDED,
         completedAt: new Date(),
-        paidAt: new Date()
+        paidAt: new Date(),
       }
     );
     logger.info(`Payment succeeded via webhook: ${paymentIntent.id}`);
@@ -477,8 +487,8 @@ class PaymentService {
         status: PaymentStatus.FAILED,
         failedAt: new Date(),
         metadata: {
-          failure_reason: paymentIntent.last_payment_error?.message
-        } as any
+          failure_reason: paymentIntent.last_payment_error?.message,
+        } as any,
       }
     );
     logger.warn(`Payment failed via webhook: ${paymentIntent.id}`);
@@ -486,7 +496,7 @@ class PaymentService {
 
   private async handleDisputeCreated(dispute: Stripe.Dispute): Promise<void> {
     const payment = await this.paymentRepository.findOne({
-      where: { stripeChargeId: dispute.charge as string }
+      where: { stripeChargeId: dispute.charge as string },
     });
 
     if (payment) {
@@ -494,7 +504,7 @@ class PaymentService {
         ...payment.metadata,
         dispute_id: dispute.id,
         dispute_reason: dispute.reason,
-        dispute_status: dispute.status
+        dispute_status: dispute.status,
       };
       await this.paymentRepository.save(payment);
       logger.warn(`Dispute created for payment: ${payment.id}, dispute ID: ${dispute.id}`);

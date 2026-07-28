@@ -22,9 +22,6 @@ interface Config {
     port: number;
     password?: string;
   };
-  mongodb: {
-    url: string;
-  };
   jwt: {
     secret: string;
     expiresIn: string;
@@ -93,9 +90,6 @@ const config: Config = {
     port: parseInt(process.env.REDIS_PORT || '6379', 10),
     password: process.env.REDIS_PASSWORD || undefined,
   },
-  mongodb: {
-    url: process.env.MONGODB_URL || 'mongodb://localhost:27017/tino_2_messages',
-  },
   jwt: {
     secret: process.env.JWT_SECRET || 'fallback-secret-change-in-production',
     expiresIn: process.env.JWT_EXPIRES_IN || '24h',
@@ -151,9 +145,13 @@ export function validateConfig(): void {
 
   if (config.jwt.secret === PLACEHOLDER_JWT) {
     if (isProduction) {
-      throw new Error('FATAL: JWT_SECRET is set to the placeholder value. Set a real secret before deploying.');
+      throw new Error(
+        'FATAL: JWT_SECRET is set to the placeholder value. Set a real secret before deploying.'
+      );
     } else {
-      console.warn('⚠️  WARNING: JWT_SECRET is using the placeholder fallback. Set a real secret in .env.');
+      console.warn(
+        '⚠️  WARNING: JWT_SECRET is using the placeholder fallback. Set a real secret in .env.'
+      );
     }
   }
 

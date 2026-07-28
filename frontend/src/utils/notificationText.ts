@@ -1,4 +1,4 @@
-import type { TFunction } from 'i18next';
+import type { TFunction } from "i18next";
 
 /**
  * Shape of the i18n payload the backend stores in `notification.metadata.i18n`
@@ -29,11 +29,13 @@ interface NotificationLike {
  */
 export function getNotificationText(
   n: NotificationLike,
-  t: TFunction
+  t: TFunction,
 ): { title: string; message: string } {
   const i18n = n.metadata?.i18n;
   const params = (i18n?.params || {}) as Record<string, unknown>;
-  const title = i18n?.titleKey ? t(i18n.titleKey, params) : n.title || '';
-  const message = i18n?.messageKey ? t(i18n.messageKey, params) : n.message || '';
+  const title = i18n?.titleKey ? t(i18n.titleKey, params) : n.title || "";
+  const message = i18n?.messageKey
+    ? t(i18n.messageKey, params)
+    : n.message || "";
   return { title, message };
 }

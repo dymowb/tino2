@@ -91,7 +91,7 @@ Rules:
 
   async execute(
     input: VerificationAgentInput,
-    _context: WorkflowContext,
+    _context: WorkflowContext
   ): Promise<AgentResult<VerificationAgentOutput>> {
     const startTime = Date.now();
     logger.info('Verification Agent executing', {
@@ -99,13 +99,9 @@ Rules:
     });
 
     // ── Build prompt ──────────────────────────────────────────────────
-    const reqSummary = JSON.stringify(
-      input.requirements.requirementsSummary,
-      null,
-      2,
-    );
+    const reqSummary = JSON.stringify(input.requirements.requirementsSummary, null, 2);
     const recsSummary = input.recommendations
-      .map(r =>
+      .map((r) =>
         JSON.stringify(
           {
             rank: r.rank,
@@ -117,13 +113,12 @@ Rules:
             concerns: r.analysis.concerns,
           },
           null,
-          2,
-        ),
+          2
+        )
       )
       .join('\n\n');
 
-    const userMessage =
-      `Customer Requirements:\n${reqSummary}\n\nRecommendations:\n${recsSummary}`;
+    const userMessage = `Customer Requirements:\n${reqSummary}\n\nRecommendations:\n${recsSummary}`;
 
     // ── Race Claude against timeout ───────────────────────────────────
     const systemPrompt = input.constraintContext
@@ -139,8 +134,8 @@ Rules:
     });
 
     // null resolves when timeout fires
-    const timeoutSignal = new Promise<null>(resolve =>
-      setTimeout(() => resolve(null), VERIFICATION_TIMEOUT_MS),
+    const timeoutSignal = new Promise<null>((resolve) =>
+      setTimeout(() => resolve(null), VERIFICATION_TIMEOUT_MS)
     );
 
     const response = await Promise.race([claudeCall, timeoutSignal]);
@@ -198,7 +193,7 @@ Rules:
 
   async reflect(
     output: VerificationAgentOutput,
-    _input: VerificationAgentInput,
+    _input: VerificationAgentInput
   ): Promise<ReflectionResult> {
     // If verification timed out there is nothing to improve
     if (output.timedOut) {
@@ -208,9 +203,7 @@ Rules:
     const improvements: string[] = [];
 
     if (output.report.qualityScore < 0 || output.report.qualityScore > 10) {
-      improvements.push(
-        `qualityScore ${output.report.qualityScore} is out of 0-10 range`,
-      );
+      improvements.push(`qualityScore ${output.report.qualityScore} is out of 0-10 range`);
     }
 
     return {

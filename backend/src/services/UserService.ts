@@ -50,11 +50,13 @@ export class UserService {
       // Fire-and-forget — a broken mail server should not fail registration
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
       const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
-      emailService.sendEmailVerification(savedUser.email, {
-        name: savedUser.firstName,
-        verificationUrl,
-        code: verificationToken.slice(0, 6).toUpperCase(),
-      }).catch((err) => logger.warn('Failed to send verification email:', err));
+      emailService
+        .sendEmailVerification(savedUser.email, {
+          name: savedUser.firstName,
+          verificationUrl,
+          code: verificationToken.slice(0, 6).toUpperCase(),
+        })
+        .catch((err) => logger.warn('Failed to send verification email:', err));
 
       return savedUser;
     } catch (error) {
@@ -402,11 +404,13 @@ export class UserService {
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
-    emailService.sendPasswordResetEmail(user.email, {
-      name: user.firstName,
-      resetUrl,
-      expiryHours: 1,
-    }).catch((err) => logger.warn('Failed to send password reset email:', err));
+    emailService
+      .sendPasswordResetEmail(user.email, {
+        name: user.firstName,
+        resetUrl,
+        expiryHours: 1,
+      })
+      .catch((err) => logger.warn('Failed to send password reset email:', err));
 
     logger.info(`Password reset requested for: ${user.id}`);
   }

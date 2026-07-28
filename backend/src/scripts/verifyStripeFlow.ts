@@ -15,7 +15,8 @@ async function main() {
 
   // 1. Escrow HOLD: manual-capture PI, confirmed with a test card → requires_capture
   const pi = await stripe.paymentIntents.create({
-    amount: 15000, currency: 'brl',
+    amount: 15000,
+    currency: 'brl',
     payment_method: 'pm_card_visa',
     capture_method: 'manual',
     confirm: true,
@@ -29,26 +30,39 @@ async function main() {
   logger.info(`2) CAPTURE → status=${captured.status} amount_received=${captured.amount_received}`);
 
   // 3. REFUND (dispute/cancel path)
-  const refund = await stripe.refunds.create({ payment_intent: pi.id, reason: 'requested_by_customer' });
+  const refund = await stripe.refunds.create({
+    payment_intent: pi.id,
+    reason: 'requested_by_customer',
+  });
   logger.info(`3) REFUND → ${refund.id} status=${refund.status} amount=${refund.amount}`);
 
   // 4. Partial-hold + cancel (uncaptured auth is voided, not charged)
   const pi2 = await stripe.paymentIntents.create({
-    amount: 5000, currency: 'brl', payment_method: 'pm_card_visa',
-    capture_method: 'manual', confirm: true,
+    amount: 5000,
+    currency: 'brl',
+    payment_method: 'pm_card_visa',
+    capture_method: 'manual',
+    confirm: true,
     payment_method_types: ['card'],
     description: 'WS2 cancel verification',
   });
   const canceled = await stripe.paymentIntents.cancel(pi2.id);
   logger.info(`4) CANCEL hold → ${pi2.id} status=${canceled.status} (expect canceled)`);
 
-  const ok = pi.status === 'requires_capture' && captured.status === 'succeeded' &&
-    refund.status === 'succeeded' && canceled.status === 'canceled';
-  logger.info(`RESULT: ${ok ? 'PASS ✅ full escrow lifecycle works with the test key' : 'FAIL ❌ unexpected statuses'}`);
+  const ok =
+    pi.status === 'requires_capture' &&
+    captured.status === 'succeeded' &&
+    refund.status === 'succeeded' &&
+    canceled.status === 'canceled';
+  logger.info(
+    `RESULT: ${ok ? 'PASS ✅ full escrow lifecycle works with the test key' : 'FAIL ❌ unexpected statuses'}`
+  );
   process.exit(ok ? 0 : 1);
 }
 
-main().catch(err => {
-  logger.error(`Stripe verification failed: type=${err?.type} code=${err?.code} msg=${err?.message}`);
+main().catch((err) => {
+  logger.error(
+    `Stripe verification failed: type=${err?.type} code=${err?.code} msg=${err?.message}`
+  );
   process.exit(1);
 });

@@ -19,7 +19,7 @@
  * - Memory MCP integration for compressed storage
  */
 
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { WorkflowState, WorkflowStatus, WorkflowContext } from '../types/workflow.types';
 import { AgentActivity } from '../types/agent.types';
 import { RequirementsAgentOutput } from '../requirements.agent';
@@ -43,9 +43,9 @@ interface WorkflowConfig {
 }
 
 const DEFAULT_CONFIG: WorkflowConfig = {
-  ttl: 30 * 60 * 1000,           // 30 minutes
-  completedTtl: 5 * 60 * 1000,   // 5 minutes — enough for frontend polling
-  cleanupInterval: 60 * 1000,    // 1 minute
+  ttl: 30 * 60 * 1000, // 30 minutes
+  completedTtl: 5 * 60 * 1000, // 5 minutes — enough for frontend polling
+  cleanupInterval: 60 * 1000, // 1 minute
   logCleanup: true,
 };
 
@@ -115,7 +115,7 @@ export class WorkflowStateService {
     locale?: string,
     seededRequirements?: NonNullable<RequirementsAgentOutput['requirementsSummary']>
   ): Promise<WorkflowState> {
-    const workflowId = uuidv4();
+    const workflowId = randomUUID();
     const now = new Date();
 
     const workflow: WorkflowState = {
@@ -286,7 +286,9 @@ export class WorkflowStateService {
     // Cleanup task will remove it after the TTL expires
 
     if (this.config.logCleanup) {
-      logger.info(`Workflow ${workflowId} completed (will be cleaned up after ${this.config.completedTtl / 1000}s)`);
+      logger.info(
+        `Workflow ${workflowId} completed (will be cleaned up after ${this.config.completedTtl / 1000}s)`
+      );
     }
   }
 
@@ -310,7 +312,9 @@ export class WorkflowStateService {
     // Keep in memory for completedTtl so frontend can poll for error details
 
     if (this.config.logCleanup) {
-      logger.error(`Workflow ${workflowId} failed: ${error.message} (will be cleaned up after ${this.config.completedTtl / 1000}s)`);
+      logger.error(
+        `Workflow ${workflowId} failed: ${error.message} (will be cleaned up after ${this.config.completedTtl / 1000}s)`
+      );
     }
   }
 
@@ -329,7 +333,9 @@ export class WorkflowStateService {
     // Keep in memory briefly so frontend gets the cancelled status
 
     if (this.config.logCleanup) {
-      logger.info(`Workflow ${workflowId} cancelled by user (will be cleaned up after ${this.config.completedTtl / 1000}s)`);
+      logger.info(
+        `Workflow ${workflowId} cancelled by user (will be cleaned up after ${this.config.completedTtl / 1000}s)`
+      );
     }
   }
 
@@ -433,7 +439,11 @@ export class WorkflowStateService {
   private cleanupZombieWorkflows(): void {
     const now = Date.now();
     const toDelete: string[] = [];
-    const terminalStatuses = [WorkflowStatus.COMPLETED, WorkflowStatus.FAILED, WorkflowStatus.CANCELLED];
+    const terminalStatuses = [
+      WorkflowStatus.COMPLETED,
+      WorkflowStatus.FAILED,
+      WorkflowStatus.CANCELLED,
+    ];
 
     for (const [id, workflow] of this.workflows) {
       const isTerminal = terminalStatuses.includes(workflow.status);

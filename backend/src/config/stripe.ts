@@ -27,14 +27,7 @@ const stripeConfig: StripeConfig = {
   processingFeeFixed: parseFloat(process.env.STRIPE_FEE_FIXED || '0.30'), // $0.30
   maxPaymentAmount: parseFloat(process.env.MAX_PAYMENT_AMOUNT || '999999.99'),
   supportedCurrencies: (process.env.SUPPORTED_CURRENCIES || 'usd,eur,gbp,cad,aud').split(','),
-  supportedPaymentMethods: [
-    'card',
-    'us_bank_account',
-    'link',
-    'apple_pay',
-    'google_pay',
-    'paypal'
-  ]
+  supportedPaymentMethods: ['card', 'us_bank_account', 'link', 'apple_pay', 'google_pay', 'paypal'],
 };
 
 // Initialize Stripe instance
@@ -59,13 +52,9 @@ export const getStripeInstance = (): Stripe => {
 
 // Validate Stripe configuration
 export const validateStripeConfig = (): void => {
-  const requiredVars = [
-    'STRIPE_SECRET_KEY',
-    'STRIPE_PUBLISHABLE_KEY',
-    'STRIPE_WEBHOOK_SECRET'
-  ];
+  const requiredVars = ['STRIPE_SECRET_KEY', 'STRIPE_PUBLISHABLE_KEY', 'STRIPE_WEBHOOK_SECRET'];
 
-  const missingVars = requiredVars.filter(varName => !process.env[varName]);
+  const missingVars = requiredVars.filter((varName) => !process.env[varName]);
 
   if (missingVars.length > 0) {
     throw new Error(`Missing required Stripe environment variables: ${missingVars.join(', ')}`);
@@ -100,14 +89,16 @@ export const validateStripeConfig = (): void => {
 // Calculate payment fees
 export const calculateFees = (amount: number) => {
   const platformFee = Math.round(amount * stripeConfig.platformFeeRate * 100) / 100;
-  const processingFee = Math.round((amount * stripeConfig.processingFeeRate + stripeConfig.processingFeeFixed) * 100) / 100;
+  const processingFee =
+    Math.round((amount * stripeConfig.processingFeeRate + stripeConfig.processingFeeFixed) * 100) /
+    100;
   const providerAmount = Math.round((amount - platformFee - processingFee) * 100) / 100;
 
   return {
     platformFee,
     processingFee,
     providerAmount,
-    totalFees: platformFee + processingFee
+    totalFees: platformFee + processingFee,
   };
 };
 
@@ -123,11 +114,11 @@ export const validatePaymentAmount = (amount: number, currency: string = 'usd'):
 
   // Minimum amounts by currency (in major units)
   const minimumAmounts: Record<string, number> = {
-    usd: 0.50,
-    eur: 0.50,
-    gbp: 0.30,
-    cad: 0.50,
-    aud: 0.50
+    usd: 0.5,
+    eur: 0.5,
+    gbp: 0.3,
+    cad: 0.5,
+    aud: 0.5,
   };
 
   const minAmount = minimumAmounts[currency.toLowerCase()];
@@ -139,7 +130,9 @@ export const validatePaymentAmount = (amount: number, currency: string = 'usd'):
 // Validate currency
 export const validateCurrency = (currency: string): void => {
   if (!stripeConfig.supportedCurrencies.includes(currency.toLowerCase())) {
-    throw new Error(`Unsupported currency: ${currency}. Supported currencies: ${stripeConfig.supportedCurrencies.join(', ')}`);
+    throw new Error(
+      `Unsupported currency: ${currency}. Supported currencies: ${stripeConfig.supportedCurrencies.join(', ')}`
+    );
   }
 };
 
@@ -162,9 +155,9 @@ export const getPaymentMethodOptions = () => ({
   paymentMethodCreation: 'manual',
   paymentMethodConfiguration: {
     displayPreference: {
-      preference: 'unspecified'
-    }
-  }
+      preference: 'unspecified',
+    },
+  },
 });
 
 // Common Stripe error messages
@@ -179,7 +172,7 @@ export const getStripeErrorMessage = (error: any): string => {
       case 'insufficient_funds':
         return 'Your card has insufficient funds. Please try a different payment method.';
       case 'incorrect_cvc':
-        return 'Your card\'s security code is incorrect. Please try again.';
+        return "Your card's security code is incorrect. Please try again.";
       case 'processing_error':
         return 'An error occurred while processing your card. Please try again.';
       default:
@@ -188,7 +181,7 @@ export const getStripeErrorMessage = (error: any): string => {
   } else if (error.type === 'StripeRateLimitError') {
     return 'Too many requests made to the API too quickly. Please try again.';
   } else if (error.type === 'StripeInvalidRequestError') {
-    return 'Invalid parameters were supplied to Stripe\'s API.';
+    return "Invalid parameters were supplied to Stripe's API.";
   } else if (error.type === 'StripeAPIError') {
     return 'An error occurred with our payment system. Please try again.';
   } else if (error.type === 'StripeConnectionError') {

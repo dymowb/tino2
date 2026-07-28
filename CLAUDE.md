@@ -35,7 +35,7 @@ After that, Claude will have full context on user preferences, feedback patterns
 - **Backend**: Node.js/Express.js API server with Socket.IO for real-time features
 - **Frontend**: React.js with TypeScript for web interface
 - **Mobile**: React Native/Flutter structure prepared for native apps
-- **Databases**: PostgreSQL (main), Redis (caching), MongoDB (messaging)
+- **Databases**: PostgreSQL (application), PostgreSQL/pgvector (assistant memory), Redis (optional caching)
 - **Authentication**: JWT tokens with bcrypt password hashing
 
 ## Common Development Commands
@@ -70,8 +70,6 @@ createdb tino_2_db
 # Redis setup (ensure Redis is running)
 redis-server
 
-# MongoDB setup (ensure MongoDB is running)
-mongod
 ```
 
 ## Environment Configuration
@@ -127,40 +125,10 @@ Socket.IO handles:
 - Service portfolio images in `backend/uploads/portfolios/`
 - Review photos in `backend/uploads/reviews/`
 
-## Browser Automation (Browserbase MCP)
+## Browser Automation
 
-The application includes Browserbase MCP integration for automated browser testing and web scraping capabilities:
-
-### Setup
-1. Sign up for a Browserbase account at https://browserbase.com
-2. Get your API key and project ID from the dashboard
-3. Add credentials to `.env`:
-   ```
-   BROWSERBASE_API_KEY=<your-browserbase-api-key>
-   BROWSERBASE_PROJECT_ID=<your-browserbase-project-id>
-   BROWSERBASE_SESSION_TIMEOUT=300000
-   BROWSERBASE_MAX_SESSIONS=10
-   ```
-
-### API Endpoints
-- `POST /api/v1/browser/sessions` - Create new browser session
-- `GET /api/v1/browser/sessions/:id` - Get session details
-- `DELETE /api/v1/browser/sessions/:id` - End browser session
-- `GET /api/v1/browser/sessions` - List all active sessions
-- `GET /api/v1/browser/stats` - Get session statistics
-- `POST /api/v1/browser/cleanup` - Clean up inactive sessions
-
-### Session Configuration
-```json
-{
-  "timeout": 300000,
-  "keepAlive": false,
-  "browserSettings": {
-    "viewport": { "width": 1920, "height": 1080 },
-    "userAgent": "custom-user-agent"
-  }
-}
-```
+Playwright is the supported browser automation layer. The product does not
+expose remote-browser session APIs.
 
 ## Known Issues (active)
 
@@ -253,6 +221,5 @@ TypeScript/coding syntax is no longer a primary focus — familiarity is suffici
 
 ### Feedback Style
 **Honest and direct** — no overpraise. Constructive criticism when deserved.
-
 
 

@@ -42,25 +42,25 @@ export async function runReflectionForUser(userId: string): Promise<ReflectionRu
           AND (expires_at IS NULL OR expires_at > NOW())
         ORDER BY occurred_at DESC
         LIMIT $2`,
-      [userId, memoryConfig.reflection.maxEpisodesPerRun],
+      [userId, memoryConfig.reflection.maxEpisodesPerRun]
     );
 
   if (rows.length < memoryConfig.reflection.minEpisodesForReflection) {
     logger.debug(
-      `[ReflectionJob] user=${userId}: ${rows.length} unreflected episodes — below threshold (${memoryConfig.reflection.minEpisodesForReflection}), skipping`,
+      `[ReflectionJob] user=${userId}: ${rows.length} unreflected episodes — below threshold (${memoryConfig.reflection.minEpisodesForReflection}), skipping`
     );
     return result;
   }
 
   result.episodesProcessed = rows.length;
-  const episodes: EpisodeSummary[] = rows.map(r => ({
+  const episodes: EpisodeSummary[] = rows.map((r) => ({
     id: r.id,
     summary: r.summary,
     occurredAt: r.occurred_at,
     importance: r.importance,
   }));
 
-  const episodeIds = episodes.map(e => e.id);
+  const episodeIds = episodes.map((e) => e.id);
 
   // ── Call the reflection agent ──────────────────────────────────────────────
   const output = await reflectionAgent.analyze(episodes, userId);
@@ -91,7 +91,7 @@ export async function runReflectionForUser(userId: string): Promise<ReflectionRu
       if (rule.confidence < queueThreshold) {
         result.rulesDiscarded++;
         logger.debug(
-          `[ReflectionJob] rule discarded (conf=${rule.confidence.toFixed(2)} < ${queueThreshold}): "${rule.ruleText.slice(0, 60)}"`,
+          `[ReflectionJob] rule discarded (conf=${rule.confidence.toFixed(2)} < ${queueThreshold}): "${rule.ruleText.slice(0, 60)}"`
         );
         continue;
       }
@@ -139,11 +139,11 @@ export async function runReflectionForUser(userId: string): Promise<ReflectionRu
           autoApproved,
           autoApproveThreshold,
           autoApproved ? new Date() : null,
-        ],
+        ]
       );
 
       logger.info(
-        `[ReflectionJob] rule ${inserted[0].id} ${status} (conf=${rule.confidence.toFixed(2)}, autoApproved=${autoApproved}): "${rule.ruleText.slice(0, 80)}"`,
+        `[ReflectionJob] rule ${inserted[0].id} ${status} (conf=${rule.confidence.toFixed(2)}, autoApproved=${autoApproved}): "${rule.ruleText.slice(0, 80)}"`
       );
 
       if (autoApproved) {
@@ -161,14 +161,14 @@ export async function runReflectionForUser(userId: string): Promise<ReflectionRu
   if (episodeIds.length > 0) {
     await MemoryDataSource.query(
       `UPDATE episodic_memories SET reflected_at = NOW() WHERE id = ANY($1::uuid[])`,
-      [episodeIds],
+      [episodeIds]
     );
   }
 
   logger.info(
     `[ReflectionJob] user=${userId} episodes=${result.episodesProcessed} ` +
-    `semanticFacts=${result.semanticFactsWritten} ` +
-    `rulesCreated=${result.rulesCreated} rulesQueued=${result.rulesQueued} rulesDiscarded=${result.rulesDiscarded}`,
+      `semanticFacts=${result.semanticFactsWritten} ` +
+      `rulesCreated=${result.rulesCreated} rulesQueued=${result.rulesQueued} rulesDiscarded=${result.rulesDiscarded}`
   );
 
   return result;
@@ -188,7 +188,7 @@ export async function runReflectionAll(): Promise<ReflectionRunResult[]> {
         AND (expires_at IS NULL OR expires_at > NOW())
       GROUP BY user_id
      HAVING COUNT(*) >= $1`,
-    [memoryConfig.reflection.minEpisodesForReflection],
+    [memoryConfig.reflection.minEpisodesForReflection]
   );
 
   if (eligible.length === 0) {
@@ -215,13 +215,13 @@ export async function runReflectionAll(): Promise<ReflectionRunResult[]> {
       created: acc.created + r.rulesCreated,
       queued: acc.queued + r.rulesQueued,
     }),
-    { episodes: 0, facts: 0, created: 0, queued: 0 },
+    { episodes: 0, facts: 0, created: 0, queued: 0 }
   );
 
   logger.info(
     `[ReflectionJob] Run complete — users=${results.length} ` +
-    `episodes=${totals.episodes} semanticFacts=${totals.facts} ` +
-    `rulesCreated=${totals.created} rulesQueued=${totals.queued}`,
+      `episodes=${totals.episodes} semanticFacts=${totals.facts} ` +
+      `rulesCreated=${totals.created} rulesQueued=${totals.queued}`
   );
 
   return results;
@@ -255,7 +255,10 @@ interface ExistingRule {
   similarity: number;
 }
 
-async function findSimilarRule(userId: string, promptFragment: string): Promise<ExistingRule | null> {
+async function findSimilarRule(
+  userId: string,
+  promptFragment: string
+): Promise<ExistingRule | null> {
   const embedding = await getEmbeddingProvider().embed(promptFragment);
   const pgEmbedding = formatEmbeddingForPg(embedding);
 
@@ -267,7 +270,7 @@ async function findSimilarRule(userId: string, promptFragment: string): Promise<
         AND status != 'rejected'
       ORDER BY embedding <=> $1::vector
       LIMIT 1`,
-    [pgEmbedding, userId],
+    [pgEmbedding, userId]
   );
 
   const best = rows[0];

@@ -9,7 +9,13 @@ import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import config from '@/config/environment';
 import logger from '@/config/logger';
-import { securityMiddleware, sanitizeInput, logSuspiciousActivity, rateLimiters, getAllowedOrigins } from '@/middleware/security';
+import {
+  securityMiddleware,
+  sanitizeInput,
+  logSuspiciousActivity,
+  rateLimiters,
+  getAllowedOrigins,
+} from '@/middleware/security';
 
 import { AppDataSource } from '@/config/database';
 import authRoutes from '@/routes/auth';
@@ -29,9 +35,12 @@ import agenticAssistantRoutes from '@/routes/agentic-assistant.routes';
 import memoryRoutes from '@/routes/memory.routes';
 import voiceRoutes from '@/routes/voice';
 import configRoutes from '@/routes/config';
+import openApiRoutes from '@/routes/openapi';
 import messageService from '@/services/MessageService';
 import notificationService from '@/services/NotificationService';
 import jwt from './utils/jwt';
+import { requestContextMiddleware } from '@/observability/requestContext';
+import { getJobMetrics } from '@/observability/jobMetrics';
 
 export class App {
   public app: express.Application;
@@ -60,11 +69,14 @@ export class App {
   }
 
   private initializeMiddleware(): void {
-    this.app.use(morgan('combined', {
-      stream: {
-        write: (message) => logger.info(message.trim()),
-      },
-    }));
+    this.app.use(requestContextMiddleware);
+    this.app.use(
+      morgan('combined', {
+        stream: {
+          write: (message) => logger.info(message.trim()),
+        },
+      })
+    );
 
     this.app.use(compression());
 
@@ -73,8 +85,10 @@ export class App {
     // otherwise consume the stream first → "payload provided as parsed object" →
     // every webhook 400s. Skip body parsing for that one path.
     const stripeWebhookPath = `/api/${config.server.apiVersion}/payments/webhook/stripe`;
-    const skipWebhook = (parser: express.RequestHandler): express.RequestHandler =>
-      (req, res, next) => (req.path === stripeWebhookPath ? next() : parser(req, res, next));
+    const skipWebhook =
+      (parser: express.RequestHandler): express.RequestHandler =>
+      (req, res, next) =>
+        req.path === stripeWebhookPath ? next() : parser(req, res, next);
     this.app.use(skipWebhook(express.json({ limit: '10mb' })));
     this.app.use(skipWebhook(express.urlencoded({ extended: true, limit: '10mb' })));
     this.app.use(cookieParser());
@@ -93,13 +107,13 @@ export class App {
   }
 
   private initializeRoutes(): void {
-
     this.app.get('/health', async (req, res) => {
       const health: Record<string, any> = {
         success: true,
         message: 'Server is running',
         timestamp: new Date().toISOString(),
         environment: config.server.nodeEnv,
+        jobs: getJobMetrics(),
       };
 
       try {
@@ -128,6 +142,7 @@ export class App {
     this.app.use(`/api/${config.server.apiVersion}/memory`, memoryRoutes);
     this.app.use(`/api/${config.server.apiVersion}/voice`, voiceRoutes);
     this.app.use(`/api/${config.server.apiVersion}/config`, configRoutes);
+    this.app.use(`/api/${config.server.apiVersion}/openapi.json`, openApiRoutes);
     this.app.use(`/api/${config.server.apiVersion}/admin`, adminRoutes);
 
     if (process.env.NODE_ENV === 'production') {
@@ -147,24 +162,28 @@ export class App {
       Sentry.setupExpressErrorHandler(this.app);
     }
 
-    this.app.use((error: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
-      logger.error('Unhandled error:', {
-        error: error.message,
-        stack: error.stack,
-        url: req.url,
-        method: req.method,
-        ip: req.ip,
-        userAgent: req.get('User-Agent'),
-      });
+    this.app.use(
+      (error: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+        logger.error('Unhandled error:', {
+          error: error.message,
+          stack: error.stack,
+          url: req.url,
+          method: req.method,
+          ip: req.ip,
+          userAgent: req.get('User-Agent'),
+          requestId: res.getHeader('x-request-id'),
+        });
 
-      const isDevelopment = config.server.nodeEnv === 'development';
+        const isDevelopment = config.server.nodeEnv === 'development';
 
-      res.status(error.status || 500).json({
-        success: false,
-        error: error.message || 'Internal server error',
-        ...(isDevelopment && { stack: error.stack }),
-      });
-    });
+        res.status(error.status || 500).json({
+          success: false,
+          error: error.message || 'Internal server error',
+          requestId: res.getHeader('x-request-id'),
+          ...(isDevelopment && { stack: error.stack }),
+        });
+      }
+    );
 
     process.on('unhandledRejection', (reason, promise) => {
       logger.error('Unhandled Rejection at:', promise, 'reason:', reason);

@@ -1,6 +1,6 @@
 # Production Hardening Backlog
 
-**Status**: Pending — do this before first public deployment
+**Status**: Historical audit — core items are implemented; validate through CI before deployment
 **Estimated effort**: ~1 session (45–60 min of actual work)
 
 ---
@@ -14,7 +14,7 @@ The `.env` file is correctly in `.gitignore` — API keys are NOT exposed in git
 
 ---
 
-## Issues to Fix (Prioritized)
+## Original Issues (historical)
 
 ### P0 — Do before any public deployment
 

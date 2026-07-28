@@ -5,7 +5,7 @@ import {
   CreateReviewRequest,
   UpdateReviewRequest,
   ReviewSearchQuery,
-  AuthenticatedRequest
+  AuthenticatedRequest,
 } from '../types';
 import { reviewResponseAgent } from '../agents/review-response.agent';
 import { memoryRetriever } from '../services/memory/MemoryRetriever';
@@ -31,12 +31,12 @@ class ReviewController {
       res.status(201).json({
         success: true,
         data: review,
-        message: 'Review created successfully'
+        message: 'Review created successfully',
       });
     } catch (error) {
       res.status(400).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to create review'
+        error: error instanceof Error ? error.message : 'Failed to create review',
       });
     }
   };
@@ -51,19 +51,19 @@ class ReviewController {
       if (!review) {
         res.status(404).json({
           success: false,
-          error: 'Review not found'
+          error: 'Review not found',
         });
         return;
       }
 
       res.json({
         success: true,
-        data: review
+        data: review,
       });
     } catch (error) {
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to get review'
+        error: error instanceof Error ? error.message : 'Failed to get review',
       });
     }
   };
@@ -79,12 +79,12 @@ class ReviewController {
       res.json({
         success: true,
         data: review,
-        message: 'Review updated successfully'
+        message: 'Review updated successfully',
       });
     } catch (error) {
       res.status(400).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to update review'
+        error: error instanceof Error ? error.message : 'Failed to update review',
       });
     }
   };
@@ -98,12 +98,12 @@ class ReviewController {
 
       res.json({
         success: true,
-        message: 'Review deleted successfully'
+        message: 'Review deleted successfully',
       });
     } catch (error) {
       res.status(400).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to delete review'
+        error: error instanceof Error ? error.message : 'Failed to delete review',
       });
     }
   };
@@ -117,7 +117,7 @@ class ReviewController {
       if (!response || typeof response !== 'string') {
         res.status(400).json({
           success: false,
-          error: 'Response text is required'
+          error: 'Response text is required',
         });
         return;
       }
@@ -127,7 +127,7 @@ class ReviewController {
       res.json({
         success: true,
         data: review,
-        message: 'Response added successfully'
+        message: 'Response added successfully',
       });
 
       // Fire-and-forget: extract provider communication style from this review+response pair
@@ -136,14 +136,16 @@ class ReviewController {
           { role: 'user', content: `Review (${review.rating} stars): "${review.comment || ''}"` },
           { role: 'agent', content: response },
         ];
-        extractionAgent.extractAndWrite(turns, providerId, `review-response-${id}`, 'provider').catch(err => {
-          logger.error('[ReviewController] provider memory extraction failed', err);
-        });
+        extractionAgent
+          .extractAndWrite(turns, providerId, `review-response-${id}`, 'provider')
+          .catch((err) => {
+            logger.error('[ReviewController] provider memory extraction failed', err);
+          });
       }
     } catch (error) {
       res.status(400).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to add response'
+        error: error instanceof Error ? error.message : 'Failed to add response',
       });
     }
   };
@@ -167,12 +169,15 @@ class ReviewController {
           const memories = await memoryRetriever.retrieve(
             `resposta a avaliação ${review.rating} estrelas sobre ${review.booking?.serviceType || 'serviço'}`,
             providerId,
-            `review-draft-${id}`,
+            `review-draft-${id}`
           );
           memoryContext = contextInjector.format(memories) ?? undefined;
           constraintContext = contextInjector.formatConstraints(memories.procedural) ?? undefined;
         } catch (err) {
-          logger.warn('[ReviewController] memory retrieval failed for draft — proceeding without', err);
+          logger.warn(
+            '[ReviewController] memory retrieval failed for draft — proceeding without',
+            err
+          );
         }
       }
 
@@ -188,7 +193,7 @@ class ReviewController {
     } catch (error) {
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to generate draft'
+        error: error instanceof Error ? error.message : 'Failed to generate draft',
       });
     }
   };
@@ -204,7 +209,7 @@ class ReviewController {
     } catch (error) {
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to get provider reviews'
+        error: error instanceof Error ? error.message : 'Failed to get provider reviews',
       });
     }
   };
@@ -220,7 +225,7 @@ class ReviewController {
     } catch (error) {
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to get customer reviews'
+        error: error instanceof Error ? error.message : 'Failed to get customer reviews',
       });
     }
   };
@@ -234,7 +239,7 @@ class ReviewController {
       if (!reason || typeof reason !== 'string') {
         res.status(400).json({
           success: false,
-          error: 'Flag reason is required'
+          error: 'Flag reason is required',
         });
         return;
       }
@@ -244,12 +249,12 @@ class ReviewController {
       res.json({
         success: true,
         data: review,
-        message: 'Review flagged successfully'
+        message: 'Review flagged successfully',
       });
     } catch (error) {
       res.status(400).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to flag review'
+        error: error instanceof Error ? error.message : 'Failed to flag review',
       });
     }
   };
@@ -262,12 +267,12 @@ class ReviewController {
 
       res.json({
         success: true,
-        data: analytics
+        data: analytics,
       });
     } catch (error) {
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to get review analytics'
+        error: error instanceof Error ? error.message : 'Failed to get review analytics',
       });
     }
   };
@@ -282,7 +287,7 @@ class ReviewController {
     } catch (error) {
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to search reviews'
+        error: error instanceof Error ? error.message : 'Failed to search reviews',
       });
     }
   };
@@ -298,7 +303,7 @@ class ReviewController {
       if (!provider) {
         res.status(404).json({
           success: false,
-          message: 'Provider profile not found'
+          message: 'Provider profile not found',
         });
         return;
       }
@@ -309,7 +314,7 @@ class ReviewController {
     } catch (error) {
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to get provider reviews'
+        error: error instanceof Error ? error.message : 'Failed to get provider reviews',
       });
     }
   };
@@ -325,7 +330,7 @@ class ReviewController {
     } catch (error) {
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to get customer reviews'
+        error: error instanceof Error ? error.message : 'Failed to get customer reviews',
       });
     }
   };

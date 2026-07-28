@@ -159,7 +159,8 @@ Plan your search strategy before executing queries.`,
     // - Think about domain knowledge: "plumber" should match "Drain Cleaning"
     // - Use JSON.stringify() to include the catalog in the message
 
-    const systemPrompt = 'You are a service inference agent. Your job is to analyze user requirements and map them to matching service names from a catalog. The matching is based on semantic similarity and domain knowledge (e.g. A plumber handles drain cleaning, pipe repairs, leak detection. A painter does pressure washing, etc). Return only a JSON array of matching service names that exist exactly in the provided catalog.';
+    const systemPrompt =
+      'You are a service inference agent. Your job is to analyze user requirements and map them to matching service names from a catalog. The matching is based on semantic similarity and domain knowledge (e.g. A plumber handles drain cleaning, pipe repairs, leak detection. A painter does pressure washing, etc). Return only a JSON array of matching service names that exist exactly in the provided catalog.';
     const userMessage = `User requirements: Service type= ${JSON.stringify(requirements.serviceType)}; Service requirements= ${JSON.stringify(requirements.specialRequirements)}\nAvailable services: ${JSON.stringify(serviceCatalog)}`;
 
     const response = await anthropicService.callClaude({
@@ -225,9 +226,9 @@ Plan your search strategy before executing queries.`,
           providerId: provider.id,
           businessName: provider.businessName,
           pricing: provider.pricing || {
-              baseRate: 0,
-              currency: 'USD',
-              rateType: 'quote' as const,
+            baseRate: 0,
+            currency: 'USD',
+            rateType: 'quote' as const,
           },
           rating: provider.rating,
           totalReviews: provider.totalReviews,
@@ -243,7 +244,7 @@ Plan your search strategy before executing queries.`,
           matchScore: 0,
           services: provider.services,
         })
-      ); 
+      );
 
       // Step 4: Calculate match scores for each provider
       providerResults.forEach((provider) => {
@@ -251,9 +252,7 @@ Plan your search strategy before executing queries.`,
       });
 
       // Step 5: Sort by match score and take top 5
-      const topProviders = providerResults
-        .sort((a, b) => b.matchScore - a.matchScore)
-        .slice(0, 5);
+      const topProviders = providerResults.sort((a, b) => b.matchScore - a.matchScore).slice(0, 5);
 
       // Step 6: Build output with metadata
       const output: SearchAgentOutput = {
@@ -364,7 +363,7 @@ Plan your search strategy before executing queries.`,
 
   private calculateBudgetScore(
     provider: ProviderSearchResult,
-    userBudget?: {min?: number; max?: number; hasFlexibleBudget?: boolean}
+    userBudget?: { min?: number; max?: number; hasFlexibleBudget?: boolean }
   ): number {
     // If no budget provided, return neutral score of 1.0
     if (!userBudget || !userBudget.max) {
@@ -372,33 +371,33 @@ Plan your search strategy before executing queries.`,
     }
     if (provider.pricing.baseRate <= userBudget.max) {
       return 1.0;
-    }
-    else{
+    } else {
       const overBudgetAmount = provider.pricing.baseRate - userBudget.max;
-      const  penalty = overBudgetAmount / userBudget.max;
+      const penalty = overBudgetAmount / userBudget.max;
       return Math.max(0, 1.0 - penalty);
     }
   }
   private calculateAvailabilityScore(
     provider: ProviderSearchResult,
-    timingRequirements?: { preferredDate?: string;preferredTime?: string; isFlexible?: boolean }
+    timingRequirements?: { preferredDate?: string; preferredTime?: string; isFlexible?: boolean }
   ): number {
-    if ((!timingRequirements?.preferredDate && !timingRequirements?.preferredTime) || timingRequirements?.isFlexible) {
+    if (
+      (!timingRequirements?.preferredDate && !timingRequirements?.preferredTime) ||
+      timingRequirements?.isFlexible
+    ) {
       return 1.0;
-    }
-    else{
+    } else {
       if (provider.availableHours) {
-        const daysAvailable = Object.values(provider.availableHours).filter((day) => day.available).length;
+        const daysAvailable = Object.values(provider.availableHours).filter(
+          (day) => day.available
+        ).length;
         return daysAvailable / 7;
       }
       return 0;
     }
   }
 
-  private calculateMatchScore(
-    provider: ProviderSearchResult,
-    input: SearchAgentInput
-  ): number {
+  private calculateMatchScore(provider: ProviderSearchResult, input: SearchAgentInput): number {
     const qualityScore = this.calculateQualityScore(provider);
     const budgetScore = this.calculateBudgetScore(provider, input.requirements.budget);
     const availabilityScore = this.calculateAvailabilityScore(provider, input.requirements.timing);
@@ -414,26 +413,24 @@ Plan your search strategy before executing queries.`,
   /**
    * Reflect on search results quality
    */
-  async reflect(
-    _output: SearchAgentOutput,
-    _input: SearchAgentInput
-  ): Promise<ReflectionResult> {
-     const improvements: string[] = [];
-        // Check 1: Did we find enough providers?
+  async reflect(_output: SearchAgentOutput, _input: SearchAgentInput): Promise<ReflectionResult> {
+    const improvements: string[] = [];
+    // Check 1: Did we find enough providers?
     if (_output.providers.length === 0) {
       improvements.push('No providers found - broaden search criteria');
     }
 
     // Check 2: Are match scores reasonable?
     // Hint: Use .every() to check if ALL scores are below 0.3
-    const allScoresLow = _output.providers.every(provider => provider.matchScore < 0.3);
+    const allScoresLow = _output.providers.every((provider) => provider.matchScore < 0.3);
     if (allScoresLow) {
       improvements.push('All match scores are low - adjust ranking algorithm');
     }
 
     // Check 3: Are results diverse? (not all same business)
     // Hint: Use Set to get unique business names, compare size to total
-    const uniqueBusinesses = new Set( _output.providers.map(provider => provider.businessName)).size;
+    const uniqueBusinesses = new Set(_output.providers.map((provider) => provider.businessName))
+      .size;
     if (uniqueBusinesses === 1 && _output.providers.length > 1) {
       improvements.push('All results are from same business - need more diversity');
     }

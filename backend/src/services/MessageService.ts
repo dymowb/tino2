@@ -25,7 +25,10 @@ function toPublicMessage(message: Message | null | undefined): any {
     sender: toPublicUser((message as any).sender),
     receiver: toPublicUser((message as any).receiver),
     replyToMessage: (message as any).replyToMessage
-      ? { ...(message as any).replyToMessage, sender: toPublicUser((message as any).replyToMessage.sender) }
+      ? {
+          ...(message as any).replyToMessage,
+          sender: toPublicUser((message as any).replyToMessage.sender),
+        }
       : (message as any).replyToMessage,
   };
 }
@@ -47,7 +50,10 @@ export class MessageService {
   }
 
   // Conversation Management
-  async createConversation(userId: string, conversationData: CreateConversationRequest): Promise<any> {
+  async createConversation(
+    userId: string,
+    conversationData: CreateConversationRequest
+  ): Promise<any> {
     try {
       // Resolve the participant set. For a booking-scoped conversation, the participants are
       // ALWAYS exactly the two booking parties (the customer and the provider's user). We never
@@ -69,7 +75,9 @@ export class MessageService {
         if (!isParty) {
           throw new Error('Access denied: you are not a party to this booking');
         }
-        allParticipantIds = Array.from(new Set([booking.customerId, providerUserId].filter(Boolean) as string[]));
+        allParticipantIds = Array.from(
+          new Set([booking.customerId, providerUserId].filter(Boolean) as string[])
+        );
       } else {
         // Ensure the requesting user is included in participants
         allParticipantIds = Array.from(new Set([userId, ...conversationData.participantIds]));
@@ -93,14 +101,18 @@ export class MessageService {
           // Only reuse the existing conversation when its participants are EXACTLY the two
           // booking parties. A record with any other participant set was squatted/poisoned
           // (e.g. created before this check existed) — deactivate it and create a clean one.
-          const existingIds = new Set((existing.participants || []).map(p => p.id));
-          const sameParties = existingIds.size === allParticipantIds.length
-            && allParticipantIds.every(id => existingIds.has(id));
+          const existingIds = new Set((existing.participants || []).map((p) => p.id));
+          const sameParties =
+            existingIds.size === allParticipantIds.length &&
+            allParticipantIds.every((id) => existingIds.has(id));
           if (sameParties) {
             return this.shapeConversation(existing);
           }
           await this.conversationRepository.update(existing.id, { isActive: false });
-          logger.warn('Deactivated mis-scoped booking conversation', { conversationId: existing.id, bookingId });
+          logger.warn('Deactivated mis-scoped booking conversation', {
+            conversationId: existing.id,
+            bookingId,
+          });
         }
         // No valid booking-specific conversation yet — fall through to create one
       } else if (conversationData.type === 'direct' || !conversationData.type) {
@@ -139,7 +151,9 @@ export class MessageService {
         metadata: conversationData.metadata,
       });
 
-      const savedConversation = await this.conversationRepository.save(conversation) as Conversation;
+      const savedConversation = (await this.conversationRepository.save(
+        conversation
+      )) as Conversation;
 
       // Explicitly insert all participants into the junction table
       for (const participantId of allParticipantIds) {
@@ -149,7 +163,11 @@ export class MessageService {
             [savedConversation.id, participantId]
           );
         } catch (insertErr) {
-          logger.error('[createConversation] junction INSERT failed', { conversationId: savedConversation.id, participantId, insertErr });
+          logger.error('[createConversation] junction INSERT failed', {
+            conversationId: savedConversation.id,
+            participantId,
+            insertErr,
+          });
           throw insertErr;
         }
       }
@@ -158,7 +176,7 @@ export class MessageService {
 
       // Emit to all participants (sanitized — never leak user PII)
       if (this.io) {
-        allParticipantIds.forEach(participantId => {
+        allParticipantIds.forEach((participantId) => {
           this.io!.to(`user_${participantId}`).emit('conversation:new', {
             conversation: shaped,
           });
@@ -167,7 +185,7 @@ export class MessageService {
 
       logger.info('Conversation created', {
         conversationId: savedConversation.id,
-        participantCount: allParticipantIds.length
+        participantCount: allParticipantIds.length,
       });
 
       return shaped;
@@ -240,7 +258,9 @@ export class MessageService {
 
       // Surface whether messaging is closed (booking finalized) so the chat UI
       // can disable the composer and explain why.
-      const { bookingStatus, messagingClosed } = await this.getBookingMessagingState(conversation.metadata);
+      const { bookingStatus, messagingClosed } = await this.getBookingMessagingState(
+        conversation.metadata
+      );
 
       return {
         ...conversation,
@@ -289,7 +309,8 @@ export class MessageService {
         .where('memberFilter.id = :userId', { userId });
 
       if (type) idQuery.andWhere('conversation.type = :type', { type });
-      if (isActive !== undefined) idQuery.andWhere('conversation.isActive = :isActive', { isActive });
+      if (isActive !== undefined)
+        idQuery.andWhere('conversation.isActive = :isActive', { isActive });
 
       if (sortBy === 'title') {
         idQuery.orderBy('conversation.title', order);
@@ -303,7 +324,7 @@ export class MessageService {
 
       const total = await idQuery.getCount();
       const idRows = await idQuery.offset(offset).limit(limit).getRawMany();
-      const orderedIds: string[] = idRows.map(r => r.id);
+      const orderedIds: string[] = idRows.map((r) => r.id);
 
       // Step 2: hydrate the page of conversations with ALL participants.
       const hydrated = orderedIds.length
@@ -314,14 +335,16 @@ export class MessageService {
         : [];
 
       // Preserve the SQL ordering (find() does not guarantee it)
-      const byId = new Map(hydrated.map(c => [c.id, c]));
-      const conversations = orderedIds.map(id => byId.get(id)!).filter(Boolean);
+      const byId = new Map(hydrated.map((c) => [c.id, c]));
+      const conversations = orderedIds.map((id) => byId.get(id)!).filter(Boolean);
 
       // Drop orphaned conversations that somehow lost a participant (defensive — never render
       // a one-sided "?" conversation).
-      const valid = conversations.filter(c => (c.participants?.length ?? 0) >= 2 || c.type !== ConversationType.DIRECT);
+      const valid = conversations.filter(
+        (c) => (c.participants?.length ?? 0) >= 2 || c.type !== ConversationType.DIRECT
+      );
 
-      const conversationIds = valid.map(c => c.id);
+      const conversationIds = valid.map((c) => c.id);
 
       // Batch-load last message per conversation + unread counts for this user — avoids N+1.
       const lastMessageMap = new Map<string, any>();
@@ -367,7 +390,7 @@ export class MessageService {
       }
 
       // Shape the public DTO: sanitized participants + lastMessage + unreadCount
-      const shaped = valid.map(c => ({
+      const shaped = valid.map((c) => ({
         id: c.id,
         type: c.type,
         title: c.title,
@@ -423,8 +446,9 @@ export class MessageService {
       }
 
       // Find the receiver (for direct conversations; undefined for group/support chats)
-      const receiverId = conversation.participants
-        .find(participant => participant.id !== senderId)?.id;
+      const receiverId = conversation.participants.find(
+        (participant) => participant.id !== senderId
+      )?.id;
 
       // Create message
       const message = this.messageRepository.create({
@@ -437,21 +461,23 @@ export class MessageService {
         replyToMessageId: messageData.replyToMessageId,
       });
 
-      const savedMessage = await this.messageRepository.save(message) as Message;
+      const savedMessage = (await this.messageRepository.save(message)) as Message;
 
       // Notify recipient of new message
       if (receiverId) {
-        notificationService.createNotification(receiverId, {
-          type: NotificationType.MESSAGE,
-          title: 'New Message',
-          message: messageData.message.substring(0, 100),
-          titleKey: 'titles.new_message',
-          // body is the user's message text — left as-is (not translated).
-          // MessagingPage selects the conversation from the ?conversationId query param;
-          // a path like /messages/<id> matches no route and falls through to home.
-          actionUrl: `/messages?conversationId=${messageData.conversationId}`,
-          metadata: { conversationId: messageData.conversationId },
-        }).catch(err => logger.error('Failed to send message notification:', err));
+        notificationService
+          .createNotification(receiverId, {
+            type: NotificationType.MESSAGE,
+            title: 'New Message',
+            message: messageData.message.substring(0, 100),
+            titleKey: 'titles.new_message',
+            // body is the user's message text — left as-is (not translated).
+            // MessagingPage selects the conversation from the ?conversationId query param;
+            // a path like /messages/<id> matches no route and falls through to home.
+            actionUrl: `/messages?conversationId=${messageData.conversationId}`,
+            metadata: { conversationId: messageData.conversationId },
+          })
+          .catch((err) => logger.error('Failed to send message notification:', err));
       }
 
       // Update lastMessageId/At using update() — avoids TypeORM M2M cascade that would
@@ -473,7 +499,7 @@ export class MessageService {
 
       // Emit real-time message to all conversation participants (sanitized — never leak user PII)
       if (this.io && messageWithSender) {
-        conversation.participants.forEach(participant => {
+        conversation.participants.forEach((participant) => {
           this.io!.to(`user_${participant.id}`).emit('message:new', {
             message: publicMessage,
             conversationId: messageData.conversationId,
@@ -484,7 +510,7 @@ export class MessageService {
       logger.info('Message sent', {
         messageId: savedMessage.id,
         senderId,
-        conversationId: messageData.conversationId
+        conversationId: messageData.conversationId,
       });
 
       return publicMessage;
@@ -542,7 +568,10 @@ export class MessageService {
       }
 
       // Apply sorting
-      queryBuilder = queryBuilder.orderBy('message.createdAt', sortOrder.toUpperCase() as 'ASC' | 'DESC');
+      queryBuilder = queryBuilder.orderBy(
+        'message.createdAt',
+        sortOrder.toUpperCase() as 'ASC' | 'DESC'
+      );
 
       // Apply pagination
       const offset = (page - 1) * limit;
@@ -567,10 +596,10 @@ export class MessageService {
       const result = await this.messageRepository
         .createQueryBuilder()
         .update(Message)
-        .set({ 
-          isRead: true, 
+        .set({
+          isRead: true,
           readAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where('conversationId = :conversationId', { conversationId })
         .andWhere('receiverId = :userId', { userId })
@@ -595,7 +624,11 @@ export class MessageService {
     }
   }
 
-  async updateMessage(messageId: string, senderId: string, updateData: UpdateMessageRequest): Promise<Message> {
+  async updateMessage(
+    messageId: string,
+    senderId: string,
+    updateData: UpdateMessageRequest
+  ): Promise<Message> {
     try {
       const message = await this.messageRepository.findOne({
         where: { id: messageId, senderId },

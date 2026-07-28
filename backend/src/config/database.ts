@@ -6,9 +6,11 @@ const options: DataSourceOptions = {
   type: 'postgres',
   url: process.env.DATABASE_URL,
   synchronize: false,
-  logging: !isProduction,
+  logging: !isProduction && process.env.NODE_ENV !== 'test',
   entities: [__dirname + '/../models/' + (isProduction ? '*.js' : '*.ts')],
-  migrations: [isProduction ? 'dist/migrations/**/*.js' : 'src/migrations/**/*.ts'],
+  // Memory/pgvector migrations have their own DataSource. Do not recurse into
+  // migrations/memory here or the app database will incorrectly require pgvector.
+  migrations: [isProduction ? 'dist/migrations/*.js' : 'src/migrations/*.ts'],
   ssl: isProduction ? { rejectUnauthorized: false } : false,
   poolSize: 20,
   extra: {

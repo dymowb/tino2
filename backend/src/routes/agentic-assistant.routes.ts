@@ -74,9 +74,6 @@ router.post(
  * GET /api/v1/agentic-assistant/stats
  * Get system statistics
  */
-router.get(
-  '/stats',
-  AgenticAssistantController.getStats.bind(AgenticAssistantController)
-);
+router.get('/stats', AgenticAssistantController.getStats.bind(AgenticAssistantController));
 
 export default router;

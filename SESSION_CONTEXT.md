@@ -3,6 +3,23 @@
 > Lean by design (per CLAUDE.md): current status + roadmap + resume point only.
 > Detailed completed-work notes live in `Tests/history/HISTORICAL_CONTEXT.md` and git history.
 
+## Current Status (2026-07-27) — Reliability and product-quality follow-up
+
+- Added a tested quote → booking → escrow hold → completion → capture lifecycle; fixed captured bookings retaining a stale `pending` payment status.
+- Accepted quotes are idempotent at both service and database layers.
+- Added structured request IDs, JSON logs, background-job metrics, an API contract endpoint, and 24-hour booking reminders.
+- Added frontend Vitest coverage, actionable provider onboarding, and scored quote-comparison highlights.
+- CI now validates frontend tests; root/backend production dependency gates remain clean.
+
+## Current Status (2026-07-27) — Stabilization pass complete
+
+- Runtime is standardized on Node 22.12; dormant MongoDB and Browserbase server code is removed.
+- Backend validation uses disposable PostgreSQL/pgvector databases and real migrations. The supported Jest suite has 18 passing integration tests.
+- Browser coverage is consolidated around the current product: nine Chromium smoke journeys cover public, customer, provider, admin, responsive, i18n, accessibility, security, and API surfaces.
+- CI now performs clean installs, a high/critical production dependency audit, backend type/format/lint/test checks, the frontend build, and Chromium Playwright tests.
+- Frontend routes are lazy-loaded and production output is split into stable framework/feature chunks.
+- Production services and production data were not changed during this pass.
+
 ## Current Status (2026-06-16) — Loose-ends cleanup ✅ COMPLETE + deployed to prod
 All plan workstreams done, committed to **main**, and live on newtino.com. Commits: `901cc17` WS4, `ecc62f1` WS1, `d0721a7`+`faeab25` WS3 (i18n now fully swept), `1de7daf` WS5, `dc846e8`/`6d495ef` WS2 (escrow+webhooks), `5cdcdb3` notification mark-read, plus the Places key + Stripe key/webhook env fixes. Dev servers :3001→dev :3002; prod :3000.
 

@@ -15,15 +15,56 @@ export interface SmsResponse {
 }
 
 export interface SmsTemplate {
-  bookingConfirmation: (params: { customerName: string; serviceName: string; date: string; providerName: string }) => string;
-  bookingReminder: (params: { customerName: string; serviceName: string; date: string; time: string }) => string;
-  bookingCancellation: (params: { customerName: string; serviceName: string; date: string; reason?: string }) => string;
-  quoteReceived: (params: { customerName: string; providerName: string; serviceType: string; amount: number }) => string;
-  paymentConfirmation: (params: { customerName: string; amount: number; serviceName: string }) => string;
-  serviceStarted: (params: { customerName: string; providerName: string; serviceName: string }) => string;
-  serviceCompleted: (params: { customerName: string; providerName: string; serviceName: string }) => string;
-  providerAssigned: (params: { customerName: string; providerName: string; serviceName: string; date: string }) => string;
-  reviewRequest: (params: { customerName: string; providerName: string; serviceName: string }) => string;
+  bookingConfirmation: (params: {
+    customerName: string;
+    serviceName: string;
+    date: string;
+    providerName: string;
+  }) => string;
+  bookingReminder: (params: {
+    customerName: string;
+    serviceName: string;
+    date: string;
+    time: string;
+  }) => string;
+  bookingCancellation: (params: {
+    customerName: string;
+    serviceName: string;
+    date: string;
+    reason?: string;
+  }) => string;
+  quoteReceived: (params: {
+    customerName: string;
+    providerName: string;
+    serviceType: string;
+    amount: number;
+  }) => string;
+  paymentConfirmation: (params: {
+    customerName: string;
+    amount: number;
+    serviceName: string;
+  }) => string;
+  serviceStarted: (params: {
+    customerName: string;
+    providerName: string;
+    serviceName: string;
+  }) => string;
+  serviceCompleted: (params: {
+    customerName: string;
+    providerName: string;
+    serviceName: string;
+  }) => string;
+  providerAssigned: (params: {
+    customerName: string;
+    providerName: string;
+    serviceName: string;
+    date: string;
+  }) => string;
+  reviewRequest: (params: {
+    customerName: string;
+    providerName: string;
+    serviceName: string;
+  }) => string;
   verificationCode: (params: { code: string; expiryMinutes: number }) => string;
 }
 
@@ -37,10 +78,7 @@ export class SmsService {
       return;
     }
 
-    this.client = twilio(
-      config.external.twilio.accountSid,
-      config.external.twilio.authToken
-    );
+    this.client = twilio(config.external.twilio.accountSid, config.external.twilio.authToken);
     this.fromNumber = config.external.twilio.phoneNumber;
   }
 
@@ -83,9 +121,9 @@ export class SmsService {
     for (const message of messages) {
       const result = await this.sendSms(message);
       results.push(result);
-      
+
       // Add a small delay between messages to respect rate limits
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
     return results;
@@ -216,12 +254,12 @@ export class SmsService {
   formatPhoneNumber(phoneNumber: string, defaultCountryCode: string = '+1'): string {
     // Remove all non-numeric characters
     const cleaned = phoneNumber.replace(/\D/g, '');
-    
+
     // If it doesn't start with country code, add default
     if (!cleaned.startsWith('1') && defaultCountryCode === '+1') {
       return `+1${cleaned}`;
     }
-    
+
     return `+${cleaned}`;
   }
 

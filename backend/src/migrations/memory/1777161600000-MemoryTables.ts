@@ -37,8 +37,12 @@ export class MemoryTables1777161600000 implements MigrationInterface {
         USING hnsw (embedding vector_cosine_ops)
         WITH (m=16, ef_construction=64)
     `);
-    await queryRunner.query(`CREATE INDEX sem_mem_user_active ON semantic_memories (user_id, is_active)`);
-    await queryRunner.query(`CREATE INDEX sem_mem_expires ON semantic_memories (expires_at) WHERE expires_at IS NOT NULL`);
+    await queryRunner.query(
+      `CREATE INDEX sem_mem_user_active ON semantic_memories (user_id, is_active)`
+    );
+    await queryRunner.query(
+      `CREATE INDEX sem_mem_expires ON semantic_memories (expires_at) WHERE expires_at IS NOT NULL`
+    );
 
     // ── episodic_memories ──────────────────────────────────────────────────
     await queryRunner.query(`
@@ -66,9 +70,15 @@ export class MemoryTables1777161600000 implements MigrationInterface {
         USING hnsw (embedding vector_cosine_ops)
         WITH (m=16, ef_construction=64)
     `);
-    await queryRunner.query(`CREATE INDEX epi_mem_user_active ON episodic_memories (user_id, is_active)`);
-    await queryRunner.query(`CREATE INDEX epi_mem_occurred ON episodic_memories (user_id, occurred_at DESC)`);
-    await queryRunner.query(`CREATE INDEX epi_mem_expires ON episodic_memories (expires_at) WHERE expires_at IS NOT NULL`);
+    await queryRunner.query(
+      `CREATE INDEX epi_mem_user_active ON episodic_memories (user_id, is_active)`
+    );
+    await queryRunner.query(
+      `CREATE INDEX epi_mem_occurred ON episodic_memories (user_id, occurred_at DESC)`
+    );
+    await queryRunner.query(
+      `CREATE INDEX epi_mem_expires ON episodic_memories (expires_at) WHERE expires_at IS NOT NULL`
+    );
 
     // ── procedural_rules ──────────────────────────────────────────────────
     await queryRunner.query(`
@@ -91,7 +101,9 @@ export class MemoryTables1777161600000 implements MigrationInterface {
       )
     `);
 
-    await queryRunner.query(`CREATE INDEX proc_rules_user_status ON procedural_rules (user_id, status)`);
+    await queryRunner.query(
+      `CREATE INDEX proc_rules_user_status ON procedural_rules (user_id, status)`
+    );
 
     // ── memory_retrieval_log ───────────────────────────────────────────────
     // Kept for 30 days — purely observability, not part of the memory store
@@ -109,7 +121,9 @@ export class MemoryTables1777161600000 implements MigrationInterface {
       )
     `);
 
-    await queryRunner.query(`CREATE INDEX ret_log_user ON memory_retrieval_log (user_id, retrieved_at DESC)`);
+    await queryRunner.query(
+      `CREATE INDEX ret_log_user ON memory_retrieval_log (user_id, retrieved_at DESC)`
+    );
 
     // ── memory_write_log ───────────────────────────────────────────────────
     await queryRunner.query(`
@@ -128,7 +142,9 @@ export class MemoryTables1777161600000 implements MigrationInterface {
       )
     `);
 
-    await queryRunner.query(`CREATE INDEX write_log_user ON memory_write_log (user_id, created_at DESC)`);
+    await queryRunner.query(
+      `CREATE INDEX write_log_user ON memory_write_log (user_id, created_at DESC)`
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

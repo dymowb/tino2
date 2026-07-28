@@ -1,12 +1,20 @@
-# Tino 2 - Phase 10 End-to-End Testing Suite
+# Tino 2 Product Validation Suite
 
 ## Overview
 
-This comprehensive test suite validates all functional and non-functional requirements of the Tino 2 domestic service platform using Playwright for end-to-end testing, performance validation, and accessibility compliance.
+This Playwright suite validates the current Tino 2 product contract against
+isolated PostgreSQL databases and dedicated application ports. It covers the
+customer, provider, and admin surfaces plus API authorization, security headers,
+basic performance, accessibility landmarks, and responsive navigation.
+
+The former Phase 10 scenario inventory described endpoints and selectors that
+were never implemented. It was replaced in July 2026 with executable,
+current-product coverage. Historical requirement traceability remains in
+`TEST_REGISTRY.md` and git history.
 
 ## Test Coverage
 
-### Functional Requirements (FR-001 to FR-081)
+### Supported coverage
 - **User Management System** (FR-001 to FR-011)
 - **Provider Management System** (FR-012 to FR-021)
 - **Service Discovery and GPS Integration** (FR-022 to FR-028)

@@ -116,7 +116,7 @@ export class CoordinatorAgent {
 
   async executeWorkflow(
     workflowId: string,
-    onProgress?: (stage: string, message: string) => void,
+    onProgress?: (stage: string, message: string) => void
   ): Promise<void> {
     try {
       // Mark workflow as active
@@ -131,7 +131,7 @@ export class CoordinatorAgent {
       const memories = await memoryRetriever.retrieve(
         initWorkflow.context.userRequest,
         initWorkflow.userId,
-        workflowId,
+        workflowId
       );
       const memoryBlock = contextInjector.format(memories);
       const constraintBlock = contextInjector.formatConstraints(memories.procedural);
@@ -143,8 +143,8 @@ export class CoordinatorAgent {
       }
       logger.info(
         `[Coordinator] Memory for workflow ${workflowId}: ` +
-        `${memories.semantic.length}s ${memories.episodic.length}e ${memories.procedural.length}p ` +
-        `(constraints=${constraintBlock ? 'yes' : 'no'})`,
+          `${memories.semantic.length}s ${memories.episodic.length}e ${memories.procedural.length}p ` +
+          `(constraints=${constraintBlock ? 'yes' : 'no'})`
       );
 
       // Execute agents in sequence until done
@@ -189,8 +189,12 @@ export class CoordinatorAgent {
           // Always include userRequest as the first turn — conversationMessages only holds
           // multi-turn follow-ups and would be empty for single-turn completions.
           const turns = [
-            { role: 'user' as const, content: workflow.context.userRequest, timestamp: workflow.context.createdAt },
-            ...(workflow.context.conversationMessages ?? []).map(m => ({
+            {
+              role: 'user' as const,
+              content: workflow.context.userRequest,
+              timestamp: workflow.context.createdAt,
+            },
+            ...(workflow.context.conversationMessages ?? []).map((m) => ({
               role: m.role as 'user' | 'agent',
               content: m.content,
               timestamp: m.timestamp,
@@ -198,15 +202,16 @@ export class CoordinatorAgent {
           ];
           extractionAgent
             .extractAndWrite(turns, workflow.userId, workflowId)
-            .catch(err =>
-              logger.error(`[ExtractionAgent] async write failed workflow=${workflowId}`, err),
+            .catch((err) =>
+              logger.error(`[ExtractionAgent] async write failed workflow=${workflowId}`, err)
             );
 
           return;
         }
 
         // Emit progress before running the agent so the client gets immediate feedback
-        const message = CoordinatorAgent.STAGE_MESSAGES[nextAgentName] ?? `Running ${nextAgentName}...`;
+        const message =
+          CoordinatorAgent.STAGE_MESSAGES[nextAgentName] ?? `Running ${nextAgentName}...`;
         onProgress?.(nextAgentName, message);
 
         // Execute the agent
@@ -388,7 +393,7 @@ export class CoordinatorAgent {
       case 'requirements':
         return {
           userRequest: workflow.context.userRequest,
-          conversationHistory: workflow.agentHistory.map(activity => ({
+          conversationHistory: workflow.agentHistory.map((activity) => ({
             agentName: activity.agentName,
             timestamp: activity.startTime,
             output: activity.output,

@@ -9,7 +9,7 @@ const PROXY_TARGET = process.env.VITE_PROXY_TARGET || 'http://localhost:3000';
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 3001,
+    port: Number(process.env.VITE_PORT || 3001),
     host: true,
     proxy: {
       '/api': {
@@ -33,6 +33,22 @@ export default defineConfig({
   build: {
     outDir: 'build',
     sourcemap: true,
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (id.includes('@mui/icons-material')) return 'vendor-mui-icons';
+          if (id.includes('@mui/x-date-pickers')) return 'vendor-mui-dates';
+          if (id.includes('@emotion')) return 'vendor-emotion';
+          if (id.includes('@mui')) return 'vendor-mui';
+          if (id.includes('@tanstack')) return 'vendor-query';
+          if (id.includes('@stripe')) return 'vendor-stripe';
+          if (id.includes('framer-motion')) return 'vendor-motion';
+          return undefined;
+        },
+      },
+    },
   },
   // Allow existing process.env.NODE_ENV checks to keep working
   define: {

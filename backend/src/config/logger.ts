@@ -1,13 +1,16 @@
 import winston from 'winston';
 import config from './environment';
+import { getRequestContext } from '@/observability/requestContext';
 
 const logFormat = winston.format.combine(
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  winston.format.timestamp(),
   winston.format.errors({ stack: true }),
-  winston.format.colorize({ all: true }),
-  winston.format.printf(({ timestamp, level, message, stack }) => {
-    return `${timestamp} ${level}: ${stack || message}`;
-  })
+  winston.format((info) => {
+    const context = getRequestContext();
+    if (context) info.requestId = context.requestId;
+    return info;
+  })(),
+  winston.format.json()
 );
 
 const logger = winston.createLogger({
@@ -15,7 +18,7 @@ const logger = winston.createLogger({
   format: logFormat,
   transports: [
     new winston.transports.Console({
-      format: winston.format.combine(winston.format.colorize(), winston.format.simple()),
+      format: logFormat,
     }),
   ],
 });

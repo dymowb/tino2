@@ -25,10 +25,10 @@ export class Conversation {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ 
-    type: 'varchar', 
-    enum: ConversationType, 
-    default: ConversationType.DIRECT 
+  @Column({
+    type: 'varchar',
+    enum: ConversationType,
+    default: ConversationType.DIRECT,
   })
   type: ConversationType;
 

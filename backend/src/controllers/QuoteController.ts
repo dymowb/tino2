@@ -80,7 +80,7 @@ export class QuoteController {
 
       res.status(statusCode).json(response);
     }
-  }
+  };
 
   getQuoteRequest = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -138,7 +138,7 @@ export class QuoteController {
 
       res.status(500).json(response);
     }
-  }
+  };
 
   updateQuoteRequest = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -184,7 +184,11 @@ export class QuoteController {
         updateData.expiresAt = new Date(updateData.expiresAt);
       }
 
-      const updatedRequest = await quoteService.updateQuoteRequest(requestId, customerId, updateData);
+      const updatedRequest = await quoteService.updateQuoteRequest(
+        requestId,
+        customerId,
+        updateData
+      );
 
       const response: ApiResponse = {
         success: true,
@@ -216,7 +220,7 @@ export class QuoteController {
 
       res.status(statusCode).json(response);
     }
-  }
+  };
 
   closeQuoteRequest = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -275,7 +279,7 @@ export class QuoteController {
 
       res.status(statusCode).json(response);
     }
-  }
+  };
 
   searchQuoteRequests = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -330,7 +334,7 @@ export class QuoteController {
 
       res.status(500).json(response);
     }
-  }
+  };
 
   // Quote Endpoints
   createQuote = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -407,7 +411,7 @@ export class QuoteController {
 
       res.status(statusCode).json(response);
     }
-  }
+  };
 
   getQuote = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -450,7 +454,7 @@ export class QuoteController {
 
       res.status(500).json(response);
     }
-  }
+  };
 
   updateQuote = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -525,7 +529,7 @@ export class QuoteController {
 
       res.status(statusCode).json(response);
     }
-  }
+  };
 
   updateQuoteStatus = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -602,7 +606,7 @@ export class QuoteController {
 
       res.status(statusCode).json(response);
     }
-  }
+  };
 
   searchQuotes = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -651,7 +655,7 @@ export class QuoteController {
 
       res.status(500).json(response);
     }
-  }
+  };
 
   withdrawQuote = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -709,7 +713,7 @@ export class QuoteController {
 
       res.status(statusCode).json(response);
     }
-  }
+  };
 
   getQuotesForRequest = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -762,7 +766,7 @@ export class QuoteController {
 
       res.status(500).json(response);
     }
-  }
+  };
 }
 
 export default new QuoteController();

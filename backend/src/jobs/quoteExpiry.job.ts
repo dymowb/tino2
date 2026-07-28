@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import quoteService from '@/services/QuoteService';
 import logger from '@/config/logger';
+import { instrumentJob } from '@/observability/jobMetrics';
 
 /**
  * Expires stale quotes and quote requests. The QuoteService methods were always
@@ -15,8 +16,9 @@ export async function runQuoteExpiry(): Promise<void> {
 // Runs hourly — quote validity windows are short (hours/days), so daily is too coarse.
 export function startQuoteExpiryJob(): void {
   cron.schedule('0 * * * *', async () => {
-    logger.info('Running quote-expiry job...');
-    await runQuoteExpiry();
+    await instrumentJob('quote-expiry', runQuoteExpiry).catch((error) =>
+      logger.error('Quote expiry job failed', { error })
+    );
   });
   logger.info('Quote-expiry cron job scheduled (hourly)');
 }

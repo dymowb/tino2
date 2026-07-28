@@ -295,7 +295,7 @@ export const paymentValidation = {
   createIntent: [
     body('bookingId').isUUID().withMessage('Valid booking ID is required'),
     body('amount')
-      .isFloat({ min: 0.50, max: 999999.99 })
+      .isFloat({ min: 0.5, max: 999999.99 })
       .withMessage('Payment amount must be between $0.50 and $999,999.99'),
     body('currency')
       .optional()
@@ -307,9 +307,7 @@ export const paymentValidation = {
       .withMessage('Valid payment method is required'),
   ],
 
-  confirmPayment: [
-    param('id').isUUID().withMessage('Valid payment ID is required'),
-  ],
+  confirmPayment: [param('id').isUUID().withMessage('Valid payment ID is required')],
 
   refund: [
     param('id').isUUID().withMessage('Valid payment ID is required'),
@@ -327,16 +325,18 @@ export const paymentValidation = {
   getHistory: [
     query('status')
       .optional()
-      .isIn(['pending', 'processing', 'succeeded', 'failed', 'cancelled', 'refunded', 'partially_refunded'])
+      .isIn([
+        'pending',
+        'processing',
+        'succeeded',
+        'failed',
+        'cancelled',
+        'refunded',
+        'partially_refunded',
+      ])
       .withMessage('Valid payment status is required'),
-    query('startDate')
-      .optional()
-      .isISO8601()
-      .withMessage('Valid start date is required'),
-    query('endDate')
-      .optional()
-      .isISO8601()
-      .withMessage('Valid end date is required'),
+    query('startDate').optional().isISO8601().withMessage('Valid start date is required'),
+    query('endDate').optional().isISO8601().withMessage('Valid end date is required'),
     ...paginationValidation,
   ],
 };

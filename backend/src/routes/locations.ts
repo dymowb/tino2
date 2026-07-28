@@ -46,7 +46,7 @@ router.get('/providers/search', async (req, res) => {
       limit: 50,
     });
 
-    const providers = result.data.map(provider => ({
+    const providers = result.data.map((provider) => ({
       id: provider.id,
       businessName: provider.businessName,
       description: provider.description,

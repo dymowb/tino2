@@ -20,12 +20,12 @@ import { AgentActivity } from './agent.types';
  * Tracks the overall state of the workflow (not individual agents).
  */
 export enum WorkflowStatus {
-  PENDING = 'pending',       // Workflow created but not started
-  ACTIVE = 'active',         // Currently processing
+  PENDING = 'pending', // Workflow created but not started
+  ACTIVE = 'active', // Currently processing
   WAITING_FOR_USER = 'waiting_for_user', // Paused, waiting for user input
-  COMPLETED = 'completed',   // Successfully finished
-  FAILED = 'failed',         // Encountered unrecoverable error
-  CANCELLED = 'cancelled',   // User or system cancelled
+  COMPLETED = 'completed', // Successfully finished
+  FAILED = 'failed', // Encountered unrecoverable error
+  CANCELLED = 'cancelled', // User or system cancelled
 }
 
 /**
@@ -204,13 +204,13 @@ export interface CheckResult {
  * Verification Report (output from Verification Agent)
  */
 export interface VerificationReport {
-  passed: boolean;          // true only if ALL checks passed
-  qualityScore: number;     // 0-10 scale
+  passed: boolean; // true only if ALL checks passed
+  qualityScore: number; // 0-10 scale
   requirementsCoverage: CheckResult;
   recommendationQuality: CheckResult;
   completeness: CheckResult;
   suggestions: string[];
-  timedOut?: boolean;       // true when verification was skipped due to timeout
+  timedOut?: boolean; // true when verification was skipped due to timeout
 }
 
 /**

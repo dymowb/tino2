@@ -108,20 +108,29 @@ export class BookingService {
         specialInstructions: bookingData.specialInstructions,
       });
 
-      const savedBooking = await this.bookingRepository.save(booking) as Booking;
-      logger.info(`Booking created`, { bookingId: savedBooking.id, customerId, providerId: bookingData.providerId });
+      const savedBooking = (await this.bookingRepository.save(booking)) as Booking;
+      logger.info(`Booking created`, {
+        bookingId: savedBooking.id,
+        customerId,
+        providerId: bookingData.providerId,
+      });
 
       // Notify provider of new booking request
-      notificationService.createNotification(provider.userId, {
-        type: NotificationType.BOOKING,
-        title: 'New Booking Request',
-        message: `${customer.firstName} ${customer.lastName} has requested a booking for ${bookingData.serviceType}`,
-        titleKey: 'titles.new_booking',
-        messageKey: 'body.new_booking',
-        i18nParams: { customer: `${customer.firstName} ${customer.lastName}`, service: bookingData.serviceType },
-        actionUrl: `/bookings?bookingId=${savedBooking.id}`,
-        metadata: { bookingId: savedBooking.id },
-      }).catch(err => logger.error('Failed to send booking notification:', err));
+      notificationService
+        .createNotification(provider.userId, {
+          type: NotificationType.BOOKING,
+          title: 'New Booking Request',
+          message: `${customer.firstName} ${customer.lastName} has requested a booking for ${bookingData.serviceType}`,
+          titleKey: 'titles.new_booking',
+          messageKey: 'body.new_booking',
+          i18nParams: {
+            customer: `${customer.firstName} ${customer.lastName}`,
+            service: bookingData.serviceType,
+          },
+          actionUrl: `/bookings?bookingId=${savedBooking.id}`,
+          metadata: { bookingId: savedBooking.id },
+        })
+        .catch((err) => logger.error('Failed to send booking notification:', err));
 
       return savedBooking;
     } catch (error) {
@@ -141,10 +150,9 @@ export class BookingService {
 
       // If userId is provided, ensure they have access to this booking
       if (userId) {
-        queryBuilder.andWhere(
-          '(booking.customerId = :userId OR provider.userId = :userId)',
-          { userId }
-        );
+        queryBuilder.andWhere('(booking.customerId = :userId OR provider.userId = :userId)', {
+          userId,
+        });
       }
 
       const booking = await queryBuilder.getOne();
@@ -155,7 +163,11 @@ export class BookingService {
     }
   }
 
-  async updateBooking(bookingId: string, userId: string, updateData: UpdateBookingRequest): Promise<Booking> {
+  async updateBooking(
+    bookingId: string,
+    userId: string,
+    updateData: UpdateBookingRequest
+  ): Promise<Booking> {
     try {
       const booking = await this.getBookingById(bookingId, userId);
 
@@ -215,9 +227,9 @@ export class BookingService {
   }
 
   async updateBookingStatus(
-    bookingId: string, 
-    userId: string, 
-    newStatus: string, 
+    bookingId: string,
+    userId: string,
+    newStatus: string,
     userRole: 'customer' | 'provider'
   ): Promise<Booking> {
     try {
@@ -237,7 +249,9 @@ export class BookingService {
       );
 
       if (!isValidTransition) {
-        throw new Error(`Invalid status transition from ${booking.status} to ${newStatus} for ${userRole}`);
+        throw new Error(
+          `Invalid status transition from ${booking.status} to ${newStatus} for ${userRole}`
+        );
       }
 
       booking.status = newStatus as BookingStatus;
@@ -252,20 +266,21 @@ export class BookingService {
       logger.info(`Booking status updated`, { bookingId, newStatus, userId, userRole });
 
       // Notify the other party about the status change
-      const notifyUserId = userRole === 'provider'
-        ? updatedBooking.customerId
-        : updatedBooking.provider?.userId;
+      const notifyUserId =
+        userRole === 'provider' ? updatedBooking.customerId : updatedBooking.provider?.userId;
       if (notifyUserId) {
-        notificationService.createNotification(notifyUserId, {
-          type: NotificationType.BOOKING,
-          title: 'Booking Status Updated',
-          message: `Your booking status has been updated to: ${newStatus}`,
-          titleKey: 'titles.booking_updated',
-          messageKey: 'body.booking_updated',
-          i18nParams: { status: newStatus },
-          actionUrl: `/bookings?bookingId=${bookingId}`,
-          metadata: { bookingId, newStatus },
-        }).catch(err => logger.error('Failed to send status notification:', err));
+        notificationService
+          .createNotification(notifyUserId, {
+            type: NotificationType.BOOKING,
+            title: 'Booking Status Updated',
+            message: `Your booking status has been updated to: ${newStatus}`,
+            titleKey: 'titles.booking_updated',
+            messageKey: 'body.booking_updated',
+            i18nParams: { status: newStatus },
+            actionUrl: `/bookings?bookingId=${bookingId}`,
+            metadata: { bookingId, newStatus },
+          })
+          .catch((err) => logger.error('Failed to send status notification:', err));
       }
 
       return updatedBooking;
@@ -332,10 +347,13 @@ export class BookingService {
       }
 
       // Apply sorting
-      const sortField = sortBy === 'date' ? 'booking.scheduledDate' :
-                       sortBy === 'status' ? 'booking.status' :
-                       'booking.createdAt';
-      
+      const sortField =
+        sortBy === 'date'
+          ? 'booking.scheduledDate'
+          : sortBy === 'status'
+            ? 'booking.status'
+            : 'booking.createdAt';
+
       queryBuilder = queryBuilder.orderBy(sortField, sortOrder.toUpperCase() as 'ASC' | 'DESC');
 
       // Apply pagination
@@ -363,7 +381,12 @@ export class BookingService {
     }
   }
 
-  async cancelBooking(bookingId: string, userId: string, userRole: 'customer' | 'provider', reason?: string): Promise<Booking> {
+  async cancelBooking(
+    bookingId: string,
+    userId: string,
+    userRole: 'customer' | 'provider',
+    reason?: string
+  ): Promise<Booking> {
     try {
       const booking = await this.getBookingById(bookingId, userId);
 
@@ -398,15 +421,19 @@ export class BookingService {
       // Notify the other party
       const notifyUserId = isCustomer ? booking.provider?.userId : booking.customerId;
       if (notifyUserId) {
-        notificationService.createNotification(notifyUserId, {
-          type: NotificationType.BOOKING,
-          title: 'Booking Cancelled',
-          message: `A booking has been cancelled by the ${isCustomer ? 'customer' : 'provider'}.`,
-          titleKey: 'titles.booking_cancelled',
-          messageKey: isCustomer ? 'body.booking_cancelled_by_customer' : 'body.booking_cancelled_by_provider',
-          actionUrl: `/bookings?bookingId=${bookingId}`,
-          metadata: { bookingId },
-        }).catch(err => logger.error('Failed to send cancellation notification:', err));
+        notificationService
+          .createNotification(notifyUserId, {
+            type: NotificationType.BOOKING,
+            title: 'Booking Cancelled',
+            message: `A booking has been cancelled by the ${isCustomer ? 'customer' : 'provider'}.`,
+            titleKey: 'titles.booking_cancelled',
+            messageKey: isCustomer
+              ? 'body.booking_cancelled_by_customer'
+              : 'body.booking_cancelled_by_provider',
+            actionUrl: `/bookings?bookingId=${bookingId}`,
+            metadata: { bookingId },
+          })
+          .catch((err) => logger.error('Failed to send cancellation notification:', err));
       }
 
       return cancelledBooking;
@@ -428,11 +455,11 @@ export class BookingService {
     let queryBuilder = this.bookingRepository
       .createQueryBuilder('booking')
       .where('booking.providerId = :providerId', { providerId })
-      .andWhere('booking.status IN (:...activeStatuses)', { 
-        activeStatuses: ['pending', 'confirmed', 'in_progress'] 
+      .andWhere('booking.status IN (:...activeStatuses)', {
+        activeStatuses: ['pending', 'confirmed', 'in_progress'],
       })
       .andWhere(
-        '(booking.scheduledDate < :endTime AND booking.scheduledDate + (booking.estimatedDuration * interval \'1 minute\') > :startTime)',
+        "(booking.scheduledDate < :endTime AND booking.scheduledDate + (booking.estimatedDuration * interval '1 minute') > :startTime)",
         { startTime, endTime }
       );
 

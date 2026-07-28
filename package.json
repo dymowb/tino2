@@ -2,8 +2,12 @@
   "name": "tino-2-e2e-tests",
   "version": "1.0.0",
   "description": "End-to-end test suite for Tino 2 domestic service platform",
+  "engines": {
+    "node": ">=22.12.0 <23"
+  },
   "scripts": {
     "test": "playwright test",
+    "test:ci": "playwright test --project=chromium",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
     "test:ui": "playwright test --ui",
@@ -11,29 +15,28 @@
     "test:firefox": "playwright test --project=firefox",
     "test:webkit": "playwright test --project=webkit",
     "test:mobile": "playwright test --project='Mobile Chrome' --project='Mobile Safari'",
-    "test:functional": "playwright test Tests/test-suites/functional",
-    "test:non-functional": "playwright test Tests/test-suites/non-functional",
-    "test:performance": "playwright test Tests/test-suites/non-functional/performance",
-    "test:security": "playwright test Tests/test-suites/non-functional/security",
-    "test:accessibility": "playwright test Tests/test-suites/non-functional/accessibility",
-    "test:user-management": "playwright test Tests/test-suites/functional/user-management",
-    "test:provider-management": "playwright test Tests/test-suites/functional/provider-management",
-    "test:service-discovery": "playwright test Tests/test-suites/functional/service-discovery",
-    "test:quote-management": "playwright test Tests/test-suites/functional/quote-management",
-    "test:booking-management": "playwright test Tests/test-suites/functional/booking-management",
-    "test:messaging": "playwright test Tests/test-suites/functional/messaging",
-    "test:payments": "playwright test Tests/test-suites/functional/payments",
-    "test:reviews": "playwright test Tests/test-suites/functional/reviews",
+    "test:functional": "playwright test --grep \"experience|domain\"",
+    "test:non-functional": "playwright test --grep \"platform, security, and performance\"",
+    "test:performance": "playwright test --grep \"response time\"",
+    "test:security": "playwright test --grep \"security|protected|malformed\"",
+    "test:accessibility": "playwright test --grep \"keyboard-reachable\"",
+    "test:user-management": "playwright test --grep \"customer experience\"",
+    "test:provider-management": "playwright test --grep \"provider experience\"",
+    "test:service-discovery": "playwright test --grep \"discovery\"",
+    "test:quote-management": "playwright test --grep \"domain contracts\"",
+    "test:booking-management": "playwright test --grep \"lifecycle|domain contracts\"",
+    "test:messaging": "playwright test --grep \"messaging\"",
+    "test:payments": "playwright test --grep \"payment\"",
+    "test:reviews": "playwright test --grep \"reviews\"",
     "report": "playwright show-report",
     "install-browsers": "playwright install",
-    "test-setup": "playwright test --project=setup"
+    "test-setup": "playwright test --grep \"health, headers\" --project=chromium"
   },
   "dependencies": {
-    "@browserbasehq/sdk": "^2.6.0",
-    "axios": "^1.12.0"
+    "axios": "^1.18.1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.59.1",
+    "@playwright/test": "^1.62.0",
     "@types/node": "^22.0.0"
   },
   "keywords": [

@@ -65,7 +65,8 @@ export const memoryConfig = {
       cpf: /\d{3}[\.\s]?\d{3}[\.\s]?\d{3}[\-\s]?\d{2}/g,
       email: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
       creditCard: /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/g,
-      streetAddress: /(?:rua|avenida|av\.|r\.|alameda|travessa)\s+[^\n,]{5,40},?\s*n[°º\.]?\s*\d+/gi,
+      streetAddress:
+        /(?:rua|avenida|av\.|r\.|alameda|travessa)\s+[^\n,]{5,40},?\s*n[°º\.]?\s*\d+/gi,
     },
   },
 };

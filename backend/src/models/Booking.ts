@@ -37,6 +37,7 @@ export enum PaymentStatus {
 @Index(['providerId'])
 @Index(['status'])
 @Index(['scheduledDate'])
+@Index(['quoteId'], { unique: true, where: '"quoteId" IS NOT NULL' })
 export class Booking {
   @PrimaryGeneratedColumn('uuid')
   id: string;

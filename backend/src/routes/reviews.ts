@@ -8,12 +8,8 @@ const router = Router();
 
 // Validation rules
 const createReviewValidation = [
-  body('bookingId')
-    .isUUID()
-    .withMessage('Booking ID must be a valid UUID'),
-  body('rating')
-    .isFloat({ min: 1, max: 5 })
-    .withMessage('Rating must be between 1 and 5'),
+  body('bookingId').isUUID().withMessage('Booking ID must be a valid UUID'),
+  body('rating').isFloat({ min: 1, max: 5 }).withMessage('Rating must be between 1 and 5'),
   body('comment')
     .optional()
     .isString()
@@ -23,14 +19,8 @@ const createReviewValidation = [
     .optional()
     .isArray({ max: 10 })
     .withMessage('Images must be an array with maximum 10 items'),
-  body('images.*')
-    .optional()
-    .isString()
-    .withMessage('Each image must be a string'),
-  body('criteria')
-    .optional()
-    .isObject()
-    .withMessage('Criteria must be an object'),
+  body('images.*').optional().isString().withMessage('Each image must be a string'),
+  body('criteria').optional().isObject().withMessage('Criteria must be an object'),
   body('criteria.quality')
     .optional()
     .isFloat({ min: 1, max: 5 })
@@ -54,9 +44,7 @@ const createReviewValidation = [
 ];
 
 const updateReviewValidation = [
-  param('id')
-    .isUUID()
-    .withMessage('Review ID must be a valid UUID'),
+  param('id').isUUID().withMessage('Review ID must be a valid UUID'),
   body('rating')
     .optional()
     .isFloat({ min: 1, max: 5 })
@@ -70,20 +58,12 @@ const updateReviewValidation = [
     .optional()
     .isArray({ max: 10 })
     .withMessage('Images must be an array with maximum 10 items'),
-  body('images.*')
-    .optional()
-    .isString()
-    .withMessage('Each image must be a string'),
-  body('criteria')
-    .optional()
-    .isObject()
-    .withMessage('Criteria must be an object'),
+  body('images.*').optional().isString().withMessage('Each image must be a string'),
+  body('criteria').optional().isObject().withMessage('Criteria must be an object'),
 ];
 
 const providerResponseValidation = [
-  param('id')
-    .isUUID()
-    .withMessage('Review ID must be a valid UUID'),
+  param('id').isUUID().withMessage('Review ID must be a valid UUID'),
   body('response')
     .isString()
     .isLength({ min: 1, max: 1000 })
@@ -91,9 +71,7 @@ const providerResponseValidation = [
 ];
 
 const flagReviewValidation = [
-  param('id')
-    .isUUID()
-    .withMessage('Review ID must be a valid UUID'),
+  param('id').isUUID().withMessage('Review ID must be a valid UUID'),
   body('reason')
     .isString()
     .isLength({ min: 10, max: 500 })
@@ -101,10 +79,7 @@ const flagReviewValidation = [
 ];
 
 const reviewSearchValidation = [
-  query('page')
-    .optional()
-    .isInt({ min: 1 })
-    .withMessage('Page must be a positive integer'),
+  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit')
     .optional()
     .isInt({ min: 1, max: 50 })
@@ -121,22 +96,13 @@ const reviewSearchValidation = [
     .optional()
     .isIn(['createdAt', 'rating', 'updatedAt'])
     .withMessage('Sort by must be one of: createdAt, rating, updatedAt'),
-  query('sortOrder')
-    .optional()
-    .isIn(['asc', 'desc'])
-    .withMessage('Sort order must be asc or desc'),
+  query('sortOrder').optional().isIn(['asc', 'desc']).withMessage('Sort order must be asc or desc'),
 ];
 
-const uuidParamValidation = [
-  param('id')
-    .isUUID()
-    .withMessage('ID must be a valid UUID'),
-];
+const uuidParamValidation = [param('id').isUUID().withMessage('ID must be a valid UUID')];
 
 const providerIdValidation = [
-  param('providerId')
-    .isUUID()
-    .withMessage('Provider ID must be a valid UUID'),
+  param('providerId').isUUID().withMessage('Provider ID must be a valid UUID'),
 ];
 
 // NOTE: the literal `/provider/my` MUST be registered before `/provider/:providerId`,
@@ -166,12 +132,7 @@ router.get(
   reviewController.searchReviews
 );
 
-router.get(
-  '/:id',
-  uuidParamValidation,
-  handleValidationErrors,
-  reviewController.getReviewById
-);
+router.get('/:id', uuidParamValidation, handleValidationErrors, reviewController.getReviewById);
 
 router.get(
   '/analytics/:providerId',
@@ -184,26 +145,11 @@ router.get(
 router.use(authenticate);
 
 // Customer routes
-router.post(
-  '/',
-  createReviewValidation,
-  handleValidationErrors,
-  reviewController.createReview
-);
+router.post('/', createReviewValidation, handleValidationErrors, reviewController.createReview);
 
-router.put(
-  '/:id',
-  updateReviewValidation,
-  handleValidationErrors,
-  reviewController.updateReview
-);
+router.put('/:id', updateReviewValidation, handleValidationErrors, reviewController.updateReview);
 
-router.delete(
-  '/:id',
-  uuidParamValidation,
-  handleValidationErrors,
-  reviewController.deleteReview
-);
+router.delete('/:id', uuidParamValidation, handleValidationErrors, reviewController.deleteReview);
 
 router.get(
   '/customer/my',
@@ -228,11 +174,6 @@ router.post(
 );
 
 // General authenticated routes
-router.post(
-  '/:id/flag',
-  flagReviewValidation,
-  handleValidationErrors,
-  reviewController.flagReview
-);
+router.post('/:id/flag', flagReviewValidation, handleValidationErrors, reviewController.flagReview);
 
 export default router;

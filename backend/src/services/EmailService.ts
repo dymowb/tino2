@@ -25,18 +25,79 @@ export interface EmailResponse {
 }
 
 export interface EmailTemplate {
-  welcome: (params: { name: string; loginUrl: string }) => { subject: string; html: string; text: string };
-  bookingConfirmation: (params: { customerName: string; serviceName: string; date: string; providerName: string; bookingId: string }) => { subject: string; html: string; text: string };
-  bookingReminder: (params: { customerName: string; serviceName: string; date: string; time: string; location: string }) => { subject: string; html: string; text: string };
-  bookingCancellation: (params: { customerName: string; serviceName: string; date: string; reason?: string }) => { subject: string; html: string; text: string };
-  quoteReceived: (params: { customerName: string; providerName: string; serviceType: string; amount: number; quoteId: string; viewUrl: string }) => { subject: string; html: string; text: string };
-  paymentConfirmation: (params: { customerName: string; amount: number; serviceName: string; transactionId: string; receiptUrl: string }) => { subject: string; html: string; text: string };
-  serviceCompleted: (params: { customerName: string; providerName: string; serviceName: string; reviewUrl: string }) => { subject: string; html: string; text: string };
-  reviewRequest: (params: { customerName: string; providerName: string; serviceName: string; reviewUrl: string }) => { subject: string; html: string; text: string };
-  passwordReset: (params: { name: string; resetUrl: string; expiryHours: number }) => { subject: string; html: string; text: string };
-  emailVerification: (params: { name: string; verificationUrl: string; code: string }) => { subject: string; html: string; text: string };
-  providerApproval: (params: { providerName: string; businessName: string; loginUrl: string }) => { subject: string; html: string; text: string };
-  providerRejection: (params: { providerName: string; businessName: string; reason: string; reapplyUrl: string }) => { subject: string; html: string; text: string };
+  welcome: (params: { name: string; loginUrl: string }) => {
+    subject: string;
+    html: string;
+    text: string;
+  };
+  bookingConfirmation: (params: {
+    customerName: string;
+    serviceName: string;
+    date: string;
+    providerName: string;
+    bookingId: string;
+  }) => { subject: string; html: string; text: string };
+  bookingReminder: (params: {
+    customerName: string;
+    serviceName: string;
+    date: string;
+    time: string;
+    location: string;
+  }) => { subject: string; html: string; text: string };
+  bookingCancellation: (params: {
+    customerName: string;
+    serviceName: string;
+    date: string;
+    reason?: string;
+  }) => { subject: string; html: string; text: string };
+  quoteReceived: (params: {
+    customerName: string;
+    providerName: string;
+    serviceType: string;
+    amount: number;
+    quoteId: string;
+    viewUrl: string;
+  }) => { subject: string; html: string; text: string };
+  paymentConfirmation: (params: {
+    customerName: string;
+    amount: number;
+    serviceName: string;
+    transactionId: string;
+    receiptUrl: string;
+  }) => { subject: string; html: string; text: string };
+  serviceCompleted: (params: {
+    customerName: string;
+    providerName: string;
+    serviceName: string;
+    reviewUrl: string;
+  }) => { subject: string; html: string; text: string };
+  reviewRequest: (params: {
+    customerName: string;
+    providerName: string;
+    serviceName: string;
+    reviewUrl: string;
+  }) => { subject: string; html: string; text: string };
+  passwordReset: (params: { name: string; resetUrl: string; expiryHours: number }) => {
+    subject: string;
+    html: string;
+    text: string;
+  };
+  emailVerification: (params: { name: string; verificationUrl: string; code: string }) => {
+    subject: string;
+    html: string;
+    text: string;
+  };
+  providerApproval: (params: { providerName: string; businessName: string; loginUrl: string }) => {
+    subject: string;
+    html: string;
+    text: string;
+  };
+  providerRejection: (params: {
+    providerName: string;
+    businessName: string;
+    reason: string;
+    reapplyUrl: string;
+  }) => { subject: string; html: string; text: string };
 }
 
 export class EmailService {
@@ -55,7 +116,9 @@ export class EmailService {
       logger.info('Email service initialized with SendGrid');
     } else {
       this.useSendGrid = false;
-      this.ready = this.initializeSmtp();
+      // Tests must never create an external Ethereal account or leave network
+      // handles open. Delivery callers already handle an unconfigured transport.
+      this.ready = config.server.nodeEnv === 'test' ? Promise.resolve() : this.initializeSmtp();
     }
   }
 
@@ -107,7 +170,7 @@ export class EmailService {
       html: message.html,
       cc: message.cc,
       bcc: message.bcc,
-      attachments: message.attachments?.map(att => ({
+      attachments: message.attachments?.map((att) => ({
         filename: att.filename,
         content: att.content.toString('base64'),
         type: att.contentType || 'application/octet-stream',
@@ -116,9 +179,9 @@ export class EmailService {
     };
 
     const result = await sgMail.send(msg);
-    
-    logger.info(`Email sent successfully via SendGrid to ${message.to}`, { 
-      messageId: result[0].headers['x-message-id'] 
+
+    logger.info(`Email sent successfully via SendGrid to ${message.to}`, {
+      messageId: result[0].headers['x-message-id'],
     });
 
     return {
@@ -170,9 +233,9 @@ export class EmailService {
     for (const message of messages) {
       const result = await this.sendEmail(message);
       results.push(result);
-      
+
       // Add delay to respect rate limits
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
     return results;
@@ -199,7 +262,13 @@ export class EmailService {
    */
   async sendBookingConfirmationEmail(
     email: string,
-    params: { customerName: string; serviceName: string; date: string; providerName: string; bookingId: string }
+    params: {
+      customerName: string;
+      serviceName: string;
+      date: string;
+      providerName: string;
+      bookingId: string;
+    }
   ): Promise<EmailResponse> {
     const template = this.templates.bookingConfirmation(params);
     return this.sendEmail({
@@ -215,7 +284,13 @@ export class EmailService {
    */
   async sendBookingReminderEmail(
     email: string,
-    params: { customerName: string; serviceName: string; date: string; time: string; location: string }
+    params: {
+      customerName: string;
+      serviceName: string;
+      date: string;
+      time: string;
+      location: string;
+    }
   ): Promise<EmailResponse> {
     const template = this.templates.bookingReminder(params);
     return this.sendEmail({
@@ -247,7 +322,14 @@ export class EmailService {
    */
   async sendQuoteReceivedEmail(
     email: string,
-    params: { customerName: string; providerName: string; serviceType: string; amount: number; quoteId: string; viewUrl: string }
+    params: {
+      customerName: string;
+      providerName: string;
+      serviceType: string;
+      amount: number;
+      quoteId: string;
+      viewUrl: string;
+    }
   ): Promise<EmailResponse> {
     const template = this.templates.quoteReceived(params);
     return this.sendEmail({
@@ -263,7 +345,13 @@ export class EmailService {
    */
   async sendPaymentConfirmationEmail(
     email: string,
-    params: { customerName: string; amount: number; serviceName: string; transactionId: string; receiptUrl: string }
+    params: {
+      customerName: string;
+      amount: number;
+      serviceName: string;
+      transactionId: string;
+      receiptUrl: string;
+    }
   ): Promise<EmailResponse> {
     const template = this.templates.paymentConfirmation(params);
     return this.sendEmail({

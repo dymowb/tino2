@@ -36,7 +36,7 @@ export class AdminController {
         pendingProviders,
         activeBookings,
         flaggedReviews,
-        ratingRaw
+        ratingRaw,
       ] = await Promise.all([
         userRepository.count({ where: { isActive: true } }),
         providerRepository.count({ where: { isActive: true } }),
@@ -44,9 +44,18 @@ export class AdminController {
         reviewRepository.count({ where: { isFlagged: false } }),
         paymentRepository
           .createQueryBuilder('payment')
-          .select('SUM(CASE WHEN payment.status = \'succeeded\' THEN payment.platformFee ELSE 0 END)', 'total')
-          .select('SUM(CASE WHEN payment.status = \'succeeded\' THEN CAST(payment.amount AS float) ELSE 0 END)', 'gross')
-          .addSelect('SUM(CASE WHEN payment.status IN (\'refunded\', \'partially_refunded\') THEN CAST(payment.refundAmount AS float) ELSE 0 END)', 'refunds')
+          .select(
+            "SUM(CASE WHEN payment.status = 'succeeded' THEN payment.platformFee ELSE 0 END)",
+            'total'
+          )
+          .select(
+            "SUM(CASE WHEN payment.status = 'succeeded' THEN CAST(payment.amount AS float) ELSE 0 END)",
+            'gross'
+          )
+          .addSelect(
+            "SUM(CASE WHEN payment.status IN ('refunded', 'partially_refunded') THEN CAST(payment.refundAmount AS float) ELSE 0 END)",
+            'refunds'
+          )
           .getRawOne(),
         providerRepository.count({ where: { verifiedAt: IsNull() } }),
         bookingRepository.count({ where: { status: BookingStatus.IN_PROGRESS } }),
@@ -56,7 +65,7 @@ export class AdminController {
           .select('AVG(review.rating)', 'avg')
           .addSelect('COUNT(*)', 'count')
           .where('review.isFlagged = false')
-          .getRawOne()
+          .getRawOne(),
       ]);
 
       const totalRevenue = parseFloat(revenueRaw?.gross) || 0;
@@ -67,13 +76,13 @@ export class AdminController {
       // Get recent activities
       const recentUsers = await userRepository.find({
         order: { createdAt: 'DESC' },
-        take: 5
+        take: 5,
       });
 
       const recentBookings = await bookingRepository.find({
         relations: ['customer', 'provider'],
         order: { createdAt: 'DESC' },
-        take: 5
+        take: 5,
       });
 
       res.json({
@@ -90,13 +99,13 @@ export class AdminController {
             pendingProviders,
             activeBookings,
             flaggedReviews,
-            averageRating: averageRating != null ? Number(averageRating.toFixed(1)) : null
+            averageRating: averageRating != null ? Number(averageRating.toFixed(1)) : null,
           },
           recentActivities: {
             users: recentUsers,
-            bookings: recentBookings
-          }
-        }
+            bookings: recentBookings,
+          },
+        },
       });
 
       logger.info(`Admin dashboard accessed by ${req.user?.userId}`);
@@ -104,21 +113,15 @@ export class AdminController {
       logger.error('Error retrieving admin dashboard:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        error: 'Internal server error',
       });
     }
-  }
+  };
 
   // GET /api/admin/users - Manage users (FR-074)
   getUsers = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const { 
-        page = 1, 
-        limit = 20, 
-        userType, 
-        isActive, 
-        search 
-      } = req.query;
+      const { page = 1, limit = 20, userType, isActive, search } = req.query;
 
       const userRepository = AppDataSource.getRepository(User);
       const queryBuilder = userRepository.createQueryBuilder('user');
@@ -128,8 +131,8 @@ export class AdminController {
         queryBuilder.andWhere('user.userType = :userType', { userType });
       }
       if (isActive !== undefined) {
-        queryBuilder.andWhere('user.isActive = :isActive', { 
-          isActive: isActive === 'true' 
+        queryBuilder.andWhere('user.isActive = :isActive', {
+          isActive: isActive === 'true',
         });
       }
       if (search) {
@@ -143,8 +146,7 @@ export class AdminController {
       queryBuilder
         .orderBy('user.createdAt', 'DESC')
         .skip((Number(page) - 1) * Number(limit))
-        .take(Number(limit))
-;
+        .take(Number(limit));
 
       const [users, total] = await queryBuilder.getManyAndCount();
 
@@ -156,9 +158,9 @@ export class AdminController {
             page: Number(page),
             limit: Number(limit),
             total,
-            pages: Math.ceil(total / Number(limit))
-          }
-        }
+            pages: Math.ceil(total / Number(limit)),
+          },
+        },
       });
 
       logger.info(`Users list accessed by admin ${req.user?.userId}`);
@@ -166,10 +168,10 @@ export class AdminController {
       logger.error('Error retrieving users:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        error: 'Internal server error',
       });
     }
-  }
+  };
 
   // PUT /api/admin/users/:id/status - Update user status (FR-074)
   updateUserStatus = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -181,7 +183,7 @@ export class AdminController {
       if (id === req.user?.userId) {
         res.status(400).json({
           success: false,
-          error: t(req, 'admin.cannot_suspend_self')
+          error: t(req, 'admin.cannot_suspend_self'),
         });
         return;
       }
@@ -192,7 +194,7 @@ export class AdminController {
       if (!user) {
         res.status(404).json({
           success: false,
-          error: t(req, 'admin.user_not_found')
+          error: t(req, 'admin.user_not_found'),
         });
         return;
       }
@@ -220,7 +222,9 @@ export class AdminController {
       // must be unwound via the refund/dispute flow, so we leave them for admin handling.
       let cancelledCount = 0;
       if (!isActive && user.userType === UserType.PROVIDER) {
-        const provider = await AppDataSource.getRepository(Provider).findOne({ where: { userId: id } });
+        const provider = await AppDataSource.getRepository(Provider).findOne({
+          where: { userId: id },
+        });
         if (provider) {
           const bookingRepository = AppDataSource.getRepository(Booking);
           const affected = await bookingRepository.find({
@@ -236,16 +240,18 @@ export class AdminController {
             await bookingRepository.save(booking);
             cancelledCount++;
             if (booking.customerId) {
-              await notificationService.createNotification(booking.customerId, {
-                type: NotificationType.BOOKING,
-                title: t(req, 'admin.booking_cancelled_title'),
-                message: t(req, 'admin.booking_cancelled_msg', { service: booking.serviceType }),
-                titleKey: 'titles.booking_cancelled',
-                messageKey: 'body.booking_cancelled_admin',
-                i18nParams: { service: booking.serviceType },
-                actionUrl: `/bookings/${booking.id}`,
-                metadata: { bookingId: booking.id },
-              }).catch(() => {});
+              await notificationService
+                .createNotification(booking.customerId, {
+                  type: NotificationType.BOOKING,
+                  title: t(req, 'admin.booking_cancelled_title'),
+                  message: t(req, 'admin.booking_cancelled_msg', { service: booking.serviceType }),
+                  titleKey: 'titles.booking_cancelled',
+                  messageKey: 'body.booking_cancelled_admin',
+                  i18nParams: { service: booking.serviceType },
+                  actionUrl: `/bookings/${booking.id}`,
+                  metadata: { bookingId: booking.id },
+                })
+                .catch(() => {});
             }
           }
         }
@@ -265,10 +271,10 @@ export class AdminController {
       logger.error('Error updating user status:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        error: 'Internal server error',
       });
     }
-  }
+  };
 
   // GET /api/admin/providers/pending - Get pending provider verifications (FR-075)
   getPendingProviders = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -286,7 +292,7 @@ export class AdminController {
       });
 
       const total = await providerRepository.count({
-        where: { verifiedAt: IsNull() }
+        where: { verifiedAt: IsNull() },
       });
 
       res.json({
@@ -297,9 +303,9 @@ export class AdminController {
             page: Number(page),
             limit: Number(limit),
             total,
-            pages: Math.ceil(total / Number(limit))
-          }
-        }
+            pages: Math.ceil(total / Number(limit)),
+          },
+        },
       });
 
       logger.info(`Pending providers list accessed by admin ${req.user?.userId}`);
@@ -307,32 +313,27 @@ export class AdminController {
       logger.error('Error retrieving pending providers:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        error: 'Internal server error',
       });
     }
-  }
+  };
 
   // POST /api/admin/providers/:id/verify - Verify provider (FR-075)
   verifyProvider = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const { 
-        approved, 
-        notes, 
-        isBackgroundChecked, 
-        isInsured 
-      } = req.body;
+      const { approved, notes, isBackgroundChecked, isInsured } = req.body;
 
       const providerRepository = AppDataSource.getRepository(Provider);
       const provider = await providerRepository.findOne({
         where: { id },
-        relations: ['user']
+        relations: ['user'],
       });
 
       if (!provider) {
         res.status(404).json({
           success: false,
-          error: 'Provider not found'
+          error: 'Provider not found',
         });
         return;
       }
@@ -340,7 +341,7 @@ export class AdminController {
       if (approved) {
         provider.verifiedAt = new Date();
         provider.verifiedBy = req.user?.userId || '';
-        
+
         if (isBackgroundChecked !== undefined) {
           provider.isBackgroundChecked = isBackgroundChecked;
         }
@@ -360,7 +361,7 @@ export class AdminController {
       res.json({
         success: true,
         data: provider,
-        message: `Provider ${approved ? 'approved' : 'rejected'} successfully`
+        message: `Provider ${approved ? 'approved' : 'rejected'} successfully`,
       });
 
       logger.info(
@@ -370,10 +371,10 @@ export class AdminController {
       logger.error('Error verifying provider:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        error: 'Internal server error',
       });
     }
-  }
+  };
 
   // GET /api/admin/reviews/flagged - Get flagged reviews (FR-077, FR-081)
   getFlaggedReviews = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -391,7 +392,7 @@ export class AdminController {
       });
 
       const total = await reviewRepository.count({
-        where: { isFlagged: true }
+        where: { isFlagged: true },
       });
 
       res.json({
@@ -402,9 +403,9 @@ export class AdminController {
             page: Number(page),
             limit: Number(limit),
             total,
-            pages: Math.ceil(total / Number(limit))
-          }
-        }
+            pages: Math.ceil(total / Number(limit)),
+          },
+        },
       });
 
       logger.info(`Flagged reviews accessed by admin ${req.user?.userId}`);
@@ -412,10 +413,10 @@ export class AdminController {
       logger.error('Error retrieving flagged reviews:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        error: 'Internal server error',
       });
     }
-  }
+  };
 
   // PUT /api/admin/reviews/:id/moderate - Moderate review (FR-081)
   moderateReview = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -426,7 +427,7 @@ export class AdminController {
       if (!['approve', 'delete', 'keep_flagged'].includes(action)) {
         res.status(400).json({
           success: false,
-          error: 'Invalid action. Must be: approve, delete, or keep_flagged'
+          error: 'Invalid action. Must be: approve, delete, or keep_flagged',
         });
         return;
       }
@@ -434,13 +435,13 @@ export class AdminController {
       const reviewRepository = AppDataSource.getRepository(Review);
       const review = await reviewRepository.findOne({
         where: { id },
-        relations: ['customer', 'provider']
+        relations: ['customer', 'provider'],
       });
 
       if (!review) {
         res.status(404).json({
           success: false,
-          error: 'Review not found'
+          error: 'Review not found',
         });
         return;
       }
@@ -454,9 +455,11 @@ export class AdminController {
           await reviewRepository.remove(review);
           res.json({
             success: true,
-            message: 'Review deleted successfully'
+            message: 'Review deleted successfully',
           });
-          logger.info(`Review ${id} deleted by admin ${req.user?.userId}. Reason: ${reason || 'Not provided'}`);
+          logger.info(
+            `Review ${id} deleted by admin ${req.user?.userId}. Reason: ${reason || 'Not provided'}`
+          );
           return;
         case 'keep_flagged':
           review.flagReason = reason || 'Under review';
@@ -468,7 +471,7 @@ export class AdminController {
       res.json({
         success: true,
         data: review,
-        message: `Review ${action === 'approve' ? 'approved' : 'kept flagged'} successfully`
+        message: `Review ${action === 'approve' ? 'approved' : 'kept flagged'} successfully`,
       });
 
       logger.info(
@@ -478,16 +481,16 @@ export class AdminController {
       logger.error('Error moderating review:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        error: 'Internal server error',
       });
     }
-  }
+  };
 
   // GET /api/admin/analytics - Platform analytics (FR-076)
   getAnalytics = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { period = '30d' } = req.query; // 30d, 90d, 1y
-      
+
       let dateFilter: Date;
       switch (period) {
         case '90d':
@@ -541,8 +544,14 @@ export class AdminController {
       // Revenue summary: gross, refunds, net for the selected period
       const revenueSummaryRaw = await paymentRepository
         .createQueryBuilder('payment')
-        .select('SUM(CASE WHEN payment.status = \'succeeded\' THEN CAST(payment.amount AS float) ELSE 0 END)', 'grossRevenue')
-        .addSelect('SUM(CASE WHEN payment.status IN (\'refunded\', \'partially_refunded\') THEN CAST(payment.refundAmount AS float) ELSE 0 END)', 'refundedAmount')
+        .select(
+          "SUM(CASE WHEN payment.status = 'succeeded' THEN CAST(payment.amount AS float) ELSE 0 END)",
+          'grossRevenue'
+        )
+        .addSelect(
+          "SUM(CASE WHEN payment.status IN ('refunded', 'partially_refunded') THEN CAST(payment.refundAmount AS float) ELSE 0 END)",
+          'refundedAmount'
+        )
         .where('payment.createdAt >= :date', { date: dateFilter })
         .getRawOne();
 
@@ -561,8 +570,8 @@ export class AdminController {
           userGrowth,
           bookingTrends,
           revenueData,
-          revenueSummary
-        }
+          revenueSummary,
+        },
       });
 
       logger.info(`Analytics accessed by admin ${req.user?.userId} for period ${period}`);
@@ -570,10 +579,10 @@ export class AdminController {
       logger.error('Error retrieving analytics:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        error: 'Internal server error',
       });
     }
-  }
+  };
 
   // GET /api/admin/disputes — list IN_DISPUTE bookings (FR-077)
   getDisputes = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -599,8 +608,13 @@ export class AdminController {
         success: true,
         data: {
           disputes,
-          pagination: { page: Number(page), limit: Number(limit), total, pages: Math.ceil(total / Number(limit)) }
-        }
+          pagination: {
+            page: Number(page),
+            limit: Number(limit),
+            total,
+            pages: Math.ceil(total / Number(limit)),
+          },
+        },
       });
 
       logger.info(`Admin ${req.user?.userId} fetched disputes (${total} total)`);
@@ -608,7 +622,7 @@ export class AdminController {
       logger.error('Error retrieving disputes:', error);
       res.status(500).json({ success: false, error: 'Internal server error' });
     }
-  }
+  };
 
   // PUT /api/admin/disputes/:id/resolve — capture (provider wins) or cancel hold (customer wins)
   // Design note: two clear outcomes map directly to Stripe primitives:
@@ -670,31 +684,58 @@ export class AdminController {
       // render in their own selected language.
       const providerUserId = booking.provider?.userId;
       const title = t(req, 'dispute.resolved_title');
-      const msgKey = decision === 'capture' ? 'dispute.resolved_provider_msg' : 'dispute.resolved_customer_msg';
+      const msgKey =
+        decision === 'capture' ? 'dispute.resolved_provider_msg' : 'dispute.resolved_customer_msg';
       const msg = t(req, msgKey, { bookingId: id });
       const i18n = {
         titleKey: 'titles.dispute_resolved',
-        messageKey: decision === 'capture' ? 'body.dispute_resolved_provider' : 'body.dispute_resolved_customer',
+        messageKey:
+          decision === 'capture'
+            ? 'body.dispute_resolved_provider'
+            : 'body.dispute_resolved_customer',
         i18nParams: { bookingId: id },
       };
       if (booking.customerId) {
-        await notificationService.createNotification(booking.customerId, { type: NotificationType.BOOKING, title, message: msg, ...i18n, metadata: { bookingId: id } });
+        await notificationService.createNotification(booking.customerId, {
+          type: NotificationType.BOOKING,
+          title,
+          message: msg,
+          ...i18n,
+          metadata: { bookingId: id },
+        });
       }
       if (providerUserId) {
-        await notificationService.createNotification(providerUserId, { type: NotificationType.BOOKING, title, message: msg, ...i18n, metadata: { bookingId: id } });
+        await notificationService.createNotification(providerUserId, {
+          type: NotificationType.BOOKING,
+          title,
+          message: msg,
+          ...i18n,
+          metadata: { bookingId: id },
+        });
       }
 
-      res.json({ success: true, message: t(req, decision === 'capture' ? 'dispute.resolved_captured' : 'dispute.resolved_refunded'), data: { booking } });
-      logger.info(`Admin ${req.user?.userId} resolved dispute ${id}: ${decision}. Notes: ${adminNotes || 'none'}`);
+      res.json({
+        success: true,
+        message: t(
+          req,
+          decision === 'capture' ? 'dispute.resolved_captured' : 'dispute.resolved_refunded'
+        ),
+        data: { booking },
+      });
+      logger.info(
+        `Admin ${req.user?.userId} resolved dispute ${id}: ${decision}. Notes: ${adminNotes || 'none'}`
+      );
     } catch (error) {
       logger.error('Error resolving dispute:', error);
       res.status(500).json({ success: false, error: getStripeErrorMessage(error) });
     }
-  }
+  };
   // GET /admin/settings
   async getSettings(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const settings = await AppDataSource.getRepository(AppSettings).find({ order: { key: 'ASC' } });
+      const settings = await AppDataSource.getRepository(AppSettings).find({
+        order: { key: 'ASC' },
+      });
       res.json({ success: true, data: settings });
     } catch (error) {
       logger.error('Error fetching settings:', error);
@@ -711,10 +752,7 @@ export class AdminController {
         res.status(400).json({ success: false, error: 'value is required' });
         return;
       }
-      await AppDataSource.getRepository(AppSettings).upsert(
-        { key, value: String(value) },
-        ['key']
-      );
+      await AppDataSource.getRepository(AppSettings).upsert({ key, value: String(value) }, ['key']);
       const updated = await AppDataSource.getRepository(AppSettings).findOne({ where: { key } });
       res.json({ success: true, data: updated });
     } catch (error) {
@@ -727,7 +765,7 @@ export class AdminController {
   // targeted providers) and which providers responded. Supports ?search=<id-prefix>.
   getQuoteRequests = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const search = (req.query.search as string || '').trim();
+      const search = ((req.query.search as string) || '').trim();
       const qb = AppDataSource.getRepository(QuoteRequest)
         .createQueryBuilder('qr')
         .leftJoinAndSelect('qr.customer', 'customer')
@@ -741,17 +779,19 @@ export class AdminController {
       const requests = await qb.getMany();
 
       // Resolve targeted provider ids → business names in one query.
-      const targetIds = [...new Set(requests.flatMap(r => r.targetProviderIds || []))];
+      const targetIds = [...new Set(requests.flatMap((r) => r.targetProviderIds || []))];
       const targetProviders = targetIds.length
         ? await AppDataSource.getRepository(Provider).findByIds(targetIds)
         : [];
-      const nameById = new Map(targetProviders.map(p => [p.id, p.businessName]));
+      const nameById = new Map(targetProviders.map((p) => [p.id, p.businessName]));
 
       // For broadcast requests, compute the ACTUAL audience the same way provider
       // visibility does: active providers whose service categories cover the request's
       // category AND who are within its radius (mirrors QuoteService matching, incl.
       // the safe fallbacks). Lets admins confirm a request reached the right providers.
-      const activeProviders = await AppDataSource.getRepository(Provider).find({ where: { isActive: true } });
+      const activeProviders = await AppDataSource.getRepository(Provider).find({
+        where: { isActive: true },
+      });
       const coverage = new Map<string, Set<string>>();
       for (const p of activeProviders) {
         coverage.set(p.id, await serviceCategoryService.coverageFor(p.services || []));
@@ -762,20 +802,24 @@ export class AdminController {
         const reqLat = Number(r.location?.latitude);
         const reqLng = Number(r.location?.longitude);
         const radius = Number(r.searchRadius) || 25;
-        return activeProviders.filter(p => {
-          const cat = r.category;
-          const cov = coverage.get(p.id)!;
-          const catOk = !cat || cov.size === 0 || cov.has(cat);
-          if (!catOk) return false;
-          const pLat = Number(p.location?.latitude);
-          const pLng = Number(p.location?.longitude);
-          // (0,0)/missing coords → treat as no location → skip the radius filter.
-          if (!hasCoords(pLat, pLng) || !hasCoords(reqLat, reqLng)) return true;
-          return Math.abs(reqLat - pLat) <= 0.009 * radius && Math.abs(reqLng - pLng) <= 0.009 * radius;
-        }).map(p => ({ id: p.id, name: p.businessName }));
+        return activeProviders
+          .filter((p) => {
+            const cat = r.category;
+            const cov = coverage.get(p.id)!;
+            const catOk = !cat || cov.size === 0 || cov.has(cat);
+            if (!catOk) return false;
+            const pLat = Number(p.location?.latitude);
+            const pLng = Number(p.location?.longitude);
+            // (0,0)/missing coords → treat as no location → skip the radius filter.
+            if (!hasCoords(pLat, pLng) || !hasCoords(reqLat, reqLng)) return true;
+            return (
+              Math.abs(reqLat - pLat) <= 0.009 * radius && Math.abs(reqLng - pLng) <= 0.009 * radius
+            );
+          })
+          .map((p) => ({ id: p.id, name: p.businessName }));
       };
 
-      const data = requests.map(r => {
+      const data = requests.map((r) => {
         const isDirect = !!(r.targetProviderIds && r.targetProviderIds.length);
         const matched = isDirect ? null : matchedFor(r);
         return {
@@ -787,13 +831,19 @@ export class AdminController {
           createdAt: r.createdAt,
           quotesReceived: r.quotesReceived,
           customer: r.customer
-            ? { name: `${r.customer.firstName} ${r.customer.lastName}`.trim(), email: r.customer.email }
+            ? {
+                name: `${r.customer.firstName} ${r.customer.lastName}`.trim(),
+                email: r.customer.email,
+              }
             : null,
           targeting: isDirect ? 'direct' : 'broadcast',
-          targetProviders: (r.targetProviderIds || []).map(id => ({ id, name: nameById.get(id) || id })),
-          matchedProviders: matched,         // null for direct; [{id,name}] for broadcast
+          targetProviders: (r.targetProviderIds || []).map((id) => ({
+            id,
+            name: nameById.get(id) || id,
+          })),
+          matchedProviders: matched, // null for direct; [{id,name}] for broadcast
           matchedCount: matched ? matched.length : null,
-          quotes: (r.quotes || []).map(q => ({
+          quotes: (r.quotes || []).map((q) => ({
             id: q.id,
             provider: q.provider?.businessName || null,
             price: Number(q.estimatedPrice),
@@ -807,7 +857,7 @@ export class AdminController {
       logger.error('Error fetching admin quote requests:', error);
       res.status(500).json({ success: false, error: 'Internal server error' });
     }
-  }
+  };
 }
 
 export default new AdminController();

@@ -18,9 +18,9 @@ router.put('/profile', rateLimiters.general, UserController.updateProfile);
 router.delete('/profile', rateLimiters.strict, UserController.deleteProfile.bind(UserController));
 
 // POST /api/users/profile/image - Upload profile image (FR-007)
-// router.post('/profile/image', 
-//   rateLimiters.upload, 
-//   UserController.uploadProfileImage, 
+// router.post('/profile/image',
+//   rateLimiters.upload,
+//   UserController.uploadProfileImage,
 //   UserController.handleProfileImageUpload
 // );
 

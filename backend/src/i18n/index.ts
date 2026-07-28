@@ -22,7 +22,11 @@ export function getLocale(req: Request): Locale {
 }
 
 /** Look up a key in the given locale, fall back to pt, then to the raw key. Interpolates {{param}}. */
-export function translate(locale: Locale, key: string, params?: Record<string, string | number>): string {
+export function translate(
+  locale: Locale,
+  key: string,
+  params?: Record<string, string | number>
+): string {
   let str = catalogs[locale]?.[key] ?? catalogs.pt[key] ?? key;
   if (params) {
     for (const [k, v] of Object.entries(params)) {

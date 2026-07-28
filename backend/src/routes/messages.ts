@@ -17,9 +17,7 @@ router.post(
     body('participantIds')
       .isArray({ min: 1 })
       .withMessage('Participant IDs must be an array with at least one participant'),
-    body('participantIds.*')
-      .isUUID()
-      .withMessage('Each participant ID must be a valid UUID'),
+    body('participantIds.*').isUUID().withMessage('Each participant ID must be a valid UUID'),
     body('title')
       .optional()
       .isString()
@@ -34,22 +32,13 @@ router.post(
       .optional()
       .isIn(['direct', 'group', 'support'])
       .withMessage('Type must be either direct, group, or support'),
-    body('metadata')
-      .optional()
-      .isObject()
-      .withMessage('Metadata must be an object'),
-    body('metadata.bookingId')
-      .optional()
-      .isUUID()
-      .withMessage('Booking ID must be a valid UUID'),
+    body('metadata').optional().isObject().withMessage('Metadata must be an object'),
+    body('metadata.bookingId').optional().isUUID().withMessage('Booking ID must be a valid UUID'),
     body('metadata.quoteRequestId')
       .optional()
       .isUUID()
       .withMessage('Quote request ID must be a valid UUID'),
-    body('metadata.serviceType')
-      .optional()
-      .isString()
-      .withMessage('Service type must be a string'),
+    body('metadata.serviceType').optional().isString().withMessage('Service type must be a string'),
   ],
   messageController.createConversation
 );
@@ -62,14 +51,8 @@ router.get(
       .optional()
       .isIn(['direct', 'group', 'support'])
       .withMessage('Type must be either direct, group, or support'),
-    query('isActive')
-      .optional()
-      .isBoolean()
-      .withMessage('isActive must be a boolean'),
-    query('page')
-      .optional()
-      .isInt({ min: 1 })
-      .withMessage('Page must be a positive integer'),
+    query('isActive').optional().isBoolean().withMessage('isActive must be a boolean'),
+    query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
     query('limit')
       .optional()
       .isInt({ min: 1, max: 100 })
@@ -89,11 +72,7 @@ router.get(
 // Get conversation by ID
 router.get(
   '/conversations/:conversationId',
-  [
-    param('conversationId')
-      .isUUID()
-      .withMessage('Conversation ID must be a valid UUID'),
-  ],
+  [param('conversationId').isUUID().withMessage('Conversation ID must be a valid UUID')],
   messageController.getConversationById
 );
 
@@ -103,9 +82,7 @@ router.get(
 router.post(
   '/messages',
   [
-    body('conversationId')
-      .isUUID()
-      .withMessage('Conversation ID must be a valid UUID'),
+    body('conversationId').isUUID().withMessage('Conversation ID must be a valid UUID'),
     body('message')
       .optional({ checkFalsy: true })
       .isString()
@@ -123,14 +100,8 @@ router.post(
       .optional()
       .isIn(['text', 'image', 'file'])
       .withMessage('Message type must be text, image, or file'),
-    body('attachments')
-      .optional()
-      .isArray()
-      .withMessage('Attachments must be an array'),
-    body('attachments.*')
-      .optional()
-      .isString()
-      .withMessage('Each attachment must be a string'),
+    body('attachments').optional().isArray().withMessage('Attachments must be an array'),
+    body('attachments.*').optional().isString().withMessage('Each attachment must be a string'),
     body('replyToMessageId')
       .optional()
       .isUUID()
@@ -143,29 +114,15 @@ router.post(
 router.get(
   '/conversations/:conversationId/messages',
   [
-    param('conversationId')
-      .isUUID()
-      .withMessage('Conversation ID must be a valid UUID'),
-    query('senderId')
-      .optional()
-      .isUUID()
-      .withMessage('Sender ID must be a valid UUID'),
-    query('receiverId')
-      .optional()
-      .isUUID()
-      .withMessage('Receiver ID must be a valid UUID'),
+    param('conversationId').isUUID().withMessage('Conversation ID must be a valid UUID'),
+    query('senderId').optional().isUUID().withMessage('Sender ID must be a valid UUID'),
+    query('receiverId').optional().isUUID().withMessage('Receiver ID must be a valid UUID'),
     query('messageType')
       .optional()
       .isIn(['text', 'image', 'file'])
       .withMessage('Message type must be text, image, or file'),
-    query('isRead')
-      .optional()
-      .isBoolean()
-      .withMessage('isRead must be a boolean'),
-    query('page')
-      .optional()
-      .isInt({ min: 1 })
-      .withMessage('Page must be a positive integer'),
+    query('isRead').optional().isBoolean().withMessage('isRead must be a boolean'),
+    query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
     query('limit')
       .optional()
       .isInt({ min: 1, max: 200 })
@@ -181,11 +138,7 @@ router.get(
 // Mark messages as read in a conversation
 router.patch(
   '/conversations/:conversationId/messages/read',
-  [
-    param('conversationId')
-      .isUUID()
-      .withMessage('Conversation ID must be a valid UUID'),
-  ],
+  [param('conversationId').isUUID().withMessage('Conversation ID must be a valid UUID')],
   messageController.markMessagesAsRead
 );
 
@@ -193,23 +146,15 @@ router.patch(
 router.patch(
   '/messages/:messageId',
   [
-    param('messageId')
-      .isUUID()
-      .withMessage('Message ID must be a valid UUID'),
+    param('messageId').isUUID().withMessage('Message ID must be a valid UUID'),
     body('message')
       .optional()
       .isString()
       .notEmpty()
       .isLength({ max: 5000 })
       .withMessage('Message must be a non-empty string with maximum 5000 characters'),
-    body('attachments')
-      .optional()
-      .isArray()
-      .withMessage('Attachments must be an array'),
-    body('attachments.*')
-      .optional()
-      .isString()
-      .withMessage('Each attachment must be a string'),
+    body('attachments').optional().isArray().withMessage('Attachments must be an array'),
+    body('attachments.*').optional().isString().withMessage('Each attachment must be a string'),
   ],
   messageController.updateMessage
 );
@@ -217,11 +162,7 @@ router.patch(
 // Delete a message
 router.delete(
   '/messages/:messageId',
-  [
-    param('messageId')
-      .isUUID()
-      .withMessage('Message ID must be a valid UUID'),
-  ],
+  [param('messageId').isUUID().withMessage('Message ID must be a valid UUID')],
   messageController.deleteMessage
 );
 

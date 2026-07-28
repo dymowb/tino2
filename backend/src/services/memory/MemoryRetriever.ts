@@ -29,7 +29,12 @@ export interface RetrievedMemories {
   hasAny: boolean;
 }
 
-const EMPTY_RESULT: RetrievedMemories = { semantic: [], episodic: [], procedural: [], hasAny: false };
+const EMPTY_RESULT: RetrievedMemories = {
+  semantic: [],
+  episodic: [],
+  procedural: [],
+  hasAny: false,
+};
 
 interface RawSemanticRow {
   id: string;
@@ -80,14 +85,21 @@ export class MemoryRetriever {
       };
 
       // Fire-and-forget: access stats + retrieval log must not delay the agent
-      this.updateAccessStats(semantic.map(s => s.id), 'semantic_memories')
-        .catch(err => logger.error('[MemoryRetriever] semantic access update failed', err));
-      this.updateAccessStats(episodic.map(e => e.id), 'episodic_memories')
-        .catch(err => logger.error('[MemoryRetriever] episodic access update failed', err));
-      this.logRetrieval(userId, query, pgEmbedding, result, workflowId, latencyMs)
-        .catch(err => logger.error('[MemoryRetriever] retrieval log failed', err));
+      this.updateAccessStats(
+        semantic.map((s) => s.id),
+        'semantic_memories'
+      ).catch((err) => logger.error('[MemoryRetriever] semantic access update failed', err));
+      this.updateAccessStats(
+        episodic.map((e) => e.id),
+        'episodic_memories'
+      ).catch((err) => logger.error('[MemoryRetriever] episodic access update failed', err));
+      this.logRetrieval(userId, query, pgEmbedding, result, workflowId, latencyMs).catch((err) =>
+        logger.error('[MemoryRetriever] retrieval log failed', err)
+      );
 
-      logger.debug(`[MemoryRetriever] query="${query.slice(0, 60)}" → ${semantic.length}s ${episodic.length}e ${procedural.length}p latency=${latencyMs}ms`);
+      logger.debug(
+        `[MemoryRetriever] query="${query.slice(0, 60)}" → ${semantic.length}s ${episodic.length}e ${procedural.length}p latency=${latencyMs}ms`
+      );
       return result;
     } catch (err) {
       // Memory failures must never break the main workflow
@@ -110,7 +122,7 @@ export class MemoryRetriever {
     lastAccessedAt: string | null,
     confidence: number,
     accessCount: number,
-    weights: { similarity: number; recency: number; importance: number; accessBoost: number },
+    weights: { similarity: number; recency: number; importance: number; accessBoost: number }
   ): number {
     const λ = Math.log(2) / memoryConfig.retrieval.recencyHalfLifeDays;
     const daysSince = lastAccessedAt
@@ -140,11 +152,11 @@ export class MemoryRetriever {
           AND (expires_at IS NULL OR expires_at > NOW())
         ORDER BY embedding <=> $1::vector
         LIMIT $3`,
-      [pgEmbedding, userId, topK * 3],
+      [pgEmbedding, userId, topK * 3]
     );
 
     return rows
-      .map(r => ({
+      .map((r) => ({
         id: r.id,
         content: r.content,
         score: this.hybridScore(
@@ -152,7 +164,7 @@ export class MemoryRetriever {
           r.last_accessed_at,
           Number(r.confidence),
           Number(r.access_count),
-          weights,
+          weights
         ),
       }))
       .sort((a, b) => b.score - a.score)
@@ -170,11 +182,11 @@ export class MemoryRetriever {
           AND (expires_at IS NULL OR expires_at > NOW())
         ORDER BY embedding <=> $1::vector
         LIMIT $3`,
-      [pgEmbedding, userId, topK * 3],
+      [pgEmbedding, userId, topK * 3]
     );
 
     return rows
-      .map(r => ({
+      .map((r) => ({
         id: r.id,
         summary: r.summary,
         occurredAt: new Date(r.occurred_at),
@@ -183,7 +195,7 @@ export class MemoryRetriever {
           r.last_accessed_at,
           Number(r.importance),
           Number(r.access_count),
-          weights,
+          weights
         ),
       }))
       .sort((a, b) => b.score - a.score)
@@ -197,9 +209,9 @@ export class MemoryRetriever {
         WHERE user_id = $1
           AND status = 'active'
         ORDER BY confidence DESC`,
-      [userId],
+      [userId]
     );
-    return rows.map(r => ({
+    return rows.map((r) => ({
       id: r.id,
       promptFragment: r.prompt_fragment,
       confidence: Number(r.confidence),
@@ -213,7 +225,7 @@ export class MemoryRetriever {
       `UPDATE ${table}
           SET access_count = access_count + 1, last_accessed_at = NOW()
         WHERE id IN (${placeholders})`,
-      ids,
+      ids
     );
   }
 
@@ -223,22 +235,22 @@ export class MemoryRetriever {
     queryEmbedding: string,
     result: RetrievedMemories,
     workflowId: string,
-    latencyMs: number,
+    latencyMs: number
   ): Promise<void> {
     const results = {
-      semanticIds: result.semantic.map(s => s.id),
-      episodicIds: result.episodic.map(e => e.id),
-      proceduralIds: result.procedural.map(p => p.id),
+      semanticIds: result.semantic.map((s) => s.id),
+      episodicIds: result.episodic.map((e) => e.id),
+      proceduralIds: result.procedural.map((p) => p.id),
       scores: {
-        semantic: result.semantic.map(s => ({ id: s.id, score: s.score })),
-        episodic: result.episodic.map(e => ({ id: e.id, score: e.score })),
+        semantic: result.semantic.map((s) => ({ id: s.id, score: s.score })),
+        episodic: result.episodic.map((e) => ({ id: e.id, score: e.score })),
       },
     };
     await MemoryDataSource.query(
       `INSERT INTO memory_retrieval_log
               (user_id, query_text, query_embedding, memory_type, results, workflow_id, latency_ms)
        VALUES ($1, $2, $3::vector, 'hybrid', $4, $5, $6)`,
-      [userId, queryText, queryEmbedding, JSON.stringify(results), workflowId, latencyMs],
+      [userId, queryText, queryEmbedding, JSON.stringify(results), workflowId, latencyMs]
     );
   }
 }

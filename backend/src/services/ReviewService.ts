@@ -6,11 +6,11 @@ import { Provider } from '../models/Provider';
 import { User } from '../models/User';
 import notificationService from './NotificationService';
 import { NotificationType } from '../models/Notification';
-import { 
-  CreateReviewRequest, 
-  UpdateReviewRequest, 
+import {
+  CreateReviewRequest,
+  UpdateReviewRequest,
   ReviewSearchQuery,
-  PaginatedResponse 
+  PaginatedResponse,
 } from '../types';
 
 export class ReviewService {
@@ -26,18 +26,15 @@ export class ReviewService {
     this.userRepository = AppDataSource.getRepository(User);
   }
 
-  async createReview(
-    customerId: string,
-    reviewData: CreateReviewRequest
-  ): Promise<Review> {
+  async createReview(customerId: string, reviewData: CreateReviewRequest): Promise<Review> {
     // Verify booking exists and is completed
     const booking = await this.bookingRepository.findOne({
-      where: { 
+      where: {
         id: reviewData.bookingId,
         customerId: customerId,
-        status: BookingStatus.COMPLETED
+        status: BookingStatus.COMPLETED,
       },
-      relations: ['provider']
+      relations: ['provider'],
     });
 
     if (!booking) {
@@ -46,7 +43,7 @@ export class ReviewService {
 
     // Check if review already exists for this booking
     const existingReview = await this.reviewRepository.findOne({
-      where: { bookingId: reviewData.bookingId }
+      where: { bookingId: reviewData.bookingId },
     });
 
     if (existingReview) {
@@ -63,7 +60,7 @@ export class ReviewService {
       images: reviewData.images || [],
       criteria: reviewData.criteria,
       isVerified: false,
-      isFlagged: false
+      isFlagged: false,
     });
 
     const savedReview = await this.reviewRepository.save(review);
@@ -72,16 +69,18 @@ export class ReviewService {
     await this.updateProviderRating(booking.providerId);
 
     // Notify provider of new review
-    notificationService.createNotification(booking.provider.userId, {
-      type: NotificationType.REVIEW,
-      title: 'New Review Received',
-      message: `You received a ${reviewData.rating}-star review`,
-      titleKey: 'titles.new_review',
-      messageKey: 'body.new_review',
-      i18nParams: { rating: reviewData.rating },
-      actionUrl: `/reviews/${savedReview.id}`,
-      metadata: { reviewId: savedReview.id, rating: reviewData.rating },
-    }).catch(err => console.error('Failed to send review notification:', err));
+    notificationService
+      .createNotification(booking.provider.userId, {
+        type: NotificationType.REVIEW,
+        title: 'New Review Received',
+        message: `You received a ${reviewData.rating}-star review`,
+        titleKey: 'titles.new_review',
+        messageKey: 'body.new_review',
+        i18nParams: { rating: reviewData.rating },
+        actionUrl: `/reviews/${savedReview.id}`,
+        metadata: { reviewId: savedReview.id, rating: reviewData.rating },
+      })
+      .catch((err) => console.error('Failed to send review notification:', err));
 
     return savedReview;
   }
@@ -89,7 +88,7 @@ export class ReviewService {
   async getReviewById(id: string, userId?: string): Promise<Review | null> {
     const review = await this.reviewRepository.findOne({
       where: { id },
-      relations: ['booking', 'customer', 'provider']
+      relations: ['booking', 'customer', 'provider'],
     });
 
     if (!review) {
@@ -112,7 +111,7 @@ export class ReviewService {
     updateData: UpdateReviewRequest
   ): Promise<Review> {
     const review = await this.reviewRepository.findOne({
-      where: { id, customerId }
+      where: { id, customerId },
     });
 
     if (!review) {
@@ -122,7 +121,7 @@ export class ReviewService {
     // Only allow updates within 7 days of creation
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
+
     if (review.createdAt < sevenDaysAgo) {
       throw new Error('Review can only be edited within 7 days of creation');
     }
@@ -132,7 +131,7 @@ export class ReviewService {
       rating: updateData.rating ?? review.rating,
       comment: updateData.comment ?? review.comment,
       images: updateData.images ?? review.images,
-      criteria: updateData.criteria ?? review.criteria
+      criteria: updateData.criteria ?? review.criteria,
     });
 
     const updatedReview = await this.reviewRepository.save(review);
@@ -145,7 +144,7 @@ export class ReviewService {
 
   async deleteReview(id: string, customerId: string): Promise<void> {
     const review = await this.reviewRepository.findOne({
-      where: { id, customerId }
+      where: { id, customerId },
     });
 
     if (!review) {
@@ -155,7 +154,7 @@ export class ReviewService {
     // Only allow deletion within 24 hours of creation
     const twentyFourHoursAgo = new Date();
     twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
-    
+
     if (review.createdAt < twentyFourHoursAgo) {
       throw new Error('Review can only be deleted within 24 hours of creation');
     }
@@ -166,11 +165,7 @@ export class ReviewService {
     await this.updateProviderRating(review.providerId);
   }
 
-  async addProviderResponse(
-    id: string,
-    providerUserId: string,
-    response: string
-  ): Promise<Review> {
+  async addProviderResponse(id: string, providerUserId: string, response: string): Promise<Review> {
     // `providerUserId` is the User id; review.providerId is the Provider entity id —
     // resolve the provider profile first, else a provider can never respond to their review.
     const provider = await this.providerRepository.findOne({ where: { userId: providerUserId } });
@@ -179,7 +174,7 @@ export class ReviewService {
     }
 
     const review = await this.reviewRepository.findOne({
-      where: { id, providerId: provider.id }
+      where: { id, providerId: provider.id },
     });
 
     if (!review) {
@@ -204,21 +199,22 @@ export class ReviewService {
     const limit = Math.min(query.limit || 10, 50);
     const skip = (page - 1) * limit;
 
-    const queryBuilder = this.reviewRepository.createQueryBuilder('review')
+    const queryBuilder = this.reviewRepository
+      .createQueryBuilder('review')
       .leftJoinAndSelect('review.customer', 'customer')
       .leftJoinAndSelect('review.booking', 'booking')
       .where('review.providerId = :providerId', { providerId });
 
     // Apply filters
     if (query.minRating) {
-      queryBuilder.andWhere('review.rating >= :minRating', { 
-        minRating: query.minRating 
+      queryBuilder.andWhere('review.rating >= :minRating', {
+        minRating: query.minRating,
       });
     }
 
     if (query.maxRating) {
-      queryBuilder.andWhere('review.rating <= :maxRating', { 
-        maxRating: query.maxRating 
+      queryBuilder.andWhere('review.rating <= :maxRating', {
+        maxRating: query.maxRating,
       });
     }
 
@@ -231,8 +227,8 @@ export class ReviewService {
     }
 
     if (query.isFlagged !== undefined) {
-      queryBuilder.andWhere('review.isFlagged = :isFlagged', { 
-        isFlagged: query.isFlagged 
+      queryBuilder.andWhere('review.isFlagged = :isFlagged', {
+        isFlagged: query.isFlagged,
       });
     }
 
@@ -245,10 +241,7 @@ export class ReviewService {
     const total = await queryBuilder.getCount();
 
     // Apply pagination
-    const reviews = await queryBuilder
-      .skip(skip)
-      .take(limit)
-      .getMany();
+    const reviews = await queryBuilder.skip(skip).take(limit).getMany();
 
     return {
       success: true,
@@ -257,8 +250,8 @@ export class ReviewService {
         page,
         limit,
         total,
-        pages: Math.ceil(total / limit)
-      }
+        pages: Math.ceil(total / limit),
+      },
     };
   }
 
@@ -270,7 +263,8 @@ export class ReviewService {
     const limit = Math.min(query.limit || 10, 50);
     const skip = (page - 1) * limit;
 
-    const queryBuilder = this.reviewRepository.createQueryBuilder('review')
+    const queryBuilder = this.reviewRepository
+      .createQueryBuilder('review')
       .leftJoinAndSelect('review.provider', 'provider')
       .leftJoinAndSelect('review.booking', 'booking')
       .where('review.customerId = :customerId', { customerId });
@@ -284,10 +278,7 @@ export class ReviewService {
     const total = await queryBuilder.getCount();
 
     // Apply pagination
-    const reviews = await queryBuilder
-      .skip(skip)
-      .take(limit)
-      .getMany();
+    const reviews = await queryBuilder.skip(skip).take(limit).getMany();
 
     return {
       success: true,
@@ -296,18 +287,14 @@ export class ReviewService {
         page,
         limit,
         total,
-        pages: Math.ceil(total / limit)
-      }
+        pages: Math.ceil(total / limit),
+      },
     };
   }
 
-  async flagReview(
-    id: string,
-    userId: string,
-    reason: string
-  ): Promise<Review> {
+  async flagReview(id: string, userId: string, reason: string): Promise<Review> {
     const review = await this.reviewRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!review) {
@@ -341,19 +328,22 @@ export class ReviewService {
   }> {
     const reviews = await this.reviewRepository.find({
       where: { providerId },
-      order: { createdAt: 'DESC' }
+      order: { createdAt: 'DESC' },
     });
 
     const totalReviews = reviews.length;
-    const averageRating = totalReviews > 0 
-      ? reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews
-      : 0;
+    const averageRating =
+      totalReviews > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews : 0;
 
     // Rating distribution
     const ratingDistribution: { [key: number]: number } = {
-      1: 0, 2: 0, 3: 0, 4: 0, 5: 0
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0,
     };
-    reviews.forEach(review => {
+    reviews.forEach((review) => {
       ratingDistribution[Math.floor(review.rating)]++;
     });
 
@@ -363,19 +353,19 @@ export class ReviewService {
       timeliness: 0,
       communication: 0,
       professionalism: 0,
-      valueForMoney: 0
+      valueForMoney: 0,
     };
 
-    const reviewsWithCriteria = reviews.filter(r => r.criteria);
+    const reviewsWithCriteria = reviews.filter((r) => r.criteria);
     if (reviewsWithCriteria.length > 0) {
-      Object.keys(criteriaAverages).forEach(key => {
+      Object.keys(criteriaAverages).forEach((key) => {
         const sum = reviewsWithCriteria.reduce((sum, r) => sum + (r.criteria[key] || 0), 0);
         criteriaAverages[key] = sum / reviewsWithCriteria.length;
       });
     }
 
     // Response rate
-    const reviewsWithResponse = reviews.filter(r => r.response).length;
+    const reviewsWithResponse = reviews.filter((r) => r.response).length;
     const responseRate = totalReviews > 0 ? (reviewsWithResponse / totalReviews) * 100 : 0;
 
     // Recent trend (last 30 days vs previous 30 days)
@@ -384,15 +374,19 @@ export class ReviewService {
     const sixtyDaysAgo = new Date();
     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
-    const recentReviews = reviews.filter(r => r.createdAt >= thirtyDaysAgo);
-    const previousReviews = reviews.filter(r => r.createdAt >= sixtyDaysAgo && r.createdAt < thirtyDaysAgo);
+    const recentReviews = reviews.filter((r) => r.createdAt >= thirtyDaysAgo);
+    const previousReviews = reviews.filter(
+      (r) => r.createdAt >= sixtyDaysAgo && r.createdAt < thirtyDaysAgo
+    );
 
-    const recentAvg = recentReviews.length > 0 
-      ? recentReviews.reduce((sum, r) => sum + r.rating, 0) / recentReviews.length
-      : 0;
-    const previousAvg = previousReviews.length > 0 
-      ? previousReviews.reduce((sum, r) => sum + r.rating, 0) / previousReviews.length
-      : 0;
+    const recentAvg =
+      recentReviews.length > 0
+        ? recentReviews.reduce((sum, r) => sum + r.rating, 0) / recentReviews.length
+        : 0;
+    const previousAvg =
+      previousReviews.length > 0
+        ? previousReviews.reduce((sum, r) => sum + r.rating, 0) / previousReviews.length
+        : 0;
 
     let recentTrend: 'improving' | 'declining' | 'stable' = 'stable';
     if (recentAvg > previousAvg + 0.1) recentTrend = 'improving';
@@ -404,19 +398,19 @@ export class ReviewService {
       ratingDistribution,
       criteriaAverages,
       responseRate,
-      recentTrend
+      recentTrend,
     };
   }
 
   private async updateProviderRating(providerId: string): Promise<void> {
     const reviews = await this.reviewRepository.find({
-      where: { providerId }
+      where: { providerId },
     });
 
     if (reviews.length === 0) {
       await this.providerRepository.update(providerId, {
         rating: 0,
-        totalReviews: 0
+        totalReviews: 0,
       });
       return;
     }
@@ -425,7 +419,7 @@ export class ReviewService {
 
     await this.providerRepository.update(providerId, {
       rating: Math.round(averageRating * 100) / 100, // Round to 2 decimal places
-      totalReviews: reviews.length
+      totalReviews: reviews.length,
     });
   }
 
@@ -434,33 +428,34 @@ export class ReviewService {
     const limit = Math.min(query.limit || 10, 50);
     const skip = (page - 1) * limit;
 
-    const queryBuilder = this.reviewRepository.createQueryBuilder('review')
+    const queryBuilder = this.reviewRepository
+      .createQueryBuilder('review')
       .leftJoinAndSelect('review.customer', 'customer')
       .leftJoinAndSelect('review.provider', 'provider')
       .leftJoinAndSelect('review.booking', 'booking');
 
     // Apply filters
     if (query.providerId) {
-      queryBuilder.andWhere('review.providerId = :providerId', { 
-        providerId: query.providerId 
+      queryBuilder.andWhere('review.providerId = :providerId', {
+        providerId: query.providerId,
       });
     }
 
     if (query.customerId) {
-      queryBuilder.andWhere('review.customerId = :customerId', { 
-        customerId: query.customerId 
+      queryBuilder.andWhere('review.customerId = :customerId', {
+        customerId: query.customerId,
       });
     }
 
     if (query.minRating) {
-      queryBuilder.andWhere('review.rating >= :minRating', { 
-        minRating: query.minRating 
+      queryBuilder.andWhere('review.rating >= :minRating', {
+        minRating: query.minRating,
       });
     }
 
     if (query.maxRating) {
-      queryBuilder.andWhere('review.rating <= :maxRating', { 
-        maxRating: query.maxRating 
+      queryBuilder.andWhere('review.rating <= :maxRating', {
+        maxRating: query.maxRating,
       });
     }
 
@@ -480,10 +475,7 @@ export class ReviewService {
     const total = await queryBuilder.getCount();
 
     // Apply pagination
-    const reviews = await queryBuilder
-      .skip(skip)
-      .take(limit)
-      .getMany();
+    const reviews = await queryBuilder.skip(skip).take(limit).getMany();
 
     return {
       success: true,
@@ -492,8 +484,8 @@ export class ReviewService {
         page,
         limit,
         total,
-        pages: Math.ceil(total / limit)
-      }
+        pages: Math.ceil(total / limit),
+      },
     };
   }
 }

@@ -13,15 +13,23 @@ class MemoryController {
     const userId = req.user!.userId;
 
     if (!isMemoryEnabled() || !MemoryDataSource.isInitialized) {
-      res.json({ success: true, data: { semantic: [], episodic: [], procedural: [], isOptedOut: false, memoryDisabled: true } });
+      res.json({
+        success: true,
+        data: {
+          semantic: [],
+          episodic: [],
+          procedural: [],
+          isOptedOut: false,
+          memoryDisabled: true,
+        },
+      });
       return;
     }
 
     try {
-      const userRow = await AppDataSource.query(
-        `SELECT settings FROM users WHERE id = $1`,
-        [userId],
-      );
+      const userRow = await AppDataSource.query(`SELECT settings FROM users WHERE id = $1`, [
+        userId,
+      ]);
       const isOptedOut = userRow[0]?.settings?.memoryOptOut ?? false;
 
       const [semantic, episodic, procedural] = await Promise.all([
@@ -30,21 +38,21 @@ class MemoryController {
              FROM semantic_memories
             WHERE user_id = $1 AND is_active = TRUE
             ORDER BY created_at DESC`,
-          [userId],
+          [userId]
         ),
         MemoryDataSource.query(
           `SELECT id, summary, importance, access_count, occurred_at, created_at
              FROM episodic_memories
             WHERE user_id = $1 AND is_active = TRUE
             ORDER BY occurred_at DESC`,
-          [userId],
+          [userId]
         ),
         MemoryDataSource.query(
           `SELECT id, rule_text, prompt_fragment, confidence, status, created_at
              FROM procedural_rules
             WHERE user_id = $1 AND status = 'active'
             ORDER BY confidence DESC`,
-          [userId],
+          [userId]
         ),
       ]);
 
@@ -71,21 +79,21 @@ class MemoryController {
         case 'semantic':
           const sr = await MemoryDataSource.query(
             `UPDATE semantic_memories SET is_active = FALSE WHERE id = $1 AND user_id = $2`,
-            [id, userId],
+            [id, userId]
           );
           rowsAffected = sr[1];
           break;
         case 'episodic':
           const er = await MemoryDataSource.query(
             `UPDATE episodic_memories SET is_active = FALSE WHERE id = $1 AND user_id = $2`,
-            [id, userId],
+            [id, userId]
           );
           rowsAffected = er[1];
           break;
         case 'procedural':
           const pr = await MemoryDataSource.query(
             `UPDATE procedural_rules SET status = 'deprecated', deprecated_at = NOW() WHERE id = $1 AND user_id = $2`,
-            [id, userId],
+            [id, userId]
           );
           rowsAffected = pr[1];
           break;
@@ -119,7 +127,7 @@ class MemoryController {
     try {
       await AppDataSource.query(
         `UPDATE users SET settings = COALESCE(settings, '{}'::jsonb) || $1::jsonb WHERE id = $2`,
-        [JSON.stringify({ memoryOptOut: optOut }), userId],
+        [JSON.stringify({ memoryOptOut: optOut }), userId]
       );
 
       // When opting out, deactivate all existing memories so they're no longer retrieved
@@ -127,15 +135,15 @@ class MemoryController {
         await Promise.all([
           MemoryDataSource.query(
             `UPDATE semantic_memories SET is_active = FALSE WHERE user_id = $1`,
-            [userId],
+            [userId]
           ),
           MemoryDataSource.query(
             `UPDATE episodic_memories SET is_active = FALSE WHERE user_id = $1`,
-            [userId],
+            [userId]
           ),
           MemoryDataSource.query(
             `UPDATE procedural_rules SET status = 'deprecated', deprecated_at = NOW() WHERE user_id = $1 AND status = 'active'`,
-            [userId],
+            [userId]
           ),
         ]);
         logger.info(`[MemoryController] user=${userId} opted out — all memories deactivated`);
@@ -166,7 +174,7 @@ class MemoryController {
              (SELECT COUNT(*) FROM semantic_memories  WHERE user_id=$1 AND is_active=TRUE)::int   AS semantic,
              (SELECT COUNT(*) FROM episodic_memories  WHERE user_id=$1 AND is_active=TRUE)::int   AS episodic,
              (SELECT COUNT(*) FROM procedural_rules   WHERE user_id=$1 AND status='active')::int  AS procedural`,
-          [userId],
+          [userId]
         ),
         // Retrieval stats — last 30 days
         MemoryDataSource.query(
@@ -181,7 +189,7 @@ class MemoryController {
              ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY latency_ms))::int              AS p95_latency_ms
            FROM memory_retrieval_log
            WHERE user_id=$1 AND retrieved_at > NOW() - INTERVAL '30 days'`,
-          [userId],
+          [userId]
         ),
         // Write decisions — last 30 days
         MemoryDataSource.query(
@@ -189,14 +197,15 @@ class MemoryController {
              FROM memory_write_log
             WHERE user_id=$1 AND created_at > NOW() - INTERVAL '30 days'
             GROUP BY action`,
-          [userId],
+          [userId]
         ),
       ]);
 
       const retrieval = retrievalRows[0] ?? {};
-      const hitRate = retrieval.total_queries > 0
-        ? Math.round((retrieval.queries_with_hits / retrieval.total_queries) * 100)
-        : 0;
+      const hitRate =
+        retrieval.total_queries > 0
+          ? Math.round((retrieval.queries_with_hits / retrieval.total_queries) * 100)
+          : 0;
 
       const writeCounts: Record<string, number> = {};
       for (const row of writeRows) writeCounts[row.action] = Number(row.count);
@@ -205,21 +214,21 @@ class MemoryController {
         success: true,
         data: {
           counts: {
-            semantic:   Number(counts[0]?.semantic   ?? 0),
-            episodic:   Number(counts[0]?.episodic   ?? 0),
+            semantic: Number(counts[0]?.semantic ?? 0),
+            episodic: Number(counts[0]?.episodic ?? 0),
             procedural: Number(counts[0]?.procedural ?? 0),
           },
           retrieval: {
-            totalQueries:    Number(retrieval.total_queries    ?? 0),
+            totalQueries: Number(retrieval.total_queries ?? 0),
             queriesWithHits: Number(retrieval.queries_with_hits ?? 0),
-            hitRatePct:      hitRate,
-            avgLatencyMs:    retrieval.avg_latency_ms ?? null,
-            p95LatencyMs:    retrieval.p95_latency_ms ?? null,
+            hitRatePct: hitRate,
+            avgLatencyMs: retrieval.avg_latency_ms ?? null,
+            p95LatencyMs: retrieval.p95_latency_ms ?? null,
           },
           writes: {
-            created:   writeCounts['created']    ?? 0,
-            merged:    writeCounts['merged']     ?? 0,
-            discarded: writeCounts['discarded']  ?? 0,
+            created: writeCounts['created'] ?? 0,
+            merged: writeCounts['merged'] ?? 0,
+            discarded: writeCounts['discarded'] ?? 0,
           },
         },
       });
@@ -242,7 +251,7 @@ class MemoryController {
              (SELECT COUNT(*) FROM semantic_memories  WHERE is_active=TRUE)::int  AS semantic,
              (SELECT COUNT(*) FROM episodic_memories  WHERE is_active=TRUE)::int  AS episodic,
              (SELECT COUNT(*) FROM procedural_rules   WHERE status='active')::int AS procedural,
-             (SELECT COUNT(DISTINCT user_id) FROM semantic_memories)::int         AS users_with_memory`,
+             (SELECT COUNT(DISTINCT user_id) FROM semantic_memories)::int         AS users_with_memory`
         ),
         MemoryDataSource.query(
           `SELECT
@@ -256,13 +265,13 @@ class MemoryController {
              ROUND(PERCENTILE_CONT(0.5)  WITHIN GROUP (ORDER BY latency_ms))::int              AS p50_latency_ms,
              ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY latency_ms))::int              AS p95_latency_ms
            FROM memory_retrieval_log
-           WHERE retrieved_at > NOW() - INTERVAL '30 days'`,
+           WHERE retrieved_at > NOW() - INTERVAL '30 days'`
         ),
         MemoryDataSource.query(
           `SELECT action, COUNT(*)::int AS count
              FROM memory_write_log
             WHERE created_at > NOW() - INTERVAL '30 days'
-            GROUP BY action`,
+            GROUP BY action`
         ),
         // Top 5 users by memory count
         MemoryDataSource.query(
@@ -271,14 +280,13 @@ class MemoryController {
             WHERE is_active=TRUE
             GROUP BY user_id
             ORDER BY count DESC
-            LIMIT 5`,
+            LIMIT 5`
         ),
       ]);
 
       const r = retrievalGlobal[0] ?? {};
-      const hitRate = r.total_queries > 0
-        ? Math.round((r.queries_with_hits / r.total_queries) * 100)
-        : 0;
+      const hitRate =
+        r.total_queries > 0 ? Math.round((r.queries_with_hits / r.total_queries) * 100) : 0;
 
       const writeCounts: Record<string, number> = {};
       for (const row of writeGlobal) writeCounts[row.action] = Number(row.count);
@@ -287,22 +295,22 @@ class MemoryController {
         success: true,
         data: {
           totals: {
-            semantic:        Number(totals[0]?.semantic        ?? 0),
-            episodic:        Number(totals[0]?.episodic        ?? 0),
-            procedural:      Number(totals[0]?.procedural      ?? 0),
+            semantic: Number(totals[0]?.semantic ?? 0),
+            episodic: Number(totals[0]?.episodic ?? 0),
+            procedural: Number(totals[0]?.procedural ?? 0),
             usersWithMemory: Number(totals[0]?.users_with_memory ?? 0),
           },
           retrieval: {
-            totalQueries:    Number(r.total_queries    ?? 0),
+            totalQueries: Number(r.total_queries ?? 0),
             queriesWithHits: Number(r.queries_with_hits ?? 0),
-            hitRatePct:      hitRate,
-            avgLatencyMs:    r.avg_latency_ms ?? null,
-            p50LatencyMs:    r.p50_latency_ms ?? null,
-            p95LatencyMs:    r.p95_latency_ms ?? null,
+            hitRatePct: hitRate,
+            avgLatencyMs: r.avg_latency_ms ?? null,
+            p50LatencyMs: r.p50_latency_ms ?? null,
+            p95LatencyMs: r.p95_latency_ms ?? null,
           },
           writes: {
-            created:   writeCounts['created']   ?? 0,
-            merged:    writeCounts['merged']    ?? 0,
+            created: writeCounts['created'] ?? 0,
+            merged: writeCounts['merged'] ?? 0,
             discarded: writeCounts['discarded'] ?? 0,
           },
           topUsersByMemory: topUsers,
@@ -345,8 +353,8 @@ class MemoryController {
           userId: targetUserId,
           latencyMs,
           hasAny: result.hasAny,
-          semantic:   result.semantic,
-          episodic:   result.episodic,
+          semantic: result.semantic,
+          episodic: result.episodic,
           procedural: result.procedural,
         },
       });

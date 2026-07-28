@@ -18,7 +18,9 @@ export interface EmbeddingProvider {
 
 export function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length) throw new Error('Vector dimension mismatch');
-  let dot = 0, normA = 0, normB = 0;
+  let dot = 0,
+    normA = 0,
+    normB = 0;
   for (let i = 0; i < a.length; i++) {
     dot += a[i] * b[i];
     normA += a[i] * a[i];
@@ -77,8 +79,10 @@ class VoyageEmbeddingProvider implements EmbeddingProvider {
       // Retry on 429 rate limit with exponential backoff (max 3 attempts)
       if (attempt < 3 && (err?.statusCode === 429 || err?.rawResponse?.status === 429)) {
         const delayMs = Math.pow(2, attempt) * 1000; // 2s, 4s
-        logger.warn(`[EmbeddingService] rate limited, retrying in ${delayMs}ms (attempt ${attempt})`);
-        await new Promise(r => setTimeout(r, delayMs));
+        logger.warn(
+          `[EmbeddingService] rate limited, retrying in ${delayMs}ms (attempt ${attempt})`
+        );
+        await new Promise((r) => setTimeout(r, delayMs));
         return this.embedWithBackoff(texts, attempt + 1);
       }
       throw err;

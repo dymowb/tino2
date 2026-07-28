@@ -57,6 +57,8 @@ const MobileBottomNav: React.FC = () => {
 
   return (
     <Paper
+      component="nav"
+      aria-label={t('navigation.mobile_navigation', { defaultValue: 'Mobile navigation' })}
       elevation={0}
       sx={{
         position: 'fixed',

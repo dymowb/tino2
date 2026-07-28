@@ -65,7 +65,11 @@ export class AuthController {
       }
       await userService.resendVerification(email);
       // Always return success to avoid leaking whether the email exists
-      res.json({ success: true, message: 'If this email is registered and unverified, a new verification link has been sent.' });
+      res.json({
+        success: true,
+        message:
+          'If this email is registered and unverified, a new verification link has been sent.',
+      });
     } catch (error) {
       res.status(400).json({
         success: false,
@@ -309,10 +313,16 @@ export class AuthController {
       }
       await userService.requestPasswordReset(email);
       // Always succeed — don't reveal whether the email exists
-      res.json({ success: true, message: 'If this email is registered, a password reset link has been sent.' });
+      res.json({
+        success: true,
+        message: 'If this email is registered, a password reset link has been sent.',
+      });
     } catch (error) {
       logger.error('Forgot password error:', error);
-      res.json({ success: true, message: 'If this email is registered, a password reset link has been sent.' });
+      res.json({
+        success: true,
+        message: 'If this email is registered, a password reset link has been sent.',
+      });
     }
   }
 

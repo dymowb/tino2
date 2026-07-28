@@ -51,13 +51,13 @@ export class MockAgent implements Agent<MockAgentInput, MockAgentOutput> {
     logger.debug('MockAgent.process() called with:', input);
 
     // Simulate some processing time (50ms)
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     // Generate mock response based on input
     const response = `Mock response to: "${input.message}"`;
     const testData = {
       processedAt: new Date(),
-      inputLength: input.message.length
+      inputLength: input.message.length,
     };
 
     logger.debug('MockAgent returning response:', response);
@@ -66,15 +66,15 @@ export class MockAgent implements Agent<MockAgentInput, MockAgentOutput> {
       success: true,
       output: {
         response,
-        testData
+        testData,
       },
       metadata: {
         executionTimeMs: 50,
         tokensUsed: 0, // Mock agent doesn't use tokens
         modelUsed: 'mock-v1',
-        confidence: 1.0
+        confidence: 1.0,
       },
-      suggestedNextAgent: null // Workflow should end after mock agent
+      suggestedNextAgent: null, // Workflow should end after mock agent
     };
   }
 
@@ -82,10 +82,7 @@ export class MockAgent implements Agent<MockAgentInput, MockAgentOutput> {
    * Reflection - Mock agent always returns perfect results
    * Note: Parameters are (output, input) per Agent interface
    */
-  async reflect(
-    output: MockAgentOutput,
-    input: MockAgentInput
-  ): Promise<ReflectionResult> {
+  async reflect(output: MockAgentOutput, input: MockAgentInput): Promise<ReflectionResult> {
     logger.debug('MockAgent.reflect() called');
 
     // Mock agent always produces perfect results (for testing)
@@ -93,7 +90,7 @@ export class MockAgent implements Agent<MockAgentInput, MockAgentOutput> {
       needsImprovement: false,
       confidence: 1.0,
       reasoning: 'Mock agent output is always correct for testing purposes',
-      improvements: []
+      improvements: [],
     };
   }
 }

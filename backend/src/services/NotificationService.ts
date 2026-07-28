@@ -4,8 +4,8 @@ import { AppDataSource } from '../config/database';
 import { User } from '../models/User';
 import logger from '../config/logger';
 import { Repository } from 'typeorm';
-import { Notification, NotificationType, NotificationPriority } from '../models/Notification';                                                                              
-import { Server } from 'socket.io';    
+import { Notification, NotificationType, NotificationPriority } from '../models/Notification';
+import { Server } from 'socket.io';
 
 export interface NotificationPreferences {
   email: {
@@ -88,21 +88,24 @@ export class NotificationService {
     this.io = io;
   }
 
-  async createNotification(userId: string, data: {
-    type: NotificationType;
-    title: string;
-    message: string;
-    priority?: NotificationPriority;
-    actionUrl?: string;
-    metadata?: any;
-    // i18n: keys into the frontend `notifications` namespace + interpolation
-    // params, stored in metadata.i18n so the UI can translate on render and
-    // react to language switches. `title`/`message` remain the English
-    // fallback (used by email/SMS and pre-i18n clients).
-    titleKey?: string;
-    messageKey?: string;
-    i18nParams?: Record<string, any>;
-  }): Promise<Notification> {
+  async createNotification(
+    userId: string,
+    data: {
+      type: NotificationType;
+      title: string;
+      message: string;
+      priority?: NotificationPriority;
+      actionUrl?: string;
+      metadata?: any;
+      // i18n: keys into the frontend `notifications` namespace + interpolation
+      // params, stored in metadata.i18n so the UI can translate on render and
+      // react to language switches. `title`/`message` remain the English
+      // fallback (used by email/SMS and pre-i18n clients).
+      titleKey?: string;
+      messageKey?: string;
+      i18nParams?: Record<string, any>;
+    }
+  ): Promise<Notification> {
     const metadata =
       data.titleKey || data.messageKey
         ? {
@@ -128,12 +131,15 @@ export class NotificationService {
     return saved;
   }
 
-  async getUserNotifications(userId: string, filters: {
-    type?: NotificationType;
-    page?: number;
-    limit?: number;
-    unreadOnly?: boolean;
-  }): Promise<{ notifications: Notification[]; total: number }> {
+  async getUserNotifications(
+    userId: string,
+    filters: {
+      type?: NotificationType;
+      page?: number;
+      limit?: number;
+      unreadOnly?: boolean;
+    }
+  ): Promise<{ notifications: Notification[]; total: number }> {
     const page = filters.page ?? 1;
     const limit = filters.limit ?? 20;
     const where: any = { userId };
@@ -217,9 +223,7 @@ export class NotificationService {
       if (value && typeof value === 'object') {
         out[channel] = { ...defaults[channel], ...value };
       } else if (typeof value === 'boolean') {
-        out[channel] = Object.fromEntries(
-          Object.keys(defaults[channel]).map((k) => [k, value])
-        );
+        out[channel] = Object.fromEntries(Object.keys(defaults[channel]).map((k) => [k, value]));
       } else {
         out[channel] = { ...defaults[channel] };
       }
@@ -231,7 +235,7 @@ export class NotificationService {
    * Update user notification preferences
    */
   async updateUserPreferences(
-    userId: string, 
+    userId: string,
     preferences: Partial<NotificationPreferences>
   ): Promise<void> {
     try {
@@ -566,7 +570,11 @@ export class NotificationService {
   /**
    * Send verification code
    */
-  async sendVerificationCode(phoneNumber: string, code: string, expiryMinutes: number = 10): Promise<NotificationResult> {
+  async sendVerificationCode(
+    phoneNumber: string,
+    code: string,
+    expiryMinutes: number = 10
+  ): Promise<NotificationResult> {
     const result: NotificationResult = {};
 
     try {
@@ -585,7 +593,11 @@ export class NotificationService {
   /**
    * Send password reset email
    */
-  async sendPasswordReset(userId: string, resetUrl: string, expiryHours: number = 24): Promise<NotificationResult> {
+  async sendPasswordReset(
+    userId: string,
+    resetUrl: string,
+    expiryHours: number = 24
+  ): Promise<NotificationResult> {
     const user = await this.getUserWithContact(userId);
     if (!user || !user.email) return {};
 
@@ -608,7 +620,11 @@ export class NotificationService {
   /**
    * Send email verification
    */
-  async sendEmailVerification(userId: string, verificationUrl: string, code: string): Promise<NotificationResult> {
+  async sendEmailVerification(
+    userId: string,
+    verificationUrl: string,
+    code: string
+  ): Promise<NotificationResult> {
     const user = await this.getUserWithContact(userId);
     if (!user || !user.email) return {};
 

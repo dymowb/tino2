@@ -15,12 +15,7 @@ import { getLanguageInstruction } from './utils/locale';
  * Model: Sonnet (nuanced cross-provider comparison and narrative reasoning)
  */
 
-import {
-  Agent,
-  AgentMetadata,
-  AgentResult,
-  ReflectionResult,
-} from './types/agent.types';
+import { Agent, AgentMetadata, AgentResult, ReflectionResult } from './types/agent.types';
 import {
   WorkflowContext,
   ProviderAnalysis,
@@ -132,7 +127,7 @@ Rules:
 
   async execute(
     input: RecommendationAgentInput,
-    _context: WorkflowContext,
+    _context: WorkflowContext
   ): Promise<AgentResult<RecommendationAgentOutput>> {
     const startTime = Date.now();
     logger.info('Recommendation Agent executing', {
@@ -155,8 +150,8 @@ Rules:
     // Tip: you can use providers.slice(0, MAX_RECOMMENDATIONS + 2) to give Claude a few extras
     // to choose from (it picks the best MAX_RECOMMENDATIONS).
     const topProviders = input.providers.slice(0, MAX_RECOMMENDATIONS + 2);
-    
-    const userMessage = `Customer Requirements:\n${JSON.stringify(input.requirements.requirementsSummary, null, 2)}\n\nProviders to Consider:\n${topProviders.map(p => JSON.stringify(p, null, 2)).join('\n')}\n\nProvider Analyses:\n${input.analysisResults.map(a => JSON.stringify(a, null, 2)).join('\n')}`;
+
+    const userMessage = `Customer Requirements:\n${JSON.stringify(input.requirements.requirementsSummary, null, 2)}\n\nProviders to Consider:\n${topProviders.map((p) => JSON.stringify(p, null, 2)).join('\n')}\n\nProvider Analyses:\n${input.analysisResults.map((a) => JSON.stringify(a, null, 2)).join('\n')}`;
 
     // TODO 5.2c: Call Claude (same pattern as analysis agent).
     // Use this.metadata.model, this.metadata.systemPrompt, etc.
@@ -166,13 +161,14 @@ Rules:
       : langPrompt;
 
     const { parsed, response } = await parseClaudeJson<ClaudeRankedProvider[]>(
-      () => anthropicService.callClaude({
-        model: ClaudeModel.SONNET,
-        systemPrompt,
-        userMessage,
-        maxTokens: this.metadata.maxTokens,
-        temperature: this.metadata.temperature,
-      }),
+      () =>
+        anthropicService.callClaude({
+          model: ClaudeModel.SONNET,
+          systemPrompt,
+          userMessage,
+          maxTokens: this.metadata.maxTokens,
+          temperature: this.metadata.temperature,
+        }),
       'array',
       { agentName: 'recommendation' }
     );
@@ -181,18 +177,21 @@ Rules:
     // retry, fall back to ranking by analysis matchScore so the customer still
     // gets recommendations rather than a crashed workflow. Reasoning is a
     // generic localized line (the rich per-provider reasoning is what we lost).
-    const claudeRankings: ClaudeRankedProvider[] = parsed ?? [...input.analysisResults]
-      .sort((a, b) => b.matchScore - a.matchScore)
-      .slice(0, MAX_RECOMMENDATIONS)
-      .map((a, i) => ({
-        providerId: a.providerId,
-        rank: i + 1,
-        reasoning: input.locale === 'en'
-          ? 'Recommended as one of the closest matches to your requirements.'
-          : 'Recomendado por estar entre as melhores correspondências com os seus requisitos.',
-        tradeoffs: [],
-        bestFor: '',
-      }));
+    const claudeRankings: ClaudeRankedProvider[] =
+      parsed ??
+      [...input.analysisResults]
+        .sort((a, b) => b.matchScore - a.matchScore)
+        .slice(0, MAX_RECOMMENDATIONS)
+        .map((a, i) => ({
+          providerId: a.providerId,
+          rank: i + 1,
+          reasoning:
+            input.locale === 'en'
+              ? 'Recommended as one of the closest matches to your requirements.'
+              : 'Recomendado por estar entre as melhores correspondências com os seus requisitos.',
+          tradeoffs: [],
+          bestFor: '',
+        }));
 
     // TODO 5.2e: Assemble full Recommendation objects.
     // For each item in claudeRankings (sorted by rank):
@@ -204,8 +203,8 @@ Rules:
     // Tip: use .find(p => p.providerId === item.providerId) for both lookups
     const recommendations: Recommendation[] = [];
     for (const item of claudeRankings.sort((a, b) => a.rank - b.rank)) {
-      const provider = input.providers.find(p => p.providerId === item.providerId);
-      const analysis = input.analysisResults.find(a => a.providerId === item.providerId);
+      const provider = input.providers.find((p) => p.providerId === item.providerId);
+      const analysis = input.analysisResults.find((a) => a.providerId === item.providerId);
       if (!provider || !analysis) {
         logger.warn('Skipping recommendation due to missing data', { providerId: item.providerId });
         continue;
@@ -245,7 +244,7 @@ Rules:
 
   async reflect(
     output: RecommendationAgentOutput,
-    _input: RecommendationAgentInput,
+    _input: RecommendationAgentInput
   ): Promise<ReflectionResult> {
     const improvements: string[] = [];
 
@@ -263,22 +262,28 @@ Rules:
     // needsImprovement: improvements.length > 0
     // improvements: improvements
     // confidence: improvements.length > 0 ? 0.5 : 0.9
-    
+
     if (output.recommendations.length === 0) {
-      improvements.push('No recommendations were generated. At least one recommendation is needed to be useful.');
+      improvements.push(
+        'No recommendations were generated. At least one recommendation is needed to be useful.'
+      );
     }
 
     const sortedByRank = [...output.recommendations].sort((a, b) => a.rank - b.rank);
     for (let i = 0; i < sortedByRank.length; i++) {
       if (sortedByRank[i].rank !== i + 1) {
-        improvements.push(`Recommendation ranks are not sequential starting from 1. Found rank ${sortedByRank[i].rank} at position ${i}. Ranks should be 1, 2, 3...`);
+        improvements.push(
+          `Recommendation ranks are not sequential starting from 1. Found rank ${sortedByRank[i].rank} at position ${i}. Ranks should be 1, 2, 3...`
+        );
         break;
       }
     }
 
     output.recommendations.forEach((rec, index) => {
       if (!rec.reasoning || rec.reasoning.trim() === '') {
-        improvements.push(`Recommendation for providerId ${rec.provider.providerId} is missing reasoning. Reasoning is important to help customers understand the recommendation.`);
+        improvements.push(
+          `Recommendation for providerId ${rec.provider.providerId} is missing reasoning. Reasoning is important to help customers understand the recommendation.`
+        );
       }
     });
     return {

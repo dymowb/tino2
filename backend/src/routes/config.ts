@@ -17,7 +17,7 @@ router.get('/', async (_req: Request, res: Response) => {
   try {
     const repo = AppDataSource.getRepository(AppSettings);
     const rows = await repo.find();
-    const byKey = new Map(rows.map(r => [r.key, r]));
+    const byKey = new Map(rows.map((r) => [r.key, r]));
     const data: Record<string, number> = {};
     for (const [field, { key, default: def }] of Object.entries(PUBLIC_SETTINGS)) {
       const row = byKey.get(key);

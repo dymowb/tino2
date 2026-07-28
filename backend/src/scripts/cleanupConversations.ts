@@ -48,7 +48,7 @@ async function run(): Promise<void> {
          ) u WHERE uid IS NOT NULL`,
         [id]
       );
-      const userIds = users.map(u => u.uid);
+      const userIds = users.map((u) => u.uid);
       if (userIds.length === 2) {
         for (const uid of userIds) {
           await qr.query(
@@ -101,12 +101,17 @@ async function run(): Promise<void> {
         [pair]
       );
       const survivor = convs[0].id;
-      const losers = convs.slice(1).map(c => c.id);
+      const losers = convs.slice(1).map((c) => c.id);
 
       for (const loser of losers) {
-        const moved = await qr.query(`UPDATE messages SET "conversationId" = $1 WHERE "conversationId" = $2`, [survivor, loser]);
+        const moved = await qr.query(
+          `UPDATE messages SET "conversationId" = $1 WHERE "conversationId" = $2`,
+          [survivor, loser]
+        );
         movedMsgs += Array.isArray(moved) ? (moved[1] ?? 0) : 0;
-        await qr.query(`DELETE FROM conversation_participants WHERE "conversationId" = $1`, [loser]);
+        await qr.query(`DELETE FROM conversation_participants WHERE "conversationId" = $1`, [
+          loser,
+        ]);
         await qr.query(`DELETE FROM conversations WHERE id = $1`, [loser]);
         mergedConvs++;
       }
@@ -121,7 +126,13 @@ async function run(): Promise<void> {
     }
 
     await qr.commitTransaction();
-    logger.info('Conversation cleanup complete', { repaired, deletedConvs, deletedMsgs, mergedConvs, movedMsgs });
+    logger.info('Conversation cleanup complete', {
+      repaired,
+      deletedConvs,
+      deletedMsgs,
+      mergedConvs,
+      movedMsgs,
+    });
     // eslint-disable-next-line no-console
     console.log(`\n✅ Cleanup done:
   repaired orphans:        ${repaired}
@@ -137,4 +148,7 @@ async function run(): Promise<void> {
   }
 }
 
-run().catch(err => { console.error(err); process.exit(1); });
+run().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

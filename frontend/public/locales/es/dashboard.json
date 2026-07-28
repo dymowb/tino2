@@ -51,6 +51,7 @@
     "phone_not_set": "Teléfono no establecido",
     "services_not_set": "Servicios no establecidos",
     "profile_completion": "Finalización del Perfil",
+    "complete_profile": "Completa tu perfil",
     "percent_complete": "{{percent}}% Completo"
   },
 

@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { User } from './User';
 
 export enum NotificationType {
@@ -61,4 +69,4 @@ export class Notification {
   @ManyToOne(() => User)
   @JoinColumn({ name: 'userId' })
   user: User;
-}   
+}

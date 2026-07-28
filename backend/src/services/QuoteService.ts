@@ -11,13 +11,13 @@ import notificationService from '@/services/NotificationService';
 import serviceCategoryService from '@/services/ServiceCategoryService';
 import locationService from '@/services/LocationService';
 import { NotificationType } from '@/models/Notification';
-import { 
-  CreateQuoteRequestRequest, 
-  UpdateQuoteRequestRequest, 
-  CreateQuoteRequest, 
+import {
+  CreateQuoteRequestRequest,
+  UpdateQuoteRequestRequest,
+  CreateQuoteRequest,
   UpdateQuoteRequest,
   QuoteRequestSearchQuery,
-  QuoteSearchQuery
+  QuoteSearchQuery,
 } from '@/types';
 
 export class QuoteService {
@@ -34,7 +34,10 @@ export class QuoteService {
   }
 
   // Quote Request Management
-  async createQuoteRequest(customerId: string, requestData: CreateQuoteRequestRequest): Promise<QuoteRequest> {
+  async createQuoteRequest(
+    customerId: string,
+    requestData: CreateQuoteRequestRequest
+  ): Promise<QuoteRequest> {
     try {
       // Verify customer exists
       const customer = await this.userRepository.findOne({
@@ -46,9 +49,12 @@ export class QuoteService {
       }
 
       // Read staleness from admin settings (default 7 days if unset)
-      const stalenessSetting = await AppDataSource.getRepository(AppSettings).findOne({ where: { key: 'quote_staleness_days' } });
+      const stalenessSetting = await AppDataSource.getRepository(AppSettings).findOne({
+        where: { key: 'quote_staleness_days' },
+      });
       const stalenessDays = stalenessSetting ? Number(stalenessSetting.value) || 7 : 7;
-      const expiresAt = requestData.expiresAt || new Date(Date.now() + stalenessDays * 24 * 60 * 60 * 1000);
+      const expiresAt =
+        requestData.expiresAt || new Date(Date.now() + stalenessDays * 24 * 60 * 60 * 1000);
 
       // Resolve the (free-form) serviceType to a canonical category up front so the
       // request is matchable to providers regardless of how serviceType was phrased.
@@ -58,17 +64,32 @@ export class QuoteService {
       // works. Best-effort: on failure we keep the request without coords and matching
       // safely falls back to category-only.
       let location = requestData.location;
-      const hasCoords = !!location && Number(location.latitude) !== 0 && Number(location.longitude) !== 0
-        && Number.isFinite(Number(location.latitude)) && Number.isFinite(Number(location.longitude));
+      const hasCoords =
+        !!location &&
+        Number(location.latitude) !== 0 &&
+        Number(location.longitude) !== 0 &&
+        Number.isFinite(Number(location.latitude)) &&
+        Number.isFinite(Number(location.longitude));
       if (location && !hasCoords) {
         const addr = [location.address, location.city, location.state, location.zipCode, 'Brazil']
-          .filter(Boolean).map(s => String(s).trim()).filter(Boolean).join(', ');
+          .filter(Boolean)
+          .map((s) => String(s).trim())
+          .filter(Boolean)
+          .join(', ');
         // Only attempt if there's something to geocode beyond the country.
         if (addr.replace(/,?\s*Brazil$/i, '').trim().length > 2) {
           try {
             const geo = await locationService.geocodeAddress(addr);
-            location = { ...location, latitude: geo.location.latitude, longitude: geo.location.longitude };
-            logger.info('Geocoded quote request address', { addr, lat: geo.location.latitude, lng: geo.location.longitude });
+            location = {
+              ...location,
+              latitude: geo.location.latitude,
+              longitude: geo.location.longitude,
+            };
+            logger.info('Geocoded quote request address', {
+              addr,
+              lat: geo.location.latitude,
+              lng: geo.location.longitude,
+            });
           } catch (err) {
             logger.warn('Quote request geocoding failed; proceeding without coords', { addr });
           }
@@ -94,7 +115,7 @@ export class QuoteService {
         status: QuoteRequestStatus.OPEN,
       });
 
-      const savedRequest = await this.quoteRequestRepository.save(quoteRequest) as QuoteRequest;
+      const savedRequest = (await this.quoteRequestRepository.save(quoteRequest)) as QuoteRequest;
       logger.info('Quote request created', {
         quoteRequestId: savedRequest.id,
         customerId,
@@ -106,16 +127,18 @@ export class QuoteService {
       if (requestData.targetProviderIds?.length) {
         const providers = await this.providerRepository.findByIds(requestData.targetProviderIds);
         for (const provider of providers) {
-          notificationService.createNotification(provider.userId, {
-            type: NotificationType.BOOKING,
-            title: 'New Quote Request',
-            message: `A customer is requesting a quote for ${requestData.serviceType}. Respond now to win the job!`,
-            titleKey: 'titles.new_quote_request',
-            messageKey: 'body.quote_request',
-            i18nParams: { service: requestData.serviceType },
-            actionUrl: '/opportunities',
-            metadata: { quoteRequestId: savedRequest.id },
-          }).catch(err => logger.error('Failed to notify provider of quote request:', err));
+          notificationService
+            .createNotification(provider.userId, {
+              type: NotificationType.BOOKING,
+              title: 'New Quote Request',
+              message: `A customer is requesting a quote for ${requestData.serviceType}. Respond now to win the job!`,
+              titleKey: 'titles.new_quote_request',
+              messageKey: 'body.quote_request',
+              i18nParams: { service: requestData.serviceType },
+              actionUrl: '/opportunities',
+              metadata: { quoteRequestId: savedRequest.id },
+            })
+            .catch((err) => logger.error('Failed to notify provider of quote request:', err));
         }
       }
 
@@ -157,7 +180,9 @@ export class QuoteService {
       // Access control mirrors the list endpoint: customers see only their own requests;
       // providers see broadcast requests plus ones targeted at them (never targeted-at-others).
       if (access?.customerId) {
-        queryBuilder.andWhere('quoteRequest.customerId = :customerId', { customerId: access.customerId });
+        queryBuilder.andWhere('quoteRequest.customerId = :customerId', {
+          customerId: access.customerId,
+        });
       } else if (access?.forProviderId) {
         queryBuilder.andWhere(
           `("quoteRequest"."targetProviderIds" IS NULL
@@ -179,8 +204,8 @@ export class QuoteService {
   }
 
   async updateQuoteRequest(
-    requestId: string, 
-    customerId: string, 
+    requestId: string,
+    customerId: string,
     updateData: UpdateQuoteRequestRequest
   ): Promise<QuoteRequest> {
     try {
@@ -212,8 +237,8 @@ export class QuoteService {
   }
 
   async closeQuoteRequest(
-    requestId: string, 
-    customerId: string, 
+    requestId: string,
+    customerId: string,
     reason?: string
   ): Promise<QuoteRequest> {
     try {
@@ -275,12 +300,16 @@ export class QuoteService {
 
       // Filter by customer
       if (customerId) {
-        queryBuilder = queryBuilder.andWhere('quoteRequest.customerId = :customerId', { customerId });
+        queryBuilder = queryBuilder.andWhere('quoteRequest.customerId = :customerId', {
+          customerId,
+        });
       }
 
       // Filter by service type
       if (serviceType) {
-        queryBuilder = queryBuilder.andWhere('quoteRequest.serviceType = :serviceType', { serviceType });
+        queryBuilder = queryBuilder.andWhere('quoteRequest.serviceType = :serviceType', {
+          serviceType,
+        });
       }
 
       // Filter by status
@@ -296,11 +325,13 @@ export class QuoteService {
       if (forProviderId) {
         const provider = await this.providerRepository.findOne({ where: { id: forProviderId } });
         const providerCategories = provider?.services?.length
-          ? [...await serviceCategoryService.coverageFor(provider.services)]
+          ? [...(await serviceCategoryService.coverageFor(provider.services))]
           : [];
         // Treat missing/(0,0) coordinates as "no location" → skip radius (don't strand).
-        const hasProvCoords = !!provider?.location
-          && Number(provider.location.latitude) !== 0 && Number(provider.location.longitude) !== 0;
+        const hasProvCoords =
+          !!provider?.location &&
+          Number(provider.location.latitude) !== 0 &&
+          Number(provider.location.longitude) !== 0;
         const pLat = hasProvCoords ? provider!.location.latitude : null;
         const pLng = hasProvCoords ? provider!.location.longitude : null;
 
@@ -332,7 +363,8 @@ export class QuoteService {
             meTarget: JSON.stringify([forProviderId]),
             providerCategories: providerCategories.length ? providerCategories : ['__none__'],
             provCatCount: providerCategories.length,
-            pLat, pLng,
+            pLat,
+            pLng,
           }
         );
         // ...and NOT requests they've already quoted — those live in the provider's
@@ -372,21 +404,26 @@ export class QuoteService {
       if (latitude && longitude) {
         const latDiff = 0.009 * radius;
         const lngDiff = 0.009 * radius;
-        queryBuilder = queryBuilder.andWhere(
-          `CAST(quoteRequest.location->>'latitude' AS float) BETWEEN :minLat AND :maxLat`,
-          { minLat: latitude - latDiff, maxLat: latitude + latDiff }
-        ).andWhere(
-          `CAST(quoteRequest.location->>'longitude' AS float) BETWEEN :minLng AND :maxLng`,
-          { minLng: longitude - lngDiff, maxLng: longitude + lngDiff }
-        );
+        queryBuilder = queryBuilder
+          .andWhere(
+            `CAST(quoteRequest.location->>'latitude' AS float) BETWEEN :minLat AND :maxLat`,
+            { minLat: latitude - latDiff, maxLat: latitude + latDiff }
+          )
+          .andWhere(
+            `CAST(quoteRequest.location->>'longitude' AS float) BETWEEN :minLng AND :maxLng`,
+            { minLng: longitude - lngDiff, maxLng: longitude + lngDiff }
+          );
       }
 
       // Apply sorting
       const sortField =
-        sortBy === 'date' ? 'quoteRequest.preferredDate' :
-        sortBy === 'budget' ? `CAST(quoteRequest.budget->>'max' AS float)` :
-        sortBy === 'urgency' ? 'quoteRequest.urgency' :
-        'quoteRequest.createdAt';
+        sortBy === 'date'
+          ? 'quoteRequest.preferredDate'
+          : sortBy === 'budget'
+            ? `CAST(quoteRequest.budget->>'max' AS float)`
+            : sortBy === 'urgency'
+              ? 'quoteRequest.urgency'
+              : 'quoteRequest.createdAt';
 
       queryBuilder = queryBuilder.orderBy(sortField, sortOrder.toUpperCase() as 'ASC' | 'DESC');
 
@@ -488,23 +525,25 @@ export class QuoteService {
       await this.quoteRequestRepository.save(quoteRequest);
 
       // Notify the customer that a provider submitted a quote
-      notificationService.createNotification(quoteRequest.customerId, {
-        type: NotificationType.BOOKING,
-        title: 'Nova proposta recebida',
-        message: `${provider.businessName} enviou uma proposta para ${quoteData.serviceType}.`,
-        titleKey: 'titles.new_quote',
-        messageKey: 'body.new_quote',
-        i18nParams: { business: provider.businessName, service: quoteData.serviceType },
-        // Deep-link into the unified Bookings hub: ?quoteId expands the holding
-        // request and highlights the new quote.
-        actionUrl: `/bookings?quoteId=${savedQuote.id}`,
-        metadata: { quoteId: savedQuote.id, requestId: quoteData.requestId },
-      }).catch(err => logger.error('Failed to notify customer of new quote:', err));
+      notificationService
+        .createNotification(quoteRequest.customerId, {
+          type: NotificationType.BOOKING,
+          title: 'Nova proposta recebida',
+          message: `${provider.businessName} enviou uma proposta para ${quoteData.serviceType}.`,
+          titleKey: 'titles.new_quote',
+          messageKey: 'body.new_quote',
+          i18nParams: { business: provider.businessName, service: quoteData.serviceType },
+          // Deep-link into the unified Bookings hub: ?quoteId expands the holding
+          // request and highlights the new quote.
+          actionUrl: `/bookings?quoteId=${savedQuote.id}`,
+          metadata: { quoteId: savedQuote.id, requestId: quoteData.requestId },
+        })
+        .catch((err) => logger.error('Failed to notify customer of new quote:', err));
 
       logger.info('Quote created', {
         quoteId: savedQuote.id,
         providerId,
-        requestId: quoteData.requestId
+        requestId: quoteData.requestId,
       });
 
       return savedQuote;
@@ -526,10 +565,9 @@ export class QuoteService {
 
       // If userId is provided, ensure access control
       if (userId) {
-        queryBuilder.andWhere(
-          '(quote.customerId = :userId OR quote.providerId = :userId)',
-          { userId }
-        );
+        queryBuilder.andWhere('(quote.customerId = :userId OR quote.providerId = :userId)', {
+          userId,
+        });
       }
 
       return await queryBuilder.getOne();
@@ -579,9 +617,9 @@ export class QuoteService {
   }
 
   async updateQuoteStatus(
-    quoteId: string, 
-    userId: string, 
-    newStatus: QuoteStatus, 
+    quoteId: string,
+    userId: string,
+    newStatus: QuoteStatus,
     userRole: 'customer' | 'provider',
     reason?: string
   ): Promise<Quote> {
@@ -616,7 +654,9 @@ export class QuoteService {
       );
 
       if (!isValidTransition) {
-        throw new Error(`Invalid status transition from ${quote.status} to ${newStatus} for ${userRole}`);
+        throw new Error(
+          `Invalid status transition from ${quote.status} to ${newStatus} for ${userRole}`
+        );
       }
 
       // Update quote status
@@ -715,10 +755,12 @@ export class QuoteService {
       }
 
       // Apply sorting
-      const sortField = 
-        sortBy === 'price' ? 'quote.estimatedPrice' :
-        sortBy === 'date' ? 'quote.validUntil' :
-        'quote.createdAt';
+      const sortField =
+        sortBy === 'price'
+          ? 'quote.estimatedPrice'
+          : sortBy === 'date'
+            ? 'quote.validUntil'
+            : 'quote.createdAt';
 
       queryBuilder = queryBuilder.orderBy(sortField, sortOrder.toUpperCase() as 'ASC' | 'DESC');
 
@@ -788,6 +830,14 @@ export class QuoteService {
    */
   private async createBookingFromQuote(quote: Quote): Promise<Booking> {
     const bookingRepo = AppDataSource.getRepository(Booking);
+    const existing = await bookingRepo.findOne({ where: { quoteId: quote.id } });
+    if (existing) {
+      logger.info('Booking already exists for accepted quote', {
+        bookingId: existing.id,
+        quoteId: quote.id,
+      });
+      return existing;
+    }
     const request = quote.request;
     const loc: any = request?.location || {};
     const hasPreferred = !!request?.preferredDate;
@@ -825,16 +875,18 @@ export class QuoteService {
     // Notify the provider that the quote was accepted and a booking now exists
     const provider = await this.providerRepository.findOne({ where: { id: quote.providerId } });
     if (provider) {
-      notificationService.createNotification(provider.userId, {
-        type: NotificationType.BOOKING,
-        title: 'Orçamento aceito',
-        message: `O cliente aceitou seu orçamento de ${quote.serviceType}. Uma reserva foi criada.`,
-        titleKey: 'titles.quote_accepted',
-        messageKey: 'body.quote_accepted',
-        i18nParams: { service: quote.serviceType },
-        actionUrl: `/bookings?bookingId=${saved.id}`,
-        metadata: { bookingId: saved.id, quoteId: quote.id },
-      }).catch(err => logger.error('Failed to notify provider of accepted quote booking:', err));
+      notificationService
+        .createNotification(provider.userId, {
+          type: NotificationType.BOOKING,
+          title: 'Orçamento aceito',
+          message: `O cliente aceitou seu orçamento de ${quote.serviceType}. Uma reserva foi criada.`,
+          titleKey: 'titles.quote_accepted',
+          messageKey: 'body.quote_accepted',
+          i18nParams: { service: quote.serviceType },
+          actionUrl: `/bookings?bookingId=${saved.id}`,
+          metadata: { bookingId: saved.id, quoteId: quote.id },
+        })
+        .catch((err) => logger.error('Failed to notify provider of accepted quote booking:', err));
     }
 
     logger.info('Booking created from accepted quote', { bookingId: saved.id, quoteId: quote.id });
@@ -877,9 +929,9 @@ export class QuoteService {
       const expiredQuotes = await this.quoteRepository
         .createQueryBuilder()
         .update(Quote)
-        .set({ 
+        .set({
           status: QuoteStatus.EXPIRED,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where('status = :status', { status: QuoteStatus.PENDING })
         .andWhere('validUntil < :now', { now: new Date() })
@@ -896,11 +948,11 @@ export class QuoteService {
       const expiredRequests = await this.quoteRequestRepository
         .createQueryBuilder()
         .update(QuoteRequest)
-        .set({ 
+        .set({
           status: QuoteRequestStatus.CLOSED,
           closedAt: new Date(),
           closureReason: 'Expired',
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where('status = :status', { status: QuoteRequestStatus.OPEN })
         .andWhere('expiresAt < :now', { now: new Date() })

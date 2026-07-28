@@ -1,11 +1,11 @@
-import { anthropicService, ClaudeModel } from './services/anthropic.service';                                                                                               
-import logger from '../config/logger';                                                                                                                                      
-                                                                                                                                                                              
-  // ─── Types ────────────────────────────────────────────────────────────                                                                                                   
-                                         
+import { anthropicService, ClaudeModel } from './services/anthropic.service';
+import logger from '../config/logger';
+
+// ─── Types ────────────────────────────────────────────────────────────
+
 export interface ReviewDraftInput {
   reviewText: string;
-  rating: number;      // 1–5
+  rating: number; // 1–5
   serviceName: string;
   memoryContext?: string;
   constraintContext?: string;
@@ -15,35 +15,33 @@ export interface ReviewDraftOutput {
   draftResponse: string;
 }
 
-  // ─── Agent ────────────────────────────────────────────────────────────
+// ─── Agent ────────────────────────────────────────────────────────────
 
 class ReviewResponseAgent {
+  // TODO 1: Write the systemPrompt
+  //
+  // This is a few-shot prompt. Structure it like this:
+  //
+  //   (brief role sentence — who you are)
+  //
+  //   Example 1:
+  //   Review (2 stars): "The plumber arrived 2 hours late and left water on the floor."
+  //   Service: Plumbing
+  //   Response: "..."
+  //
+  //   Example 2: (5 stars, happy customer)
+  //   Example 3: (3 stars, mixed feedback)
+  //
+  //   Rules:
+  //   - Return ONLY the response text, no labels, no JSON
+  //   - 2–4 sentences max
+  //   - Professional but warm tone
+  //   - Always thank the customer
+  //   - Address the specific feedback (don't be generic)
+  //   - Never be defensive
+  //
 
-    // TODO 1: Write the systemPrompt
-    //
-    // This is a few-shot prompt. Structure it like this:
-    //
-    //   (brief role sentence — who you are)
-    //
-    //   Example 1:
-    //   Review (2 stars): "The plumber arrived 2 hours late and left water on the floor."
-    //   Service: Plumbing
-    //   Response: "..."
-    //
-    //   Example 2: (5 stars, happy customer)
-    //   Example 3: (3 stars, mixed feedback)
-    //
-    //   Rules:
-    //   - Return ONLY the response text, no labels, no JSON
-    //   - 2–4 sentences max
-    //   - Professional but warm tone
-    //   - Always thank the customer
-    //   - Address the specific feedback (don't be generic)
-    //   - Never be defensive
-    //
-
-
-    private readonly systemPrompt = `you are a customer support agent for a home services platform in Brazil. Your job is to write warm, professional responses to customer reviews in Brazilian Portuguese (pt-BR). Use the following examples as a guide:
+  private readonly systemPrompt = `you are a customer support agent for a home services platform in Brazil. Your job is to write warm, professional responses to customer reviews in Brazilian Portuguese (pt-BR). Use the following examples as a guide:
 
 Example 1:
 Review (2 stars): "O encanador chegou 2 horas atrasado e deixou água no chão."
@@ -69,9 +67,7 @@ Regras:
 - Nunca seja defensivo
 - Responda SEMPRE em português do Brasil`;
 
-
-
-async execute(input: ReviewDraftInput): Promise<ReviewDraftOutput> {
+  async execute(input: ReviewDraftInput): Promise<ReviewDraftOutput> {
     logger.info('ReviewResponseAgent executing', { rating: input.rating });
 
     // TODO 2: Build the userMessage
@@ -91,11 +87,11 @@ async execute(input: ReviewDraftInput): Promise<ReviewDraftOutput> {
     if (input.constraintContext) systemPrompt = `${input.constraintContext}\n\n${systemPrompt}`;
 
     const response = await anthropicService.callClaude({
-    model: ClaudeModel.SONNET,
-    systemPrompt,
-    userMessage,
-    maxTokens: 300,
-    temperature: 0.7,
+      model: ClaudeModel.SONNET,
+      systemPrompt,
+      userMessage,
+      maxTokens: 300,
+      temperature: 0.7,
     });
 
     const draftResponse = response.text.trim();

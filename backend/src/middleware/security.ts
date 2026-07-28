@@ -47,7 +47,9 @@ export const securityMiddleware = [
         callback(null, { origin: true, credentials: true });
         return;
       }
-    } catch (_) { /* invalid origin URL */ }
+    } catch (_) {
+      /* invalid origin URL */
+    }
     // Allow explicitly configured origins
     if (getAllowedOrigins().includes(origin)) {
       callback(null, { origin: true, credentials: true });

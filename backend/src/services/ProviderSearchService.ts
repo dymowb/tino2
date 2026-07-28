@@ -105,7 +105,7 @@ export class ProviderSearchService {
         // Normalize service type: convert underscores to spaces and use case-insensitive match
         const normalizedService = params.serviceType.replace(/_/g, ' ');
         query = query.andWhere('provider.services::text ILIKE :serviceType', {
-          serviceType: `%${normalizedService}%`
+          serviceType: `%${normalizedService}%`,
         });
       }
 
@@ -118,8 +118,8 @@ export class ProviderSearchService {
       }
 
       if (params.isBackgroundChecked !== undefined) {
-        query = query.andWhere('provider.isBackgroundChecked = :isBackgroundChecked', { 
-          isBackgroundChecked: params.isBackgroundChecked 
+        query = query.andWhere('provider.isBackgroundChecked = :isBackgroundChecked', {
+          isBackgroundChecked: params.isBackgroundChecked,
         });
       }
 
@@ -133,7 +133,7 @@ export class ProviderSearchService {
 
       if (params.maxRate !== undefined) {
         query = query.andWhere("(provider.pricing->>'baseRate')::numeric <= :maxRate", {
-          maxRate: params.maxRate
+          maxRate: params.maxRate,
         });
       }
 
@@ -203,7 +203,11 @@ export class ProviderSearchService {
       }
 
       // Sort results
-      this.sortProviders(providersWithDistance, params.sortBy || 'distance', params.sortOrder || 'asc');
+      this.sortProviders(
+        providersWithDistance,
+        params.sortBy || 'distance',
+        params.sortOrder || 'asc'
+      );
 
       // Apply pagination
       const total = providersWithDistance.length;
@@ -238,14 +242,14 @@ export class ProviderSearchService {
    * Search providers by address (geocode first, then search) (FR-024)
    */
   async searchProvidersByAddress(
-    address: string, 
-    radius: number = 10, 
+    address: string,
+    radius: number = 10,
     options: Omit<LocationSearchParams, 'latitude' | 'longitude' | 'radius'> = {}
   ): Promise<ServiceDiscoveryResult> {
     try {
       // Geocode the address first
       const geocodeResult = await LocationService.geocodeAddress(address);
-      
+
       const searchResult = await this.searchProvidersByLocation({
         latitude: geocodeResult.location.latitude,
         longitude: geocodeResult.location.longitude,
@@ -307,7 +311,7 @@ export class ProviderSearchService {
 
       if (serviceType) {
         query = query.andWhere('provider.services::text ILIKE :serviceType', {
-          serviceType: `%${serviceType}%`
+          serviceType: `%${serviceType}%`,
         });
       }
 
@@ -384,7 +388,9 @@ export class ProviderSearchService {
     availability: { date: Date; startTime: string; endTime: string }
   ): Promise<boolean> {
     try {
-      const dayOfWeek = availability.date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase() as keyof typeof provider.availableHours;
+      const dayOfWeek = availability.date
+        .toLocaleDateString('en-US', { weekday: 'long' })
+        .toLowerCase() as keyof typeof provider.availableHours;
       const providerHours = provider.availableHours[dayOfWeek];
 
       if (!providerHours || !providerHours.available) {

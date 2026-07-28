@@ -17,11 +17,11 @@ import { App } from '@/app';
 import { initializeDatabase } from '@/config/database';
 import { initializeMemoryDatabase } from '@/config/memoryDatabase';
 import { redisClient } from '@/config/redis';
-import { mongoClient } from '@/config/mongodb';
 import logger from '@/config/logger';
 import { startAutoCaptureJob } from '@/jobs/autoCapture.job';
 import { startReflectionJob } from '@/jobs/reflection.job';
 import { startQuoteExpiryJob } from '@/jobs/quoteExpiry.job';
+import { startBookingReminderJob } from '@/jobs/bookingReminder.job';
 import { validateConfig } from '@/config/environment';
 
 async function bootstrap(): Promise<void> {
@@ -40,32 +40,23 @@ async function bootstrap(): Promise<void> {
       logger.info('Redis disabled');
     }
 
-    if (process.env.MONGODB_ENABLED === 'true') {
-      await mongoClient.connect();
-      logger.info('MongoDB connected');
-    } else {
-      logger.info('MongoDB disabled');
-    }
-
     const app = new App();
     app.listen();
 
     startAutoCaptureJob();
     startReflectionJob();
     startQuoteExpiryJob();
+    startBookingReminderJob();
 
     const gracefulShutdown = async (): Promise<void> => {
       logger.info('Received shutdown signal. Gracefully shutting down...');
-      
+
       try {
         if (process.env.REDIS_ENABLED === 'true') {
           await redisClient.disconnect();
         }
-        if (process.env.MONGODB_ENABLED === 'true') {
-          await mongoClient.disconnect();
-        }
         logger.info('Databases disconnected successfully');
-        
+
         process.exit(0);
       } catch (error) {
         logger.error('Error during graceful shutdown:', error);
@@ -75,7 +66,6 @@ async function bootstrap(): Promise<void> {
 
     process.on('SIGTERM', gracefulShutdown);
     process.on('SIGINT', gracefulShutdown);
-
   } catch (error) {
     logger.error('Failed to start server:', error);
     process.exit(1);

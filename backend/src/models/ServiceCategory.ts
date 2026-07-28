@@ -8,7 +8,7 @@ import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn } fro
 @Entity('service_categories')
 export class ServiceCategory {
   @PrimaryColumn()
-  category: string;            // canonical key, e.g. 'plumbing'
+  category: string; // canonical key, e.g. 'plumbing'
 
   @Column()
   labelPt: string;
@@ -17,10 +17,10 @@ export class ServiceCategory {
   labelEn: string;
 
   @Column({ type: 'jsonb', default: () => "'[]'" })
-  aliases: string[];           // lowercased fuzzy-match tokens
+  aliases: string[]; // lowercased fuzzy-match tokens
 
   @Column({ type: 'jsonb', default: () => "'[]'" })
-  services: string[];          // specific services belonging to this category
+  services: string[]; // specific services belonging to this category
 
   @CreateDateColumn()
   createdAt: Date;

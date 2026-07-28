@@ -8,7 +8,11 @@ const router = Router();
 
 router.get('/verify-email', authController.verifyEmail.bind(authController));
 
-router.post('/resend-verification', rateLimiters.auth, authController.resendVerification.bind(authController));
+router.post(
+  '/resend-verification',
+  rateLimiters.auth,
+  authController.resendVerification.bind(authController)
+);
 
 router.post(
   '/register',
@@ -48,8 +52,16 @@ router.put(
   authController.changePassword.bind(authController)
 );
 
-router.post('/forgot-password', rateLimiters.auth, authController.forgotPassword.bind(authController));
+router.post(
+  '/forgot-password',
+  rateLimiters.auth,
+  authController.forgotPassword.bind(authController)
+);
 
-router.post('/reset-password', rateLimiters.auth, authController.resetPassword.bind(authController));
+router.post(
+  '/reset-password',
+  rateLimiters.auth,
+  authController.resetPassword.bind(authController)
+);
 
 export default router;

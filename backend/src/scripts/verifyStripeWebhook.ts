@@ -19,18 +19,33 @@ async function main() {
   if (!secret.startsWith('whsec_')) throw new Error('STRIPE_WEBHOOK_SECRET not set');
 
   const payload = JSON.stringify({
-    id: 'evt_test_ws2', object: 'event', type: 'payment_intent.succeeded',
-    data: { object: { id: 'pi_test_ws2_synthetic', object: 'payment_intent', status: 'succeeded' } },
+    id: 'evt_test_ws2',
+    object: 'event',
+    type: 'payment_intent.succeeded',
+    data: {
+      object: { id: 'pi_test_ws2_synthetic', object: 'payment_intent', status: 'succeeded' },
+    },
   });
   const header = stripe.webhooks.generateTestHeaderString({ payload, secret });
 
   const url = new URL(`${base}/api/v1/payments/webhook/stripe`);
   const lib = url.protocol === 'https:' ? https : http;
   const status: number = await new Promise((resolve, reject) => {
-    const req = lib.request(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Stripe-Signature': header, 'Content-Length': Buffer.byteLength(payload) },
-    }, res => { res.resume(); resolve(res.statusCode || 0); });
+    const req = lib.request(
+      url,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Stripe-Signature': header,
+          'Content-Length': Buffer.byteLength(payload),
+        },
+      },
+      (res) => {
+        res.resume();
+        resolve(res.statusCode || 0);
+      }
+    );
     req.on('error', reject);
     req.write(payload);
     req.end();
@@ -38,10 +53,15 @@ async function main() {
 
   // Stripe webhook convention: 200 = received & signature valid. 400 = signature/parse fail.
   console.log(`POST ${url.href} → HTTP ${status}`);
-  console.log(status === 200
-    ? 'PASS ✅ webhook signature verified + raw body intact'
-    : `FAIL ❌ (HTTP ${status}) — likely signature/raw-body issue`);
+  console.log(
+    status === 200
+      ? 'PASS ✅ webhook signature verified + raw body intact'
+      : `FAIL ❌ (HTTP ${status}) — likely signature/raw-body issue`
+  );
   process.exit(status === 200 ? 0 : 1);
 }
 
-main().catch(e => { console.error('Webhook verify error:', e?.message || e); process.exit(1); });
+main().catch((e) => {
+  console.error('Webhook verify error:', e?.message || e);
+  process.exit(1);
+});

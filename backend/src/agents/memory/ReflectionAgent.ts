@@ -106,7 +106,11 @@ export class ReflectionAgent {
 
     const episodeText = episodes
       .map((ep, i) => {
-        const date = ep.occurredAt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const date = ep.occurredAt.toLocaleDateString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+        });
         return `[${i + 1}] ID: ${ep.id}\nData: ${date} | Importância: ${ep.importance.toFixed(2)}\nResumo: ${ep.summary}`;
       })
       .join('\n\n');
@@ -132,7 +136,10 @@ export class ReflectionAgent {
   }
 
   private parse(raw: string, episodes: EpisodeSummary[], userId: string): ReflectionOutput {
-    let cleaned = raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim();
+    let cleaned = raw
+      .replace(/^```(?:json)?\s*/m, '')
+      .replace(/\s*```\s*$/m, '')
+      .trim();
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
     if (jsonMatch) cleaned = jsonMatch[0];
 
@@ -140,14 +147,16 @@ export class ReflectionAgent {
     try {
       obj = JSON.parse(cleaned) as Record<string, unknown>;
     } catch {
-      logger.warn(`[ReflectionAgent] JSON parse failed for user ${userId}. Raw: ${raw.slice(0, 200)}`);
+      logger.warn(
+        `[ReflectionAgent] JSON parse failed for user ${userId}. Raw: ${raw.slice(0, 200)}`
+      );
       return { semanticFacts: [], proceduralRules: [] };
     }
 
-    const validEpisodeIds = new Set(episodes.map(e => e.id));
+    const validEpisodeIds = new Set(episodes.map((e) => e.id));
 
     const semanticFacts: ReflectedFact[] = Array.isArray(obj.semantic_facts)
-      ? (obj.semantic_facts as unknown[]).filter(isRawFact).map(f => ({
+      ? (obj.semantic_facts as unknown[]).filter(isRawFact).map((f) => ({
           content: f.content,
           confidence: clamp(f.confidence),
           importance: clamp(f.importance),
@@ -156,7 +165,7 @@ export class ReflectionAgent {
       : [];
 
     const proceduralRules: ReflectedRule[] = Array.isArray(obj.procedural_rules)
-      ? (obj.procedural_rules as unknown[]).filter(isRawRule).map(r => ({
+      ? (obj.procedural_rules as unknown[]).filter(isRawRule).map((r) => ({
           ruleText: r.rule_text,
           promptFragment: r.prompt_fragment,
           confidence: clamp(r.confidence),
@@ -166,7 +175,7 @@ export class ReflectionAgent {
 
     logger.info(
       `[ReflectionAgent] user=${userId} episodes=${episodes.length} ` +
-      `facts=${semanticFacts.length} rules=${proceduralRules.length}`,
+        `facts=${semanticFacts.length} rules=${proceduralRules.length}`
     );
 
     return { semanticFacts, proceduralRules };
@@ -181,7 +190,7 @@ function clamp(n: unknown): number {
 
 function filterValidIds(ids: unknown, validSet: Set<string>): string[] {
   if (!Array.isArray(ids)) return [];
-  return (ids as unknown[]).filter(id => typeof id === 'string' && validSet.has(id)) as string[];
+  return (ids as unknown[]).filter((id) => typeof id === 'string' && validSet.has(id)) as string[];
 }
 
 interface RawFact {
@@ -200,8 +209,10 @@ interface RawRule {
 
 function isRawFact(x: unknown): x is RawFact {
   return (
-    typeof x === 'object' && x !== null &&
-    typeof (x as RawFact).content === 'string' && (x as RawFact).content.trim().length > 0 &&
+    typeof x === 'object' &&
+    x !== null &&
+    typeof (x as RawFact).content === 'string' &&
+    (x as RawFact).content.trim().length > 0 &&
     typeof (x as RawFact).confidence === 'number' &&
     typeof (x as RawFact).importance === 'number'
   );
@@ -209,9 +220,12 @@ function isRawFact(x: unknown): x is RawFact {
 
 function isRawRule(x: unknown): x is RawRule {
   return (
-    typeof x === 'object' && x !== null &&
-    typeof (x as RawRule).rule_text === 'string' && (x as RawRule).rule_text.trim().length > 0 &&
-    typeof (x as RawRule).prompt_fragment === 'string' && (x as RawRule).prompt_fragment.trim().length > 0 &&
+    typeof x === 'object' &&
+    x !== null &&
+    typeof (x as RawRule).rule_text === 'string' &&
+    (x as RawRule).rule_text.trim().length > 0 &&
+    typeof (x as RawRule).prompt_fragment === 'string' &&
+    (x as RawRule).prompt_fragment.trim().length > 0 &&
     typeof (x as RawRule).confidence === 'number'
   );
 }

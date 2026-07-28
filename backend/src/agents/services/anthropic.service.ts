@@ -13,9 +13,9 @@ import logger from '../../config/logger';
  * Claude Model Options
  */
 export enum ClaudeModel {
-  HAIKU = 'claude-haiku-4-5-20251001',     // Fast, cheap - for conversations
-  SONNET = 'claude-sonnet-4-6',            // Balanced - for analysis
-  OPUS = 'claude-opus-4-6',               // Powerful - for synthesis
+  HAIKU = 'claude-haiku-4-5-20251001', // Fast, cheap - for conversations
+  SONNET = 'claude-sonnet-4-6', // Balanced - for analysis
+  OPUS = 'claude-opus-4-6', // Powerful - for synthesis
 }
 
 /**
@@ -142,7 +142,7 @@ class AnthropicService {
 
     switch (model) {
       case ClaudeModel.HAIKU:
-        inputCostPer1M = 0.80;
+        inputCostPer1M = 0.8;
         outputCostPer1M = 4.0;
         break;
       case ClaudeModel.SONNET:
@@ -198,8 +198,5 @@ class AnthropicService {
   }
 }
 
-
 // Export singleton instance
 export const anthropicService = new AnthropicService();
-
-

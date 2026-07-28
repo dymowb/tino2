@@ -52,10 +52,10 @@ export class Message {
   @IsString()
   message: string;
 
-  @Column({ 
-    type: 'varchar', 
-    enum: MessageType, 
-    default: MessageType.TEXT 
+  @Column({
+    type: 'varchar',
+    enum: MessageType,
+    default: MessageType.TEXT,
   })
   @IsEnum(MessageType)
   messageType: MessageType;

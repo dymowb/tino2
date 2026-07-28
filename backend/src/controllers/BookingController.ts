@@ -5,7 +5,7 @@ import providerService from '@/services/ProviderService';
 import logger from '@/config/logger';
 import { ApiResponse, AuthenticatedRequest } from '@/types';
 import { AppDataSource } from '@/config/database';
-import { Booking, BookingStatus } from '@/models/Booking';
+import { Booking, BookingStatus, PaymentStatus } from '@/models/Booking';
 import { User } from '@/models/User';
 import { Provider } from '@/models/Provider';
 import { getStripeInstance, getStripeErrorMessage, calculateFees } from '@/config/stripe';
@@ -88,7 +88,7 @@ export class BookingController {
 
       res.status(statusCode).json(response);
     }
-  }
+  };
 
   getBooking = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -131,7 +131,7 @@ export class BookingController {
 
       res.status(500).json(response);
     }
-  }
+  };
 
   updateBooking = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -183,7 +183,10 @@ export class BookingController {
         if (error.message.includes('not found') || error.message.includes('access denied')) {
           statusCode = 404;
           message = error.message;
-        } else if (error.message.includes('Cannot update') || error.message.includes('Only the customer')) {
+        } else if (
+          error.message.includes('Cannot update') ||
+          error.message.includes('Only the customer')
+        ) {
           statusCode = 403;
           message = error.message;
         } else if (error.message.includes('not available')) {
@@ -199,7 +202,7 @@ export class BookingController {
 
       res.status(statusCode).json(response);
     }
-  }
+  };
 
   updateBookingStatus = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -265,7 +268,7 @@ export class BookingController {
 
       res.status(statusCode).json(response);
     }
-  }
+  };
 
   searchBookings = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -294,13 +297,18 @@ export class BookingController {
         query.customerId = userId;
       } else if (userType === 'provider') {
         // booking.providerId references providers.id (not users.id) — look it up
-        const providerProfile = await AppDataSource.getRepository(Provider)
-          .findOne({ where: { userId, isActive: true } });
+        const providerProfile = await AppDataSource.getRepository(Provider).findOne({
+          where: { userId, isActive: true },
+        });
         if (providerProfile) {
           query.providerId = providerProfile.id;
         } else {
           // No provider profile — return empty
-          res.json({ success: true, data: [], pagination: { page: 1, limit: 20, total: 0, pages: 0 } });
+          res.json({
+            success: true,
+            data: [],
+            pagination: { page: 1, limit: 20, total: 0, pages: 0 },
+          });
           return;
         }
       }
@@ -315,8 +323,8 @@ export class BookingController {
           page: result.page,
           limit: result.limit,
           total: result.total,
-          pages: Math.ceil(result.total / result.limit)
-        }
+          pages: Math.ceil(result.total / result.limit),
+        },
       };
 
       res.status(200).json(response);
@@ -330,7 +338,7 @@ export class BookingController {
 
       res.status(500).json(response);
     }
-  }
+  };
 
   getCustomerBookings = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -374,8 +382,8 @@ export class BookingController {
           page: result.page,
           limit: result.limit,
           total: result.total,
-          pages: Math.ceil(result.total / result.limit)
-        }
+          pages: Math.ceil(result.total / result.limit),
+        },
       };
 
       res.status(200).json(response);
@@ -389,7 +397,7 @@ export class BookingController {
 
       res.status(500).json(response);
     }
-  }
+  };
 
   getProviderBookings = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -434,8 +442,8 @@ export class BookingController {
           page: result.page,
           limit: result.limit,
           total: result.total,
-          pages: Math.ceil(result.total / result.limit)
-        }
+          pages: Math.ceil(result.total / result.limit),
+        },
       };
 
       res.status(200).json(response);
@@ -449,7 +457,7 @@ export class BookingController {
 
       res.status(500).json(response);
     }
-  }
+  };
 
   cancelBooking = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -490,7 +498,10 @@ export class BookingController {
         if (error.message.includes('not found') || error.message.includes('access denied')) {
           statusCode = 404;
           message = error.message;
-        } else if (error.message.includes('Cannot cancel') || error.message.includes('Access denied')) {
+        } else if (
+          error.message.includes('Cannot cancel') ||
+          error.message.includes('Access denied')
+        ) {
           statusCode = 403;
           message = error.message;
         }
@@ -503,7 +514,7 @@ export class BookingController {
 
       res.status(statusCode).json(response);
     }
-  }
+  };
 
   // POST /bookings/:bookingId/start — provider starts service; places hold on customer card
   startBooking = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -516,21 +527,31 @@ export class BookingController {
 
       // Verify caller is the provider for this booking
       const providerEntity = await providerRepo.findOne({ where: { userId: req.user.userId } });
-      if (!providerEntity) { res.status(403).json({ success: false, message: 'Not a provider' }); return; }
+      if (!providerEntity) {
+        res.status(403).json({ success: false, message: 'Not a provider' });
+        return;
+      }
 
       const booking = await bookingRepo.findOne({
         where: { id: bookingId, providerId: providerEntity.id },
         relations: ['customer'],
       });
-      if (!booking) { res.status(404).json({ success: false, message: 'Booking not found' }); return; }
+      if (!booking) {
+        res.status(404).json({ success: false, message: 'Booking not found' });
+        return;
+      }
       if (booking.status !== BookingStatus.CONFIRMED) {
-        res.status(400).json({ success: false, message: `Cannot start booking in status: ${booking.status}` });
+        res
+          .status(400)
+          .json({ success: false, message: `Cannot start booking in status: ${booking.status}` });
         return;
       }
 
       const customer = booking.customer;
       if (!customer.stripePaymentMethodId || !customer.stripeCustomerId) {
-        res.status(400).json({ success: false, message: 'Customer has not set up a payment method' });
+        res
+          .status(400)
+          .json({ success: false, message: 'Customer has not set up a payment method' });
         return;
       }
 
@@ -558,30 +579,41 @@ export class BookingController {
         // Hold failed — cancel the booking and notify both parties
         booking.status = BookingStatus.CANCELLED;
         booking.cancelledAt = new Date();
-        booking.cancellationReason = 'Payment hold failed: ' + (stripeErr.message || 'insufficient funds');
+        booking.cancellationReason =
+          'Payment hold failed: ' + (stripeErr.message || 'insufficient funds');
         await bookingRepo.save(booking);
 
-        notificationService.createNotification(customer.id, {
-          type: NotificationType.PAYMENT,
-          title: 'Payment hold failed',
-          message: 'Your booking was cancelled because the payment could not be authorised. Please update your payment method.',
-          titleKey: 'titles.payment_hold_failed',
-          messageKey: 'body.payment_hold_failed',
-          actionUrl: `/bookings?bookingId=${bookingId}`,
-          metadata: { bookingId },
-        }).catch(() => {});
+        notificationService
+          .createNotification(customer.id, {
+            type: NotificationType.PAYMENT,
+            title: 'Payment hold failed',
+            message:
+              'Your booking was cancelled because the payment could not be authorised. Please update your payment method.',
+            titleKey: 'titles.payment_hold_failed',
+            messageKey: 'body.payment_hold_failed',
+            actionUrl: `/bookings?bookingId=${bookingId}`,
+            metadata: { bookingId },
+          })
+          .catch(() => {});
 
-        notificationService.createNotification(req.user.userId, {
-          type: NotificationType.PAYMENT,
-          title: 'Booking cancelled',
-          message: 'The booking was cancelled because the customer\'s payment method was declined.',
-          titleKey: 'titles.booking_cancelled',
-          messageKey: 'body.booking_cancelled_payment',
-          actionUrl: `/bookings?bookingId=${bookingId}`,
-          metadata: { bookingId },
-        }).catch(() => {});
+        notificationService
+          .createNotification(req.user.userId, {
+            type: NotificationType.PAYMENT,
+            title: 'Booking cancelled',
+            message:
+              "The booking was cancelled because the customer's payment method was declined.",
+            titleKey: 'titles.booking_cancelled',
+            messageKey: 'body.booking_cancelled_payment',
+            actionUrl: `/bookings?bookingId=${bookingId}`,
+            metadata: { bookingId },
+          })
+          .catch(() => {});
 
-        res.status(402).json({ success: false, message: 'Payment hold failed — booking cancelled', error: stripeErr.message });
+        res.status(402).json({
+          success: false,
+          message: 'Payment hold failed — booking cancelled',
+          error: stripeErr.message,
+        });
         return;
       }
 
@@ -596,7 +628,7 @@ export class BookingController {
       logger.error('Error in startBooking:', error);
       res.status(500).json({ success: false, message: getStripeErrorMessage(error) });
     }
-  }
+  };
 
   // POST /bookings/:bookingId/complete — provider marks service as done
   markBookingComplete = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -606,15 +638,24 @@ export class BookingController {
     try {
       const { bookingId } = req.params;
       const providerEntity = await providerRepo.findOne({ where: { userId: req.user.userId } });
-      if (!providerEntity) { res.status(403).json({ success: false, message: 'Not a provider' }); return; }
+      if (!providerEntity) {
+        res.status(403).json({ success: false, message: 'Not a provider' });
+        return;
+      }
 
       const booking = await bookingRepo.findOne({
         where: { id: bookingId, providerId: providerEntity.id },
         relations: ['customer'],
       });
-      if (!booking) { res.status(404).json({ success: false, message: 'Booking not found' }); return; }
+      if (!booking) {
+        res.status(404).json({ success: false, message: 'Booking not found' });
+        return;
+      }
       if (booking.status !== BookingStatus.IN_PROGRESS) {
-        res.status(400).json({ success: false, message: `Cannot complete booking in status: ${booking.status}` });
+        res.status(400).json({
+          success: false,
+          message: `Cannot complete booking in status: ${booking.status}`,
+        });
         return;
       }
 
@@ -622,22 +663,29 @@ export class BookingController {
       booking.completedAt = new Date();
       await bookingRepo.save(booking);
 
-      notificationService.createNotification(booking.customer.id, {
-        type: NotificationType.BOOKING,
-        title: 'Service complete — please confirm',
-        message: 'Your provider has marked the service as complete. Please confirm or raise a dispute within 3 days.',
-        titleKey: 'titles.service_complete_confirm',
-        messageKey: 'body.service_complete_confirm',
-        actionUrl: `/bookings?bookingId=${bookingId}`,
-        metadata: { bookingId },
-      }).catch(() => {});
+      notificationService
+        .createNotification(booking.customer.id, {
+          type: NotificationType.BOOKING,
+          title: 'Service complete — please confirm',
+          message:
+            'Your provider has marked the service as complete. Please confirm or raise a dispute within 3 days.',
+          titleKey: 'titles.service_complete_confirm',
+          messageKey: 'body.service_complete_confirm',
+          actionUrl: `/bookings?bookingId=${bookingId}`,
+          metadata: { bookingId },
+        })
+        .catch(() => {});
 
-      res.json({ success: true, message: 'Booking marked complete, awaiting customer confirmation', data: { booking } });
+      res.json({
+        success: true,
+        message: 'Booking marked complete, awaiting customer confirmation',
+        data: { booking },
+      });
     } catch (error) {
       logger.error('Error in markBookingComplete:', error);
       res.status(500).json({ success: false, message: 'Internal server error' });
     }
-  }
+  };
 
   // POST /bookings/:bookingId/confirm-completion — customer confirms, triggers capture
   confirmCompletion = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -649,9 +697,14 @@ export class BookingController {
         where: { id: bookingId, customerId: req.user.userId },
         relations: ['provider'],
       });
-      if (!booking) { res.status(404).json({ success: false, message: 'Booking not found' }); return; }
+      if (!booking) {
+        res.status(404).json({ success: false, message: 'Booking not found' });
+        return;
+      }
       if (booking.status !== BookingStatus.PENDING_COMPLETION) {
-        res.status(400).json({ success: false, message: `Cannot confirm booking in status: ${booking.status}` });
+        res
+          .status(400)
+          .json({ success: false, message: `Cannot confirm booking in status: ${booking.status}` });
         return;
       }
 
@@ -660,24 +713,31 @@ export class BookingController {
       await stripe.paymentIntents.capture(booking.stripePaymentIntentId);
 
       booking.status = BookingStatus.COMPLETED;
+      booking.paymentStatus = PaymentStatus.PAID;
       await bookingRepo.save(booking);
 
-      notificationService.createNotification(booking.provider.userId, {
-        type: NotificationType.PAYMENT,
-        title: 'Payment released',
-        message: 'The customer confirmed service completion. Payment has been captured.',
-        titleKey: 'titles.payment_released',
-        messageKey: 'body.payment_released',
-        actionUrl: `/bookings?bookingId=${bookingId}`,
-        metadata: { bookingId },
-      }).catch(() => {});
+      notificationService
+        .createNotification(booking.provider.userId, {
+          type: NotificationType.PAYMENT,
+          title: 'Payment released',
+          message: 'The customer confirmed service completion. Payment has been captured.',
+          titleKey: 'titles.payment_released',
+          messageKey: 'body.payment_released',
+          actionUrl: `/bookings?bookingId=${bookingId}`,
+          metadata: { bookingId },
+        })
+        .catch(() => {});
 
-      res.json({ success: true, message: 'Completion confirmed, payment captured', data: { booking } });
+      res.json({
+        success: true,
+        message: 'Completion confirmed, payment captured',
+        data: { booking },
+      });
     } catch (error) {
       logger.error('Error in confirmCompletion:', error);
       res.status(500).json({ success: false, message: getStripeErrorMessage(error) });
     }
-  }
+  };
 
   // POST /bookings/:bookingId/dispute — customer disputes; freezes capture, notifies admin
   disputeBooking = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -689,9 +749,15 @@ export class BookingController {
       const booking = await bookingRepo.findOne({
         where: { id: bookingId, customerId: req.user.userId },
       });
-      if (!booking) { res.status(404).json({ success: false, message: t(req, 'booking.not_found') }); return; }
+      if (!booking) {
+        res.status(404).json({ success: false, message: t(req, 'booking.not_found') });
+        return;
+      }
       if (booking.status !== BookingStatus.PENDING_COMPLETION) {
-        res.status(400).json({ success: false, message: t(req, 'booking.dispute_wrong_status', { status: booking.status }) });
+        res.status(400).json({
+          success: false,
+          message: t(req, 'booking.dispute_wrong_status', { status: booking.status }),
+        });
         return;
       }
 
@@ -711,7 +777,7 @@ export class BookingController {
       logger.error('Error in disputeBooking:', error);
       res.status(500).json({ success: false, message: 'Internal server error' });
     }
-  }
+  };
 
   getMyProviderBookings = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -760,8 +826,8 @@ export class BookingController {
           page: result.page,
           limit: result.limit,
           total: result.total,
-          pages: Math.ceil(result.total / result.limit)
-        }
+          pages: Math.ceil(result.total / result.limit),
+        },
       };
 
       res.status(200).json(response);
@@ -775,7 +841,7 @@ export class BookingController {
 
       res.status(500).json(response);
     }
-  }
+  };
 }
 
 export default new BookingController();

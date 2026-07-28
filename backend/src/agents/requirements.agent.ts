@@ -12,12 +12,7 @@ import { getLanguageInstruction } from './utils/locale';
  * - Build comprehensive requirements summary
  */
 
-import {
-  Agent,
-  AgentMetadata,
-  AgentResult,
-  ReflectionResult,
-} from './types/agent.types';
+import { Agent, AgentMetadata, AgentResult, ReflectionResult } from './types/agent.types';
 import { WorkflowContext } from './types/workflow.types';
 import { anthropicService, ClaudeModel } from './services/anthropic.service';
 import { parseLlmJson } from './utils/llm-json';
@@ -111,7 +106,9 @@ class RequirementsAgent implements Agent<RequirementsAgentInput, RequirementsAge
     const todayISO = today.toISOString().split('T')[0];
     const todayWeekday = today.toLocaleDateString('en-US', { weekday: 'long' });
     // Dynamic example date (today + 7d) so the example never anchors the model to a past year.
-    const exampleDate = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const exampleDate = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split('T')[0];
     return `You are a requirements gathering assistant for a domestic services platform.
 ${getLanguageInstruction(locale)}
 
@@ -212,8 +209,10 @@ Analyze the conversation and respond with JSON following the format specified in
         if (input.constraintContext) systemPrompt = `${input.constraintContext}\n\n${systemPrompt}`;
 
         if (iterationCount === 0) {
-          if (input.constraintContext) logger.info(`[RequirementsAgent] Constraints injected:\n${input.constraintContext}`);
-          if (input.memoryContext) logger.info(`[RequirementsAgent] Memory injected:\n${input.memoryContext}`);
+          if (input.constraintContext)
+            logger.info(`[RequirementsAgent] Constraints injected:\n${input.constraintContext}`);
+          if (input.memoryContext)
+            logger.info(`[RequirementsAgent] Memory injected:\n${input.memoryContext}`);
         }
 
         const response = await anthropicService.callClaude({
@@ -226,12 +225,14 @@ Analyze the conversation and respond with JSON following the format specified in
 
         // Parse Claude's JSON response
         const output = this.parseClaudeResponse(response.text);
-        bestOutput = output;  
+        bestOutput = output;
         const executionTimeMs = Date.now() - startTime;
-        totalTokensUsed += response.usage.inputTokens + response.usage.outputTokens;  // ← Add
-        finalExecutionTimeMs = executionTimeMs;  // ← Add
+        totalTokensUsed += response.usage.inputTokens + response.usage.outputTokens; // ← Add
+        finalExecutionTimeMs = executionTimeMs; // ← Add
         const reflection = await this.reflect(output, input);
-        logger.debug(`Reflection: needsImprovement=${reflection.needsImprovement}, confidence=${reflection.confidence}`);
+        logger.debug(
+          `Reflection: needsImprovement=${reflection.needsImprovement}, confidence=${reflection.confidence}`
+        );
         // If output is good enough, we're done
         if (!reflection.needsImprovement) {
           logger.debug('Reflection satisfied - breaking early');
@@ -239,10 +240,12 @@ Analyze the conversation and respond with JSON following the format specified in
         }
 
         // Otherwise, log that we're retrying
-        logger.debug(`Reflection suggests improvements (attempt ${iterationCount + 1}/${MAX_REFLECTION_ITERATIONS})`);
+        logger.debug(
+          `Reflection suggests improvements (attempt ${iterationCount + 1}/${MAX_REFLECTION_ITERATIONS})`
+        );
         iterationCount++;
-     }
-     
+      }
+
       return {
         success: true,
         output: bestOutput!,
@@ -305,7 +308,7 @@ Analyze the conversation and respond with JSON following the format specified in
     }
 
     const needsImprovement = criticalFieldsMissing.length > 0;
-    const confidence = 1.0 - (criticalFieldsMissing.length * 0.2);
+    const confidence = 1.0 - criticalFieldsMissing.length * 0.2;
 
     if (needsImprovement) {
       return {
@@ -373,7 +376,11 @@ Analyze the conversation and respond with JSON following the format specified in
       }
 
       // Normalise: Claude sometimes returns followUpQuestions (array) instead of followUpQuestion (string)
-      if (!parsed.followUpQuestion && Array.isArray(parsed.followUpQuestions) && parsed.followUpQuestions.length > 0) {
+      if (
+        !parsed.followUpQuestion &&
+        Array.isArray(parsed.followUpQuestions) &&
+        parsed.followUpQuestions.length > 0
+      ) {
         parsed.followUpQuestion = parsed.followUpQuestions[0];
       }
 
@@ -412,7 +419,8 @@ Analyze the conversation and respond with JSON following the format specified in
   private getErrorOutput(): RequirementsAgentOutput {
     return {
       isComplete: false,
-      followUpQuestion: 'I apologize, but I encountered an error. Could you please repeat your service request?',
+      followUpQuestion:
+        'I apologize, but I encountered an error. Could you please repeat your service request?',
       extractedFacts: [],
       missingInformation: ['all information'],
     };

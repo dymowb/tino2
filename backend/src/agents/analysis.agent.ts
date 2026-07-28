@@ -14,12 +14,7 @@ import { parseClaudeJson } from './utils/llm-json';
  * Model: Sonnet (balanced cost/quality for analytical work)
  */
 
-import {
-  Agent,
-  AgentMetadata,
-  AgentResult,
-  ReflectionResult,
-} from './types/agent.types';
+import { Agent, AgentMetadata, AgentResult, ReflectionResult } from './types/agent.types';
 import { WorkflowContext, ProviderAnalysis } from './types/workflow.types';
 import { ProviderSearchResult } from './search.agent';
 import { RequirementsAgentOutput } from './requirements.agent';
@@ -149,14 +144,16 @@ Return a JSON array of analysis objects.`,
       }));
 
       return {
-        analytics: analytics ? {
-          totalReviews: analytics.totalReviews || 0,
-          averageRating: analytics.averageRating || 0,
-          ratingDistribution: analytics.ratingDistribution || {},
-          criteriaAverages: analytics.criteriaAverages || {},
-          responseRate: analytics.responseRate || 0,
-          recentTrend: analytics.recentTrend || 'stable',
-        } : null,
+        analytics: analytics
+          ? {
+              totalReviews: analytics.totalReviews || 0,
+              averageRating: analytics.averageRating || 0,
+              ratingDistribution: analytics.ratingDistribution || {},
+              criteriaAverages: analytics.criteriaAverages || {},
+              responseRate: analytics.responseRate || 0,
+              recentTrend: analytics.recentTrend || 'stable',
+            }
+          : null,
         recentReviews,
       };
     } catch (error) {
@@ -168,7 +165,9 @@ Return a JSON array of analysis objects.`,
   /**
    * Fetch booking history summary for a provider
    */
-  private async fetchBookingHistory(providerId: string): Promise<EnrichedProviderData['bookingHistory']> {
+  private async fetchBookingHistory(
+    providerId: string
+  ): Promise<EnrichedProviderData['bookingHistory']> {
     try {
       const completedResult = await bookingService.searchBookings({
         providerId,
@@ -206,7 +205,9 @@ Return a JSON array of analysis objects.`,
   /**
    * Enrich all providers with DB data (runs in parallel)
    */
-  private async enrichProviders(providers: ProviderSearchResult[]): Promise<EnrichedProviderData[]> {
+  private async enrichProviders(
+    providers: ProviderSearchResult[]
+  ): Promise<EnrichedProviderData[]> {
     const enrichmentPromises = providers.map(async (provider) => {
       const [reviewData, bookingHistory] = await Promise.all([
         this.fetchReviewData(provider.providerId),
@@ -262,7 +263,6 @@ Return a JSON array of analysis objects.`,
   //
 
   async execute(
-    
     input: AnalysisAgentInput,
     _context: WorkflowContext
   ): Promise<AgentResult<AnalysisAgentOutput>> {
@@ -271,14 +271,18 @@ Return a JSON array of analysis objects.`,
     logger.info('Analysis Agent executing', { workflowId: _context.workflowId });
     const topProviders = input.providers.slice(0, MAX_PROVIDERS_TO_ANALYZE);
     const enrichedProviders = await this.enrichProviders(topProviders);
-    const userMessage = `Customer Requirements:\n${JSON.stringify(input.requirements.requirementsSummary, null, 2)}\n\n` +
-      `Providers to Analyze:\n${enrichedProviders.map((ep, index) => (
-          `Provider: ${index +1})\n` +
-          `Profile: ${JSON.stringify(ep.provider, null, 2)}\n` +
-          `Review Analytics: ${JSON.stringify(ep.reviewAnalytics, null, 2)}\n` +
-          `Recent Reviews: ${JSON.stringify(ep.recentReviews, null, 2)}\n` +
-          `Booking History: ${JSON.stringify(ep.bookingHistory, null, 2)}\n`
-      )).join('\n\n')}`
+    const userMessage =
+      `Customer Requirements:\n${JSON.stringify(input.requirements.requirementsSummary, null, 2)}\n\n` +
+      `Providers to Analyze:\n${enrichedProviders
+        .map(
+          (ep, index) =>
+            `Provider: ${index + 1})\n` +
+            `Profile: ${JSON.stringify(ep.provider, null, 2)}\n` +
+            `Review Analytics: ${JSON.stringify(ep.reviewAnalytics, null, 2)}\n` +
+            `Recent Reviews: ${JSON.stringify(ep.recentReviews, null, 2)}\n` +
+            `Booking History: ${JSON.stringify(ep.bookingHistory, null, 2)}\n`
+        )
+        .join('\n\n')}`;
 
     const langPrompt = `${this.metadata.systemPrompt}\n${getLanguageInstruction(input.locale)}`;
     const systemPrompt = input.constraintContext
@@ -286,13 +290,14 @@ Return a JSON array of analysis objects.`,
       : langPrompt;
 
     const { parsed, response } = await parseClaudeJson<ProviderAnalysis[]>(
-      () => anthropicService.callClaude({
-        model: ClaudeModel.HAIKU,
-        systemPrompt,
-        userMessage,
-        maxTokens: this.metadata.maxTokens,
-        temperature: this.metadata.temperature,
-      }),
+      () =>
+        anthropicService.callClaude({
+          model: ClaudeModel.HAIKU,
+          systemPrompt,
+          userMessage,
+          maxTokens: this.metadata.maxTokens,
+          temperature: this.metadata.temperature,
+        }),
       'array',
       { agentName: 'analysis' }
     );
@@ -301,13 +306,15 @@ Return a JSON array of analysis objects.`,
     // retry, fall back to a minimal analysis per provider built from the
     // search data we already have. This keeps the pipeline alive (recommendation
     // can still rank by matchScore) instead of crashing the whole workflow.
-    const parsedAnalyses: ProviderAnalysis[] = parsed ?? enrichedProviders.map((ep) => ({
-      providerId: ep.provider.providerId,
-      matchScore: ep.provider.matchScore ?? 0.5,
-      strengths: [],
-      concerns: [],
-      reviewSentiment: '',
-    }));
+    const parsedAnalyses: ProviderAnalysis[] =
+      parsed ??
+      enrichedProviders.map((ep) => ({
+        providerId: ep.provider.providerId,
+        matchScore: ep.provider.matchScore ?? 0.5,
+        strengths: [],
+        concerns: [],
+        reviewSentiment: '',
+      }));
     const executionTimeMs = Date.now() - startTime;
 
     return {
@@ -345,10 +352,7 @@ Return a JSON array of analysis objects.`,
   //   - confidence: 0.9 if all good, lower if issues found
   //
 
-  async reflect(
-    output: AnalysisAgentOutput,
-    input: AnalysisAgentInput
-  ): Promise<ReflectionResult> {
+  async reflect(output: AnalysisAgentOutput, input: AnalysisAgentInput): Promise<ReflectionResult> {
     const improvements: string[] = [];
 
     // Check 1: Did we get analyses for all providers?

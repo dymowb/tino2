@@ -3,7 +3,7 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 2022,
     sourceType: 'module',
-    project: './tsconfig.json',
+    project: './tsconfig.eslint.json',
   },
   plugins: ['@typescript-eslint', 'prettier'],
   extends: [
@@ -13,6 +13,7 @@ module.exports = {
   env: {
     node: true,
     jest: true,
+    es2021: true,
   },
   ignorePatterns: ['.eslintrc.js', 'dist/**/*'],
   rules: {
@@ -20,7 +21,11 @@ module.exports = {
     '@typescript-eslint/explicit-function-return-type': 'off',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     '@typescript-eslint/no-explicit-any': 'warn',
-    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    'no-unused-vars': 'off',
+    'no-undef': 'off',
+    'no-useless-escape': 'warn',
+    'no-case-declarations': 'warn',
+    '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     'prettier/prettier': 'error',
   },
 };

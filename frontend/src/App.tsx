@@ -1,4 +1,13 @@
-import React, { Component, ErrorInfo, createContext, useContext, useState, useMemo } from 'react';
+import React, {
+  Component,
+  ErrorInfo,
+  createContext,
+  lazy,
+  Suspense,
+  useContext,
+  useState,
+  useMemo,
+} from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline, GlobalStyles, Box, Button, Typography, useMediaQuery } from '@mui/material';
@@ -11,32 +20,33 @@ import './i18n';
 import i18n from './i18n';
 import Navigation from './components/layout/Navigation';
 import MobileBottomNav from './components/layout/MobileBottomNav';
-import HomePage from './components/pages/HomePage';
 import LoginForm from './components/auth/LoginForm';
 import RegisterForm from './components/auth/RegisterForm';
-import FindProvidersPage from './components/pages/FindProvidersPage';
-import MyBookingsPage from './components/pages/MyBookingsPage';
-import OpportunitiesPage from './components/pages/OpportunitiesPage';
-import ProfilePage from './components/pages/ProfilePage';
-import ProviderDashboardPage from './components/pages/ProviderDashboardPage';
-import MessagingPage from './components/pages/MessagingPage';
-import PaymentsPage from './components/pages/PaymentsPage';
-import MyReviewsPage from './components/pages/MyReviewsPage';
-import NotificationsPage from './components/pages/NotificationsPage';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import AdminRoute from './components/auth/AdminRoute';
 import VerifyEmailPage from './components/auth/VerifyEmailPage';
-import ForgotPasswordPage from './components/pages/ForgotPasswordPage';
-import ResetPasswordPage from './components/pages/ResetPasswordPage';
 import AdminLayout from './components/admin/AdminLayout';
-import AdminDashboardPage from './components/pages/AdminDashboardPage';
-import AdminUsersPage from './components/pages/AdminUsersPage';
-import AdminProvidersPage from './components/pages/AdminProvidersPage';
-import AdminReviewsPage from './components/pages/AdminReviewsPage';
-import AdminSettingsPage from './components/pages/AdminSettingsPage';
-import AdminDisputesPage from './components/pages/AdminDisputesPage';
-import AdminQuoteRequestsPage from './components/pages/AdminQuoteRequestsPage';
-import MemoryPage from './components/pages/MemoryPage';
+
+const HomePage = lazy(() => import('./components/pages/HomePage'));
+const FindProvidersPage = lazy(() => import('./components/pages/FindProvidersPage'));
+const MyBookingsPage = lazy(() => import('./components/pages/MyBookingsPage'));
+const OpportunitiesPage = lazy(() => import('./components/pages/OpportunitiesPage'));
+const ProfilePage = lazy(() => import('./components/pages/ProfilePage'));
+const ProviderDashboardPage = lazy(() => import('./components/pages/ProviderDashboardPage'));
+const MessagingPage = lazy(() => import('./components/pages/MessagingPage'));
+const PaymentsPage = lazy(() => import('./components/pages/PaymentsPage'));
+const MyReviewsPage = lazy(() => import('./components/pages/MyReviewsPage'));
+const NotificationsPage = lazy(() => import('./components/pages/NotificationsPage'));
+const ForgotPasswordPage = lazy(() => import('./components/pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./components/pages/ResetPasswordPage'));
+const AdminDashboardPage = lazy(() => import('./components/pages/AdminDashboardPage'));
+const AdminUsersPage = lazy(() => import('./components/pages/AdminUsersPage'));
+const AdminProvidersPage = lazy(() => import('./components/pages/AdminProvidersPage'));
+const AdminReviewsPage = lazy(() => import('./components/pages/AdminReviewsPage'));
+const AdminSettingsPage = lazy(() => import('./components/pages/AdminSettingsPage'));
+const AdminDisputesPage = lazy(() => import('./components/pages/AdminDisputesPage'));
+const AdminQuoteRequestsPage = lazy(() => import('./components/pages/AdminQuoteRequestsPage'));
+const MemoryPage = lazy(() => import('./components/pages/MemoryPage'));
 
 // ─── Color mode context ────────────────────────────────────────────────────────
 export const ColorModeContext = createContext({
@@ -177,7 +187,7 @@ const AppContent: React.FC = () => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       {!isAdminRoute && <Navigation />}
-      <Box component="main" sx={{ flexGrow: 1, pb: bottomPad }}>
+      <Box component={isAdminRoute ? 'div' : 'main'} sx={{ flexGrow: 1, pb: bottomPad }}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={location.pathname}
@@ -188,6 +198,7 @@ const AppContent: React.FC = () => {
             transition={pageTransition}
             style={{ display: 'contents' }}
           >
+            <Suspense fallback={<LoadingSpinner />}>
             <Routes location={location}>
               {/* Public */}
               <Route path="/" element={<HomePage />} />
@@ -224,6 +235,7 @@ const AppContent: React.FC = () => {
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            </Suspense>
           </motion.div>
         </AnimatePresence>
       </Box>

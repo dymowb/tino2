@@ -72,7 +72,9 @@ export async function parseClaudeJson<T>(
   }
 
   if (parsed === null) {
-    logger.warn(`[${opts.agentName}] LLM JSON unparseable after ${retries + 1} attempt(s); using fallback`);
+    logger.warn(
+      `[${opts.agentName}] LLM JSON unparseable after ${retries + 1} attempt(s); using fallback`
+    );
   }
 
   return { parsed, response };

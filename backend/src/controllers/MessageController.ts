@@ -21,7 +21,7 @@ const messageStorage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
+    const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
     cb(null, filename);
   },
 });
@@ -47,7 +47,7 @@ export class MessageController {
         res.status(400).json({
           success: false,
           message: t(req, 'common.validation_failed'),
-          errors: errors.mapped()
+          errors: errors.mapped(),
         });
         return;
       }
@@ -60,14 +60,14 @@ export class MessageController {
       res.status(201).json({
         success: true,
         data: conversation,
-        message: t(req, 'message.conversation_created')
+        message: t(req, 'message.conversation_created'),
       });
     } catch (error) {
       logger.error('Error creating conversation:', error);
       res.status(500).json({
         success: false,
         message: t(req, 'message.conversation_create_failed'),
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   };
@@ -82,7 +82,7 @@ export class MessageController {
       if (!conversation) {
         res.status(404).json({
           success: false,
-          message: t(req, 'message.conversation_not_found')
+          message: t(req, 'message.conversation_not_found'),
         });
         return;
       }
@@ -90,14 +90,14 @@ export class MessageController {
       res.json({
         success: true,
         data: conversation,
-        message: t(req, 'message.conversation_retrieved')
+        message: t(req, 'message.conversation_retrieved'),
       });
     } catch (error) {
       logger.error('Error getting conversation:', error);
       res.status(500).json({
         success: false,
         message: t(req, 'message.conversation_retrieve_failed'),
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   };
@@ -124,16 +124,16 @@ export class MessageController {
           page: result.page,
           limit: result.limit,
           total: result.total,
-          pages: Math.ceil(result.total / result.limit)
+          pages: Math.ceil(result.total / result.limit),
         },
-        message: t(req, 'message.conversations_retrieved')
+        message: t(req, 'message.conversations_retrieved'),
       });
     } catch (error) {
       logger.error('Error getting user conversations:', error);
       res.status(500).json({
         success: false,
         message: t(req, 'message.conversations_retrieve_failed'),
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   };
@@ -145,7 +145,7 @@ export class MessageController {
         res.status(400).json({
           success: false,
           message: t(req, 'common.validation_failed'),
-          errors: errors.mapped()
+          errors: errors.mapped(),
         });
         return;
       }
@@ -158,7 +158,7 @@ export class MessageController {
       res.status(201).json({
         success: true,
         data: message,
-        message: t(req, 'message.sent')
+        message: t(req, 'message.sent'),
       });
     } catch (error) {
       // Messaging is closed once the booking is finalized — distinct, expected
@@ -176,7 +176,7 @@ export class MessageController {
       res.status(500).json({
         success: false,
         message: t(req, 'message.send_failed'),
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   };
@@ -214,16 +214,16 @@ export class MessageController {
           page: result.page,
           limit: result.limit,
           total: result.total,
-          pages: Math.ceil(result.total / result.limit)
+          pages: Math.ceil(result.total / result.limit),
         },
-        message: t(req, 'message.retrieved')
+        message: t(req, 'message.retrieved'),
       });
     } catch (error) {
       logger.error('Error getting conversation messages:', error);
       res.status(500).json({
         success: false,
         message: t(req, 'message.retrieve_failed'),
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   };
@@ -238,14 +238,14 @@ export class MessageController {
       res.json({
         success: true,
         data: { markedCount: count },
-        message: `${count} messages marked as read`
+        message: `${count} messages marked as read`,
       });
     } catch (error) {
       logger.error('Error marking messages as read:', error);
       res.status(500).json({
         success: false,
         message: t(req, 'message.mark_read_failed'),
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   };
@@ -257,7 +257,7 @@ export class MessageController {
         res.status(400).json({
           success: false,
           message: t(req, 'common.validation_failed'),
-          errors: errors.mapped()
+          errors: errors.mapped(),
         });
         return;
       }
@@ -271,14 +271,14 @@ export class MessageController {
       res.json({
         success: true,
         data: message,
-        message: t(req, 'message.updated')
+        message: t(req, 'message.updated'),
       });
     } catch (error) {
       logger.error('Error updating message:', error);
       res.status(500).json({
         success: false,
         message: t(req, 'message.update_failed'),
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   };
@@ -292,14 +292,14 @@ export class MessageController {
 
       res.json({
         success: true,
-        message: t(req, 'message.deleted')
+        message: t(req, 'message.deleted'),
       });
     } catch (error) {
       logger.error('Error deleting message:', error);
       res.status(500).json({
         success: false,
         message: t(req, 'message.delete_failed'),
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   };
@@ -313,14 +313,14 @@ export class MessageController {
       res.json({
         success: true,
         data: { unreadCount: count },
-        message: t(req, 'message.unread_count_retrieved')
+        message: t(req, 'message.unread_count_retrieved'),
       });
     } catch (error) {
       logger.error('Error getting unread message count:', error);
       res.status(500).json({
         success: false,
         message: t(req, 'message.unread_count_failed'),
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   };

@@ -147,7 +147,7 @@ export class ExtractionAgent {
     turns: ConversationTurn[],
     userId: string,
     workflowId: string,
-    role: 'customer' | 'provider' = 'customer',
+    role: 'customer' | 'provider' = 'customer'
   ): Promise<ExtractionResult> {
     if (!isMemoryEnabled()) {
       return { written: [], episodicSummary: '', episodicImportance: 0, piiDetected: false };
@@ -171,7 +171,7 @@ export class ExtractionAgent {
     }
 
     const conversationText = window
-      .map(t => `${t.role === 'user' ? 'User' : 'Assistant'}: ${t.content}`)
+      .map((t) => `${t.role === 'user' ? 'User' : 'Assistant'}: ${t.content}`)
       .join('\n');
 
     // ── Step 1: LLM extraction ─────────────────────────────────────────────
@@ -195,7 +195,9 @@ export class ExtractionAgent {
         const scrubbed = scrubPii(fact.content);
         if (scrubbed.detected) {
           piiDetected = true;
-          logger.warn(`[ExtractionAgent] PII scrubbed from fact (types: ${scrubbed.types.join(', ')})`);
+          logger.warn(
+            `[ExtractionAgent] PII scrubbed from fact (types: ${scrubbed.types.join(', ')})`
+          );
         }
 
         const candidate: SemanticCandidate = {
@@ -205,18 +207,25 @@ export class ExtractionAgent {
         };
 
         const result = await deduper.process(candidate, userId, fact.content);
-        written.push({ content: candidate.content, action: result.action, memoryId: result.memoryId });
+        written.push({
+          content: candidate.content,
+          action: result.action,
+          memoryId: result.memoryId,
+        });
       } catch (err) {
-        logger.error(`[ExtractionAgent] Failed to process fact: "${fact.content.slice(0, 60)}"`, err);
+        logger.error(
+          `[ExtractionAgent] Failed to process fact: "${fact.content.slice(0, 60)}"`,
+          err
+        );
       }
     }
 
     logger.info(
       `[ExtractionAgent] user=${userId} workflow=${workflowId} ` +
-      `facts=${llmOutput.semantic_facts.length} ` +
-      `created=${written.filter(w => w.action === 'created').length} ` +
-      `merged=${written.filter(w => w.action === 'merged').length} ` +
-      `discarded=${written.filter(w => w.action === 'discarded').length}`,
+        `facts=${llmOutput.semantic_facts.length} ` +
+        `created=${written.filter((w) => w.action === 'created').length} ` +
+        `merged=${written.filter((w) => w.action === 'merged').length} ` +
+        `discarded=${written.filter((w) => w.action === 'discarded').length}`
     );
 
     // Write episodic memory — summary of this session with temporal context
@@ -238,7 +247,11 @@ export class ExtractionAgent {
     };
   }
 
-  private async callLlm(conversationText: string, workflowId: string, role: 'customer' | 'provider' = 'customer'): Promise<ExtractionLLMOutput> {
+  private async callLlm(
+    conversationText: string,
+    workflowId: string,
+    role: 'customer' | 'provider' = 'customer'
+  ): Promise<ExtractionLLMOutput> {
     const systemPrompt = role === 'provider' ? PROVIDER_SYSTEM_PROMPT : CUSTOMER_SYSTEM_PROMPT;
     const response = await anthropicService.callClaude({
       model: ClaudeModel.HAIKU,
@@ -254,7 +267,10 @@ export class ExtractionAgent {
 
   private parseResponse(text: string, workflowId: string): ExtractionLLMOutput {
     // Strip markdown code fences if present
-    let cleaned = text.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim();
+    let cleaned = text
+      .replace(/^```(?:json)?\s*/m, '')
+      .replace(/\s*```\s*$/m, '')
+      .trim();
 
     // Haiku occasionally prefixes with prose before the JSON object — extract the last {...} block
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
@@ -264,7 +280,9 @@ export class ExtractionAgent {
     try {
       parsed = JSON.parse(cleaned);
     } catch {
-      logger.warn(`[ExtractionAgent] JSON parse failed for workflow=${workflowId}. Raw: ${text.slice(0, 200)}`);
+      logger.warn(
+        `[ExtractionAgent] JSON parse failed for workflow=${workflowId}. Raw: ${text.slice(0, 200)}`
+      );
       return { semantic_facts: [], episodic_summary: '', episodic_importance: 0 };
     }
 

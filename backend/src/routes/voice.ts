@@ -27,16 +27,22 @@ router.post(
   authenticate,
   upload.single('audio'),
   async (req: Request, res: Response) => {
-    if (!hasOpenAI()) { res.status(204).end(); return; }
+    if (!hasOpenAI()) {
+      res.status(204).end();
+      return;
+    }
     if (!req.file) {
       res.status(400).json({ success: false, error: 'No audio file provided' });
       return;
     }
 
-    const ext = req.file.mimetype.includes('webm') ? 'webm'
-               : req.file.mimetype.includes('ogg')  ? 'ogg'
-               : req.file.mimetype.includes('wav')  ? 'wav'
-               : 'mp4';
+    const ext = req.file.mimetype.includes('webm')
+      ? 'webm'
+      : req.file.mimetype.includes('ogg')
+        ? 'ogg'
+        : req.file.mimetype.includes('wav')
+          ? 'wav'
+          : 'mp4';
 
     try {
       const openai = getOpenAI();
@@ -54,37 +60,36 @@ router.post(
 
 // POST /api/v1/voice/synthesize
 // Accepts {text}, streams back mp3 audio
-router.post(
-  '/synthesize',
-  authenticate,
-  async (req: Request, res: Response) => {
-    if (!hasOpenAI()) { res.status(204).end(); return; }
-    const { text } = req.body as { text?: string };
-    if (!text?.trim()) {
-      res.status(400).json({ success: false, error: 'No text provided' });
-      return;
-    }
-
-    // Truncate to ~4000 chars so TTS doesn't time out on very long responses
-    const truncated = text.length > 4000 ? text.slice(0, 4000) + '…' : text;
-
-    try {
-      const openai = getOpenAI();
-      const mp3 = await openai.audio.speech.create({
-        model: 'tts-1',
-        voice: 'nova',    // natural, friendly — good fit for a service assistant
-        input: truncated,
-        response_format: 'mp3',
-      });
-
-      const buffer = Buffer.from(await mp3.arrayBuffer());
-      res.setHeader('Content-Type', 'audio/mpeg');
-      res.setHeader('Content-Length', buffer.length);
-      res.send(buffer);
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
+router.post('/synthesize', authenticate, async (req: Request, res: Response) => {
+  if (!hasOpenAI()) {
+    res.status(204).end();
+    return;
   }
-);
+  const { text } = req.body as { text?: string };
+  if (!text?.trim()) {
+    res.status(400).json({ success: false, error: 'No text provided' });
+    return;
+  }
+
+  // Truncate to ~4000 chars so TTS doesn't time out on very long responses
+  const truncated = text.length > 4000 ? text.slice(0, 4000) + '…' : text;
+
+  try {
+    const openai = getOpenAI();
+    const mp3 = await openai.audio.speech.create({
+      model: 'tts-1',
+      voice: 'nova', // natural, friendly — good fit for a service assistant
+      input: truncated,
+      response_format: 'mp3',
+    });
+
+    const buffer = Buffer.from(await mp3.arrayBuffer());
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 export default router;
