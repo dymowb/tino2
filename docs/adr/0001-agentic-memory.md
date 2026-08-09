@@ -24,6 +24,15 @@ Goal: add a production-grade memory layer so the agent (a) retains relevant fact
 
 ### D2 — Embedding Model: Voyage AI (`voyage-3`)
 
+> **Superseded in August 2026:** embeddings now use the provider-neutral
+> `AI_EMBEDDING_CHAIN`. The tested all-OpenAI profile uses
+> `openai:text-embedding-3-small` at 1,024 dimensions, with optional Voyage targets as
+> configured fallbacks. Model identifiers are not hard-coded in memory services.
+
+> Superseded in implementation: embeddings now use the provider-neutral
+> `AI_EMBEDDING_CHAIN`, supporting ordered OpenAI and Voyage targets with no
+> runtime model default. This section records the original design decision.
+
 Anthropic's partnership embedding model. 1024-dimensional vectors, strong retrieval quality, available via REST, TypeScript-friendly. Cost ~$0.06/1M tokens — negligible at beta traffic.
 
 For dev: `voyage-3-lite` (same API, cheaper, faster). Swap is one config line.

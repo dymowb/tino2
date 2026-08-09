@@ -66,8 +66,7 @@ function markdownToHtml(markdown, title) {
 <body>
     <p>${html}</p>
 </body>
-</html>
-    `;
+</html>`;
 }
 
 // List of documentation files to convert
@@ -78,7 +77,11 @@ const docs = [
     { file: '03-Data-Models-Schema.md', title: 'Tino 2 - Data Models & Schema' },
     { file: '04-API-Documentation.md', title: 'Tino 2 - API Documentation' },
     { file: '05-System-Diagrams.md', title: 'Tino 2 - System Diagrams' },
-    { file: '06-Deployment-Setup-Guide.md', title: 'Tino 2 - Deployment & Setup Guide' }
+    { file: '06-Deployment-Setup-Guide.md', title: 'Tino 2 - Deployment & Setup Guide' },
+    { file: '07-Agentic-Product-Roadmap.md', title: 'Tino 2 - Agentic Product Roadmap' },
+    { file: '08-AI-Configuration-Operations.md', title: 'Tino 2 - AI Configuration and Operations' },
+    { file: 'IDEAS_BACKLOG.md', title: 'Tino 2 - Product and Agentic Ideas Backlog' },
+    { file: 'adr/0001-agentic-memory.md', title: 'Tino 2 - Agentic Memory ADR' }
 ];
 
 console.log('Converting Tino 2 documentation to HTML format...\n');
@@ -95,7 +98,7 @@ docs.forEach(doc => {
         if (fs.existsSync(doc.file)) {
             const markdown = fs.readFileSync(doc.file, 'utf8');
             const html = markdownToHtml(markdown, doc.title);
-            const outputFile = path.join(outputDir, doc.file.replace('.md', '.html'));
+            const outputFile = path.join(outputDir, doc.file.replace(/\//g, '-').replace('.md', '.html'));
             
             fs.writeFileSync(outputFile, html);
             console.log(`✅ Converted: ${doc.file} -> ${outputFile}`);
@@ -153,6 +156,10 @@ try {
             <li><a href="#api">API Documentation</a></li>
             <li><a href="#diagrams">System Diagrams</a></li>
             <li><a href="#deployment">Deployment & Setup Guide</a></li>
+            <li><a href="#roadmap">Agentic Product Roadmap</a></li>
+            <li><a href="#ai-operations">AI Configuration and Operations</a></li>
+            <li><a href="#ideas">Ideas Backlog</a></li>
+            <li><a href="#memory-adr">Agentic Memory ADR</a></li>
         </ul>
     </div>
     `;
@@ -160,7 +167,19 @@ try {
     docs.slice(1).forEach((doc, index) => {
         if (fs.existsSync(doc.file)) {
             const markdown = fs.readFileSync(doc.file, 'utf8');
-            const sectionId = doc.file.split('-')[0].replace('.md', '');
+            const sectionIds = {
+                '01-System-Overview-Requirements.md': 'overview',
+                '02-System-Architecture.md': 'architecture',
+                '03-Data-Models-Schema.md': 'data',
+                '04-API-Documentation.md': 'api',
+                '05-System-Diagrams.md': 'diagrams',
+                '06-Deployment-Setup-Guide.md': 'deployment',
+                '07-Agentic-Product-Roadmap.md': 'roadmap',
+                '08-AI-Configuration-Operations.md': 'ai-operations',
+                'IDEAS_BACKLOG.md': 'ideas',
+                'adr/0001-agentic-memory.md': 'memory-adr'
+            };
+            const sectionId = sectionIds[doc.file] || doc.file.replace(/[^a-z0-9]+/gi, '-');
             
             combinedHtml += `<div class="page-break document-section" id="${sectionId}">`;
             combinedHtml += markdownToHtml(markdown, doc.title).replace(/<!DOCTYPE html>[\s\S]*?<body>/, '').replace('</body></html>', '');
@@ -185,6 +204,6 @@ console.log('   2. Use the browser\'s "Print to PDF" feature');
 console.log('   3. Or use an online HTML to PDF converter');
 console.log('\n📚 Available files:');
 docs.forEach(doc => {
-    console.log(`   - ${doc.file.replace('.md', '.html')}`);
+    console.log(`   - ${doc.file.replace(/\//g, '-').replace('.md', '.html')}`);
 });
 console.log('   - Complete-Tino2-Documentation.html (combined)');

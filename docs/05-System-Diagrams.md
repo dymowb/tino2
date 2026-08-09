@@ -1,5 +1,28 @@
 # Tino 2 - System Diagrams & Flowcharts
 
+## Current AI configuration and rebook flows
+
+```text
+Admin Settings UI → validation → app_settings + runtime cache
+                                      │
+             ┌────────────────────────┼────────────────────────┐
+             ▼                        ▼                        ▼
+       text gateway             embedding gateway      sanitized public config
+      primary → fallback        primary → fallback      → disclosure footer
+```
+
+```text
+Completed booking → ownership/status check → deterministic rebook draft
+                                                    │
+                                      optional AI refinement
+                                                    │
+                                      customer reviews/submits
+                                                    │
+                               targeted request with provenance
+```
+
+AI never changes eligibility, sends the request, or mutates payment state.
+
 ## Table of Contents
 - [System Architecture Diagram](#system-architecture-diagram)
 - [Database Entity Relationship Diagram](#database-entity-relationship-diagram)

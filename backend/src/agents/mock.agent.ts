@@ -34,7 +34,7 @@ export class MockAgent implements Agent<MockAgentInput, MockAgentOutput> {
   readonly metadata: AgentMetadata = {
     name: 'mock-agent',
     description: 'Mock agent for Phase 1 UAT testing',
-    model: 'claude-haiku-4-5-20251001',
+    model: 'fast',
     tools: [],
     maxTokens: 100,
     temperature: 0,

@@ -108,6 +108,16 @@
     "home_inspection": "Inspección del Hogar",
     "roofing": "Techado"
   },
+  "favorites": {
+    "tab": "Guardados",
+    "title": "Proveedores guardados",
+    "save": "Guardar proveedor",
+    "remove": "Quitar de guardados",
+    "empty": "Aún no hay proveedores guardados",
+    "empty_description": "Guarda proveedores mientras buscas para encontrarlos aquí.",
+    "update_error": "No se pudieron actualizar los proveedores guardados",
+    "unavailable": "No disponible actualmente"
+  },
   "messages": {
     "location_updated": "¡Ubicación actualizada!",
     "location_error": "Error al obtener tu ubicación",

@@ -1,11 +1,4 @@
 export const memoryConfig = {
-  embedding: {
-    model: process.env.VOYAGE_MODEL || 'voyage-3',
-    dimensions: 1024,
-    apiKey: process.env.VOYAGE_API_KEY || '',
-    batchSize: 8,
-  },
-
   retrieval: {
     semantic: {
       topK: parseInt(process.env.MEMORY_SEMANTIC_TOP_K || '5', 10),

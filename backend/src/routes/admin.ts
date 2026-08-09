@@ -44,5 +44,11 @@ router.get('/quote-requests', rateLimiters.general, adminController.getQuoteRequ
 
 router.get('/settings', rateLimiters.general, adminController.getSettings);
 router.put('/settings/:key', rateLimiters.adminStrict, adminController.updateSetting);
+router.get('/ai-configuration', rateLimiters.general, adminController.getAiConfiguration);
+router.put(
+  '/ai-configuration/:field',
+  rateLimiters.adminStrict,
+  adminController.updateAiConfiguration
+);
 
 export default router;

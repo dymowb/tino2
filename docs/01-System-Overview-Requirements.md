@@ -1,5 +1,22 @@
 # Tino 2 - System Overview & Requirements
 
+> **Current implementation note (August 2026):** Tino includes Favorites + Rebook,
+> provider-neutral AI routing, semantic/episodic memory, AI transparency disclosures, and
+> protected runtime model configuration.
+
+## Delivered repeat-customer and AI requirements
+
+- Customers can privately favorite/unfavorite providers and view saved providers.
+- Only genuinely completed bookings are eligible for rebooking; cancelled bookings have a
+  distinct lifecycle section.
+- Rebook prefill is deterministic and retains source booking/target provider provenance.
+- Optional AI refinement updates only changes explicitly requested by the customer and
+  never submits a request automatically.
+- Text generation and embeddings use ordered provider/model chains with fallbacks; model
+  identifiers are configuration, not workflow constants.
+- AI-powered pages disclose the active model set and warn that output can be wrong.
+- Admins may change validated model chains at runtime. Credentials remain server-only.
+
 ## Table of Contents
 - [Project Overview](#project-overview)
 - [Business Requirements](#business-requirements)

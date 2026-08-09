@@ -23,7 +23,7 @@ import {
   Recommendation,
 } from './types/workflow.types';
 import { RequirementsAgentOutput } from './requirements.agent';
-import { anthropicService, ClaudeModel } from './services/anthropic.service';
+import { aiGateway } from './services/ai-gateway.service';
 import { parseClaudeJson } from './utils/llm-json';
 import logger from '../config/logger';
 
@@ -83,7 +83,7 @@ class RecommendationAgent implements Agent<RecommendationAgentInput, Recommendat
   readonly metadata: AgentMetadata = {
     name: 'recommendation',
     description: 'Synthesizes analysis data into ranked provider recommendations with reasoning',
-    model: 'claude-sonnet-4-6',
+    model: 'reasoning',
     tools: [],
     maxTokens: 2000,
     temperature: 0.4, // Fairly deterministic — we want consistent ranking logic
@@ -162,13 +162,14 @@ Rules:
 
     const { parsed, response } = await parseClaudeJson<ClaudeRankedProvider[]>(
       () =>
-        anthropicService.callClaude({
-          model: ClaudeModel.SONNET,
-          systemPrompt,
-          userMessage,
-          maxTokens: this.metadata.maxTokens,
-          temperature: this.metadata.temperature,
-        }),
+        aiGateway
+          .generate('reasoning', {
+            systemPrompt,
+            userMessage,
+            maxTokens: this.metadata.maxTokens,
+            temperature: this.metadata.temperature,
+          })
+          .then((result) => result.value),
       'array',
       { agentName: 'recommendation' }
     );
@@ -234,7 +235,7 @@ Rules:
       metadata: {
         executionTimeMs,
         tokensUsed: response.usage.inputTokens + response.usage.outputTokens,
-        modelUsed: ClaudeModel.SONNET,
+        modelUsed: this.metadata.model,
         confidence: 0.9,
       },
     };

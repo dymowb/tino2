@@ -355,6 +355,7 @@ export interface CreateQuoteRequestRequest {
   searchRadius?: number;
   expiresAt?: Date;
   targetProviderIds?: string[];
+  sourceBookingId?: string;
 }
 
 export interface UpdateQuoteRequestRequest {

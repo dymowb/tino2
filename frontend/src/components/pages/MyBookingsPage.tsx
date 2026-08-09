@@ -37,6 +37,7 @@ import {
   Person,
   Replay,
   RequestQuote,
+  Search,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
@@ -136,7 +137,7 @@ const ACTIVE_BOOKING_STATUSES = [
   "pending_completion",
   "in_dispute",
 ];
-const DONE_BOOKING_STATUSES = ["completed", "cancelled"];
+const DONE_BOOKING_STATUSES = ["completed"];
 
 // A "job" in the unified hub:
 //  - customer: an open request (awaiting/receiving quotes) or a booking
@@ -162,9 +163,9 @@ const MyBookingsPage: React.FC = () => {
   const isDark = theme.palette.mode === "dark";
 
   // Both roles use the same lifecycle stages.
-  const [stage, setStage] = useState<"all" | "awaiting" | "active" | "done">(
-    "all",
-  );
+  const [stage, setStage] = useState<
+    "all" | "awaiting" | "active" | "done" | "cancelled"
+  >("all");
   const [expandedRequests, setExpandedRequests] = useState<Set<string>>(
     new Set(),
   );
@@ -181,6 +182,7 @@ const MyBookingsPage: React.FC = () => {
   const [rebookLocation, setRebookLocation] = useState<
     Booking["location"] | null
   >(null);
+  const [rebookBookingId, setRebookBookingId] = useState<string | null>(null);
   const [showNewRequest, setShowNewRequest] = useState(false);
   const [compareQuotes, setCompareQuotes] = useState<Quote[] | null>(null);
 
@@ -470,18 +472,28 @@ const MyBookingsPage: React.FC = () => {
   // Stage classification, symmetric across roles:
   //  awaiting = open request (customer) / pending sent quote (provider)
   //  active   = booking in an active status
-  //  done     = finished booking / closed sent quote (provider)
-  const jobStage = (j: Job): "awaiting" | "active" | "done" | null => {
+  //  done     = completed booking only
+  //  cancelled = cancelled booking only
+  const jobStage = (
+    j: Job,
+  ): "awaiting" | "active" | "done" | "cancelled" | null => {
     if (j.kind === "request") return "awaiting";
     if (j.kind === "sentquote")
-      return j.quote.status === "pending" ? "awaiting" : "done";
+      return j.quote.status === "pending" ? "awaiting" : null;
     if (ACTIVE_BOOKING_STATUSES.includes(j.booking.status)) return "active";
     if (DONE_BOOKING_STATUSES.includes(j.booking.status)) return "done";
+    if (j.booking.status === "cancelled") return "cancelled";
     return null;
   };
 
   const stageCount = useMemo(() => {
-    const c = { all: jobs.length, awaiting: 0, active: 0, done: 0 };
+    const c = {
+      all: jobs.length,
+      awaiting: 0,
+      active: 0,
+      done: 0,
+      cancelled: 0,
+    };
     jobs.forEach((j) => {
       const s = jobStage(j);
       if (s) c[s]++;
@@ -857,8 +869,7 @@ const MyBookingsPage: React.FC = () => {
                 </Button>
               ))}
 
-            {(booking.status === "completed" ||
-              booking.status === "cancelled") &&
+            {booking.status === "completed" &&
               !isProvider &&
               booking.provider && (
                 <Button
@@ -869,6 +880,7 @@ const MyBookingsPage: React.FC = () => {
                     setRebookProvider(booking.provider as Provider);
                     setRebookServiceType(booking.serviceType);
                     setRebookLocation(booking.location);
+                    setRebookBookingId(booking.id);
                   }}
                   sx={{
                     borderColor: tokens.color.earth,
@@ -881,6 +893,22 @@ const MyBookingsPage: React.FC = () => {
                   {t("bookings:actions.rebook")}
                 </Button>
               )}
+
+            {booking.status === "cancelled" && !isProvider && (
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<Search fontSize="small" />}
+                onClick={() =>
+                  navigate(
+                    `/providers?service=${encodeURIComponent(booking.serviceType)}`,
+                  )
+                }
+                sx={{ borderRadius: tokens.radius.full, px: 2.5 }}
+              >
+                {t("bookings:actions.find_similar")}
+              </Button>
+            )}
 
             {(booking.status === "pending" || booking.status === "confirmed") &&
               !isProvider && (
@@ -1206,6 +1234,11 @@ const MyBookingsPage: React.FC = () => {
       label: t("bookings:hub.filter.done"),
       count: stageCount.done,
     },
+    {
+      value: "cancelled",
+      label: t("bookings:hub.filter.cancelled"),
+      count: stageCount.cancelled,
+    },
   ];
 
   const chipSx = (selected: boolean) => ({
@@ -1244,7 +1277,9 @@ const MyBookingsPage: React.FC = () => {
         ? t("bookings:hub.empty_active")
         : stage === "done"
           ? t("bookings:hub.empty_done")
-          : t("bookings:hub.empty_all");
+          : stage === "cancelled"
+            ? t("bookings:hub.empty_cancelled")
+            : t("bookings:hub.empty_all");
 
   return (
     <Box sx={{ px: { xs: 2, md: 4 }, py: 4, maxWidth: 900, mx: "auto" }}>
@@ -1446,10 +1481,12 @@ const MyBookingsPage: React.FC = () => {
           setRebookProvider(null);
           setRebookServiceType("");
           setRebookLocation(null);
+          setRebookBookingId(null);
         }}
         provider={rebookProvider}
         serviceType={rebookServiceType}
         initialLocation={rebookLocation}
+        rebookBookingId={rebookBookingId}
       />
 
       {/* New broadcast request */}

@@ -8,6 +8,13 @@ import { Booking, BookingStatus } from '@/models/Booking';
 import { Review } from '@/models/Review';
 import { Payment } from '@/models/Payment';
 import { AppSettings } from '@/models/AppSettings';
+import {
+  AiConfigurationField,
+  AI_SETTING_KEYS,
+  getAiConfigurationView,
+  updateAiConfiguration,
+} from '@/services/AiConfigurationService';
+import { resetEmbeddingProvider } from '@/services/memory/EmbeddingService';
 import { getStripeInstance, getStripeErrorMessage } from '@/config/stripe';
 import notificationService from '@/services/NotificationService';
 import serviceCategoryService from '@/services/ServiceCategoryService';
@@ -733,9 +740,11 @@ export class AdminController {
   // GET /admin/settings
   async getSettings(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const settings = await AppDataSource.getRepository(AppSettings).find({
-        order: { key: 'ASC' },
-      });
+      const settings = await AppDataSource.getRepository(AppSettings)
+        .createQueryBuilder('setting')
+        .where('setting.key NOT LIKE :aiPrefix', { aiPrefix: 'ai_%' })
+        .orderBy('setting.key', 'ASC')
+        .getMany();
       res.json({ success: true, data: settings });
     } catch (error) {
       logger.error('Error fetching settings:', error);
@@ -758,6 +767,29 @@ export class AdminController {
     } catch (error) {
       logger.error('Error updating setting:', error);
       res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  }
+
+  async getAiConfiguration(_req: AuthenticatedRequest, res: Response): Promise<void> {
+    res.json({ success: true, data: getAiConfigurationView() });
+  }
+
+  async updateAiConfiguration(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const field = req.params.field as AiConfigurationField;
+      if (!(field in AI_SETTING_KEYS)) {
+        res.status(404).json({ success: false, error: 'Unknown AI configuration field' });
+        return;
+      }
+      await updateAiConfiguration(field, req.body.value);
+      if (field === 'embedding') resetEmbeddingProvider();
+      logger.info('Admin updated AI configuration', { field, adminId: req.user?.userId });
+      res.json({ success: true, data: getAiConfigurationView() });
+    } catch (error) {
+      res.status(400).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Invalid AI configuration',
+      });
     }
   }
 

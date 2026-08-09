@@ -14,19 +14,21 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: PROXY_TARGET,
-        changeOrigin: true,
+        // Preserve the browser-facing Host header so the backend's same-host
+        // CORS check also works when Vite is opened from another LAN device.
+        changeOrigin: false,
       },
       '/socket.io': {
         target: PROXY_TARGET,
         ws: true,
-        changeOrigin: true,
+        changeOrigin: false,
       },
       // Uploaded files (message attachments, profile images, etc.) are served
       // by the backend. Without this, /uploads/* hits the SPA fallback (index.html)
       // → broken images and "clicking an attachment lands on the home screen".
       '/uploads': {
         target: PROXY_TARGET,
-        changeOrigin: true,
+        changeOrigin: false,
       },
     },
   },

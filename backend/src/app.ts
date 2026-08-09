@@ -41,6 +41,9 @@ import notificationService from '@/services/NotificationService';
 import jwt from './utils/jwt';
 import { requestContextMiddleware } from '@/observability/requestContext';
 import { getJobMetrics } from '@/observability/jobMetrics';
+import { validateAiConfiguration } from '@/agents/services/ai-gateway.service';
+import { validateEmbeddingConfiguration } from '@/services/memory/EmbeddingService';
+import { isMemoryEnabled } from '@/config/memoryDatabase';
 
 export class App {
   public app: express.Application;
@@ -48,6 +51,8 @@ export class App {
   public io: SocketIOServer;
 
   constructor() {
+    validateAiConfiguration();
+    if (isMemoryEnabled()) validateEmbeddingConfiguration();
     this.app = express();
     // Trust loopback proxy (Cloudflare tunnel arrives from 127.0.0.1).
     // This makes Express use X-Forwarded-For for req.ip so rate limiting

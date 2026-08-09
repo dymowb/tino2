@@ -1,6 +1,11 @@
 import { Router } from 'express';
 import { body, param, query } from 'express-validator';
-import { authenticate, requireProviderRole, requireAdminRole } from '@/middleware/auth';
+import {
+  authenticate,
+  requireCustomerRole,
+  requireProviderRole,
+  requireAdminRole,
+} from '@/middleware/auth';
 import { handleValidationErrors } from '@/middleware/validation';
 import providerController from '@/controllers/ProviderController';
 
@@ -13,6 +18,28 @@ router.get('/test', (req, res) => {
 
 // Get all distinct service types from active providers (public endpoint)
 router.get('/services/catalog', providerController.getServiceCatalog);
+
+// Customer saved providers (must remain before /:providerId).
+router.get(
+  '/favorites',
+  authenticate,
+  requireCustomerRole,
+  providerController.getFavoriteProviders
+);
+router.post(
+  '/:providerId/favorite',
+  authenticate,
+  requireCustomerRole,
+  [param('providerId').isUUID().withMessage('Valid provider ID required'), handleValidationErrors],
+  providerController.addFavoriteProvider
+);
+router.delete(
+  '/:providerId/favorite',
+  authenticate,
+  requireCustomerRole,
+  [param('providerId').isUUID().withMessage('Valid provider ID required'), handleValidationErrors],
+  providerController.removeFavoriteProvider
+);
 
 // Search providers (public endpoint)
 router.get(

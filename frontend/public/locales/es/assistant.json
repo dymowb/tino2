@@ -46,6 +46,11 @@
     "viewProfile": "Ver Perfil",
     "requestQuote": "Solicitar Presupuesto"
   },
+  "transparency": {
+    "poweredBy": "Esta experiencia utiliza IA. Los modelos pueden cometer errores.",
+    "details": "Detalles de los modelos",
+    "disclaimer": "La selección del modelo puede cambiar cuando se necesite un respaldo configurado."
+  },
   "errors": {
     "startFailed": "Error al iniciar el asistente. Inténtalo de nuevo.",
     "messageFailed": "Error al enviar tu mensaje. Inténtalo de nuevo."

@@ -88,6 +88,11 @@
     "providerProfile": "Perfil do Profissional",
     "services": "Serviços Oferecidos"
   },
+  "transparency": {
+    "poweredBy": "Esta experiência usa IA. Os modelos podem cometer erros.",
+    "details": "Detalhes dos modelos",
+    "disclaimer": "A seleção do modelo pode mudar quando um fallback configurado for necessário."
+  },
   "errors": {
     "startFailed": "Falha ao iniciar o assistente. Tente novamente.",
     "messageFailed": "Falha ao enviar sua mensagem. Tente novamente."

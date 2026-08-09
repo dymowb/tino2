@@ -111,6 +111,7 @@ export class QuoteService {
         availability: requestData.availability || [],
         searchRadius: requestData.searchRadius || 25.0,
         targetProviderIds: requestData.targetProviderIds || null,
+        sourceBookingId: requestData.sourceBookingId || null,
         expiresAt,
         status: QuoteRequestStatus.OPEN,
       });

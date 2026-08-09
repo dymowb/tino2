@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { AppDataSource } from '@/config/database';
 import { AppSettings } from '@/models/AppSettings';
 import logger from '@/config/logger';
+import { getAiConfigurationView } from '@/services/AiConfigurationService';
 
 const router = Router();
 
@@ -24,13 +25,13 @@ router.get('/', async (_req: Request, res: Response) => {
       const val = row ? Number(row.value) : NaN;
       data[field] = Number.isFinite(val) ? val : def;
     }
-    res.json({ success: true, data });
+    res.json({ success: true, data: { ...data, ai: getAiConfigurationView() } });
   } catch (error) {
     logger.error('Error fetching public config:', error);
     // Never block the client on config — fall back to defaults.
     const data: Record<string, number> = {};
     for (const [field, { default: def }] of Object.entries(PUBLIC_SETTINGS)) data[field] = def;
-    res.json({ success: true, data });
+    res.json({ success: true, data: { ...data, ai: getAiConfigurationView() } });
   }
 });
 

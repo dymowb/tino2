@@ -23,6 +23,7 @@ import { startReflectionJob } from '@/jobs/reflection.job';
 import { startQuoteExpiryJob } from '@/jobs/quoteExpiry.job';
 import { startBookingReminderJob } from '@/jobs/bookingReminder.job';
 import { validateConfig } from '@/config/environment';
+import { loadAiConfiguration } from '@/services/AiConfigurationService';
 
 async function bootstrap(): Promise<void> {
   try {
@@ -30,6 +31,8 @@ async function bootstrap(): Promise<void> {
     logger.info('Starting Tino 2 Backend Server...');
 
     await initializeDatabase();
+
+    await loadAiConfiguration();
 
     await initializeMemoryDatabase();
 

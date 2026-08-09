@@ -14,7 +14,7 @@ import { getLanguageInstruction } from './utils/locale';
 import { Agent, AgentMetadata, AgentResult, ReflectionResult } from './types/agent.types';
 import { WorkflowContext } from './types/workflow.types';
 import { RequirementsAgentOutput } from './requirements.agent';
-import { anthropicService, ClaudeModel } from './services/anthropic.service';
+import { aiGateway } from './services/ai-gateway.service';
 import ProviderService from '@/services/ProviderService';
 import { Provider } from '@/models/Provider';
 import logger from '@/config/logger';
@@ -118,7 +118,7 @@ class SearchAgent implements Agent<SearchAgentInput, SearchAgentOutput> {
   readonly metadata: AgentMetadata = {
     name: 'search',
     description: 'Finds and ranks service providers based on requirements',
-    model: 'claude-sonnet-4-6', // Use Sonnet for planning + ranking logic
+    model: 'fast',
     tools: [], // No MCP tools needed - direct database access
     maxTokens: 2000, // Enough for planning + reasoning
     temperature: 0.3, // Low temperature for consistent, deterministic search strategy
@@ -163,8 +163,7 @@ Plan your search strategy before executing queries.`,
       'You are a service inference agent. Your job is to analyze user requirements and map them to matching service names from a catalog. The matching is based on semantic similarity and domain knowledge (e.g. A plumber handles drain cleaning, pipe repairs, leak detection. A painter does pressure washing, etc). Return only a JSON array of matching service names that exist exactly in the provided catalog.';
     const userMessage = `User requirements: Service type= ${JSON.stringify(requirements.serviceType)}; Service requirements= ${JSON.stringify(requirements.specialRequirements)}\nAvailable services: ${JSON.stringify(serviceCatalog)}`;
 
-    const response = await anthropicService.callClaude({
-      model: ClaudeModel.HAIKU,
+    const { value: response } = await aiGateway.generate('fast', {
       systemPrompt,
       userMessage,
       maxTokens: 500,

@@ -11,7 +11,7 @@
  */
 
 import logger from '../../config/logger';
-import { ClaudeResponse } from '../services/anthropic.service';
+import { AiTextResponse } from '../services/ai-gateway.service';
 
 /**
  * Extract and parse the outermost JSON value of the requested shape from an
@@ -55,10 +55,10 @@ export function parseLlmJson<T = any>(text: string, kind: 'object' | 'array' = '
  * token usage for metadata.
  */
 export async function parseClaudeJson<T>(
-  runCall: () => Promise<ClaudeResponse>,
+  runCall: () => Promise<AiTextResponse>,
   kind: 'object' | 'array',
   opts: { agentName: string; retries?: number } = { agentName: 'agent' }
-): Promise<{ parsed: T | null; response: ClaudeResponse }> {
+): Promise<{ parsed: T | null; response: AiTextResponse }> {
   const retries = opts.retries ?? 1;
   let response = await runCall();
   let parsed = parseLlmJson<T>(response.text, kind);

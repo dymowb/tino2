@@ -10,7 +10,7 @@ import logger from '@/config/logger';
 import { coordinator, CoordinatorAgent } from '@/agents/coordinator';
 import { workflowStateService } from '@/agents/services/state.service';
 import { WorkflowStatus } from '@/agents/types/workflow.types';
-import { anthropicService, ClaudeModel } from '@/agents/services/anthropic.service';
+import { aiGateway } from '@/agents/services/ai-gateway.service';
 import { memoryRetriever } from '@/services/memory/MemoryRetriever';
 import { contextInjector } from '@/services/memory/ContextInjector';
 import { runReflectionForUser } from '@/jobs/reflection.job';
@@ -139,8 +139,7 @@ Do NOT list all providers. Do NOT use markdown.
 Customer needs: ${JSON.stringify(requirements.requirementsSummary)}
 Top recommendation: ${topRec.provider.businessName ?? topRec.provider.providerId} — ${topRec.reasoning}`;
 
-        for await (const chunk of anthropicService.stream({
-          model: ClaudeModel.HAIKU,
+        for await (const chunk of aiGateway.stream('fast', {
           systemPrompt: 'You are a helpful assistant summarising service provider recommendations.',
           userMessage: narrativePrompt,
           maxTokens: 200,

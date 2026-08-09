@@ -115,6 +115,16 @@
     "home_inspection": "Inspeção Residencial",
     "roofing": "Telhado"
   },
+  "favorites": {
+    "tab": "Salvos",
+    "title": "Prestadores salvos",
+    "save": "Salvar prestador",
+    "remove": "Remover dos salvos",
+    "empty": "Nenhum prestador salvo",
+    "empty_description": "Salve prestadores durante a busca para encontrá-los aqui.",
+    "update_error": "Não foi possível atualizar os prestadores salvos",
+    "unavailable": "Indisponível no momento"
+  },
   "messages": {
     "location_updated": "Localização atualizada!",
     "location_error": "Falha ao obter sua localização",

@@ -1,5 +1,19 @@
 # Tino 2 - Deployment & Setup Guide
 
+## Current AI configuration checklist (August 2026)
+
+1. Copy `backend/.env.example` to `backend/.env`; never commit the resulting file.
+2. Configure at least one API key matching every active chain.
+3. Set fast, reasoning, synthesis, and embedding chains as ordered `provider:model` targets.
+4. Set `AI_EMBEDDING_DIMENSIONS` and run `npm run memory:migration:run`.
+5. Optionally configure rebook and voice models, then run both main/memory migrations.
+6. Confirm `/health`, `/api/v1/config`, an authenticated AI workflow, and memory retrieval.
+
+Admins can override models after startup. Environment values remain recovery defaults.
+Embedding dimension changes require schema migration and are intentionally absent from the
+admin UI. For LAN development, explicitly allow every browser origin in CORS; do not use a
+wildcard origin with credentials.
+
 ## Table of Contents
 - [Prerequisites](#prerequisites)
 - [Development Environment Setup](#development-environment-setup)

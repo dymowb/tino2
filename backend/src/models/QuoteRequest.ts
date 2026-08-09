@@ -83,6 +83,10 @@ export class QuoteRequest {
   @Column({ type: 'jsonb', nullable: true })
   targetProviderIds: string[];
 
+  // Present when this request was created from a completed booking's rebook flow.
+  @Column({ type: 'uuid', nullable: true })
+  sourceBookingId: string | null;
+
   @Column({ type: 'varchar', enum: UrgencyLevel, default: UrgencyLevel.MEDIUM })
   @IsEnum(UrgencyLevel)
   urgency: UrgencyLevel;

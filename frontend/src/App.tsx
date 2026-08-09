@@ -26,6 +26,7 @@ import LoadingSpinner from './components/common/LoadingSpinner';
 import AdminRoute from './components/auth/AdminRoute';
 import VerifyEmailPage from './components/auth/VerifyEmailPage';
 import AdminLayout from './components/admin/AdminLayout';
+import AiTransparencyFooter from './components/common/AiTransparencyFooter';
 
 const HomePage = lazy(() => import('./components/pages/HomePage'));
 const FindProvidersPage = lazy(() => import('./components/pages/FindProvidersPage'));
@@ -178,6 +179,9 @@ const AppContent: React.FC = () => {
   const isAdminRoute = location.pathname.startsWith('/admin');
   const theme = useMediaQuery('(max-width:899px)'); // md breakpoint
   const isMobile = theme;
+  const isAiPoweredRoute = ['/providers', '/bookings', '/reviews', '/memory'].some(
+    path => location.pathname === path || location.pathname.startsWith(`${path}/`),
+  );
 
   if (loading) return <LoadingSpinner />;
 
@@ -239,6 +243,7 @@ const AppContent: React.FC = () => {
           </motion.div>
         </AnimatePresence>
       </Box>
+      {!isAdminRoute && isAuthenticated && isAiPoweredRoute && <AiTransparencyFooter />}
       {!isAdminRoute && <MobileBottomNav />}
     </Box>
   );

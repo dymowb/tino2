@@ -3,6 +3,7 @@ import multer from 'multer';
 import OpenAI, { toFile } from 'openai';
 import { File as NodeFile } from 'node:buffer';
 import { authenticate } from '@/middleware/auth';
+import { getAiSetting } from '@/services/AiConfigurationService';
 
 // Node 18 doesn't expose File as a global; OpenAI SDK v6 requires it for uploads
 if (!globalThis.File) (globalThis as any).File = NodeFile;
@@ -14,6 +15,12 @@ function getOpenAI(): OpenAI {
   const key = process.env.OPENAI_API_KEY;
   if (!key) throw new Error('OPENAI_API_KEY not configured');
   return new OpenAI({ apiKey: key });
+}
+
+function requiredVoiceSetting(name: 'VOICE_TRANSCRIPTION_MODEL' | 'VOICE_TTS_MODEL'): string {
+  const value = getAiSetting(name === 'VOICE_TRANSCRIPTION_MODEL' ? 'transcription' : 'speech');
+  if (!value) throw new Error(`${name} not configured`);
+  return value;
 }
 
 // Voice is an optional enhancement. When no OpenAI key is configured (e.g. dev),
@@ -48,7 +55,7 @@ router.post(
       const openai = getOpenAI();
       const result = await openai.audio.transcriptions.create({
         file: await toFile(req.file.buffer, `recording.${ext}`, { type: req.file.mimetype }),
-        model: 'whisper-1',
+        model: requiredVoiceSetting('VOICE_TRANSCRIPTION_MODEL'),
         language: 'pt',
       });
       res.json({ success: true, data: { transcript: result.text } });
@@ -77,7 +84,7 @@ router.post('/synthesize', authenticate, async (req: Request, res: Response) => 
   try {
     const openai = getOpenAI();
     const mp3 = await openai.audio.speech.create({
-      model: 'tts-1',
+      model: requiredVoiceSetting('VOICE_TTS_MODEL'),
       voice: 'nova', // natural, friendly — good fit for a service assistant
       input: truncated,
       response_format: 'mp3',

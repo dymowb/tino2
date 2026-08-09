@@ -115,6 +115,16 @@
     "home_inspection": "Home Inspection",
     "roofing": "Roofing"
   },
+  "favorites": {
+    "tab": "Saved",
+    "title": "Saved providers",
+    "save": "Save provider",
+    "remove": "Remove from saved",
+    "empty": "No saved providers yet",
+    "empty_description": "Save providers while browsing so you can find them here.",
+    "update_error": "Could not update saved providers",
+    "unavailable": "Currently unavailable"
+  },
   "messages": {
     "location_updated": "Location updated!",
     "location_error": "Failed to get your location",

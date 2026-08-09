@@ -6,17 +6,21 @@
 
 import { searchAgent } from '../search.agent';
 import { WorkflowContext } from '../types/workflow.types';
-import { anthropicService } from '../services/anthropic.service';
+import { aiGateway } from '../services/ai-gateway.service';
 
 describe('Search Agent', () => {
   beforeEach(() => {
-    jest.spyOn(anthropicService, 'callClaude').mockImplementation(async (request) => {
+    jest.spyOn(aiGateway, 'generate').mockImplementation(async (_profile, request) => {
       const serviceType = request.userMessage.match(/Service type= "([^"]+)"/)?.[1] ?? '';
       return {
-        text: JSON.stringify(serviceType ? [serviceType] : []),
-        usage: { inputTokens: 1, outputTokens: 1 },
         model: 'test',
-        stopReason: 'end_turn',
+        provider: 'anthropic',
+        attempts: 1,
+        value: {
+          text: JSON.stringify(serviceType ? [serviceType] : []),
+          usage: { inputTokens: 1, outputTokens: 1 },
+          finishReason: 'end_turn',
+        },
       };
     });
   });

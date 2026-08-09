@@ -14,6 +14,9 @@ I have successfully generated comprehensive documentation for the **Tino 2** dom
 5. **[04-API-Documentation.md](04-API-Documentation.md)** - Complete API reference and specifications
 6. **[05-System-Diagrams.md](05-System-Diagrams.md)** - System diagrams and flowcharts
 7. **[06-Deployment-Setup-Guide.md](06-Deployment-Setup-Guide.md)** - Setup and deployment procedures
+8. **[07-Agentic-Product-Roadmap.md](07-Agentic-Product-Roadmap.md)** - Sequenced agentic roadmap
+9. **[08-AI-Configuration-Operations.md](08-AI-Configuration-Operations.md)** - AI configuration and operations
+10. **[IDEAS_BACKLOG.md](IDEAS_BACKLOG.md)** - Deferred product and agentic ideas
 
 ### HTML Files (PDF-Ready Format)
 Located in `html-exports/` directory:
@@ -79,6 +82,9 @@ Located in `html-exports/` directory:
 - **Quote System** - Competitive bidding platform
 - **Payment Processing** - Multi-gateway integration
 - **Review System** - Two-way rating and feedback
+- **Favorites + Rebook** - Repeat-customer flow grounded in completed bookings
+- **Provider-Neutral AI** - Configurable text/embedding chains with ordered fallbacks
+- **AI Control Plane** - Protected runtime settings and customer model disclosure
 - **Security Features** - Multi-layer security implementation
 
 ### Technical Specifications
@@ -152,7 +158,7 @@ For questions about this documentation or the Tino 2 system:
 
 ---
 
-**Documentation Generated**: January 2025  
+**Documentation Updated**: August 2026
 **Project**: Tino 2 Domestic Service Platform  
 **Coverage**: Complete system documentation from requirements to deployment  
 **Format**: Markdown source + HTML for PDF conversion

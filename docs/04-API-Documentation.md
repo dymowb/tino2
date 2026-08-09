@@ -1,5 +1,25 @@
 # Tino 2 - API Documentation
 
+## Current favorites, rebook, and AI configuration endpoints
+
+All routes use `/api/v1`. Authenticated routes require a JWT bearer token.
+
+| Method | Route | Authorization | Purpose |
+|---|---|---|---|
+| `GET` | `/providers/favorites` | customer | List favorite providers |
+| `POST` | `/providers/:id/favorite` | customer | Save a provider idempotently |
+| `DELETE` | `/providers/:id/favorite` | customer | Remove a favorite idempotently |
+| `GET` | `/bookings/:id/rebook-prefill` | booking customer | Return eligibility and deterministic draft |
+| `POST` | `/bookings/:id/rebook-refine` | booking customer | Optionally refine an editable draft with AI |
+| `GET` | `/config` | public read-only | Return sanitized app and AI model metadata |
+| `GET` | `/admin/ai-configuration` | admin | Return active chains and source |
+| `PUT` | `/admin/ai-configuration/:field` | admin | Validate, persist, and activate one setting |
+
+Admin fields are `fast`, `reasoning`, `synthesis`, `rebook`, `embedding`, `transcription`,
+and `speech`. Chains are comma-separated `provider:model` targets. Invalid values return
+HTTP 400; responses never contain API keys. The assistant streaming endpoint emits SSE
+`started`, `progress`, `token`, `complete`, and `error` events.
+
 ## Table of Contents
 - [API Overview](#api-overview)
 - [Authentication](#authentication)

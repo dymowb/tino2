@@ -306,7 +306,15 @@ const PaymentsPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box
+      sx={{
+        p: { xs: 2, sm: 3 },
+        width: '100%',
+        maxWidth: '100%',
+        minWidth: 0,
+        overflowX: 'hidden',
+      }}
+    >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">
           {isProvider ? t('payments:payment_management') : t('payments:payment_history')}
@@ -330,8 +338,8 @@ const PaymentsPage: React.FC = () => {
 
       {renderPaymentStats()}
 
-      <Card>
-        <CardContent>
+      <Card sx={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
+        <CardContent sx={{ minWidth: 0 }}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
             <Tabs value={currentTab} onChange={handleTabChange}>
               <Tab label={t('payments:all_payments')} />
@@ -374,8 +382,12 @@ const PaymentsPage: React.FC = () => {
             </TextField>
           </Box>
 
-          <TableContainer component={Paper} variant="outlined">
-            <Table>
+          <TableContainer
+            component={Paper}
+            variant="outlined"
+            sx={{ width: '100%', maxWidth: '100%', overflowX: 'auto' }}
+          >
+            <Table sx={{ minWidth: 826 }}>
               <TableHead>
                 <TableRow>
                   <TableCell>{t('payments:table.payment_id')}</TableCell>

@@ -1,0 +1,38 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Tino 2 - AI Configuration and Operations</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2, h3, h4 { color: #2c3e50; margin-top: 30px; }
+        h1 { border-bottom: 3px solid #3498db; padding-bottom: 10px; }
+        h2 { border-bottom: 1px solid #bdc3c7; padding-bottom: 5px; }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        code { background: #f1f2f6; padding: 2px 4px; border-radius: 3px; }
+        ul { margin: 15px 0; }
+        li { margin: 5px 0; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        blockquote { border-left: 4px solid #3498db; margin: 0; padding-left: 20px; color: #666; }
+        .toc { background: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; }
+        .page-break { page-break-before: always; }
+        @media print {
+            body { margin: 0; }
+            .page-break { page-break-before: always; }
+        }
+    </style>
+</head>
+<body>
+    <p><h1>AI Configuration and Operations</h1></p><p><h2>Scope</h2></p><p>Tino routes text generation, embeddings, transcription, and speech through configurable<br>capabilities. Workflow code selects a capability, not a vendor-specific model. This keeps<br>model choice replaceable while domain services retain validation and authority.</p><p><h2>Capabilities</h2></p><p>| Field | Environment default | Providers | Typical consumers |<br>|---|---|---|---|<br>| Fast | <code>AI_FAST_MODEL_CHAIN</code> | OpenAI, Anthropic | requirements, search, narrative, extraction |<br>| Reasoning | <code>AI_REASONING_MODEL_CHAIN</code> | OpenAI, Anthropic | analysis, recommendation, verification, reflection |<br>| Synthesis | <code>AI_SYNTHESIS_MODEL_CHAIN</code> | OpenAI, Anthropic | cross-agent synthesis |<br>| Rebook | <code>REBOOK_AI_MODEL_CHAIN</code> or Fast | OpenAI, Anthropic | repeat-request refinement |<br>| Embedding | <code>AI_EMBEDDING_CHAIN</code> | OpenAI, Voyage | semantic memory |<br>| Transcription | <code>VOICE_TRANSCRIPTION_MODEL</code> | OpenAI | voice input |<br>| Speech | <code>VOICE_TTS_MODEL</code> | OpenAI | voice output |</p><p>Chains use <code>provider:model,provider:fallback-model</code> syntax. Targets are tried in order.<br>Unconfigured providers are skipped; failures proceed according to retry and timeout settings.</p><p><h2>Runtime admin controls</h2></p><p>The protected Admin Settings page shows the effective value and whether it came from an<br>admin override or the environment. A save validates syntax, persists a secret-free value in<br><code>app_settings</code>, updates the in-process configuration, and resets the embedding provider when<br>that chain changes. The ordinary settings table excludes <code>ai_*</code> rows so there is one editor.</p><p>API keys are deliberately absent. Key rotation remains an environment/secret-manager<br>operation and normally requires a process restart.</p><p><h2>Transparency</h2></p><p>AI-powered customer routes (<code>/providers</code>, <code>/bookings</code>, <code>/reviews</code>, and <code>/memory</code>) render a<br>compact disclosure footer. It reads sanitized <code>/api/v1/config</code> metadata and shows configured<br>provider/model targets plus a fallback warning. It never exposes keys, prompts, tokens, or<br>private logs.</p><p><h2>Operational checks</h2></p><p>After a configuration change:</p><p><ul><li>verify Admin shows <code>admin</code> as the source;</li><br><li>verify <code>/api/v1/config</code> reflects the same metadata;</li><br><li>run one request for every affected capability;</li><br><li>confirm logs record provider, model, attempts, and failures;</li><br><li>for embeddings, confirm vector length equals <code>AI_EMBEDDING_DIMENSIONS</code>;</li><br><li>keep a known-good environment chain available for recovery.</li></p><p><h2>Current all-OpenAI test profile</h2></p><p>The tested development profile uses Luna with Terra fallback for fast work, Terra with Sol<br>fallback for reasoning, Sol with Terra fallback for synthesis, and<br><code>text-embedding-3-small</code> at 1,024 dimensions for memory. Availability varies by account and<br>date, so these values remain configuration rather than code defaults.</p><p><h2>Security boundaries</h2></p><p><li>Only admins can read or update full runtime chains.</li><br><li>The public endpoint is read-only and sanitized.</li><br><li>Models cannot mutate business records through the gateway.</li><br><li>Rebook refinement changes only a draft returned for customer review.</li><br><li>Embedding dimension changes require migration/re-index planning.</li><br><li>Invalid configuration fails with HTTP 400 and is never persisted.</li><br></ul></p>
+</body>
+</html>

@@ -23,7 +23,7 @@ import {
   Recommendation,
 } from './types/workflow.types';
 import { RequirementsAgentOutput } from './requirements.agent';
-import { anthropicService, ClaudeModel } from './services/anthropic.service';
+import { aiGateway } from './services/ai-gateway.service';
 import { parseLlmJson } from './utils/llm-json';
 import logger from '../config/logger';
 
@@ -53,7 +53,7 @@ class VerificationAgent implements Agent<VerificationAgentInput, VerificationAge
   readonly metadata: AgentMetadata = {
     name: 'verification',
     description: 'Quality-assurance check that recommendations match requirements',
-    model: 'claude-haiku-4-5-20251001',
+    model: 'reasoning',
     tools: [],
     maxTokens: 800,
     temperature: 0.1, // Near-deterministic — QA should be consistent
@@ -125,8 +125,7 @@ Rules:
       ? `${input.constraintContext}\n\n${this.metadata.systemPrompt}`
       : this.metadata.systemPrompt;
 
-    const claudeCall = anthropicService.callClaude({
-      model: ClaudeModel.HAIKU,
+    const claudeCall = aiGateway.generate('reasoning', {
       systemPrompt,
       userMessage,
       maxTokens: this.metadata.maxTokens,
@@ -138,15 +137,16 @@ Rules:
       setTimeout(() => resolve(null), VERIFICATION_TIMEOUT_MS)
     );
 
-    const response = await Promise.race([claudeCall, timeoutSignal]);
+    const gatewayResult = await Promise.race([claudeCall, timeoutSignal]);
 
     // ── Timeout path — soft pass ──────────────────────────────────────
-    if (response === null) {
+    if (gatewayResult === null) {
       logger.warn('Verification Agent timed out — soft pass, returning unmodified recommendations');
       return this.timedOutResult(startTime);
     }
 
     // ── Parse Claude response ─────────────────────────────────────────
+    const response = gatewayResult.value;
     const parsed = parseLlmJson<any>(response.text, 'object');
     if (!parsed) {
       logger.warn('Verification Agent: could not parse JSON — soft pass');
@@ -183,7 +183,7 @@ Rules:
       metadata: {
         executionTimeMs: Date.now() - startTime,
         tokensUsed: response.usage.inputTokens + response.usage.outputTokens,
-        modelUsed: ClaudeModel.HAIKU,
+        modelUsed: gatewayResult.model,
         confidence: report.passed ? 0.9 : 0.6,
       },
     };
@@ -235,7 +235,7 @@ Rules:
       metadata: {
         executionTimeMs: Date.now() - startTime,
         tokensUsed: 0,
-        modelUsed: ClaudeModel.HAIKU,
+        modelUsed: this.metadata.model,
         confidence: 0,
       },
     };

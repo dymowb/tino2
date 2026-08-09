@@ -45,6 +45,21 @@ This comprehensive documentation covers all aspects of the Tino 2 platform, from
    - Docker containerization guide
    - Monitoring and maintenance procedures
 
+7. **[Agentic Product Roadmap](07-Agentic-Product-Roadmap.md)**
+   - Booking Readiness Copilot implementation plan
+   - Quote Decision Council implementation plan
+   - Shared orchestration, safety, evaluation, and rollout strategy
+
+8. **[Ideas Backlog](IDEAS_BACKLOG.md)**
+   - Deferred agentic product concepts
+   - Non-agentic product and engineering opportunities
+   - Promotion criteria and safety boundaries
+
+9. **[AI Configuration and Operations](08-AI-Configuration-Operations.md)**
+   - Provider-neutral profiles and ordered fallbacks
+   - Runtime admin controls and customer transparency
+   - Security boundaries and operational verification
+
 ## Quick Reference
 
 ### Key Technologies
@@ -62,6 +77,9 @@ This comprehensive documentation covers all aspects of the Tino 2 platform, from
 - 💰 **Quote System with Competitive Bidding**
 - 💳 **Integrated Payment Processing**
 - ⭐ **Review and Rating System**
+- ❤️ **Favorite Providers and Completed-Booking Rebook**
+- 🤖 **Provider-Neutral Agentic Assistant and Memory**
+- ⚙️ **Runtime AI Model Administration**
 - 🔐 **Secure Authentication & Authorization**
 
 ### Development Commands

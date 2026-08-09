@@ -69,6 +69,10 @@ export const rateLimiters = {
     },
     standardHeaders: true,
     legacyHeaders: false,
+    // Browser projects share one disposable backend and loopback IP. Counting
+    // their combined navigation/API traffic makes the suite fail with unrelated
+    // 429s; production and development still exercise the configured limiter.
+    skip: () => config.server.nodeEnv === 'test',
     keyGenerator: (req: Request) => {
       return req.user?.userId || req.ip || 'unknown';
     },

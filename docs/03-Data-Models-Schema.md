@@ -1,5 +1,28 @@
 # Tino 2 - Data Models & Database Schema
 
+## Current schema additions (August 2026)
+
+### `favorite_providers`
+
+Private customer/provider join table with UUID primary key, foreign keys to `users` and
+`providers`, timestamps, and a unique `(customer_id, provider_id)` constraint.
+
+### Rebooking provenance
+
+`quote_requests` contains nullable links to its source booking and target provider.
+Eligibility requires a source booking whose status is exactly `completed`.
+
+### `app_settings` AI overrides
+
+Optional validated rows include `ai_fast_model_chain`, `ai_reasoning_model_chain`,
+`ai_synthesis_model_chain`, `ai_rebook_model_chain`, `ai_embedding_chain`,
+`ai_transcription_model`, and `ai_speech_model`. No API credentials are stored.
+
+### Agentic memory database
+
+Semantic and episodic memory use separate PostgreSQL/pgvector storage. Embedding dimensions
+are fixed by `AI_EMBEDDING_DIMENSIONS`; changing them requires migration and re-embedding.
+
 ## Table of Contents
 - [Database Overview](#database-overview)
 - [Entity Relationship Diagram](#entity-relationship-diagram)

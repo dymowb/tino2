@@ -21,6 +21,21 @@
     "results_count_other": "{{count}} Reservas Encontradas",
     "results_count_one": "{{count}} Reserva Encontrada"
   },
+  "rebook": {
+    "proposed_budget": "Orçamento proposto",
+    "previous_total_hint": "Total da reserva anterior: {{amount}}. O prestador pode fazer uma contraproposta.",
+    "prefill_error": "Não foi possível preparar esta nova solicitação",
+    "refine_title": "O que deve ser diferente desta vez?",
+    "refine_placeholder": "Por exemplo: inclua a varanda e reserve três horas",
+    "refine_action": "Aprimorar com IA",
+    "refine_error": "O aprimoramento por IA está indisponível; seu rascunho não foi alterado",
+    "unavailable": {
+      "booking_not_completed": "Apenas reservas concluídas podem ser repetidas",
+      "provider_inactive": "Este prestador não está mais disponível",
+      "service_no_longer_offered": "Este prestador não oferece mais este serviço",
+      "not_booking_customer": "Você não pode repetir esta reserva"
+    }
+  },
   "create": {
     "title": "Criar Nova Reserva",
     "dialog_title": "Reservar Serviço com {{provider}}",
@@ -112,6 +127,7 @@
     "leave_review": "Deixar Avaliação",
     "review_sent": "Avaliação enviada",
     "rebook": "Reservar Novamente",
+    "find_similar": "Encontrar Semelhantes",
     "view_receipt": "Ver Recibo",
     "get_directions": "Obter Direções",
     "keep_booking": "Manter Reserva",
@@ -218,12 +234,14 @@
     "empty_all": "Você ainda não tem pedidos ou reservas.",
     "empty_awaiting": "Nenhum pedido aberto aguardando orçamentos.",
     "empty_active": "Nenhuma reserva ativa.",
-    "empty_done": "Nenhum serviço concluído ou cancelado ainda.",
+    "empty_done": "Nenhum serviço concluído ainda.",
+    "empty_cancelled": "Nenhuma reserva cancelada.",
     "filter": {
       "all": "Todos",
       "awaiting": "Aguardando orçamentos",
       "active": "Ativos",
       "done": "Concluídos",
+      "cancelled": "Cancelados",
       "awaiting_provider": "Aguardando resposta"
     },
     "request_closed_note": "Este pedido foi cancelado.",

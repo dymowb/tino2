@@ -1,4 +1,4 @@
-import { anthropicService, ClaudeModel } from '@/agents/services/anthropic.service';
+import { aiGateway } from '@/agents/services/ai-gateway.service';
 import { deduper, SemanticCandidate, DedupResult } from '@/services/memory/Deduper';
 import { scrubPii } from '@/services/memory/PiiScrubber';
 import { episodicWriter } from './EpisodicWriter';
@@ -253,8 +253,7 @@ export class ExtractionAgent {
     role: 'customer' | 'provider' = 'customer'
   ): Promise<ExtractionLLMOutput> {
     const systemPrompt = role === 'provider' ? PROVIDER_SYSTEM_PROMPT : CUSTOMER_SYSTEM_PROMPT;
-    const response = await anthropicService.callClaude({
-      model: ClaudeModel.HAIKU,
+    const { value: response } = await aiGateway.generate('fast', {
       systemPrompt,
       userMessage: `Conversation to extract from:\n\n${conversationText}`,
       maxTokens: 800,

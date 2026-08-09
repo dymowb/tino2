@@ -14,7 +14,7 @@ import { getLanguageInstruction } from './utils/locale';
 
 import { Agent, AgentMetadata, AgentResult, ReflectionResult } from './types/agent.types';
 import { WorkflowContext } from './types/workflow.types';
-import { anthropicService, ClaudeModel } from './services/anthropic.service';
+import { aiGateway } from './services/ai-gateway.service';
 import { parseLlmJson } from './utils/llm-json';
 import logger from '../config/logger';
 
@@ -91,7 +91,7 @@ class RequirementsAgent implements Agent<RequirementsAgentInput, RequirementsAge
   readonly metadata: AgentMetadata = {
     name: 'requirements-agent',
     description: 'Gathers service requirements through conversational flow',
-    model: 'claude-haiku-4-5-20251001',
+    model: 'fast',
     tools: [],
     maxTokens: 1024,
     temperature: 0.7,
@@ -215,8 +215,7 @@ Analyze the conversation and respond with JSON following the format specified in
             logger.info(`[RequirementsAgent] Memory injected:\n${input.memoryContext}`);
         }
 
-        const response = await anthropicService.callClaude({
-          model: ClaudeModel.HAIKU,
+        const { value: response } = await aiGateway.generate('fast', {
           systemPrompt,
           userMessage,
           maxTokens: this.metadata.maxTokens,
@@ -252,7 +251,7 @@ Analyze the conversation and respond with JSON following the format specified in
         metadata: {
           executionTimeMs: finalExecutionTimeMs,
           tokensUsed: totalTokensUsed,
-          modelUsed: ClaudeModel.HAIKU,
+          modelUsed: this.metadata.model,
           confidence: this.calculateConfidence(bestOutput!),
         },
         suggestedNextAgent: bestOutput!.isComplete ? 'search' : null, // Continue to search if complete
@@ -267,7 +266,7 @@ Analyze the conversation and respond with JSON following the format specified in
         metadata: {
           executionTimeMs: Date.now() - startTime,
           tokensUsed: 0,
-          modelUsed: ClaudeModel.HAIKU,
+          modelUsed: this.metadata.model,
           confidence: 0,
         },
         suggestedNextAgent: null,

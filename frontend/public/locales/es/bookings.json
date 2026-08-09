@@ -21,6 +21,21 @@
     "results_count_other": "{{count}} Reservas Encontradas",
     "results_count_one": "{{count}} Reserva Encontrada"
   },
+  "rebook": {
+    "proposed_budget": "Presupuesto propuesto",
+    "previous_total_hint": "Total de la reserva anterior: {{amount}}. El proveedor puede hacer una contraoferta.",
+    "prefill_error": "No se pudo preparar esta nueva solicitud",
+    "refine_title": "¿Qué debería ser diferente esta vez?",
+    "refine_placeholder": "Por ejemplo: agrega el balcón y permite tres horas",
+    "refine_action": "Mejorar con IA",
+    "refine_error": "La mejora con IA no está disponible; tu borrador no cambió",
+    "unavailable": {
+      "booking_not_completed": "Solo se pueden repetir reservas completadas",
+      "provider_inactive": "Este proveedor ya no está disponible",
+      "service_no_longer_offered": "Este proveedor ya no ofrece este servicio",
+      "not_booking_customer": "No puedes repetir esta reserva"
+    }
+  },
   "create": {
     "title": "Crear Nueva Reserva",
     "dialog_title": "Reservar Servicio con {{provider}}",
@@ -117,6 +132,7 @@
     "confirm_completion": "Confirmar Finalización",
     "open_dispute": "Abrir Disputa",
     "rebook": "Reservar de nuevo",
+    "find_similar": "Buscar similares",
     "review_sent": "Reseña enviada"
   },
   "status": {
@@ -207,12 +223,14 @@
     "empty_all": "Aún no tienes solicitudes ni reservas.",
     "empty_awaiting": "No hay solicitudes abiertas esperando presupuestos.",
     "empty_active": "No hay reservas activas.",
-    "empty_done": "Aún no hay trabajos completados o cancelados.",
+    "empty_done": "Aún no hay trabajos completados.",
+    "empty_cancelled": "No hay reservas canceladas.",
     "filter": {
       "all": "Todos",
       "awaiting": "Esperando presupuestos",
       "active": "Activos",
       "done": "Completados",
+      "cancelled": "Cancelados",
       "awaiting_provider": "Esperando respuesta"
     },
     "request_closed_note": "Esta solicitud fue cancelada.",

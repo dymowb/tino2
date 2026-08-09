@@ -10,19 +10,10 @@ import config from '../../config/environment';
 import logger from '../../config/logger';
 
 /**
- * Claude Model Options
- */
-export enum ClaudeModel {
-  HAIKU = 'claude-haiku-4-5-20251001', // Fast, cheap - for conversations
-  SONNET = 'claude-sonnet-4-6', // Balanced - for analysis
-  OPUS = 'claude-opus-4-6', // Powerful - for synthesis
-}
-
-/**
  * Request parameters for Claude API
  */
 export interface ClaudeRequest {
-  model: ClaudeModel;
+  model: string;
   systemPrompt: string;
   userMessage: string;
   maxTokens?: number;
@@ -116,50 +107,12 @@ class AnthropicService {
 
       logger.info(`Claude responded in ${duration}ms`);
       logger.info(`Tokens: ${result.usage.inputTokens} in, ${result.usage.outputTokens} out`);
-      logger.info(`Estimated cost: $${this.estimateCost(result.usage, request.model)}`);
 
       return result;
     } catch (error) {
       logger.error('Claude API error:', error);
       throw error;
     }
-  }
-
-  /**
-   * Estimate cost of API call
-   *
-   * Based on Anthropic's pricing (as of Nov 2024):
-   * - Haiku: $0.25 per 1M input tokens, $1.25 per 1M output tokens
-   * - Sonnet: $3 per 1M input tokens, $15 per 1M output tokens
-   * - Opus: $15 per 1M input tokens, $75 per 1M output tokens
-   */
-  private estimateCost(
-    usage: { inputTokens: number; outputTokens: number },
-    model: ClaudeModel
-  ): string {
-    let inputCostPer1M = 0;
-    let outputCostPer1M = 0;
-
-    switch (model) {
-      case ClaudeModel.HAIKU:
-        inputCostPer1M = 0.8;
-        outputCostPer1M = 4.0;
-        break;
-      case ClaudeModel.SONNET:
-        inputCostPer1M = 3.0;
-        outputCostPer1M = 15.0;
-        break;
-      case ClaudeModel.OPUS:
-        inputCostPer1M = 15.0;
-        outputCostPer1M = 75.0;
-        break;
-    }
-
-    const inputCost = (usage.inputTokens / 1_000_000) * inputCostPer1M;
-    const outputCost = (usage.outputTokens / 1_000_000) * outputCostPer1M;
-    const totalCost = inputCost + outputCost;
-
-    return totalCost.toFixed(6);
   }
 
   /**

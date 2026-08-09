@@ -1,4 +1,4 @@
-import { anthropicService, ClaudeModel } from './services/anthropic.service';
+import { aiGateway } from './services/ai-gateway.service';
 import logger from '../config/logger';
 
 // ─── Types ────────────────────────────────────────────────────────────
@@ -86,8 +86,7 @@ Regras:
     if (input.memoryContext) systemPrompt = `${input.memoryContext}\n\n${systemPrompt}`;
     if (input.constraintContext) systemPrompt = `${input.constraintContext}\n\n${systemPrompt}`;
 
-    const response = await anthropicService.callClaude({
-      model: ClaudeModel.SONNET,
+    const { value: response } = await aiGateway.generate('reasoning', {
       systemPrompt,
       userMessage,
       maxTokens: 300,

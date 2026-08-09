@@ -20,7 +20,7 @@ import { ProviderSearchResult } from './search.agent';
 import { RequirementsAgentOutput } from './requirements.agent';
 import reviewService from '../services/ReviewService';
 import bookingService from '../services/BookingService';
-import { anthropicService, ClaudeModel } from './services/anthropic.service';
+import { aiGateway } from './services/ai-gateway.service';
 import logger from '../config/logger';
 
 // ─── Type Definitions ───────────────────────────────────────────────
@@ -97,7 +97,7 @@ class AnalysisAgent implements Agent<AnalysisAgentInput, AnalysisAgentOutput> {
   readonly metadata: AgentMetadata = {
     name: 'analysis',
     description: 'Deeply evaluates providers using reviews, booking history, and LLM analysis',
-    model: 'claude-haiku-4-5-20251001',
+    model: 'reasoning',
     tools: [],
     maxTokens: 2000,
     temperature: 0.3, // Low temperature for consistent structured output
@@ -240,8 +240,7 @@ Return a JSON array of analysis objects.`,
   //    - For each enriched provider: profile data, review analytics, recent reviews, booking history
   //    Format it clearly so Claude can analyze each provider
   //
-  // 4. Call Claude via anthropicService.callClaude() with:
-  //    - model: ClaudeModel.SONNET
+  // 4. Call the configured reasoning profile through the AI gateway.
   //    - systemPrompt: this.metadata.systemPrompt
   //    - userMessage: the string you built
   //    - maxTokens: this.metadata.maxTokens
@@ -291,13 +290,14 @@ Return a JSON array of analysis objects.`,
 
     const { parsed, response } = await parseClaudeJson<ProviderAnalysis[]>(
       () =>
-        anthropicService.callClaude({
-          model: ClaudeModel.HAIKU,
-          systemPrompt,
-          userMessage,
-          maxTokens: this.metadata.maxTokens,
-          temperature: this.metadata.temperature,
-        }),
+        aiGateway
+          .generate('reasoning', {
+            systemPrompt,
+            userMessage,
+            maxTokens: this.metadata.maxTokens,
+            temperature: this.metadata.temperature,
+          })
+          .then((result) => result.value),
       'array',
       { agentName: 'analysis' }
     );
@@ -327,7 +327,7 @@ Return a JSON array of analysis objects.`,
       metadata: {
         executionTimeMs,
         tokensUsed: response.usage.inputTokens + response.usage.outputTokens,
-        modelUsed: ClaudeModel.SONNET,
+        modelUsed: this.metadata.model,
         confidence: 0.95, // Assume high confidence for now
       },
     };

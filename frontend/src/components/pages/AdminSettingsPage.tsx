@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import {
   Box, Typography, Paper, Table, TableBody, TableCell, TableHead, TableRow,
-  TextField, Button, CircularProgress, Alert, Chip,
+  TextField, Button, CircularProgress, Alert, Chip, Divider, Stack,
 } from '@mui/material';
 import { Save } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import apiService from '../../services/api';
+import type { AiConfiguration } from '../../services/api';
 
 interface Setting {
   key: string;
@@ -22,14 +23,19 @@ const AdminSettingsPage: React.FC = () => {
   const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [aiConfig, setAiConfig] = useState<AiConfiguration | null>(null);
+  const [aiEdits, setAiEdits] = useState<Record<string, string>>({});
+  const [aiSaving, setAiSaving] = useState('');
 
   useEffect(() => {
-    apiService.get('/admin/settings')
-      .then(res => {
+    Promise.all([apiService.get('/admin/settings'), apiService.getAdminAiConfiguration()])
+      .then(([res, ai]) => {
         setSettings(res.data.data);
         const initial: Record<string, string> = {};
         res.data.data.forEach((s: Setting) => { initial[s.key] = s.value; });
         setEdits(initial);
+        setAiConfig(ai);
+        setAiEdits(Object.fromEntries(Object.entries(ai).map(([field, entry]) => [field, entry.value])));
       })
       .catch(() => setError(t('settings.error_load')))
       .finally(() => setLoading(false));
@@ -46,6 +52,20 @@ const AdminSettingsPage: React.FC = () => {
       setError(t('settings.error_save', { key }));
     } finally {
       setSaving(p => ({ ...p, [key]: false }));
+    }
+  };
+
+  const handleAiSave = async (field: string) => {
+    setAiSaving(field);
+    setError('');
+    try {
+      const next = await apiService.updateAdminAiConfiguration(field, aiEdits[field] ?? '');
+      setAiConfig(next);
+      setAiEdits(Object.fromEntries(Object.entries(next).map(([key, entry]) => [key, entry.value])));
+    } catch (err: any) {
+      setError(err.response?.data?.error || `Failed to save ${field}`);
+    } finally {
+      setAiSaving('');
     }
   };
 
@@ -107,6 +127,47 @@ const AdminSettingsPage: React.FC = () => {
             ))}
           </TableBody>
         </Table>
+      </Paper>
+
+      <Divider sx={{ my: 4 }} />
+      <Typography variant="h5" fontWeight="bold" gutterBottom>AI model configuration</Typography>
+      <Typography variant="body2" color="text.secondary" mb={2}>
+        Enter ordered <code>provider:model</code> chains. The first model is primary; later models are fallbacks. API keys remain server-only.
+      </Typography>
+      <Alert severity="info" sx={{ mb: 2 }}>
+        Changes apply immediately. Environment variables remain the defaults and can be restored by removing the corresponding AI setting from the database.
+      </Alert>
+      <Paper variant="outlined" sx={{ p: 2 }}>
+        <Stack spacing={2}>
+          {aiConfig && Object.entries(aiConfig).map(([field, entry]) => {
+            const isVoice = field === 'transcription' || field === 'speech';
+            const label = field.charAt(0).toUpperCase() + field.slice(1);
+            return (
+              <Box key={field} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '140px 1fr auto' }, gap: 1.5, alignItems: 'center' }}>
+                <Box>
+                  <Typography variant="body2" fontWeight={600}>{label}</Typography>
+                  <Chip size="small" label={entry.source} variant="outlined" sx={{ mt: .5 }} />
+                </Box>
+                <TextField
+                  size="small"
+                  fullWidth
+                  value={aiEdits[field] ?? ''}
+                  placeholder={isVoice ? 'model-name' : 'openai:model,anthropic:fallback'}
+                  onChange={event => setAiEdits(current => ({ ...current, [field]: event.target.value }))}
+                  inputProps={{ 'aria-label': `${label} model configuration` }}
+                />
+                <Button
+                  variant="outlined"
+                  startIcon={aiSaving === field ? <CircularProgress size={14} /> : <Save />}
+                  disabled={!!aiSaving || aiEdits[field] === entry.value}
+                  onClick={() => handleAiSave(field)}
+                >
+                  Save
+                </Button>
+              </Box>
+            );
+          })}
+        </Stack>
       </Paper>
     </Box>
   );

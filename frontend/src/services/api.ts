@@ -1,5 +1,5 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { toast } from 'react-hot-toast';
+import axios, { AxiosInstance, AxiosResponse } from "axios";
+import { toast } from "react-hot-toast";
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -25,7 +25,7 @@ export interface User {
   lastName: string;
   phone?: string;
   profileImage?: string;
-  userType: 'customer' | 'provider' | 'admin';
+  userType: "customer" | "provider" | "admin";
   isVerified: boolean;
   settings?: {
     notifications: {
@@ -47,21 +47,34 @@ export interface AuthResponse {
   refreshToken: string;
 }
 
+export interface AiConfigurationEntry {
+  value: string;
+  source: "admin" | "environment";
+  models: Array<{ provider: string; model: string }>;
+}
+
+export type AiConfiguration = Record<
+  "fast" | "reasoning" | "synthesis" | "rebook" | "embedding" | "transcription" | "speech",
+  AiConfigurationEntry
+>;
+
 export interface Provider {
   id: string;
   userId: string;
   businessName: string;
   description: string;
   services: string[];
-  location: {
-    latitude: number;
-    longitude: number;
-    address: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country: string;
-  } | string;
+  location:
+    | {
+        latitude: number;
+        longitude: number;
+        address: string;
+        city: string;
+        state: string;
+        zipCode: string;
+        country: string;
+      }
+    | string;
   serviceRadius: number;
   rating: number;
   totalReviews: number;
@@ -74,16 +87,16 @@ export interface Provider {
   pricing: {
     baseRate: number;
     currency: string;
-    rateType: 'hourly' | 'fixed' | 'quote';
+    rateType: "hourly" | "fixed" | "quote";
   };
   availableHours: {
-    monday:    { start: string; end: string; available: boolean };
-    tuesday:   { start: string; end: string; available: boolean };
+    monday: { start: string; end: string; available: boolean };
+    tuesday: { start: string; end: string; available: boolean };
     wednesday: { start: string; end: string; available: boolean };
-    thursday:  { start: string; end: string; available: boolean };
-    friday:    { start: string; end: string; available: boolean };
-    saturday:  { start: string; end: string; available: boolean };
-    sunday:    { start: string; end: string; available: boolean };
+    thursday: { start: string; end: string; available: boolean };
+    friday: { start: string; end: string; available: boolean };
+    saturday: { start: string; end: string; available: boolean };
+    sunday: { start: string; end: string; available: boolean };
   };
   completedJobs: number;
   responseRate: number;
@@ -112,9 +125,16 @@ export interface Booking {
   };
   scheduledDate: string;
   estimatedDuration: number;
-  status: 'pending' | 'confirmed' | 'in_progress' | 'pending_completion' | 'completed' | 'in_dispute' | 'cancelled';
+  status:
+    | "pending"
+    | "confirmed"
+    | "in_progress"
+    | "pending_completion"
+    | "completed"
+    | "in_dispute"
+    | "cancelled";
   totalAmount: number;
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  paymentStatus: "pending" | "paid" | "failed" | "refunded";
   specialInstructions?: string;
   reviews?: Array<{ id: string }>;
   createdAt: string;
@@ -141,8 +161,8 @@ export interface QuoteRequest {
     currency: string;
   };
   images?: string[];
-  urgency: 'low' | 'medium' | 'high' | 'urgent';
-  status: 'open' | 'closed' | 'cancelled';
+  urgency: "low" | "medium" | "high" | "urgent";
+  status: "open" | "closed" | "cancelled";
   requirements?: Array<{
     category: string;
     requirement: string;
@@ -160,11 +180,43 @@ export interface QuoteRequest {
   // Present + non-empty ⇒ a direct request targeted at specific provider(s);
   // empty/absent ⇒ broadcast to all matching providers.
   targetProviderIds?: string[] | null;
+  sourceBookingId?: string | null;
   quotesReceived: number;
   closedAt?: string;
   closureReason?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface FavoriteProvider {
+  id: string;
+  providerId: string;
+  createdAt: string;
+  provider: Provider;
+}
+
+export interface RebookPrefill {
+  eligible: boolean;
+  reason:
+    | "booking_not_completed"
+    | "provider_inactive"
+    | "service_no_longer_offered"
+    | "not_booking_customer"
+    | null;
+  sourceBookingId: string;
+  provider: Provider;
+  draft: {
+    serviceType: string;
+    description: string;
+    specialInstructions: string;
+    location: Booking["location"];
+    estimatedDurationHours: number;
+    proposedBudget: number;
+    currency: string;
+    requirements: NonNullable<QuoteRequest["requirements"]>;
+  };
+  references: { previousTotal: number; currentBaseRate: number | null };
+  copiedFields: string[];
 }
 
 export interface Quote {
@@ -177,7 +229,7 @@ export interface Quote {
   estimatedPrice: number;
   estimatedDuration: number;
   validUntil: string;
-  status: 'pending' | 'accepted' | 'rejected' | 'expired' | 'withdrawn';
+  status: "pending" | "accepted" | "rejected" | "expired" | "withdrawn";
   breakdown?: {
     labor: number;
     materials: number;
@@ -219,7 +271,12 @@ export interface Recommendation {
     rating: number;
     totalReviews: number;
     services: string[];
-    pricing?: { baseRate?: number; hourlyRate?: number; currency: string; rateType?: string } | null;
+    pricing?: {
+      baseRate?: number;
+      hourlyRate?: number;
+      currency: string;
+      rateType?: string;
+    } | null;
   };
   analysis: ProviderAnalysis;
   reasoning: string;
@@ -266,7 +323,13 @@ export interface VerificationReport {
 export interface WorkflowData {
   id: string;
   userId: string;
-  status: 'pending' | 'active' | 'completed' | 'failed' | 'cancelled' | 'waiting_for_user';
+  status:
+    | "pending"
+    | "active"
+    | "completed"
+    | "failed"
+    | "cancelled"
+    | "waiting_for_user";
   currentAgent: string | null;
   agentHistory: Array<{
     agentName: string;
@@ -289,11 +352,21 @@ export interface WorkflowData {
       missingInformation?: string[];
       requirementsSummary?: {
         serviceType: string;
-        location: { neighborhood?: string; address?: string; city?: string; state?: string; zipCode?: string };
-        timing: { preferredDate?: string; preferredTime?: string; isFlexible: boolean };
+        location: {
+          neighborhood?: string;
+          address?: string;
+          city?: string;
+          state?: string;
+          zipCode?: string;
+        };
+        timing: {
+          preferredDate?: string;
+          preferredTime?: string;
+          isFlexible: boolean;
+        };
         budget?: { min?: number; max?: number; hasFlexibility: boolean };
         specialRequirements: string[];
-        urgency: 'low' | 'medium' | 'high' | 'emergency';
+        urgency: "low" | "medium" | "high" | "emergency";
       };
     };
     searchResults?: WorkflowProviderResult[];
@@ -316,7 +389,7 @@ export interface WorkflowData {
 
 class ApiService {
   private api: AxiosInstance;
-  private baseURL = import.meta.env.VITE_API_URL || '/api/v1';
+  private baseURL = import.meta.env.VITE_API_URL || "/api/v1";
   // Single-flight token refresh: concurrent 401s share one refresh call
   // instead of each firing its own (which previously caused a request storm).
   private refreshPromise: Promise<string> | null = null;
@@ -326,7 +399,7 @@ class ApiService {
       baseURL: this.baseURL,
       timeout: 10000,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
 
@@ -336,18 +409,18 @@ class ApiService {
   private setupInterceptors(): void {
     this.api.interceptors.request.use(
       (config) => {
-        const token = localStorage.getItem('accessToken');
+        const token = localStorage.getItem("accessToken");
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
         // Tell the backend which locale to return server-generated messages in.
-        const lng = (localStorage.getItem('i18nextLng') || 'pt').toLowerCase();
-        config.headers['X-Locale'] = lng.startsWith('en') ? 'en' : 'pt';
+        const lng = (localStorage.getItem("i18nextLng") || "pt").toLowerCase();
+        config.headers["X-Locale"] = lng.startsWith("en") ? "en" : "pt";
         return config;
       },
       (error) => {
         return Promise.reject(error);
-      }
+      },
     );
 
     this.api.interceptors.response.use(
@@ -356,17 +429,21 @@ class ApiService {
       },
       async (error) => {
         const originalRequest = error.config;
-        const url: string = originalRequest?.url || '';
+        const url: string = originalRequest?.url || "";
         // A 401 from the auth endpoints themselves must NOT trigger a refresh:
         // refreshing the refresh call recurses infinitely (the storm we saw).
         // A dead refresh token means the session is over — log out once.
         const isAuthEndpoint =
-          url.includes('/auth/refresh') ||
-          url.includes('/auth/logout') ||
-          url.includes('/auth/login') ||
-          url.includes('/auth/register');
+          url.includes("/auth/refresh") ||
+          url.includes("/auth/logout") ||
+          url.includes("/auth/login") ||
+          url.includes("/auth/register");
 
-        if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
+        if (
+          error.response?.status === 401 &&
+          !originalRequest._retry &&
+          !isAuthEndpoint
+        ) {
           originalRequest._retry = true;
           try {
             const accessToken = await this.refreshAccessToken();
@@ -374,7 +451,7 @@ class ApiService {
             return this.api(originalRequest);
           } catch (refreshError) {
             this.logout();
-            window.location.href = '/login';
+            window.location.href = "/login";
             return Promise.reject(refreshError);
           }
         }
@@ -382,7 +459,7 @@ class ApiService {
         // Don't surface a toast for a failed refresh/logout — the redirect to
         // /login already communicates the expired session. (login/register
         // errors, e.g. "invalid credentials", still toast.)
-        if (!url.includes('/auth/refresh') && !url.includes('/auth/logout')) {
+        if (!url.includes("/auth/refresh") && !url.includes("/auth/logout")) {
           if (error.response?.data?.error) {
             toast.error(error.response.data.error);
           } else if (error.message) {
@@ -391,7 +468,7 @@ class ApiService {
         }
 
         return Promise.reject(error);
-      }
+      },
     );
   }
 
@@ -402,36 +479,41 @@ class ApiService {
     firstName: string;
     lastName: string;
     phone?: string;
-    userType: 'customer' | 'provider';
+    userType: "customer" | "provider";
   }): Promise<{ email: string; firstName: string }> {
-    const response = await this.api.post<ApiResponse<{ email: string; firstName: string }>>('/auth/register', userData);
+    const response = await this.api.post<
+      ApiResponse<{ email: string; firstName: string }>
+    >("/auth/register", userData);
     return response.data.data!;
   }
 
   async verifyEmail(token: string): Promise<void> {
-    await this.api.get('/auth/verify-email', { params: { token } });
+    await this.api.get("/auth/verify-email", { params: { token } });
   }
 
   async resendVerification(email: string): Promise<void> {
-    await this.api.post('/auth/resend-verification', { email });
+    await this.api.post("/auth/resend-verification", { email });
   }
 
   async forgotPassword(email: string): Promise<void> {
-    await this.api.post('/auth/forgot-password', { email });
+    await this.api.post("/auth/forgot-password", { email });
   }
 
   async resetPassword(token: string, password: string): Promise<void> {
-    await this.api.post('/auth/reset-password', { token, password });
+    await this.api.post("/auth/reset-password", { token, password });
   }
 
   async login(email: string, password: string): Promise<AuthResponse> {
-    const response = await this.api.post<ApiResponse<AuthResponse>>('/auth/login', {
-      email,
-      password,
-    });
+    const response = await this.api.post<ApiResponse<AuthResponse>>(
+      "/auth/login",
+      {
+        email,
+        password,
+      },
+    );
     const { accessToken, refreshToken } = response.data.data!;
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
+    localStorage.setItem("accessToken", accessToken);
+    localStorage.setItem("refreshToken", refreshToken);
     return response.data.data!;
   }
 
@@ -439,16 +521,17 @@ class ApiService {
   // request. Throws if there's no refresh token or the refresh itself fails.
   private refreshAccessToken(): Promise<string> {
     if (!this.refreshPromise) {
-      const refreshToken = localStorage.getItem('refreshToken');
+      const refreshToken = localStorage.getItem("refreshToken");
       if (!refreshToken) {
-        return Promise.reject(new Error('No refresh token'));
+        return Promise.reject(new Error("No refresh token"));
       }
       this.refreshPromise = this.api
-        .post('/auth/refresh', { refreshToken })
+        .post("/auth/refresh", { refreshToken })
         .then((response) => {
-          const { accessToken, refreshToken: newRefreshToken } = response.data.data;
-          localStorage.setItem('accessToken', accessToken);
-          localStorage.setItem('refreshToken', newRefreshToken);
+          const { accessToken, refreshToken: newRefreshToken } =
+            response.data.data;
+          localStorage.setItem("accessToken", accessToken);
+          localStorage.setItem("refreshToken", newRefreshToken);
           return accessToken as string;
         })
         .finally(() => {
@@ -460,35 +543,41 @@ class ApiService {
 
   async logout(): Promise<void> {
     try {
-      await this.api.post('/auth/logout');
+      await this.api.post("/auth/logout");
     } catch (error) {
       // Continue with logout even if API call fails
     } finally {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("user");
     }
   }
 
   async getProfile(): Promise<User> {
-    const response = await this.api.get<ApiResponse<User>>('/auth/profile');
+    const response = await this.api.get<ApiResponse<User>>("/auth/profile");
     return response.data.data!;
   }
 
   async updateProfile(updates: Partial<User>): Promise<User> {
-    const response = await this.api.put<ApiResponse<User>>('/auth/profile', updates);
+    const response = await this.api.put<ApiResponse<User>>(
+      "/auth/profile",
+      updates,
+    );
     return response.data.data!;
   }
 
-  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    await this.api.put('/auth/password', {
+  async changePassword(
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    await this.api.put("/auth/password", {
       currentPassword,
       newPassword,
     });
   }
 
   async deleteAccount(): Promise<void> {
-    await this.api.delete('/users/profile');
+    await this.api.delete("/users/profile");
   }
 
   // Provider methods
@@ -500,14 +589,19 @@ class ApiService {
     radius?: number;
     serviceType?: string;
   }): Promise<PaginatedResponse<Provider>> {
-    const response = await this.api.get<PaginatedResponse<Provider>>('/providers', {
-      params,
-    });
+    const response = await this.api.get<PaginatedResponse<Provider>>(
+      "/providers",
+      {
+        params,
+      },
+    );
     return response.data;
   }
 
   async getProvider(id: string): Promise<Provider> {
-    const response = await this.api.get<ApiResponse<Provider>>(`/providers/${id}`);
+    const response = await this.api.get<ApiResponse<Provider>>(
+      `/providers/${id}`,
+    );
     return response.data.data!;
   }
 
@@ -517,9 +611,12 @@ class ApiService {
     limit?: number;
     status?: string;
   }): Promise<PaginatedResponse<Booking>> {
-    const response = await this.api.get<PaginatedResponse<Booking>>('/bookings', {
-      params,
-    });
+    const response = await this.api.get<PaginatedResponse<Booking>>(
+      "/bookings",
+      {
+        params,
+      },
+    );
     return response.data;
   }
 
@@ -540,17 +637,25 @@ class ApiService {
     totalAmount: number;
     specialInstructions?: string;
   }): Promise<Booking> {
-    const response = await this.api.post<ApiResponse<Booking>>('/bookings', bookingData);
+    const response = await this.api.post<ApiResponse<Booking>>(
+      "/bookings",
+      bookingData,
+    );
     return response.data.data!;
   }
 
   async updateBooking(id: string, updates: Partial<Booking>): Promise<Booking> {
-    const response = await this.api.put<ApiResponse<Booking>>(`/bookings/${id}`, updates);
+    const response = await this.api.put<ApiResponse<Booking>>(
+      `/bookings/${id}`,
+      updates,
+    );
     return response.data.data!;
   }
 
   async getBooking(id: string): Promise<Booking> {
-    const response = await this.api.get<ApiResponse<Booking>>(`/bookings/${id}`);
+    const response = await this.api.get<ApiResponse<Booking>>(
+      `/bookings/${id}`,
+    );
     return response.data.data!;
   }
 
@@ -560,35 +665,54 @@ class ApiService {
 
   // Location and GPS methods
   async geocodeAddress(address: string): Promise<any> {
-    const response = await this.api.post<ApiResponse<any>>('/locations/geocode', {
-      address,
-    });
+    const response = await this.api.post<ApiResponse<any>>(
+      "/locations/geocode",
+      {
+        address,
+      },
+    );
     return response.data.data;
   }
 
   // Address typeahead — returns [] gracefully if Places API is unavailable (the
   // caller then falls back to free-text + geocode validation).
-  async addressAutocomplete(input: string): Promise<Array<{ description: string; placeId: string }>> {
+  async addressAutocomplete(
+    input: string,
+  ): Promise<Array<{ description: string; placeId: string }>> {
     try {
-      const response = await this.api.get<ApiResponse<Array<{ description: string; placeId: string }>>>(
-        `/locations/autocomplete?input=${encodeURIComponent(input)}`
-      );
+      const response = await this.api.get<
+        ApiResponse<Array<{ description: string; placeId: string }>>
+      >(`/locations/autocomplete?input=${encodeURIComponent(input)}`);
       return response.data.data ?? [];
     } catch {
       return [];
     }
   }
 
-  async resolvePlace(placeId: string): Promise<{ address: string; city: string; state: string; zipCode: string; latitude: number; longitude: number }> {
-    const response = await this.api.get<ApiResponse<any>>(`/locations/resolve-place/${placeId}`);
+  async resolvePlace(
+    placeId: string,
+  ): Promise<{
+    address: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    latitude: number;
+    longitude: number;
+  }> {
+    const response = await this.api.get<ApiResponse<any>>(
+      `/locations/resolve-place/${placeId}`,
+    );
     return response.data.data;
   }
 
   async reverseGeocode(latitude: number, longitude: number): Promise<any> {
-    const response = await this.api.post<ApiResponse<any>>('/locations/reverse-geocode', {
-      latitude,
-      longitude,
-    });
+    const response = await this.api.post<ApiResponse<any>>(
+      "/locations/reverse-geocode",
+      {
+        latitude,
+        longitude,
+      },
+    );
     return response.data.data;
   }
 
@@ -597,7 +721,7 @@ class ApiService {
     longitude: number;
     radius?: number;
     serviceTypes?: string[];
-    sortBy?: 'distance' | 'rating' | 'price' | 'response_time';
+    sortBy?: "distance" | "rating" | "price" | "response_time";
     minRating?: number;
     maxPrice?: number;
     hasInsurance?: boolean;
@@ -605,54 +729,74 @@ class ApiService {
     isAvailable?: boolean;
     page?: number;
     limit?: number;
-  }): Promise<ApiResponse<{
-    providers: (Provider & { distance: number; distanceText: string; duration: number; durationText: string })[];
-    totalCount: number;
-    page: number;
-    totalPages: number;
-    searchParams: any;
-  }>> {
-    // TEMPORARY WORKAROUND: Use GET endpoint with query params instead of POST
-    const queryParams = new URLSearchParams();
-    queryParams.append('latitude', params.latitude.toString());
-    queryParams.append('longitude', params.longitude.toString());
-    if (params.radius) queryParams.append('radius', params.radius.toString());
-
-    // Send service type if any are selected
-    if (params.serviceTypes && params.serviceTypes.length > 0) {
-      queryParams.append('serviceType', params.serviceTypes[0]);
-    }
-
-    if (params.sortBy) queryParams.append('sortBy', params.sortBy);
-    if (params.minRating && params.minRating > 0) queryParams.append('minRating', params.minRating.toString());
-    if (params.maxPrice) queryParams.append('maxRate', params.maxPrice.toString());
-
-    // Only send boolean filters when they are TRUE (enabled)
-    if (params.hasInsurance === true) queryParams.append('isInsured', 'true');
-    if (params.hasBackgroundCheck === true) queryParams.append('isBackgroundChecked', 'true');
-    if (params.isAvailable === true) queryParams.append('isVerified', 'true');
-
-    if (params.page) queryParams.append('page', params.page.toString());
-    if (params.limit) queryParams.append('limit', params.limit.toString());
-
-    const response = await this.api.get<ApiResponse<{
-      providers: (Provider & { distance: number; distanceText: string; duration: number; durationText: string })[];
+  }): Promise<
+    ApiResponse<{
+      providers: (Provider & {
+        distance: number;
+        distanceText: string;
+        duration: number;
+        durationText: string;
+      })[];
       totalCount: number;
       page: number;
       totalPages: number;
       searchParams: any;
-    }>>(`/locations/providers/search?${queryParams.toString()}`);
+    }>
+  > {
+    // TEMPORARY WORKAROUND: Use GET endpoint with query params instead of POST
+    const queryParams = new URLSearchParams();
+    queryParams.append("latitude", params.latitude.toString());
+    queryParams.append("longitude", params.longitude.toString());
+    if (params.radius) queryParams.append("radius", params.radius.toString());
+
+    // Send service type if any are selected
+    if (params.serviceTypes && params.serviceTypes.length > 0) {
+      queryParams.append("serviceType", params.serviceTypes[0]);
+    }
+
+    if (params.sortBy) queryParams.append("sortBy", params.sortBy);
+    if (params.minRating && params.minRating > 0)
+      queryParams.append("minRating", params.minRating.toString());
+    if (params.maxPrice)
+      queryParams.append("maxRate", params.maxPrice.toString());
+
+    // Only send boolean filters when they are TRUE (enabled)
+    if (params.hasInsurance === true) queryParams.append("isInsured", "true");
+    if (params.hasBackgroundCheck === true)
+      queryParams.append("isBackgroundChecked", "true");
+    if (params.isAvailable === true) queryParams.append("isVerified", "true");
+
+    if (params.page) queryParams.append("page", params.page.toString());
+    if (params.limit) queryParams.append("limit", params.limit.toString());
+
+    const response = await this.api.get<
+      ApiResponse<{
+        providers: (Provider & {
+          distance: number;
+          distanceText: string;
+          duration: number;
+          durationText: string;
+        })[];
+        totalCount: number;
+        page: number;
+        totalPages: number;
+        searchParams: any;
+      }>
+    >(`/locations/providers/search?${queryParams.toString()}`);
     return response.data;
   }
 
   async calculateDistance(
     origin: { latitude: number; longitude: number },
-    destination: { latitude: number; longitude: number }
+    destination: { latitude: number; longitude: number },
   ): Promise<{ distance: number; duration: number; route?: any }> {
-    const response = await this.api.post<ApiResponse<any>>('/locations/distance', {
-      origin,
-      destination,
-    });
+    const response = await this.api.post<ApiResponse<any>>(
+      "/locations/distance",
+      {
+        origin,
+        destination,
+      },
+    );
     return response.data.data;
   }
 
@@ -660,18 +804,79 @@ class ApiService {
     latitude: number,
     longitude: number,
     radius: number,
-    type?: string
+    type?: string,
   ): Promise<any[]> {
-    const response = await this.api.post<ApiResponse<any[]>>('/locations/nearby-search', {
-      latitude,
-      longitude,
-      radius,
-      type,
-    });
+    const response = await this.api.post<ApiResponse<any[]>>(
+      "/locations/nearby-search",
+      {
+        latitude,
+        longitude,
+        radius,
+        type,
+      },
+    );
     return response.data.data || [];
   }
 
   // Quote Request methods
+  async getFavoriteProviders(): Promise<FavoriteProvider[]> {
+    const response = await this.api.get<
+      ApiResponse<{ favorites: FavoriteProvider[] }>
+    >("/providers/favorites");
+    return response.data.data?.favorites || [];
+  }
+
+  async addFavoriteProvider(providerId: string): Promise<void> {
+    await this.api.post(`/providers/${providerId}/favorite`);
+  }
+
+  async removeFavoriteProvider(providerId: string): Promise<void> {
+    await this.api.delete(`/providers/${providerId}/favorite`);
+  }
+
+  async getRebookPrefill(bookingId: string): Promise<RebookPrefill> {
+    const response = await this.api.get<ApiResponse<RebookPrefill>>(
+      `/bookings/${bookingId}/rebook-prefill`,
+    );
+    return response.data.data!;
+  }
+
+  async createRebookRequest(
+    bookingId: string,
+    draft: RebookPrefill["draft"] & { preferredDate: string },
+  ): Promise<QuoteRequest> {
+    const response = await this.api.post<
+      ApiResponse<{ quoteRequest: QuoteRequest }>
+    >(`/bookings/${bookingId}/rebook-request`, draft);
+    return response.data.data!.quoteRequest;
+  }
+
+  async refineRebookDraft(
+    bookingId: string,
+    draft: Pick<
+      RebookPrefill["draft"],
+      | "serviceType"
+      | "description"
+      | "specialInstructions"
+      | "estimatedDurationHours"
+      | "proposedBudget"
+    >,
+    changeRequest: string,
+  ): Promise<{
+    draft: typeof draft;
+    changedFields: string[];
+    summary: string;
+  }> {
+    const response = await this.api.post<
+      ApiResponse<{
+        draft: typeof draft;
+        changedFields: string[];
+        summary: string;
+      }>
+    >(`/bookings/${bookingId}/rebook-refine`, { draft, changeRequest });
+    return response.data.data!;
+  }
+
   async createQuoteRequest(requestData: {
     serviceType: string;
     description: string;
@@ -690,7 +895,7 @@ class ApiService {
       currency: string;
     };
     images?: string[];
-    urgency: 'low' | 'medium' | 'high' | 'urgent';
+    urgency: "low" | "medium" | "high" | "urgent";
     requirements?: Array<{
       category: string;
       requirement: string;
@@ -707,22 +912,36 @@ class ApiService {
     expiresAt?: string;
     targetProviderIds?: string[];
   }): Promise<QuoteRequest> {
-    const response = await this.api.post<ApiResponse<{ quoteRequest: QuoteRequest }>>('/quotes/requests', requestData);
+    const response = await this.api.post<
+      ApiResponse<{ quoteRequest: QuoteRequest }>
+    >("/quotes/requests", requestData);
     return response.data.data!.quoteRequest;
   }
 
   async getQuoteRequest(requestId: string): Promise<QuoteRequest> {
-    const response = await this.api.get<ApiResponse<{ quoteRequest: QuoteRequest }>>(`/quotes/requests/${requestId}`);
+    const response = await this.api.get<
+      ApiResponse<{ quoteRequest: QuoteRequest }>
+    >(`/quotes/requests/${requestId}`);
     return response.data.data!.quoteRequest;
   }
 
-  async updateQuoteRequest(requestId: string, updates: Partial<QuoteRequest>): Promise<QuoteRequest> {
-    const response = await this.api.put<ApiResponse<{ quoteRequest: QuoteRequest }>>(`/quotes/requests/${requestId}`, updates);
+  async updateQuoteRequest(
+    requestId: string,
+    updates: Partial<QuoteRequest>,
+  ): Promise<QuoteRequest> {
+    const response = await this.api.put<
+      ApiResponse<{ quoteRequest: QuoteRequest }>
+    >(`/quotes/requests/${requestId}`, updates);
     return response.data.data!.quoteRequest;
   }
 
-  async closeQuoteRequest(requestId: string, reason?: string): Promise<QuoteRequest> {
-    const response = await this.api.post<ApiResponse<{ quoteRequest: QuoteRequest }>>(`/quotes/requests/${requestId}/close`, { reason });
+  async closeQuoteRequest(
+    requestId: string,
+    reason?: string,
+  ): Promise<QuoteRequest> {
+    const response = await this.api.post<
+      ApiResponse<{ quoteRequest: QuoteRequest }>
+    >(`/quotes/requests/${requestId}/close`, { reason });
     return response.data.data!.quoteRequest;
   }
 
@@ -738,12 +957,28 @@ class ApiService {
     longitude?: number;
     radius?: number;
   }): Promise<PaginatedResponse<QuoteRequest>> {
-    const response = await this.api.get<ApiResponse<{ quoteRequests: QuoteRequest[]; total: number; page: number; limit: number }>>('/quotes/requests', { params });
+    const response = await this.api.get<
+      ApiResponse<{
+        quoteRequests: QuoteRequest[];
+        total: number;
+        page: number;
+        limit: number;
+      }>
+    >("/quotes/requests", { params });
     const d = response.data.data!;
-    return { success: true, data: d.quoteRequests, pagination: { page: d.page, limit: d.limit, total: d.total, pages: Math.ceil(d.total / d.limit) } };
+    return {
+      success: true,
+      data: d.quoteRequests,
+      pagination: {
+        page: d.page,
+        limit: d.limit,
+        total: d.total,
+        pages: Math.ceil(d.total / d.limit),
+      },
+    };
   }
 
-  // Quote methods  
+  // Quote methods
   async createQuote(quoteData: {
     requestId: string;
     serviceType: string;
@@ -765,39 +1000,62 @@ class ApiService {
     notes?: string;
     attachments?: string[];
   }): Promise<Quote> {
-    const response = await this.api.post<ApiResponse<{ quote: Quote }>>('/quotes', quoteData);
+    const response = await this.api.post<ApiResponse<{ quote: Quote }>>(
+      "/quotes",
+      quoteData,
+    );
     return response.data.data!.quote;
   }
 
   async getQuote(quoteId: string): Promise<Quote> {
-    const response = await this.api.get<ApiResponse<{ quote: Quote }>>(`/quotes/${quoteId}`);
+    const response = await this.api.get<ApiResponse<{ quote: Quote }>>(
+      `/quotes/${quoteId}`,
+    );
     return response.data.data!.quote;
   }
 
   async updateQuote(quoteId: string, updates: Partial<Quote>): Promise<Quote> {
-    const response = await this.api.put<ApiResponse<{ quote: Quote }>>(`/quotes/${quoteId}`, updates);
+    const response = await this.api.put<ApiResponse<{ quote: Quote }>>(
+      `/quotes/${quoteId}`,
+      updates,
+    );
     return response.data.data!.quote;
   }
 
-  async updateQuoteStatus(quoteId: string, status: 'accepted' | 'rejected' | 'withdrawn', reason?: string): Promise<Quote> {
-    const response = await this.api.put<ApiResponse<{ quote: Quote }>>(`/quotes/${quoteId}/status`, { status, reason });
+  async updateQuoteStatus(
+    quoteId: string,
+    status: "accepted" | "rejected" | "withdrawn",
+    reason?: string,
+  ): Promise<Quote> {
+    const response = await this.api.put<ApiResponse<{ quote: Quote }>>(
+      `/quotes/${quoteId}/status`,
+      { status, reason },
+    );
     return response.data.data!.quote;
   }
 
   async withdrawQuote(quoteId: string): Promise<Quote> {
-    const response = await this.api.delete<ApiResponse<{ quote: Quote }>>(`/quotes/${quoteId}`);
+    const response = await this.api.delete<ApiResponse<{ quote: Quote }>>(
+      `/quotes/${quoteId}`,
+    );
     return response.data.data!.quote;
   }
 
-  async getQuotesForRequest(requestId: string, params?: {
-    page?: number;
-    limit?: number;
-    sortBy?: 'price' | 'rating' | 'createdAt';
-    sortOrder?: 'asc' | 'desc';
-  }): Promise<PaginatedResponse<Quote>> {
-    const response = await this.api.get<PaginatedResponse<Quote>>(`/quotes/requests/${requestId}/quotes`, {
-      params,
-    });
+  async getQuotesForRequest(
+    requestId: string,
+    params?: {
+      page?: number;
+      limit?: number;
+      sortBy?: "price" | "rating" | "createdAt";
+      sortOrder?: "asc" | "desc";
+    },
+  ): Promise<PaginatedResponse<Quote>> {
+    const response = await this.api.get<PaginatedResponse<Quote>>(
+      `/quotes/requests/${requestId}/quotes`,
+      {
+        params,
+      },
+    );
     return response.data;
   }
 
@@ -809,23 +1067,42 @@ class ApiService {
     maxPrice?: number;
     serviceType?: string;
   }): Promise<PaginatedResponse<Quote>> {
-    const response = await this.api.get<ApiResponse<{ quotes: Quote[]; total: number; page: number; limit: number }>>('/quotes', { params });
+    const response = await this.api.get<
+      ApiResponse<{
+        quotes: Quote[];
+        total: number;
+        page: number;
+        limit: number;
+      }>
+    >("/quotes", { params });
     const d = response.data.data!;
-    return { success: true, data: d.quotes, pagination: { page: d.page, limit: d.limit, total: d.total, pages: Math.ceil(d.total / d.limit) } };
+    return {
+      success: true,
+      data: d.quotes,
+      pagination: {
+        page: d.page,
+        limit: d.limit,
+        total: d.total,
+        pages: Math.ceil(d.total / d.limit),
+      },
+    };
   }
 
   // Messaging methods
   async getConversations(params?: {
-    type?: 'direct' | 'group' | 'support';
+    type?: "direct" | "group" | "support";
     isActive?: boolean;
     page?: number;
     limit?: number;
-    sortBy?: 'lastMessage' | 'created' | 'title';
-    sortOrder?: 'asc' | 'desc';
+    sortBy?: "lastMessage" | "created" | "title";
+    sortOrder?: "asc" | "desc";
   }): Promise<PaginatedResponse<any>> {
-    const response = await this.api.get<PaginatedResponse<any>>('/messages/conversations', {
-      params,
-    });
+    const response = await this.api.get<PaginatedResponse<any>>(
+      "/messages/conversations",
+      {
+        params,
+      },
+    );
     return response.data;
   }
 
@@ -833,70 +1110,106 @@ class ApiService {
     participantIds: string[];
     title?: string;
     description?: string;
-    type?: 'direct' | 'group' | 'support';
+    type?: "direct" | "group" | "support";
     metadata?: {
       bookingId?: string;
       quoteRequestId?: string;
       serviceType?: string;
     };
   }): Promise<any> {
-    const response = await this.api.post<ApiResponse<any>>('/messages/conversations', conversationData);
+    const response = await this.api.post<ApiResponse<any>>(
+      "/messages/conversations",
+      conversationData,
+    );
     return response.data.data!;
   }
 
-  async uploadMessageAttachment(file: File): Promise<{ url: string; originalName: string; mimeType: string; size: number }> {
+  async uploadMessageAttachment(
+    file: File,
+  ): Promise<{
+    url: string;
+    originalName: string;
+    mimeType: string;
+    size: number;
+  }> {
     const formData = new FormData();
-    formData.append('file', file);
-    const response = await this.api.post<ApiResponse<{ url: string; originalName: string; mimeType: string; size: number }>>(
-      '/messages/messages/upload',
+    formData.append("file", file);
+    const response = await this.api.post<
+      ApiResponse<{
+        url: string;
+        originalName: string;
+        mimeType: string;
+        size: number;
+      }>
+    >(
+      "/messages/messages/upload",
       formData,
       // File transfers (up to 10MB) can far exceed the 10s default on slow
       // connections — give them a generous timeout so they don't abort mid-upload.
-      { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 }
+      { headers: { "Content-Type": "multipart/form-data" }, timeout: 60000 },
     );
     return response.data.data!;
   }
 
   async getConversation(conversationId: string): Promise<any> {
-    const response = await this.api.get<ApiResponse<any>>(`/messages/conversations/${conversationId}`);
+    const response = await this.api.get<ApiResponse<any>>(
+      `/messages/conversations/${conversationId}`,
+    );
     return response.data.data!;
   }
 
   async sendMessage(messageData: {
     conversationId: string;
     message: string;
-    messageType?: 'text' | 'image' | 'file';
+    messageType?: "text" | "image" | "file";
     attachments?: string[];
     replyToMessageId?: string;
   }): Promise<any> {
-    const response = await this.api.post<ApiResponse<any>>('/messages/messages', messageData);
+    const response = await this.api.post<ApiResponse<any>>(
+      "/messages/messages",
+      messageData,
+    );
     return response.data.data!;
   }
 
-  async getMessages(conversationId: string, params?: {
-    senderId?: string;
-    receiverId?: string;
-    messageType?: 'text' | 'image' | 'file';
-    isRead?: boolean;
-    page?: number;
-    limit?: number;
-    sortOrder?: 'asc' | 'desc';
-  }): Promise<PaginatedResponse<any>> {
-    const response = await this.api.get<PaginatedResponse<any>>(`/messages/conversations/${conversationId}/messages`, {
-      params,
-    });
+  async getMessages(
+    conversationId: string,
+    params?: {
+      senderId?: string;
+      receiverId?: string;
+      messageType?: "text" | "image" | "file";
+      isRead?: boolean;
+      page?: number;
+      limit?: number;
+      sortOrder?: "asc" | "desc";
+    },
+  ): Promise<PaginatedResponse<any>> {
+    const response = await this.api.get<PaginatedResponse<any>>(
+      `/messages/conversations/${conversationId}/messages`,
+      {
+        params,
+      },
+    );
     return response.data;
   }
 
   async markMessagesAsRead(conversationId: string): Promise<void> {
-    await this.api.patch(`/messages/conversations/${conversationId}/messages/read`);
+    await this.api.patch(
+      `/messages/conversations/${conversationId}/messages/read`,
+    );
   }
 
-  async updateMessage(messageId: string, updates: {
-    message?: string;
-    attachments?: string[];
-  }): Promise<any> {
-    const response = await this.api.patch<ApiResponse<any>>(`/messages/messages/${messageId}`, updates);
+  async updateMessage(
+    messageId: string,
+    updates: {
+      message?: string;
+      attachments?: string[];
+    },
+  ): Promise<any> {
+    const response = await this.api.patch<ApiResponse<any>>(
+      `/messages/messages/${messageId}`,
+      updates,
+    );
     return response.data.data!;
   }
 
@@ -905,7 +1218,9 @@ class ApiService {
   }
 
   async getUnreadMessageCount(): Promise<{ count: number }> {
-    const response = await this.api.get<ApiResponse<{ count: number }>>('/messages/messages/unread/count');
+    const response = await this.api.get<ApiResponse<{ count: number }>>(
+      "/messages/messages/unread/count",
+    );
     return response.data.data!;
   }
 
@@ -916,16 +1231,18 @@ class ApiService {
     page?: number;
     limit?: number;
     sortBy?: string;
-    sortOrder?: 'asc' | 'desc';
+    sortOrder?: "asc" | "desc";
   }): Promise<PaginatedResponse<any>> {
-    const response = await this.api.get<PaginatedResponse<any>>('/payments', {
+    const response = await this.api.get<PaginatedResponse<any>>("/payments", {
       params,
     });
     return response.data;
   }
 
   async getPayment(paymentId: string): Promise<any> {
-    const response = await this.api.get<ApiResponse<any>>(`/payments/${paymentId}`);
+    const response = await this.api.get<ApiResponse<any>>(
+      `/payments/${paymentId}`,
+    );
     return response.data.data!;
   }
 
@@ -936,71 +1253,107 @@ class ApiService {
     description?: string;
     metadata?: Record<string, any>;
   }): Promise<any> {
-    const response = await this.api.post<ApiResponse<any>>('/payments/intent', paymentData);
+    const response = await this.api.post<ApiResponse<any>>(
+      "/payments/intent",
+      paymentData,
+    );
     return response.data.data!;
   }
 
-  async confirmPayment(paymentId: string, paymentMethodId?: string): Promise<any> {
-    const response = await this.api.post<ApiResponse<any>>(`/payments/${paymentId}/confirm`, {
-      paymentMethodId,
-    });
+  async confirmPayment(
+    paymentId: string,
+    paymentMethodId?: string,
+  ): Promise<any> {
+    const response = await this.api.post<ApiResponse<any>>(
+      `/payments/${paymentId}/confirm`,
+      {
+        paymentMethodId,
+      },
+    );
     return response.data.data!;
   }
 
-  async refundPayment(paymentId: string, refundData: {
-    amount?: number;
-    reason?: string;
-    refundApplicationFee?: boolean;
-    reverseTransfer?: boolean;
-  }): Promise<any> {
-    const response = await this.api.post<ApiResponse<any>>(`/payments/${paymentId}/refund`, refundData);
+  async refundPayment(
+    paymentId: string,
+    refundData: {
+      amount?: number;
+      reason?: string;
+      refundApplicationFee?: boolean;
+      reverseTransfer?: boolean;
+    },
+  ): Promise<any> {
+    const response = await this.api.post<ApiResponse<any>>(
+      `/payments/${paymentId}/refund`,
+      refundData,
+    );
     return response.data.data!;
   }
 
-  async getCustomerPayments(customerId: string, params?: {
-    page?: number;
-    limit?: number;
-    status?: string;
-  }): Promise<PaginatedResponse<any>> {
-    const response = await this.api.get<PaginatedResponse<any>>(`/payments/customer/${customerId}`, {
-      params,
-    });
+  async getCustomerPayments(
+    customerId: string,
+    params?: {
+      page?: number;
+      limit?: number;
+      status?: string;
+    },
+  ): Promise<PaginatedResponse<any>> {
+    const response = await this.api.get<PaginatedResponse<any>>(
+      `/payments/customer/${customerId}`,
+      {
+        params,
+      },
+    );
     return response.data;
   }
 
-  async getProviderPayments(providerId: string, params?: {
-    page?: number;
-    limit?: number;
-    status?: string;
-  }): Promise<PaginatedResponse<any>> {
-    const response = await this.api.get<PaginatedResponse<any>>(`/payments/provider/${providerId}`, {
-      params,
-    });
+  async getProviderPayments(
+    providerId: string,
+    params?: {
+      page?: number;
+      limit?: number;
+      status?: string;
+    },
+  ): Promise<PaginatedResponse<any>> {
+    const response = await this.api.get<PaginatedResponse<any>>(
+      `/payments/provider/${providerId}`,
+      {
+        params,
+      },
+    );
     return response.data;
   }
 
   // AI Assistant Workflow methods
-  async startWorkflow(initialMessage: string): Promise<{ workflowId: string; status: string }> {
-    const response = await this.api.post<ApiResponse<{ workflowId: string; status: string }>>(
-      '/agentic-assistant/workflows',
+  async startWorkflow(
+    initialMessage: string,
+  ): Promise<{ workflowId: string; status: string }> {
+    const response = await this.api.post<
+      ApiResponse<{ workflowId: string; status: string }>
+    >(
+      "/agentic-assistant/workflows",
       { initialMessage },
-      { timeout: 30000 } // LLM calls can take longer
+      { timeout: 30000 }, // LLM calls can take longer
     );
     return response.data.data!;
   }
 
   async getWorkflow(workflowId: string): Promise<WorkflowData> {
-    const response = await this.api.get<ApiResponse<{ workflow: WorkflowData }>>(
-      `/agentic-assistant/workflows/${workflowId}`
-    );
+    const response = await this.api.get<
+      ApiResponse<{ workflow: WorkflowData }>
+    >(`/agentic-assistant/workflows/${workflowId}`);
     return response.data.data!.workflow;
   }
 
-  async sendWorkflowMessage(workflowId: string, message: string): Promise<WorkflowData> {
-    const response = await this.api.post<ApiResponse<{ workflow: WorkflowData }>>(
+  async sendWorkflowMessage(
+    workflowId: string,
+    message: string,
+  ): Promise<WorkflowData> {
+    const response = await this.api.post<
+      ApiResponse<{ workflow: WorkflowData }>
+    >(
       `/agentic-assistant/workflows/${workflowId}/messages`,
       { message },
-      { timeout: 30000 }
+      { timeout: 30000 },
     );
     return response.data.data!.workflow;
   }
@@ -1011,7 +1364,7 @@ class ApiService {
 
   // Health check
   async healthCheck(): Promise<any> {
-    const response = await this.api.get('/health');
+    const response = await this.api.get("/health");
     return response.data;
   }
 
@@ -1024,16 +1377,18 @@ class ApiService {
     page?: number;
     limit?: number;
     sortBy?: string;
-    sortOrder?: 'asc' | 'desc';
+    sortOrder?: "asc" | "desc";
   }): Promise<PaginatedResponse<any>> {
-    const response = await this.api.get<PaginatedResponse<any>>('/reviews', {
+    const response = await this.api.get<PaginatedResponse<any>>("/reviews", {
       params,
     });
     return response.data;
   }
 
   async getReview(reviewId: string): Promise<any> {
-    const response = await this.api.get<ApiResponse<any>>(`/reviews/${reviewId}`);
+    const response = await this.api.get<ApiResponse<any>>(
+      `/reviews/${reviewId}`,
+    );
     return response.data.data!;
   }
 
@@ -1053,25 +1408,34 @@ class ApiService {
     photos?: string[];
     isAnonymous?: boolean;
   }): Promise<any> {
-    const response = await this.api.post<ApiResponse<any>>('/reviews', reviewData);
+    const response = await this.api.post<ApiResponse<any>>(
+      "/reviews",
+      reviewData,
+    );
     return response.data.data!;
   }
 
-  async updateReview(reviewId: string, reviewData: {
-    rating?: number;
-    title?: string;
-    comment?: string;
-    criteria?: {
-      quality?: number;
-      timeliness?: number;
-      communication?: number;
-      professionalism?: number;
-      value?: number;
-    };
-    photos?: string[];
-    isAnonymous?: boolean;
-  }): Promise<any> {
-    const response = await this.api.put<ApiResponse<any>>(`/reviews/${reviewId}`, reviewData);
+  async updateReview(
+    reviewId: string,
+    reviewData: {
+      rating?: number;
+      title?: string;
+      comment?: string;
+      criteria?: {
+        quality?: number;
+        timeliness?: number;
+        communication?: number;
+        professionalism?: number;
+        value?: number;
+      };
+      photos?: string[];
+      isAnonymous?: boolean;
+    },
+  ): Promise<any> {
+    const response = await this.api.put<ApiResponse<any>>(
+      `/reviews/${reviewId}`,
+      reviewData,
+    );
     return response.data.data!;
   }
 
@@ -1080,25 +1444,39 @@ class ApiService {
   }
 
   async addProviderResponse(reviewId: string, response: string): Promise<any> {
-    const responseData = await this.api.post<ApiResponse<any>>(`/reviews/${reviewId}/response`, { response });
+    const responseData = await this.api.post<ApiResponse<any>>(
+      `/reviews/${reviewId}/response`,
+      { response },
+    );
     return responseData.data.data!;
   }
 
-  async draftProviderResponse(reviewId: string): Promise<{ draftResponse: string }> {
-    const responseData = await this.api.post<ApiResponse<any>>(`/reviews/${reviewId}/draft-response`, {});
+  async draftProviderResponse(
+    reviewId: string,
+  ): Promise<{ draftResponse: string }> {
+    const responseData = await this.api.post<ApiResponse<any>>(
+      `/reviews/${reviewId}/draft-response`,
+      {},
+    );
     return responseData.data.data!;
   }
 
-  async getProviderReviews(providerId: string, params?: {
-    page?: number;
-    limit?: number;
-    rating?: number;
-    sortBy?: string;
-    sortOrder?: 'asc' | 'desc';
-  }): Promise<PaginatedResponse<any>> {
-    const response = await this.api.get<PaginatedResponse<any>>(`/reviews/provider/${providerId}`, {
-      params,
-    });
+  async getProviderReviews(
+    providerId: string,
+    params?: {
+      page?: number;
+      limit?: number;
+      rating?: number;
+      sortBy?: string;
+      sortOrder?: "asc" | "desc";
+    },
+  ): Promise<PaginatedResponse<any>> {
+    const response = await this.api.get<PaginatedResponse<any>>(
+      `/reviews/provider/${providerId}`,
+      {
+        params,
+      },
+    );
     return response.data;
   }
 
@@ -1106,11 +1484,14 @@ class ApiService {
     page?: number;
     limit?: number;
     sortBy?: string;
-    sortOrder?: 'asc' | 'desc';
+    sortOrder?: "asc" | "desc";
   }): Promise<PaginatedResponse<any>> {
-    const response = await this.api.get<PaginatedResponse<any>>('/reviews/customer/my', {
-      params,
-    });
+    const response = await this.api.get<PaginatedResponse<any>>(
+      "/reviews/customer/my",
+      {
+        params,
+      },
+    );
     return response.data;
   }
 
@@ -1119,24 +1500,36 @@ class ApiService {
     limit?: number;
     rating?: number;
     sortBy?: string;
-    sortOrder?: 'asc' | 'desc';
+    sortOrder?: "asc" | "desc";
   }): Promise<PaginatedResponse<any>> {
-    const response = await this.api.get<PaginatedResponse<any>>('/reviews/provider/my', {
-      params,
-    });
+    const response = await this.api.get<PaginatedResponse<any>>(
+      "/reviews/provider/my",
+      {
+        params,
+      },
+    );
     return response.data;
   }
 
-  async flagReview(reviewId: string, reason: string, details?: string): Promise<any> {
-    const response = await this.api.post<ApiResponse<any>>(`/reviews/${reviewId}/flag`, {
-      reason,
-      details,
-    });
+  async flagReview(
+    reviewId: string,
+    reason: string,
+    details?: string,
+  ): Promise<any> {
+    const response = await this.api.post<ApiResponse<any>>(
+      `/reviews/${reviewId}/flag`,
+      {
+        reason,
+        details,
+      },
+    );
     return response.data.data!;
   }
 
   async getReviewAnalytics(providerId: string): Promise<any> {
-    const response = await this.api.get<ApiResponse<any>>(`/reviews/analytics/${providerId}`);
+    const response = await this.api.get<ApiResponse<any>>(
+      `/reviews/analytics/${providerId}`,
+    );
     return response.data.data!;
   }
 
@@ -1149,29 +1542,38 @@ class ApiService {
     page?: number;
     limit?: number;
   }): Promise<PaginatedResponse<any>> {
-    const response = await this.api.get<PaginatedResponse<any>>('/reviews/search', {
-      params,
-    });
+    const response = await this.api.get<PaginatedResponse<any>>(
+      "/reviews/search",
+      {
+        params,
+      },
+    );
     return response.data;
   }
 
   // Provider Dashboard methods
-  async getProviderDashboardStats(period: string = 'month'): Promise<any> {
-    const response = await this.api.get(`/providers/my/dashboard-stats?period=${period}`);
+  async getProviderDashboardStats(period: string = "month"): Promise<any> {
+    const response = await this.api.get(
+      `/providers/my/dashboard-stats?period=${period}`,
+    );
     return response.data;
   }
 
-  async getProviderBookings(params: {
-    status?: string;
-    page?: number;
-    limit?: number;
-  } = {}): Promise<PaginatedResponse<any>> {
+  async getProviderBookings(
+    params: {
+      status?: string;
+      page?: number;
+      limit?: number;
+    } = {},
+  ): Promise<PaginatedResponse<any>> {
     const searchParams = new URLSearchParams();
-    if (params.status) searchParams.append('status', params.status);
-    if (params.page) searchParams.append('page', params.page.toString());
-    if (params.limit) searchParams.append('limit', params.limit.toString());
-    
-    const response = await this.api.get(`/bookings/provider/my?${searchParams}`);
+    if (params.status) searchParams.append("status", params.status);
+    if (params.page) searchParams.append("page", params.page.toString());
+    if (params.limit) searchParams.append("limit", params.limit.toString());
+
+    const response = await this.api.get(
+      `/bookings/provider/my?${searchParams}`,
+    );
     return response.data;
   }
 
@@ -1180,29 +1582,39 @@ class ApiService {
     return response.data;
   }
 
-  async getMyProviderProfile(): Promise<ApiResponse<{provider: Provider}>> {
+  async getMyProviderProfile(): Promise<ApiResponse<{ provider: Provider }>> {
     const response = await this.api.get(`/providers/my`);
     return response.data;
   }
 
-  async updateProviderProfile(providerId: string, data: Partial<Provider>): Promise<Provider> {
+  async updateProviderProfile(
+    providerId: string,
+    data: Partial<Provider>,
+  ): Promise<Provider> {
     const response = await this.api.put(`/providers/${providerId}`, data);
     return response.data;
   }
 
-  async updateAvailability(availability: Provider['availableHours']): Promise<Provider['availableHours']> {
-    const response = await this.api.patch<ApiResponse<Provider['availableHours']>>('/providers/availability', availability);
+  async updateAvailability(
+    availability: Provider["availableHours"],
+  ): Promise<Provider["availableHours"]> {
+    const response = await this.api.patch<
+      ApiResponse<Provider["availableHours"]>
+    >("/providers/availability", availability);
     return response.data.data!;
   }
 
   async getServiceCatalog(): Promise<string[]> {
-    const response = await this.api.get<ApiResponse<{ services: string[] }>>('/providers/services/catalog');
+    const response = await this.api.get<ApiResponse<{ services: string[] }>>(
+      "/providers/services/catalog",
+    );
     return response.data.data?.services ?? [];
   }
 
-
   async updateBookingStatus(bookingId: string, status: string): Promise<any> {
-    const response = await this.api.put(`/bookings/${bookingId}/status`, { status });
+    const response = await this.api.put(`/bookings/${bookingId}/status`, {
+      status,
+    });
     return response.data;
   }
 
@@ -1217,141 +1629,206 @@ class ApiService {
   }
 
   async confirmBookingCompletion(bookingId: string): Promise<any> {
-    const response = await this.api.post(`/bookings/${bookingId}/confirm-completion`, {});
+    const response = await this.api.post(
+      `/bookings/${bookingId}/confirm-completion`,
+      {},
+    );
     return response.data;
   }
 
   async disputeBooking(bookingId: string, reason: string): Promise<any> {
-    const response = await this.api.post(`/bookings/${bookingId}/dispute`, { reason });
+    const response = await this.api.post(`/bookings/${bookingId}/dispute`, {
+      reason,
+    });
     return response.data;
   }
 
   // Notification methods
-  async getUserNotifications(params: {
-    type?: string;
-    page?: number;
-    limit?: number;
-    unreadOnly?: boolean;
-  } = {}): Promise<PaginatedResponse<any>> {
+  async getUserNotifications(
+    params: {
+      type?: string;
+      page?: number;
+      limit?: number;
+      unreadOnly?: boolean;
+    } = {},
+  ): Promise<PaginatedResponse<any>> {
     const searchParams = new URLSearchParams();
-    if (params.type) searchParams.append('type', params.type);
-    if (params.page) searchParams.append('page', params.page.toString());
-    if (params.limit) searchParams.append('limit', params.limit.toString());
-    if (params.unreadOnly) searchParams.append('unreadOnly', 'true');
-    
+    if (params.type) searchParams.append("type", params.type);
+    if (params.page) searchParams.append("page", params.page.toString());
+    if (params.limit) searchParams.append("limit", params.limit.toString());
+    if (params.unreadOnly) searchParams.append("unreadOnly", "true");
+
     const response = await this.api.get(`/notifications?${searchParams}`);
     return response.data;
   }
 
   async getUnreadNotificationCount(): Promise<{ unreadCount: number }> {
-    const response = await this.api.get('/notifications/unread/count');
+    const response = await this.api.get("/notifications/unread/count");
     return response.data?.data ?? response.data;
   }
 
   async markNotificationsRead(notificationIds: string[]): Promise<any> {
-    const response = await this.api.patch('/notifications/read', { notificationIds });
+    const response = await this.api.patch("/notifications/read", {
+      notificationIds,
+    });
     return response.data;
   }
 
   async markAllNotificationsRead(): Promise<any> {
-    const response = await this.api.patch('/notifications/read-all');
+    const response = await this.api.patch("/notifications/read-all");
     return response.data;
   }
 
   async deleteNotifications(notificationIds: string[]): Promise<any> {
-    const response = await this.api.delete('/notifications', { 
-      data: { notificationIds } 
+    const response = await this.api.delete("/notifications", {
+      data: { notificationIds },
     });
     return response.data;
   }
 
   async getNotificationPreferences(): Promise<any> {
-    const response = await this.api.get('/notifications/preferences');
+    const response = await this.api.get("/notifications/preferences");
     return response.data?.data ?? response.data;
   }
 
   async updateNotificationPreferences(preferences: any): Promise<any> {
-    const response = await this.api.put('/notifications/preferences', preferences);
+    const response = await this.api.put(
+      "/notifications/preferences",
+      preferences,
+    );
     return response.data;
   }
 
   // ── Admin methods ──────────────────────────────────────────────────
 
   async getAdminDashboard(): Promise<any> {
-    const response = await this.api.get<ApiResponse<any>>('/admin/dashboard');
+    const response = await this.api.get<ApiResponse<any>>("/admin/dashboard");
     return response.data.data!;
   }
 
-  async getAdminUsers(params?: { page?: number; limit?: number; userType?: string; isActive?: boolean; search?: string }): Promise<any> {
-    const response = await this.api.get<ApiResponse<any>>('/admin/users', { params });
-    return response.data.data!;
-  }
-
-  async updateUserStatus(userId: string, payload: {
-    isActive: boolean;
-    suspensionReason?: string;
-    suspensionComment?: string;
-    suspendedUntil?: string | null;
+  async getAdminUsers(params?: {
+    page?: number;
+    limit?: number;
+    userType?: string;
+    isActive?: boolean;
+    search?: string;
   }): Promise<any> {
-    const response = await this.api.put<ApiResponse<any>>(`/admin/users/${userId}/status`, payload);
+    const response = await this.api.get<ApiResponse<any>>("/admin/users", {
+      params,
+    });
     return response.data.data!;
   }
 
-  async getPendingProviders(params?: { page?: number; limit?: number }): Promise<any> {
-    const response = await this.api.get<ApiResponse<any>>('/admin/providers/pending', { params });
+  async updateUserStatus(
+    userId: string,
+    payload: {
+      isActive: boolean;
+      suspensionReason?: string;
+      suspensionComment?: string;
+      suspendedUntil?: string | null;
+    },
+  ): Promise<any> {
+    const response = await this.api.put<ApiResponse<any>>(
+      `/admin/users/${userId}/status`,
+      payload,
+    );
     return response.data.data!;
   }
 
-  async verifyProvider(providerId: string, payload: { approved: boolean; notes?: string; isBackgroundChecked?: boolean; isInsured?: boolean }): Promise<any> {
-    const response = await this.api.post<ApiResponse<any>>(`/admin/providers/${providerId}/verify`, payload);
+  async getPendingProviders(params?: {
+    page?: number;
+    limit?: number;
+  }): Promise<any> {
+    const response = await this.api.get<ApiResponse<any>>(
+      "/admin/providers/pending",
+      { params },
+    );
     return response.data.data!;
   }
 
-  async getFlaggedReviews(params?: { page?: number; limit?: number }): Promise<any> {
-    const response = await this.api.get<ApiResponse<any>>('/admin/reviews/flagged', { params });
+  async verifyProvider(
+    providerId: string,
+    payload: {
+      approved: boolean;
+      notes?: string;
+      isBackgroundChecked?: boolean;
+      isInsured?: boolean;
+    },
+  ): Promise<any> {
+    const response = await this.api.post<ApiResponse<any>>(
+      `/admin/providers/${providerId}/verify`,
+      payload,
+    );
     return response.data.data!;
   }
 
-  async moderateReview(reviewId: string, payload: { action: 'approve' | 'delete' | 'keep_flagged'; reason?: string }): Promise<any> {
-    const response = await this.api.put<ApiResponse<any>>(`/admin/reviews/${reviewId}/moderate`, payload);
+  async getFlaggedReviews(params?: {
+    page?: number;
+    limit?: number;
+  }): Promise<any> {
+    const response = await this.api.get<ApiResponse<any>>(
+      "/admin/reviews/flagged",
+      { params },
+    );
+    return response.data.data!;
+  }
+
+  async moderateReview(
+    reviewId: string,
+    payload: { action: "approve" | "delete" | "keep_flagged"; reason?: string },
+  ): Promise<any> {
+    const response = await this.api.put<ApiResponse<any>>(
+      `/admin/reviews/${reviewId}/moderate`,
+      payload,
+    );
     return response.data.data!;
   }
 
   // Utility methods
   isAuthenticated(): boolean {
-    return !!localStorage.getItem('accessToken');
+    return !!localStorage.getItem("accessToken");
   }
 
   getStoredUser(): User | null {
-    const user = localStorage.getItem('user');
+    const user = localStorage.getItem("user");
     return user ? JSON.parse(user) : null;
   }
 
   setStoredUser(user: User): void {
-    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem("user", JSON.stringify(user));
   }
 
   clearStoredUser(): void {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("user");
   }
 
   // Generic HTTP methods for ad-hoc requests (admin pages, payment forms, etc.)
-  get(path: string, config?: any) { return this.api.get(path, config); }
-  post(path: string, data?: any, config?: any) { return this.api.post(path, data, config); }
-  put(path: string, data?: any, config?: any) { return this.api.put(path, data, config); }
-  patch(path: string, data?: any, config?: any) { return this.api.patch(path, data, config); }
-  delete(path: string, config?: any) { return this.api.delete(path, config); }
+  get(path: string, config?: any) {
+    return this.api.get(path, config);
+  }
+  post(path: string, data?: any, config?: any) {
+    return this.api.post(path, data, config);
+  }
+  put(path: string, data?: any, config?: any) {
+    return this.api.put(path, data, config);
+  }
+  patch(path: string, data?: any, config?: any) {
+    return this.api.patch(path, data, config);
+  }
+  delete(path: string, config?: any) {
+    return this.api.delete(path, config);
+  }
 
   async voiceTranscribe(audioBlob: Blob, filename: string): Promise<string> {
     const form = new FormData();
-    form.append('audio', audioBlob, filename);
+    form.append("audio", audioBlob, filename);
     // Use fetch directly — axios instance default 'Content-Type: application/json' breaks
     // multipart uploads by overwriting the browser-generated boundary parameter
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem("accessToken");
     const res = await fetch(`${this.baseURL}/voice/transcribe`, {
-      method: 'POST',
+      method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: form,
     });
@@ -1359,16 +1836,19 @@ class ApiService {
       const err = await res.json().catch(() => ({ error: res.statusText }));
       throw new Error(err.error ?? res.statusText);
     }
-    if (res.status === 204) return ''; // voice not configured server-side → no transcript
+    if (res.status === 204) return ""; // voice not configured server-side → no transcript
     const json = await res.json();
-    return json.data?.transcript ?? '';
+    return json.data?.transcript ?? "";
   }
 
   async voiceSynthesize(text: string): Promise<Blob> {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem("accessToken");
     const res = await fetch(`${this.baseURL}/voice/synthesize`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ text }),
     });
     if (!res.ok) throw new Error(res.statusText);
@@ -1378,13 +1858,29 @@ class ApiService {
 
   // Public, read-only client config (admin-tunable app_settings). Falls back to
   // sane defaults if the request fails so the UI never blocks on it.
-  async getAppConfig(): Promise<{ maxProvidersPerQuote: number }> {
+  async getAppConfig(): Promise<{ maxProvidersPerQuote: number; ai?: AiConfiguration }> {
     try {
-      const res = await this.api.get<ApiResponse<{ maxProvidersPerQuote: number }>>('/config');
+      const res =
+        await this.api.get<ApiResponse<{ maxProvidersPerQuote: number; ai?: AiConfiguration }>>(
+          "/config",
+        );
       return res.data.data ?? { maxProvidersPerQuote: 5 };
     } catch {
       return { maxProvidersPerQuote: 5 };
     }
+  }
+
+  async getAdminAiConfiguration(): Promise<AiConfiguration> {
+    const res = await this.api.get<ApiResponse<AiConfiguration>>("/admin/ai-configuration");
+    return res.data.data!;
+  }
+
+  async updateAdminAiConfiguration(field: string, value: string): Promise<AiConfiguration> {
+    const res = await this.api.put<ApiResponse<AiConfiguration>>(
+      `/admin/ai-configuration/${field}`,
+      { value },
+    );
+    return res.data.data!;
   }
 }
 

@@ -9,6 +9,44 @@ import { AvailabilitySchema } from '@/schemas/availability.schema';
 import { t } from '@/i18n';
 
 export class ProviderController {
+  getFavoriteProviders = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const favorites = await providerService.getFavoriteProviders(req.user!.userId);
+      res.status(200).json({
+        success: true,
+        data: {
+          favorites: favorites.map((favorite) => ({
+            id: favorite.id,
+            providerId: favorite.providerId,
+            createdAt: favorite.createdAt,
+            provider: favorite.provider,
+          })),
+        },
+      });
+    } catch (error) {
+      logger.error('Error retrieving favorite providers:', error);
+      res.status(500).json({ success: false, message: 'Failed to retrieve saved providers' });
+    }
+  };
+
+  addFavoriteProvider = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const favorite = await providerService.addFavoriteProvider(
+        req.user!.userId,
+        req.params.providerId
+      );
+      res.status(200).json({ success: true, data: { favorite } });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to save provider';
+      res.status(message.includes('not found') ? 404 : 409).json({ success: false, message });
+    }
+  };
+
+  removeFavoriteProvider = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    await providerService.removeFavoriteProvider(req.user!.userId, req.params.providerId);
+    res.status(204).send();
+  };
+
   createProvider = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const errors = validationResult(req);

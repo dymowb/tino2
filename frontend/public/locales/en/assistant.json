@@ -88,6 +88,11 @@
     "providerProfile": "Provider Profile",
     "services": "Services Offered"
   },
+  "transparency": {
+    "poweredBy": "This experience uses AI. Models may make mistakes.",
+    "details": "Model details",
+    "disclaimer": "Model selection may change when a configured fallback is needed."
+  },
   "errors": {
     "startFailed": "Failed to start the assistant. Please try again.",
     "messageFailed": "Failed to send your message. Please try again."

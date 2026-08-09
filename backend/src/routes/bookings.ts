@@ -78,6 +78,53 @@ router.get(
   bookingController.searchBookings
 );
 
+router.get(
+  '/:bookingId/rebook-prefill',
+  authenticate,
+  requireCustomerRole,
+  [param('bookingId').isUUID().withMessage('Valid booking ID required'), handleValidationErrors],
+  bookingController.getRebookPrefill
+);
+
+router.post(
+  '/:bookingId/rebook-request',
+  authenticate,
+  requireCustomerRole,
+  [
+    param('bookingId').isUUID().withMessage('Valid booking ID required'),
+    body('serviceType').notEmpty(),
+    body('description').notEmpty(),
+    body('preferredDate').isISO8601(),
+    body('estimatedDurationHours').isFloat({ min: 0.5, max: 8 }),
+    body('proposedBudget').isFloat({ min: 0 }),
+    body('location.address').notEmpty(),
+    body('location.city').notEmpty(),
+    body('location.state').notEmpty(),
+    body('location.zipCode').notEmpty(),
+    body('location.latitude').isFloat({ min: -90, max: 90 }),
+    body('location.longitude').isFloat({ min: -180, max: 180 }),
+    handleValidationErrors,
+  ],
+  bookingController.createRebookRequest
+);
+
+router.post(
+  '/:bookingId/rebook-refine',
+  authenticate,
+  requireCustomerRole,
+  [
+    param('bookingId').isUUID().withMessage('Valid booking ID required'),
+    body('changeRequest').isString().trim().isLength({ min: 3, max: 2000 }),
+    body('draft').isObject(),
+    body('draft.serviceType').notEmpty(),
+    body('draft.description').notEmpty(),
+    body('draft.estimatedDurationHours').isFloat({ min: 0.5, max: 8 }),
+    body('draft.proposedBudget').isFloat({ min: 0 }),
+    handleValidationErrors,
+  ],
+  bookingController.refineRebookDraft
+);
+
 // Get specific booking by ID
 router.get(
   '/:bookingId',

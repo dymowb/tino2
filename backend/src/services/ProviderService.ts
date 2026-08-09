@@ -4,6 +4,7 @@ import { Provider } from '@/models/Provider';
 import { User, UserType } from '@/models/User';
 import logger from '@/config/logger';
 import { CreateProviderRequest, UpdateProviderRequest, ProviderSearchQuery } from '@/types';
+import { FavoriteProvider } from '@/models/FavoriteProvider';
 
 // Great-circle distance (km) from the search center (:cLat,:cLng) to a provider's
 // stored lat/lng. LEAST/GREATEST clamp the acos argument so float rounding can't
@@ -15,10 +16,34 @@ const HAVERSINE_KM = `(6371 * acos(LEAST(1, GREATEST(-1, cos(radians(:cLat)) * c
 export class ProviderService {
   private providerRepository: Repository<Provider>;
   private userRepository: Repository<User>;
+  private favoriteRepository: Repository<FavoriteProvider>;
 
   constructor() {
     this.providerRepository = AppDataSource.getRepository(Provider);
     this.userRepository = AppDataSource.getRepository(User);
+    this.favoriteRepository = AppDataSource.getRepository(FavoriteProvider);
+  }
+
+  async getFavoriteProviders(customerId: string): Promise<FavoriteProvider[]> {
+    return this.favoriteRepository.find({
+      where: { customerId },
+      relations: ['provider'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async addFavoriteProvider(customerId: string, providerId: string): Promise<FavoriteProvider> {
+    const provider = await this.providerRepository.findOne({ where: { id: providerId } });
+    if (!provider) throw new Error('Provider not found');
+    if (!provider.isActive) throw new Error('Provider is inactive');
+
+    const existing = await this.favoriteRepository.findOne({ where: { customerId, providerId } });
+    if (existing) return existing;
+    return this.favoriteRepository.save(this.favoriteRepository.create({ customerId, providerId }));
+  }
+
+  async removeFavoriteProvider(customerId: string, providerId: string): Promise<void> {
+    await this.favoriteRepository.delete({ customerId, providerId });
   }
 
   async createProvider(userId: string, providerData: CreateProviderRequest): Promise<Provider> {

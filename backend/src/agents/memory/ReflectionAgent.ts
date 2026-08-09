@@ -1,4 +1,4 @@
-import { anthropicService, ClaudeModel } from '@/agents/services/anthropic.service';
+import { aiGateway } from '@/agents/services/ai-gateway.service';
 import logger from '@/config/logger';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -119,8 +119,7 @@ export class ReflectionAgent {
 
     let raw: string;
     try {
-      const response = await anthropicService.callClaude({
-        model: ClaudeModel.SONNET,
+      const { value: response } = await aiGateway.generate('reasoning', {
         systemPrompt: SYSTEM_PROMPT,
         userMessage,
         maxTokens: 2500,

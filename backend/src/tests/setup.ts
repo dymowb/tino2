@@ -4,6 +4,14 @@ process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-jwt-secret-that-is-long-enough-for-tests-only';
 process.env.STRIPE_SECRET_KEY = 'sk_test_fake_key';
 process.env.REDIS_ENABLED = 'false';
+process.env.REBOOK_AI_MODEL_CHAIN = process.env.REBOOK_AI_MODEL_CHAIN || 'anthropic:test-model';
+process.env.AI_FAST_MODEL_CHAIN = process.env.AI_FAST_MODEL_CHAIN || 'anthropic:test-fast';
+process.env.AI_REASONING_MODEL_CHAIN =
+  process.env.AI_REASONING_MODEL_CHAIN || 'anthropic:test-reasoning';
+process.env.AI_SYNTHESIS_MODEL_CHAIN =
+  process.env.AI_SYNTHESIS_MODEL_CHAIN || 'anthropic:test-synthesis';
+process.env.AI_EMBEDDING_CHAIN = process.env.AI_EMBEDDING_CHAIN || 'openai:test-embedding';
+process.env.AI_EMBEDDING_DIMENSIONS = process.env.AI_EMBEDDING_DIMENSIONS || '1024';
 
 const testDatabaseUrl =
   process.env.TEST_DATABASE_URL ?? 'postgresql://tino_test:tino_test@localhost:5434/tino_test';

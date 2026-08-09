@@ -1,5 +1,29 @@
 # Tino 2 - System Architecture Documentation
 
+## Current AI and repeat-booking architecture (August 2026)
+
+The application uses PostgreSQL for marketplace data and a separate PostgreSQL/pgvector
+database for agentic memory. Messaging remains in the application database; Redis is
+optional. The AI layer is provider-neutral:
+
+```text
+AI workflow/service
+  → capability profile (fast | reasoning | synthesis | rebook)
+  → runtime configuration cache
+  → ordered provider:model chain
+  → OpenAI Responses API or Anthropic adapter
+  → retry/timeout/fallback + structured validation
+
+Memory retrieval/write
+  → ordered embedding chain → OpenAI or Voyage adapter → pgvector
+```
+
+Environment variables provide startup defaults. Validated admin overrides are stored in
+`app_settings`, loaded before application construction, and consulted at request time.
+Rebook and embedding consumers avoid construction-time model caching so changes take effect
+immediately. Favorites/rebooking use ordinary domain services; AI is an optional refinement,
+not the authority for eligibility, ownership, persistence, or submission.
+
 ## Table of Contents
 - [Architecture Overview](#architecture-overview)
 - [Technology Stack](#technology-stack)

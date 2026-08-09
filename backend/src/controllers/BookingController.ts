@@ -12,8 +12,128 @@ import { getStripeInstance, getStripeErrorMessage, calculateFees } from '@/confi
 import notificationService from '@/services/NotificationService';
 import { NotificationType } from '@/models/Notification';
 import { t } from '@/i18n';
+import quoteService from '@/services/QuoteService';
+import serviceCategoryService from '@/services/ServiceCategoryService';
+import rebookRefinementService from '@/services/RebookRefinementService';
 
 export class BookingController {
+  private async loadRebookSource(bookingId: string, customerId: string) {
+    const booking = await bookingService.getBookingById(bookingId, customerId);
+    if (!booking || booking.customerId !== customerId) {
+      return { eligible: false as const, reason: 'not_booking_customer' as const, booking: null };
+    }
+    if (booking.status !== BookingStatus.COMPLETED) {
+      return { eligible: false as const, reason: 'booking_not_completed' as const, booking };
+    }
+    if (!booking.provider?.isActive || !booking.provider.user?.isActive) {
+      return { eligible: false as const, reason: 'provider_inactive' as const, booking };
+    }
+    const category = await serviceCategoryService.categorize(booking.serviceType);
+    const coverage = await serviceCategoryService.coverageFor(booking.provider.services || []);
+    if (category && !coverage.has(category)) {
+      return { eligible: false as const, reason: 'service_no_longer_offered' as const, booking };
+    }
+    return { eligible: true as const, reason: null, booking };
+  }
+
+  getRebookPrefill = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const result = await this.loadRebookSource(req.params.bookingId, req.user!.userId);
+    if (!result.booking) {
+      res.status(404).json({ success: false, reason: result.reason });
+      return;
+    }
+    const booking = result.booking;
+    res.status(200).json({
+      success: true,
+      data: {
+        eligible: result.eligible,
+        reason: result.reason,
+        sourceBookingId: booking.id,
+        provider: booking.provider,
+        draft: {
+          serviceType: booking.serviceType,
+          description: booking.description,
+          specialInstructions: booking.specialInstructions || '',
+          location: booking.location,
+          estimatedDurationHours: Math.max(0.5, Number(booking.estimatedDuration) / 60),
+          proposedBudget: Number(booking.totalAmount),
+          currency: 'BRL',
+          requirements: [],
+        },
+        references: {
+          previousTotal: Number(booking.totalAmount),
+          currentBaseRate: booking.provider.pricing?.baseRate ?? null,
+        },
+        copiedFields: [
+          'serviceType',
+          'description',
+          'specialInstructions',
+          'location',
+          'estimatedDurationHours',
+          'proposedBudget',
+        ],
+      },
+    });
+  };
+
+  createRebookRequest = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const result = await this.loadRebookSource(req.params.bookingId, req.user!.userId);
+      if (!result.booking) {
+        res.status(404).json({ success: false, reason: result.reason });
+        return;
+      }
+      if (!result.eligible) {
+        res.status(409).json({ success: false, reason: result.reason });
+        return;
+      }
+      const hours = Number(req.body.estimatedDurationHours);
+      const budget = Number(req.body.proposedBudget);
+      const request = await quoteService.createQuoteRequest(req.user!.userId, {
+        serviceType: req.body.serviceType,
+        description: req.body.specialInstructions
+          ? `${req.body.description}\n\n${req.body.specialInstructions}`
+          : req.body.description,
+        location: req.body.location,
+        preferredDate: new Date(req.body.preferredDate),
+        budget: { min: budget, max: budget, currency: 'BRL' },
+        urgency: 'medium',
+        targetProviderIds: [result.booking.providerId],
+        sourceBookingId: result.booking.id,
+        requirements: [
+          ...(Array.isArray(req.body.requirements) ? req.body.requirements : []),
+          {
+            category: 'proposed_duration_hours',
+            requirement: String(hours),
+            mandatory: false,
+          },
+        ],
+      });
+      res.status(201).json({ success: true, data: { quoteRequest: request } });
+    } catch (error) {
+      logger.error('Failed to create rebook request:', error);
+      res.status(500).json({ success: false, message: 'Failed to create repeat request' });
+    }
+  };
+
+  refineRebookDraft = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const result = await this.loadRebookSource(req.params.bookingId, req.user!.userId);
+      if (!result.eligible) {
+        res.status(result.booking ? 409 : 404).json({ success: false, reason: result.reason });
+        return;
+      }
+      const refinement = await rebookRefinementService.refine(
+        req.body.draft,
+        req.body.changeRequest
+      );
+      res.status(200).json({ success: true, data: refinement });
+    } catch (error) {
+      logger.error('Failed to refine rebook draft:', error);
+      res.status(502).json({ success: false, message: 'AI refinement is temporarily unavailable' });
+    }
+  };
+
   createBooking = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const errors = validationResult(req);

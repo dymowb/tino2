@@ -1,0 +1,38 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Tino 2 - Product and Agentic Ideas Backlog</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2, h3, h4 { color: #2c3e50; margin-top: 30px; }
+        h1 { border-bottom: 3px solid #3498db; padding-bottom: 10px; }
+        h2 { border-bottom: 1px solid #bdc3c7; padding-bottom: 5px; }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        code { background: #f1f2f6; padding: 2px 4px; border-radius: 3px; }
+        ul { margin: 15px 0; }
+        li { margin: 5px 0; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        blockquote { border-left: 4px solid #3498db; margin: 0; padding-left: 20px; color: #666; }
+        .toc { background: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; }
+        .page-break { page-break-before: always; }
+        @media print {
+            body { margin: 0; }
+            .page-break { page-break-before: always; }
+        }
+    </style>
+</head>
+<body>
+    <p><h1>Product and Agentic Ideas Backlog</h1></p><p>This file holds promising ideas that are <strong>not committed roadmap work</strong>. An item moves into<br>the roadmap only after its user problem, safety boundary, smallest useful slice, and success<br>metric are agreed.</p><p><h2>How ideas are evaluated</h2></p><p>Score each candidate from 1–5 on:</p><p><ul><li>user value;</li><br><li>frequency of the problem;</li><br><li>benefit from agent specialization rather than ordinary code;</li><br><li>availability and quality of evidence;</li><br><li>reversibility and human control;</li><br><li>implementation and operational cost.</li></p><p>An idea should not become multi-agent merely because it contains several steps. Prefer<br>deterministic services when rules and calculations can solve the problem reliably.</p><p><h2>Agentic candidates</h2></p><p><h3>Dispute Triage Assistant</h3></p><p><strong>Problem:</strong> Admins must reconstruct timelines and evaluate evidence across bookings,<br>payments, messages, and attachments.</p><p>Potential agents:</p><p><li>Timeline Agent reconstructs authoritative events.</li><br><li>Evidence Agent inventories relevant records and gaps.</li><br><li>Policy Agent maps facts to platform rules.</li><br><li>Resolution Agent proposes options.</li><br><li>Fairness Agent challenges the proposal.</li><br><li>Verification Agent checks citations and payment calculations.</li></p><p><strong>Safety boundary:</strong> Advisory only. It cannot capture, refund, cancel, sanction, or message.<br>Every conclusion must cite platform evidence; the admin makes the decision through existing<br>services.</p><p><strong>Why deferred:</strong> High value, but financial consequences require formal policies, stronger<br>audit retention, adversarial evaluations, and human-review UX first.</p><p><h3>Provider Job Coach</h3></p><p><strong>Problem:</strong> Providers may under-scope work or submit unclear quotes.</p><p>Potential agents:</p><p><li>Scope Estimator identifies tasks and missing facts.</li><br><li>Effort Agent estimates complexity and duration ranges.</li><br><li>Pricing Agent structures provider-supplied rates and costs.</li><br><li>Risk Agent identifies assumptions.</li><br><li>Quote Writer creates a clear draft.</li><br><li>Verification Agent checks grounding and math.</li></p><p><strong>Safety boundary:</strong> Draft only. The provider owns price, duration, terms, and submission.<br>The system must not coordinate prices across providers or imply a market-mandated rate.</p><p><strong>Why deferred:</strong> Build the customer-side Quote Decision Council first to establish fair,<br>evidence-backed quote interpretation and avoid conflicting scoring models.</p><p><h3>Rebooking Concierge — foundation delivered; broader orchestration deferred</h3></p><p><strong>Problem:</strong> Repeat customers should not reconstruct the same service request from scratch.</p><p>Potential agents:</p><p><li>History Agent summarizes the prior booking.</li><br><li>Change Detection Agent asks what differs this time.</li><br><li>Requirements Agent creates updated structured requirements.</li><br><li>Provider Fit Agent checks whether the prior provider remains eligible.</li><br><li>Request Builder prepares a targeted quote request.</li><br><li>Verification Agent shows copied and changed fields.</li></p><p><strong>Safety boundary:</strong> Never submit automatically. The customer reviews all copied personal,<br>address, schedule, scope, and budget data.</p><p><strong>Status:</strong> Favorites + Rebook and focused optional refinement are delivered. Keep broader<br>autonomous orchestration deferred until usage data shows that it is valuable.</p><p><h3>Marketplace Quality Monitor</h3></p><p><strong>Problem:</strong> Operations needs early signals for recurring cancellations, stale profiles,<br>unanswered requests, and abnormal lifecycle patterns.</p><p>Potential approach: deterministic metrics first; an agent summarizes clusters and proposes<br>investigations only after alerts cross explicit thresholds.</p><p><strong>Safety boundary:</strong> No automatic provider penalties or customer restrictions.</p><p><strong>Why deferred:</strong> Requires reliable analytics events and baselines before LLM interpretation<br>adds value.</p><p><h2>Non-agentic product ideas</h2></p><p><h3>Favorites + Book Again — delivered</h3></p><p>Customers can save providers, view favorites, and prefill a targeted request from a genuinely<br>completed booking. Cancelled bookings remain separate. Future work here is optimization and<br>analytics, not rebuilding the foundation.</p><p><h3>Product Analytics Foundation</h3></p><p>Capture privacy-conscious events for request creation, quote receipt/comparison/acceptance,<br>readiness use, cancellation, dispute, and repeat booking. Define funnels before building an<br>AI analytics layer.</p><p><h3>Cross-browser CI Reliability</h3></p><p>Install Firefox/WebKit host dependencies in CI, isolate rate limits per test project, and<br>use authenticated storage states to avoid repeated login bursts. This is engineering<br>backlog work discovered during the frontend review.</p><p><h3>Responsive Data Presentation</h3></p><p>Audit remaining desktop tables and choose explicit mobile patterns: internal scrolling for<br>dense administrative data, cards for customer-facing data, and tested document-level<br>overflow constraints.</p><p><h2>Parking lot</h2></p><p><li>External market-price benchmarking — evidence, regional accuracy, and fairness unclear.</li><br><li>Automatic scheduling negotiation — requires calendar conflict semantics and consent.</li><br><li>Autonomous provider/customer messaging — too much agency without a mature approval model.</li><br><li>Automated dispute resolution — explicitly excluded until policy and regulatory review.</li><br><li>Provider portfolio visual analysis — value uncertain relative to privacy and compute cost.</li><br></ul></p>
+</body>
+</html>

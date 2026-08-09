@@ -21,6 +21,21 @@
     "results_count_other": "{{count}} Bookings Found",
     "results_count_one": "{{count}} Booking Found"
   },
+  "rebook": {
+    "proposed_budget": "Proposed budget",
+    "previous_total_hint": "Previous booking total: {{amount}}. The provider may counter.",
+    "prefill_error": "Could not prepare this repeat request",
+    "refine_title": "What should be different this time?",
+    "refine_placeholder": "For example: add the balcony and allow three hours",
+    "refine_action": "Refine with AI",
+    "refine_error": "AI refinement is unavailable; your draft was not changed",
+    "unavailable": {
+      "booking_not_completed": "Only completed bookings can be repeated",
+      "provider_inactive": "This provider is no longer available",
+      "service_no_longer_offered": "This provider no longer offers this service",
+      "not_booking_customer": "You cannot repeat this booking"
+    }
+  },
   "create": {
     "title": "Create New Booking",
     "dialog_title": "Book Service with {{provider}}",
@@ -112,6 +127,7 @@
     "leave_review": "Leave Review",
     "review_sent": "Review Sent",
     "rebook": "Book Again",
+    "find_similar": "Find Similar",
     "view_receipt": "View Receipt",
     "get_directions": "Get Directions",
     "keep_booking": "Keep Booking",
@@ -210,12 +226,14 @@
     "empty_all": "You have no requests or bookings yet.",
     "empty_awaiting": "No open requests awaiting quotes.",
     "empty_active": "No active bookings.",
-    "empty_done": "No completed or cancelled jobs yet.",
+    "empty_done": "No completed jobs yet.",
+    "empty_cancelled": "No cancelled bookings.",
     "filter": {
       "all": "All",
       "awaiting": "Awaiting quotes",
       "active": "Active",
       "done": "Completed",
+      "cancelled": "Cancelled",
       "awaiting_provider": "Awaiting response"
     },
     "request_closed_note": "This request was cancelled.",
