@@ -685,6 +685,9 @@ class DatabaseSeeder {
           random -= sw.weight;
         }
 
+        // Keep the demo account deterministic for the cancelled-bookings product test.
+        if (i === 0) status = BookingStatus.CANCELLED;
+
         const booking = bookingRepository.create({
           customerId: demoCustomer.id,
           providerId: provider.id,
@@ -705,7 +708,9 @@ class DatabaseSeeder {
           paymentStatus:
             status === BookingStatus.COMPLETED
               ? BookingPaymentStatus.PAID
-              : BookingPaymentStatus.PENDING,
+              : status === BookingStatus.CANCELLED
+                ? BookingPaymentStatus.REFUNDED
+                : BookingPaymentStatus.PENDING,
           confirmedAt:
             status !== BookingStatus.PENDING
               ? new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000)
