@@ -3,6 +3,77 @@
 > Lean by design (per CLAUDE.md): current status + roadmap + resume point only.
 > Detailed completed-work notes live in `Tests/history/HISTORICAL_CONTEXT.md` and git history.
 
+## Current Status (2026-08-08) — Favorites/Rebook + configurable AI delivered
+
+**Branch:** `codex-testing`
+
+**Delivery commit:** `28e9954` (`feat: add favorites rebooking and configurable AI`)
+
+**Remote:** pushed to `origin/codex-testing`
+
+### Delivered product behavior
+
+- Customers can favorite providers, browse saved providers, and start a repeat request from
+  a genuinely completed booking. Cancelled bookings have their own section and are never
+  treated as completed or rebook-eligible.
+- Rebooking deterministically prefills the prior provider, service, location, scope, duration,
+  and budget while preserving source-booking provenance. The customer must review and submit.
+- Optional AI refinement changes only fields explicitly requested by the customer; it does
+  not invent agreements or submit requests.
+- The AI assistant, agent memory, review-response workflow, and rebook refinement now use a
+  provider-neutral gateway. Workflow code selects `fast`, `reasoning`, or `synthesis`
+  capabilities rather than hard-coded model IDs.
+- Text chains support OpenAI/Anthropic targets; embedding chains support OpenAI/Voyage.
+  Retries, timeouts, unconfigured-provider skipping, and ordered fallbacks are centralized.
+- AI-powered routes (`/providers`, `/bookings`, `/reviews`, `/memory`) show a compact model
+  transparency footer. Admin Platform Settings can validate and update model chains at
+  runtime without exposing API keys.
+
+### Active all-OpenAI development profile
+
+- Fast: Luna → Terra
+- Reasoning: Terra → Sol
+- Synthesis: Sol → Terra
+- Embeddings: `text-embedding-3-small`, 1,024 dimensions
+- Voice: configurable OpenAI transcription and speech models
+
+Environment variables remain bootstrap/recovery defaults. Admin overrides live in
+`app_settings` and take effect immediately. Embedding dimensions remain environment/schema
+configuration and cannot be changed from the admin UI.
+
+### Verification completed
+
+- Live calls passed for all three text profiles and OpenAI embeddings.
+- Full streaming booking workflow completed through search, analysis, recommendation,
+  verification, narrative, and memory retrieval/persistence.
+- Rebook AI refinement and OpenAI speech synthesis passed.
+- Backend/frontend production builds passed; backend lint passed with pre-existing warnings.
+- Targeted AI gateway/embedding/provider-boundary tests: 9 passing.
+- Playwright confirmed the customer disclosure and admin configuration UI with no console errors.
+- Invalid admin configuration returns HTTP 400; valid changes appear immediately.
+- Secret scan passed; `backend/.env` and API keys were not committed.
+
+### Current local environment
+
+- Isolated backend: `http://192.168.1.97:3100`
+- Isolated frontend: `http://192.168.1.97:3101`
+- Test app DB: PostgreSQL on port 5434; test memory DB/pgvector on port 5435.
+- The isolated demo database was reseeded after Jest setup cleared it.
+- The separate instance on port 3001 was not used for this delivery.
+
+### Resume point
+
+The roadmap order is now:
+
+1. Favorites + Rebook — delivered.
+2. Provider-neutral AI configuration/control plane — delivered.
+3. Booking Readiness Copilot — next implementation milestone.
+4. Quote Decision Council — follows the Copilot.
+
+Authoritative design details are in `docs/07-Agentic-Product-Roadmap.md`; runtime model
+operations are in `docs/08-AI-Configuration-Operations.md`; deferred ideas remain in
+`docs/IDEAS_BACKLOG.md`.
+
 ## Current Status (2026-07-27) — Reliability and product-quality follow-up
 
 - Added a tested quote → booking → escrow hold → completion → capture lifecycle; fixed captured bookings retaining a stale `pending` payment status.
@@ -207,7 +278,11 @@ Git history has the full per-commit detail; one-liners here for resume.
 | 8 | Evaluation framework | ✅ |
 | 9 | Extend memory to providers (`PROVIDER_SYSTEM_PROMPT` wired) | ✅ |
 
-**Memory architecture quick-ref:** direct implementation (no Mem0/LangGraph); Voyage AI embeddings (`voyage-3`, 1024-dim) in pgvector; per-user scope; procedural rules tiered by confidence (≥0.85 auto-approve); PI   I opt-out + scrub on write. Embedding columns are NOT in the TypeORM entity — all vector ops use raw `MemoryDataSource.query()`.
+**Memory architecture quick-ref:** direct implementation (no Mem0/LangGraph); provider-neutral
+OpenAI/Voyage embedding chain at configured dimensions (current tested profile:
+`text-embedding-3-small`, 1,024) in pgvector; per-user scope; procedural rules tiered by
+confidence (≥0.85 auto-approve); PII opt-out + scrub on write. Embedding columns are not in
+the TypeORM entity—all vector operations use raw `MemoryDataSource.query()`.
 
 ## Key agent files
 - Coordinator `backend/src/agents/coordinator.ts`; Requirements/Analysis/Recommendation/Verification agents under `backend/src/agents/`; Review-response `review-response.agent.ts`; Memory agents under `backend/src/agents/memory/`.
