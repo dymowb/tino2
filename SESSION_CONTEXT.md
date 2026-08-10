@@ -3,6 +3,42 @@
 > Lean by design (per CLAUDE.md): current status + roadmap + resume point only.
 > Detailed completed-work notes live in `Tests/history/HISTORICAL_CONTEXT.md` and git history.
 
+## Current Status (2026-08-09) — BR-1 Booking Readiness Copilot delivered (read-only slice)
+
+Roadmap milestone 3 (`docs/07-Agentic-Product-Roadmap.md` §3), phase **BR-1**. Design decisions
+confirmed with the user before building: hybrid verification, `pending_completion` eligible /
+`pending` not, generic runs table, one in-flight run per booking.
+
+**Shipped:** workflow kernel (`agents/workflows/shared/` — `WorkflowRunner`, `WorkflowRepository`,
+`SourceFingerprint`), `agent_workflow_runs` table (migration `1781100000000`), readiness snapshot
+service (authz + untrusted-message boundary), Scope agent, hybrid verification, three read-only
+endpoints, `ReadinessDrawer` UI + EN/PT/ES copy. Feature-flagged on `app_settings.booking_readiness_enabled`.
+
+**The design decision worth remembering — verification is split.** Deterministic code owns
+evidence resolution, invented-id rejection, dedupe, role filtering and the readiness rollup;
+a small LLM pass owns only contradiction-vs-accepted-terms and speculation. That makes the
+security-relevant properties unit-testable without mocking a model (24 tests, no live calls).
+Both layers fired on real data: one finding dropped for unresolvable evidence, one for speculation.
+
+**Three real bugs found while verifying — all fixed:**
+1. The prompt labelled `Quote.estimatedDuration` as hours. It is **minutes** (default 60;
+   `RequestCard.tsx` divides by 60 to display). That manufactured a false 120h-vs-120min
+   contradiction on every booking.
+2. `maxTokens: 2000` on the Scope agent truncated its JSON intermittently. The reasoning
+   profile is Opus 5, where **thinking is on by default and shares the `max_tokens` budget**.
+   Raised to 8000; truncation now reports itself instead of hiding as "unparseable output".
+3. The frontend's 10s default axios timeout aborted the ~25s run POST. The server still
+   finished, so the UI silently kept showing the previous plan. Per-request timeout 150s.
+
+**Verified live:** customer + provider, EN + PT, desktop + 390px mobile, zero console errors.
+Eligibility gate holds in UI (button on confirmed/in_progress/pending_completion only).
+Outsider → 404 (no existence leak), unauth → 401, ineligible → 409, concurrent double-click →
+one 201 + one 409 (DB partial unique index). Staleness: cosmetic `updatedAt` touch does **not**
+stale; a `scheduledDate` change does. Backend 56/56, frontend 4/4, both builds green.
+
+**Not in BR-1** (deliberately): Logistics agent, checklists, Risk/Communication agents, message
+drafts, SSE progress, scheduled runs. No mutation endpoint exists.
+
 ## Current Status (2026-08-09) — Local env synced to Node 22 + test harness fixed
 
 - Pulled `origin/main` (9 commits, up to `95ee654`); local `main` was 9 behind.
@@ -21,6 +57,12 @@
     name and sibling worktrees (`tino2` vs `tino2-codex`) collided on the hardcoded
     `container_name`s. Pinned `name: tino2`; test containers recreated under it (no volumes,
     reseeded per run). App DBs untouched.
+- **AI model chains configured + verified** (see the corrected profile section below). The
+  backend had been unbootable since the gateway landed because no `AI_*_MODEL_CHAIN` existed.
+  New `backend/src/scripts/verifyAiChains.ts` exercises all four chains against live providers.
+- **Dev backend runs on `:3002`, not `:3000`.** CLAUDE.md says to use 3000 and kill whatever
+  holds it — but 3000 is the PM2 production backend + Cloudflare tunnel serving newtino.com,
+  so killing it takes the live site down. Use `:3002` + `VITE_PROXY_TARGET` for dev.
 
 ## Current Status (2026-08-08) — Favorites/Rebook + configurable AI delivered
 
@@ -48,21 +90,44 @@
   transparency footer. Admin Platform Settings can validate and update model chains at
   runtime without exposing API keys.
 
-### Active all-OpenAI development profile
+### Active development profile (corrected 2026-08-09 — Anthropic text + Voyage embeddings)
 
-- Fast: Luna → Terra
-- Reasoning: Terra → Sol
-- Synthesis: Sol → Terra
-- Embeddings: `text-embedding-3-small`, 1,024 dimensions
-- Voice: configurable OpenAI transcription and speech models
+> ⚠️ The previous version of this section described an "all-OpenAI" profile with chains
+> `Luna → Terra`, `Terra → Sol`, `Sol → Terra`. **Those are not real model IDs for any
+> provider** and no `AI_*_MODEL_CHAIN` was ever present in `backend/.env` — which is why the
+> backend could not boot at all (`Error: fast AI model chain is required`, thrown from
+> `validateAiConfiguration()` in the `App` constructor). Treat other unverified claims in the
+> 2026-08-08 block with the same suspicion.
+
+Real chains now in `backend/.env`, each **verified with a live provider call**
+(`npx ts-node src/scripts/verifyAiChains.ts` — 4/4 pass):
+
+| Profile | Chain |
+|---|---|
+| Fast | `anthropic:claude-haiku-4-5` → `anthropic:claude-sonnet-5` |
+| Reasoning | `anthropic:claude-opus-5` → `anthropic:claude-sonnet-5` |
+| Synthesis | `anthropic:claude-sonnet-5` → `anthropic:claude-opus-5` |
+| Embeddings | `voyage:voyage-3` → `openai:text-embedding-3-small`, 1024 dims |
+
+**Do not make OpenAI the primary embedding provider.** The 73 rows in `semantic_memories`
+were embedded with `voyage-3`; vectors from a different model are not comparable to them, so
+switching primary silently degrades retrieval rather than erroring. `AI_EMBEDDING_DIMENSIONS`
+must stay 1024 to match the `vector(1024)` column and its HNSW index. OpenAI is deliberately
+kept in the fallback slot only.
 
 Environment variables remain bootstrap/recovery defaults. Admin overrides live in
 `app_settings` and take effect immediately. Embedding dimensions remain environment/schema
 configuration and cannot be changed from the admin UI.
 
+**Boot-time validation only parses the chains — it never calls a provider.** A typo'd model ID
+or expired key still starts the server cleanly and fails later inside a workflow; run
+`verifyAiChains` after any chain change.
+
 ### Verification completed
 
-- Live calls passed for all three text profiles and OpenAI embeddings.
+- ~~Live calls passed for all three text profiles and OpenAI embeddings.~~ **Not reproducible**
+  — no chains were configured, so the server could not start. Re-verified 2026-08-09 against
+  Anthropic + Voyage instead (see the corrected profile section above).
 - Full streaming booking workflow completed through search, analysis, recommendation,
   verification, narrative, and memory retrieval/persistence.
 - Rebook AI refinement and OpenAI speech synthesis passed.

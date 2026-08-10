@@ -58,6 +58,54 @@ export type AiConfiguration = Record<
   AiConfigurationEntry
 >;
 
+export interface ReadinessEvidence {
+  source: "booking" | "quote" | "request" | "provider" | "availability" | "message";
+  recordId: string;
+  field: string;
+  excerpt?: string;
+}
+
+export interface ReadinessFinding {
+  id: string;
+  category:
+    | "scope"
+    | "access"
+    | "materials"
+    | "schedule"
+    | "safety"
+    | "payment"
+    | "communication";
+  severity: "info" | "attention" | "blocking";
+  visibility: "shared" | "customer_only" | "provider_only";
+  statement: string;
+  evidence: ReadinessEvidence[];
+  resolutionQuestion?: string;
+}
+
+export interface ReadinessPlan {
+  bookingId: string;
+  sourceFingerprint: string;
+  readiness: "ready" | "needs_attention" | "blocked" | "incomplete";
+  agreedScope: string[];
+  exclusions: string[];
+  findings: ReadinessFinding[];
+  verification: {
+    droppedCount: number;
+    dropReasons: string[];
+    semanticReviewRan: boolean;
+  };
+  generatedAt: string;
+  unavailableSections: string[];
+}
+
+export interface ReadinessRunResponse {
+  runId: string;
+  status: string;
+  plan: ReadinessPlan | null;
+  /** True when the booking changed after the plan was generated. */
+  stale: boolean;
+}
+
 export interface Provider {
   id: string;
   userId: string;
@@ -1881,6 +1929,31 @@ class ApiService {
       { value },
     );
     return res.data.data!;
+  }
+
+  // ── Booking Readiness Copilot ───────────────────────────────────────────
+  // Read-only: these endpoints return an advisory plan. Acting on a finding
+  // still goes through the existing messaging/booking APIs.
+
+  async createReadinessRun(bookingId: string): Promise<ReadinessRunResponse> {
+    const res = await this.api.post<ApiResponse<ReadinessRunResponse>>(
+      `/bookings/${bookingId}/readiness-runs`,
+      undefined,
+      // The run is synchronous and calls two models: ~25s typical, and the
+      // backend's own stage timeouts allow up to 135s. The 10s client default
+      // aborts mid-run — the server still finishes, but the response is lost and
+      // the UI silently keeps showing the previous plan. (BR-2 replaces this
+      // with SSE progress, at which point the long POST goes away.)
+      { timeout: 150000 },
+    );
+    return res.data.data!;
+  }
+
+  async getLatestReadinessRun(bookingId: string): Promise<ReadinessRunResponse | null> {
+    const res = await this.api.get<ApiResponse<ReadinessRunResponse | null>>(
+      `/bookings/${bookingId}/readiness-runs/latest`,
+    );
+    return res.data.data ?? null;
   }
 }
 
