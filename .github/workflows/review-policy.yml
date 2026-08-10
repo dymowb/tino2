@@ -1,0 +1,63 @@
+name: Review Policy
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  review-policy:
+    name: review-policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce conditional approval policy
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const ownerLogin = 'dymowb';
+            const pullRequest = context.payload.pull_request;
+
+            if (!pullRequest) {
+              core.setFailed('This workflow must run for a pull request event.');
+              return;
+            }
+
+            const authorLogin = pullRequest.user.login;
+            if (authorLogin.toLowerCase() === ownerLogin.toLowerCase()) {
+              core.info(`Approval is optional for pull requests opened by ${ownerLogin}.`);
+              return;
+            }
+
+            const reviews = await github.paginate(github.rest.pulls.listReviews, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pullRequest.number,
+              per_page: 100,
+            });
+
+            const latestReviewByUser = new Map();
+            for (const review of reviews) {
+              const reviewer = review.user?.login;
+              if (!reviewer || reviewer.toLowerCase() === authorLogin.toLowerCase()) continue;
+
+              const previous = latestReviewByUser.get(reviewer.toLowerCase());
+              if (!previous || review.id > previous.id) {
+                latestReviewByUser.set(reviewer.toLowerCase(), review);
+              }
+            }
+
+            const approvers = [...latestReviewByUser.values()]
+              .filter((review) => review.state === 'APPROVED')
+              .map((review) => review.user.login);
+
+            if (approvers.length === 0) {
+              core.setFailed(`Pull requests opened by ${authorLogin} require one approval from another user.`);
+              return;
+            }
+
+            core.info(`Approval requirement satisfied by ${approvers.join(', ')}.`);
