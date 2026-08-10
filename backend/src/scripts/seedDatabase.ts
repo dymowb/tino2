@@ -550,7 +550,7 @@ class DatabaseSeeder {
           portfolioImages: [],
           isBackgroundChecked: Math.random() > 0.2,
           isInsured: Math.random() > 0.3,
-          isActive: Math.random() > 0.1,
+          isActive: userData.email === 'provider@demo.com' || Math.random() > 0.1,
           availableHours: {
             monday: { start: '08:00', end: '18:00', available: Math.random() > 0.1 },
             tuesday: { start: '08:00', end: '18:00', available: Math.random() > 0.1 },
@@ -661,9 +661,10 @@ class DatabaseSeeder {
     logger.info('Adding extra bookings for demo customer for UX testing...');
     const demoCustomer = this.users.find((u) => u.email === 'customer@demo.com');
     if (demoCustomer) {
+      const activeProviders = this.providers.filter((provider) => provider.isActive);
       for (let i = 0; i < 47; i++) {
         // Add 47 more bookings (total ~50)
-        const provider = getRandomItem(this.providers);
+        const provider = getRandomItem(activeProviders);
         const service = getRandomItem(provider.services);
         const location = getRandomItem(LOCATIONS);
 
