@@ -38,12 +38,15 @@ jobs:
 
             core.setOutput('source', labels[0].slice(prefix.length));
 
-      - name: Checkout trusted base
+      - name: Checkout trusted base without submodules
         if: steps.provenance.outputs.source != 'human-or-mixed'
-        uses: actions/checkout@v5
-        with:
-          ref: ${{ github.event.pull_request.base.sha }}
-          persist-credentials: false
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git init .
+          git remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          git fetch --depth=1 origin "$BASE_SHA"
+          git checkout --detach FETCH_HEAD
 
       - name: Capture untrusted PR diff
         if: steps.provenance.outputs.source != 'human-or-mixed'
