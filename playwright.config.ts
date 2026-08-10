@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const reuseExistingServer =
+  process.env.PLAYWRIGHT_REUSE_SERVERS === 'true' || !process.env.CI;
+
 /**
  * @see https://playwright.dev/docs/test-configuration
  */
@@ -71,7 +74,7 @@ export default defineConfig({
       command:
         'if [ "${CI:-false}" != "true" ]; then docker compose up -d --wait postgres-test postgres-memory-test; fi; cd backend && npm run migration:run && npm run seed && npm run dev',
       url: 'http://127.0.0.1:3100/health',
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer,
       timeout: 120_000,
       env: {
         ...process.env,
@@ -89,7 +92,7 @@ export default defineConfig({
     {
       command: 'cd frontend && npm run dev',
       url: 'http://127.0.0.1:3101',
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer,
       timeout: 120_000,
       env: {
         ...process.env,

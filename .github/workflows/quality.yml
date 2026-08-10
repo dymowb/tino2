@@ -81,7 +81,41 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
+      - name: Start product servers
+        env:
+          PORT: "3100"
+          DATABASE_URL: postgresql://tino_test:tino_test@127.0.0.1:5434/tino_test
+          ALLOWED_ORIGINS: http://127.0.0.1:3101,http://localhost:3101
+          VITE_PROXY_TARGET: http://127.0.0.1:3100
+          VITE_PORT: "3101"
+        run: |
+          mkdir -p test-results/server-logs
+          (cd backend && npm run migration:run && npm run seed && npm run dev) \
+            > test-results/server-logs/backend.log 2>&1 &
+          (cd frontend && npm run dev) \
+            > test-results/server-logs/frontend.log 2>&1 &
+
+          servers_ready=0
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error http://127.0.0.1:3100/health > /dev/null \
+              && curl --fail --silent --show-error http://127.0.0.1:3101 > /dev/null; then
+              servers_ready=1
+              break
+            fi
+            sleep 2
+          done
+
+          if [ "$servers_ready" -ne 1 ]; then
+            echo "Backend server log:"
+            tail -n 200 test-results/server-logs/backend.log
+            echo "Frontend server log:"
+            tail -n 200 test-results/server-logs/frontend.log
+            exit 1
+          fi
+
       - name: Chromium product suite
+        env:
+          PLAYWRIGHT_REUSE_SERVERS: "true"
         run: npm run test:ci
 
       - uses: actions/upload-artifact@v4
