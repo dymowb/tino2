@@ -1,3 +1,8 @@
+# Pinned so every checkout/worktree of this repo shares one Compose project.
+# Without it the project name defaults to the directory name, and sibling
+# worktrees collide on the hardcoded container_name values below.
+name: tino2
+
 services:
   postgres-app:
     image: postgres:16

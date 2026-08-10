@@ -3,6 +3,25 @@
 > Lean by design (per CLAUDE.md): current status + roadmap + resume point only.
 > Detailed completed-work notes live in `Tests/history/HISTORICAL_CONTEXT.md` and git history.
 
+## Current Status (2026-08-09) — Local env synced to Node 22 + test harness fixed
+
+- Pulled `origin/main` (9 commits, up to `95ee654`); local `main` was 9 behind.
+- **Node 22.12.0** installed via nvm (repo now requires `>=22.12 <23`; system Node 18 kept).
+  `pm2` still resolves from `/usr/local/bin` under either Node — production was untouched
+  throughout (`:3000` and newtino.com healthy, 8d uptime).
+- Clean `npm ci` in root/backend/frontend. Full verification on Node 22: backend Jest
+  **32/32**, frontend Vitest **4/4**, both builds green, Playwright Chromium **12/12**.
+- `react-router-dom` 7.18.1 → **7.18.2** (RSC-mode CSRF advisory; SPA not actually exposed).
+  Frontend production audit now reports 0 vulnerabilities.
+- **Two local-only test-harness bugs fixed** (CI was unaffected, which is why they slipped):
+  - `playwright.config.ts` `webServer.env` lacked the AI model chains, so the backend died at
+    boot with `fast AI model chain is required`. CI only worked because `quality.yml` exports
+    them. Now defaulted in-config (real env still wins).
+  - `docker-compose.yml` had no project `name`, so the project defaulted to the directory
+    name and sibling worktrees (`tino2` vs `tino2-codex`) collided on the hardcoded
+    `container_name`s. Pinned `name: tino2`; test containers recreated under it (no volumes,
+    reseeded per run). App DBs untouched.
+
 ## Current Status (2026-08-08) — Favorites/Rebook + configurable AI delivered
 
 **Branch:** `codex-testing`
