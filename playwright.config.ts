@@ -87,6 +87,17 @@ export default defineConfig({
         JWT_SECRET: 'playwright-test-secret-that-is-never-used-outside-tests',
         REDIS_ENABLED: 'false',
         ALLOWED_ORIGINS: 'http://127.0.0.1:3101,http://localhost:3101',
+        // The AI gateway validates its model chains at boot, so the server will
+        // not start without them. Placeholders keep local runs working without
+        // credentials; a real environment value still wins.
+        REBOOK_AI_MODEL_CHAIN: process.env.REBOOK_AI_MODEL_CHAIN || 'anthropic:test-model',
+        AI_FAST_MODEL_CHAIN: process.env.AI_FAST_MODEL_CHAIN || 'anthropic:test-fast',
+        AI_REASONING_MODEL_CHAIN:
+          process.env.AI_REASONING_MODEL_CHAIN || 'anthropic:test-reasoning',
+        AI_SYNTHESIS_MODEL_CHAIN:
+          process.env.AI_SYNTHESIS_MODEL_CHAIN || 'anthropic:test-synthesis',
+        AI_EMBEDDING_CHAIN: process.env.AI_EMBEDDING_CHAIN || 'openai:test-embedding',
+        AI_EMBEDDING_DIMENSIONS: process.env.AI_EMBEDDING_DIMENSIONS || '1024',
       },
     },
     {
