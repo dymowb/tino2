@@ -22,9 +22,10 @@
 
 ###### **Fixed and verified**
 
+* Live chat message not shown until refresh
 * Provider sent "what about reducing the cleaning time" message to customer. Bell icon correctly showed 1 new message. Clicked on it and it took me to the end of the chat, but new message was not there yet. Had to refresh the screen to see it
 * Any notification you click on should be marked as read
-* Book Service: address validation and auto-completion 
+* Book Service: address validation and auto-completion
 * The "My requests" and "Received quotes" tabs are confusing. Quotes always have a request attached to it, so it doesn't make sense to show them separately. Each request should have their "received quotes" feature. Also, it's confusing there's no way to get to request/quotes screen if not from Messages. In fact, it looks like both should somehow be folded into the "bookings" option. Think hard on how to refactor this feature(s) ensuring smooth, intuitive CX. Ask me any questions before you proceed.
 * Profile Settings: Account Actions buttons are misaligned; notificationssettings takes to a screen that's not possible to come back from; didn't test change password or delete my account, pls do it; same for profile visibility
 * Notification not getting to quote when clicked on Logged as Demo Cliente, clicked on the 2nd notification from the top, didnot scroll down or select the quote.
