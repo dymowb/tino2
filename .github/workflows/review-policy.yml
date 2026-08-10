@@ -19,6 +19,7 @@ jobs:
         uses: actions/github-script@v9
         with:
           script: |
+            // Self-authored PRs still require CI, but do not require a second reviewer.
             const ownerLogin = 'dymowb';
             const pullRequest = context.payload.pull_request;
 
