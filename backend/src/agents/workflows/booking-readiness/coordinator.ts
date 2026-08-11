@@ -70,8 +70,7 @@ export async function runBookingReadiness(
       agreedScope: result.state.scope?.agreedScope ?? [],
       exclusions: result.state.scope?.exclusions ?? [],
       findings,
-      verification:
-        result.state.verification ?? buildVerification([], false),
+      verification: result.state.verification ?? buildVerification([], false),
       generatedAt: new Date().toISOString(),
       unavailableSections,
     };
@@ -89,8 +88,7 @@ export async function runBookingReadiness(
       // so both participants can be served from one run.
       output: plan,
       stageOutcomes: result.outcomes,
-      errorSummary:
-        result.outcomes.find((outcome) => outcome.error)?.error ?? null,
+      errorSummary: result.outcomes.find((outcome) => outcome.error)?.error ?? null,
       durationMs: result.durationMs,
       inputTokens: sumTokens(result.outcomes, 'inputTokens'),
       outputTokens: sumTokens(result.outcomes, 'outputTokens'),
@@ -120,8 +118,8 @@ function buildStages(snapshot: ReadinessSnapshot): WorkflowStage<ReadinessWorkfl
         name: 'scope',
         required: true,
         timeoutMs: SCOPE_TIMEOUT_MS,
-        run: async () => {
-          const { output } = await runScopeAgent(snapshot);
+        run: async (_state, signal) => {
+          const { output } = await runScopeAgent(snapshot, signal);
           return { scope: output };
         },
       },
@@ -131,18 +129,15 @@ function buildStages(snapshot: ReadinessSnapshot): WorkflowStage<ReadinessWorkfl
         name: 'verification',
         required: true,
         timeoutMs: VERIFY_TIMEOUT_MS,
-        run: async (state) => {
+        run: async (state, signal) => {
           const { findings, dropReasons } = validateFindings(
             state.scope?.findings ?? [],
             state.snapshot
           );
-          const review = await semanticReview(findings, state.snapshot);
+          const review = await semanticReview(findings, state.snapshot, signal);
           return {
             verifiedFindings: review.kept,
-            verification: buildVerification(
-              [...dropReasons, ...review.dropReasons],
-              review.ran
-            ),
+            verification: buildVerification([...dropReasons, ...review.dropReasons], review.ran),
           };
         },
       },
@@ -151,10 +146,7 @@ function buildStages(snapshot: ReadinessSnapshot): WorkflowStage<ReadinessWorkfl
 }
 
 /** Private findings never cross roles, including in the API response. */
-export function applyRoleFilter(
-  plan: ReadinessPlan,
-  role: 'customer' | 'provider'
-): ReadinessPlan {
+export function applyRoleFilter(plan: ReadinessPlan, role: 'customer' | 'provider'): ReadinessPlan {
   const findings = filterForRole(plan.findings, role);
   return {
     ...plan,

@@ -13,11 +13,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-import {
-  aiGateway,
-  getAiProfileChain,
-  AiProfileName,
-} from '@/agents/services/ai-gateway.service';
+import { aiGateway, getAiProfileChain, AiProfileName } from '@/agents/services/ai-gateway.service';
 import {
   EmbeddingGateway,
   getEmbeddingDimensions,
@@ -40,7 +36,9 @@ async function main(): Promise<void> {
         userMessage: 'Say OK.',
         maxTokens: 16,
       });
-      const reply = JSON.stringify(result.value ?? result).replace(/\s+/g, ' ').slice(0, 80);
+      const reply = JSON.stringify(result.value ?? result)
+        .replace(/\s+/g, ' ')
+        .slice(0, 80);
       console.log(`PASS  ${profile.padEnd(9)} ${chain}\n      ${reply}`);
     } catch (error) {
       failures += 1;

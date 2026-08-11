@@ -52,7 +52,10 @@ export class WorkflowRepository {
         this.repo.create({ ...input, status: WorkflowRunStatus.RUNNING })
       );
     } catch (error) {
-      if (error instanceof QueryFailedError && (error as { code?: string }).code === UNIQUE_VIOLATION) {
+      if (
+        error instanceof QueryFailedError &&
+        (error as { code?: string }).code === UNIQUE_VIOLATION
+      ) {
         throw new WorkflowAlreadyRunningError();
       }
       throw error;

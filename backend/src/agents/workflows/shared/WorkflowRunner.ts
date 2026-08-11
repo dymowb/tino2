@@ -14,7 +14,13 @@ export interface WorkflowStage<TState> {
   /** A failed required stage degrades the run; a failed optional one is noted and skipped. */
   required: boolean;
   timeoutMs?: number;
-  run: (state: TState) => Promise<Partial<TState>>;
+  /**
+   * `signal` aborts when the stage times out. Stages that call a provider MUST
+   * forward it — otherwise the timeout only stops us waiting while the model
+   * call keeps running and billing, and the caller may free a resource (the
+   * single-in-flight-run slot) that the abandoned call is still consuming.
+   */
+  run: (state: TState, signal: AbortSignal) => Promise<Partial<TState>>;
 }
 
 export interface WorkflowUsage {
@@ -41,15 +47,34 @@ class StageTimeoutError extends Error {
   }
 }
 
-async function withTimeout<T>(promise: Promise<T>, ms: number, stage: string): Promise<T> {
+/**
+ * Races the stage against its deadline and **aborts the underlying work** when the
+ * deadline wins. Racing alone would leave an abandoned provider call running to
+ * completion; the controller makes the timeout actually stop the work.
+ */
+async function withTimeout<T>(
+  start: (signal: AbortSignal) => Promise<T>,
+  ms: number,
+  stage: string
+): Promise<T> {
+  const controller = new AbortController();
   let timer: NodeJS.Timeout | undefined;
+
   try {
     return await Promise.race([
-      promise,
+      start(controller.signal),
       new Promise<T>((_, reject) => {
-        timer = setTimeout(() => reject(new StageTimeoutError(stage, ms)), ms);
+        timer = setTimeout(() => {
+          controller.abort();
+          reject(new StageTimeoutError(stage, ms));
+        }, ms);
       }),
     ]);
+  } catch (error) {
+    // Also cancel when the stage itself rejects, so a sibling in the same group
+    // failing does not leave this one running unattended.
+    controller.abort();
+    throw error;
   } finally {
     if (timer) clearTimeout(timer);
   }
@@ -71,43 +96,51 @@ export class WorkflowRunner<TState> {
 
     for (const group of this.groups) {
       const settled = await Promise.all(
-        group.map(async (stage): Promise<{ stage: WorkflowStage<TState>; patch?: Partial<TState>; outcome: WorkflowStageOutcome }> => {
-          const stageStart = Date.now();
-          try {
-            const patch = await withTimeout(
-              stage.run(state),
-              stage.timeoutMs ?? DEFAULT_STAGE_TIMEOUT_MS,
-              stage.name
-            );
-            return {
-              stage,
-              patch,
-              outcome: {
+        group.map(
+          async (
+            stage
+          ): Promise<{
+            stage: WorkflowStage<TState>;
+            patch?: Partial<TState>;
+            outcome: WorkflowStageOutcome;
+          }> => {
+            const stageStart = Date.now();
+            try {
+              const patch = await withTimeout(
+                (signal) => stage.run(state, signal),
+                stage.timeoutMs ?? DEFAULT_STAGE_TIMEOUT_MS,
+                stage.name
+              );
+              return {
+                stage,
+                patch,
+                outcome: {
+                  stage: stage.name,
+                  status: 'succeeded',
+                  durationMs: Date.now() - stageStart,
+                },
+              };
+            } catch (error) {
+              const timedOut = error instanceof StageTimeoutError;
+              const message = error instanceof Error ? error.message : String(error);
+              logger.warn('Workflow stage failed', {
                 stage: stage.name,
-                status: 'succeeded',
-                durationMs: Date.now() - stageStart,
-              },
-            };
-          } catch (error) {
-            const timedOut = error instanceof StageTimeoutError;
-            const message = error instanceof Error ? error.message : String(error);
-            logger.warn('Workflow stage failed', {
-              stage: stage.name,
-              required: stage.required,
-              timedOut,
-              error: message,
-            });
-            return {
-              stage,
-              outcome: {
-                stage: stage.name,
-                status: timedOut ? 'timed_out' : 'failed',
-                durationMs: Date.now() - stageStart,
+                required: stage.required,
+                timedOut,
                 error: message,
-              },
-            };
+              });
+              return {
+                stage,
+                outcome: {
+                  stage: stage.name,
+                  status: timedOut ? 'timed_out' : 'failed',
+                  durationMs: Date.now() - stageStart,
+                  error: message,
+                },
+              };
+            }
           }
-        })
+        )
       );
 
       // Merge sequentially so concurrent stages cannot interleave partial writes.
@@ -134,7 +167,8 @@ export class WorkflowRunner<TState> {
       outcomes.filter((o) => o.status === 'succeeded').map((o) => o.stage)
     );
     const degraded = requiredStages.some((s) => !succeededNames.has(s.name));
-    const failed = requiredStages.length > 0 && !requiredStages.some((s) => succeededNames.has(s.name));
+    const failed =
+      requiredStages.length > 0 && !requiredStages.some((s) => succeededNames.has(s.name));
 
     return { state, outcomes, degraded, failed, durationMs: Date.now() - startedAt };
   }

@@ -42,7 +42,10 @@ Return ONLY JSON:
   ]
 }`;
 
-export async function runScopeAgent(snapshot: ReadinessSnapshot): Promise<{
+export async function runScopeAgent(
+  snapshot: ReadinessSnapshot,
+  signal?: AbortSignal
+): Promise<{
   output: ScopeAgentOutput;
   inputTokens: number;
   outputTokens: number;
@@ -54,6 +57,7 @@ export async function runScopeAgent(snapshot: ReadinessSnapshot): Promise<{
     // by default and max_tokens caps thinking *plus* the response — a tight
     // budget silently truncates the JSON mid-object rather than erroring.
     maxTokens: SCOPE_MAX_TOKENS,
+    signal,
   });
 
   const parsed = parseLlmJson<Partial<ScopeAgentOutput>>(result.value.text);

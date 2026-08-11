@@ -16,6 +16,13 @@ export interface AiTextRequest {
   userMessage: string;
   maxTokens?: number;
   temperature?: number;
+  /**
+   * Cancels the in-flight provider request. Without this a caller-side timeout
+   * only stops *waiting* — the model call keeps running and billing, and any
+   * resource the caller frees on timeout (a lock, a queue slot) can be taken
+   * while the abandoned call is still burning tokens.
+   */
+  signal?: AbortSignal;
 }
 
 export interface AiTextResponse {
@@ -92,12 +99,15 @@ class OpenAiAdapter implements AiProviderAdapter {
   async generate(model: string, request: AiTextRequest): Promise<AiTextResponse> {
     if (!this.isConfigured()) throw new Error('OPENAI_API_KEY not configured');
     this.client ||= new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const response = await this.client.responses.create({
-      model,
-      instructions: request.systemPrompt,
-      input: request.userMessage,
-      max_output_tokens: request.maxTokens,
-    });
+    const response = await this.client.responses.create(
+      {
+        model,
+        instructions: request.systemPrompt,
+        input: request.userMessage,
+        max_output_tokens: request.maxTokens,
+      },
+      { signal: request.signal }
+    );
     return {
       text: response.output_text,
       finishReason: response.status || 'unknown',

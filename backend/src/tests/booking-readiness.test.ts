@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import {
   computeReadiness,
   filterForRole,
@@ -152,6 +154,17 @@ describe('prompt rendering and the injection boundary', () => {
     expect(rendered).not.toMatch(/estimatedDuration: \d+ hours/);
   });
 
+  it('states duration in minutes in the semantic reviewer prompt too', () => {
+    // The unit was fixed in the scope prompt but originally missed here, which
+    // fed the reviewer false "accepted terms" — same bug, second site.
+    const source = readFileSync(
+      join(__dirname, '../agents/workflows/booking-readiness/verification.ts'),
+      'utf-8'
+    );
+    expect(source).toContain('estimatedDuration} minutes');
+    expect(source).not.toMatch(/estimatedDuration\}h/);
+  });
+
   it('marks a never-geocoded address rather than presenting it as complete', () => {
     expect(renderSnapshotForPrompt(sparseSnapshot())).toContain('address never geocoded');
   });
@@ -165,9 +178,7 @@ describe('prompt rendering and the injection boundary', () => {
 
 describe('source fingerprint', () => {
   it('is stable regardless of key order', () => {
-    expect(fingerprint({ a: 1, b: { c: 2, d: 3 } })).toBe(
-      fingerprint({ b: { d: 3, c: 2 }, a: 1 })
-    );
+    expect(fingerprint({ a: 1, b: { c: 2, d: 3 } })).toBe(fingerprint({ b: { d: 3, c: 2 }, a: 1 }));
   });
 
   it('changes when a load-bearing value changes', () => {
@@ -233,6 +244,49 @@ describe('workflow runner partial failure', () => {
     const result = await runner.run({});
     expect(result.outcomes[0].status).toBe('timed_out');
     expect(result.failed).toBe(true);
+  });
+
+  it('aborts the stage signal on timeout so the underlying call is cancelled', async () => {
+    // Without this, a timeout only stops us waiting: the provider request keeps
+    // running and billing, while the freed in-flight slot lets a retry stack a
+    // second concurrent call for the same subject.
+    let observed: AbortSignal | undefined;
+    const runner = new WorkflowRunner<State>([
+      [
+        {
+          name: 'slow',
+          required: true,
+          timeoutMs: 20,
+          run: (_state, signal) => {
+            observed = signal;
+            return new Promise(() => undefined);
+          },
+        },
+      ],
+    ]);
+
+    await runner.run({});
+    expect(observed).toBeDefined();
+    expect(observed!.aborted).toBe(true);
+  });
+
+  it('aborts the signal when the stage itself rejects', async () => {
+    let observed: AbortSignal | undefined;
+    const runner = new WorkflowRunner<State>([
+      [
+        {
+          name: 'boom',
+          required: true,
+          run: async (_state, signal) => {
+            observed = signal;
+            throw new Error('exploded');
+          },
+        },
+      ],
+    ]);
+
+    await runner.run({});
+    expect(observed!.aborted).toBe(true);
   });
 
   it('lets an optional stage fail without degrading the run', async () => {

@@ -102,12 +102,13 @@ export function validateFindings(
  */
 export async function semanticReview(
   findings: ReadinessFinding[],
-  snapshot: ReadinessSnapshot
+  snapshot: ReadinessSnapshot,
+  signal?: AbortSignal
 ): Promise<{ kept: ReadinessFinding[]; dropReasons: string[]; ran: boolean }> {
   if (findings.length === 0) return { kept: [], dropReasons: [], ran: true };
 
   const terms = snapshot.quote
-    ? `price ${snapshot.quote.estimatedPrice}, duration ${snapshot.quote.estimatedDuration}h, ` +
+    ? `price ${snapshot.quote.estimatedPrice}, duration ${snapshot.quote.estimatedDuration} minutes, ` +
       `terms: ${snapshot.quote.terms.map((t) => `${t.item}=${t.description}`).join('; ') || 'none'}`
     : 'no accepted quote on this booking';
 
@@ -125,6 +126,7 @@ export async function semanticReview(
         'Reject sparingly. If a finding is merely cautious or obvious, keep it.',
       userMessage: `ACCEPTED TERMS: ${terms}\n\nFINDINGS:\n${numbered}`,
       maxTokens: 600,
+      signal,
     });
 
     const parsed = parseLlmJson<{ reject?: Array<{ index: number; reason: string }> }>(
@@ -211,10 +213,7 @@ function buildRecordIndex(snapshot: ReadinessSnapshot): RecordIndex {
   return index;
 }
 
-function resolveEvidence(
-  refs: RawFinding['evidence'],
-  index: RecordIndex
-): EvidenceRef[] {
+function resolveEvidence(refs: RawFinding['evidence'], index: RecordIndex): EvidenceRef[] {
   if (!Array.isArray(refs)) return [];
   const resolved: EvidenceRef[] = [];
 

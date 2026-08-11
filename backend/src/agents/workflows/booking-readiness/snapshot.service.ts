@@ -119,8 +119,8 @@ export async function buildSnapshot(booking: Booking): Promise<ReadinessSnapshot
         // (0,0) is the sentinel this codebase uses for "never geocoded".
         hasCoordinates: Boolean(
           booking.location?.latitude &&
-            booking.location?.longitude &&
-            !(booking.location.latitude === 0 && booking.location.longitude === 0)
+          booking.location?.longitude &&
+          !(booking.location.latitude === 0 && booking.location.longitude === 0)
         ),
       },
     },
@@ -247,6 +247,11 @@ export function snapshotFingerprint(snapshot: ReadinessSnapshot): string {
     quote: snapshot.quote,
     request: snapshot.request,
     payment: snapshot.payment,
+    // Both are given to the agent and can change the answer on their own: a new
+    // conflicting booking near the slot, or a provider dropping the service.
+    // Omitting them would let a plan report itself fresh after either changed.
+    availability: snapshot.availability,
+    provider: { id: snapshot.provider.id, services: snapshot.provider.services },
     // Only the newest message id — earlier ones cannot change retroactively.
     lastMessageId: snapshot.messages[snapshot.messages.length - 1]?.id ?? null,
   });
@@ -256,7 +261,5 @@ export function snapshotFingerprint(snapshot: ReadinessSnapshot): string {
 export function excerptFor(value: unknown): string | undefined {
   if (typeof value !== 'string' || value.trim() === '') return undefined;
   const scrubbed = scrubPii(value).text.replace(/\s+/g, ' ').trim();
-  return scrubbed.length > EXCERPT_LENGTH
-    ? `${scrubbed.slice(0, EXCERPT_LENGTH)}…`
-    : scrubbed;
+  return scrubbed.length > EXCERPT_LENGTH ? `${scrubbed.slice(0, EXCERPT_LENGTH)}…` : scrubbed;
 }

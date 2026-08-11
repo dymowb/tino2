@@ -5,7 +5,10 @@ import logger from '@/config/logger';
 import { ApiResponse, AuthenticatedRequest } from '@/types';
 import { t } from '@/i18n';
 import { AgentWorkflowRun, WorkflowRunStatus } from '@/models/AgentWorkflowRun';
-import { workflowRepository, WorkflowAlreadyRunningError } from '@/agents/workflows/shared/WorkflowRepository';
+import {
+  workflowRepository,
+  WorkflowAlreadyRunningError,
+} from '@/agents/workflows/shared/WorkflowRepository';
 import {
   applyRoleFilter,
   runBookingReadiness,
@@ -137,7 +140,12 @@ export class ReadinessController {
   private async present(
     run: AgentWorkflowRun,
     role: ReadinessRole
-  ): Promise<{ runId: string; status: WorkflowRunStatus; plan: ReadinessPlan | null; stale: boolean }> {
+  ): Promise<{
+    runId: string;
+    status: WorkflowRunStatus;
+    plan: ReadinessPlan | null;
+    stale: boolean;
+  }> {
     const plan = (run.output as ReadinessPlan | null) ?? null;
     let stale = false;
 

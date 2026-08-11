@@ -3,12 +3,7 @@ export const READINESS_SUBJECT_TYPE = 'booking';
 export const READINESS_SCHEMA_VERSION = 1;
 
 export type EvidenceSource =
-  | 'booking'
-  | 'quote'
-  | 'request'
-  | 'provider'
-  | 'availability'
-  | 'message';
+  'booking' | 'quote' | 'request' | 'provider' | 'availability' | 'message';
 
 export interface EvidenceRef {
   source: EvidenceSource;
@@ -19,13 +14,7 @@ export interface EvidenceRef {
 }
 
 export type FindingCategory =
-  | 'scope'
-  | 'access'
-  | 'materials'
-  | 'schedule'
-  | 'safety'
-  | 'payment'
-  | 'communication';
+  'scope' | 'access' | 'materials' | 'schedule' | 'safety' | 'payment' | 'communication';
 
 export type FindingSeverity = 'info' | 'attention' | 'blocking';
 export type FindingVisibility = 'shared' | 'customer_only' | 'provider_only';
