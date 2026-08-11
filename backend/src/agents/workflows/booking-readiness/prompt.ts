@@ -32,7 +32,7 @@ export function renderSnapshotForPrompt(snapshot: ReadinessSnapshot): string {
       '## BOOKING (source: "booking")',
       `recordId: ${snapshot.booking.id}`,
       `status: ${snapshot.booking.status}`,
-      `serviceType: ${snapshot.booking.serviceType}`,
+      `serviceType: ${field(snapshot.booking.serviceType)}`,
       `description: ${field(snapshot.booking.description)}`,
       `scheduledDate: ${snapshot.booking.scheduledDate}`,
       `estimatedDuration: ${snapshot.booking.estimatedDuration} minutes`,
@@ -60,7 +60,9 @@ export function renderSnapshotForPrompt(snapshot: ReadinessSnapshot): string {
         `terms:${
           snapshot.quote.terms.length
             ? '\n' +
-              snapshot.quote.terms.map((term) => `  - ${term.item}: ${term.description}`).join('\n')
+              snapshot.quote.terms
+                .map((term) => `  - ${field(term.item)}: ${field(term.description)}`)
+                .join('\n')
             : ' (none)'
         }`,
       ].join('\n')
@@ -74,7 +76,7 @@ export function renderSnapshotForPrompt(snapshot: ReadinessSnapshot): string {
       [
         '## ORIGINAL REQUEST (source: "request") — superseded by the quote where they differ',
         `recordId: ${snapshot.request.id}`,
-        `serviceType: ${snapshot.request.serviceType}`,
+        `serviceType: ${field(snapshot.request.serviceType)}`,
         `description: ${field(snapshot.request.description)}`,
         `preferredDate: ${snapshot.request.preferredDate ?? '(none)'}`,
         `requirements:${
@@ -94,7 +96,11 @@ export function renderSnapshotForPrompt(snapshot: ReadinessSnapshot): string {
       '## PROVIDER (source: "provider")',
       `recordId: ${snapshot.provider.id}`,
       `businessName: ${field(snapshot.provider.businessName)}`,
-      `services: ${snapshot.provider.services.join(', ') || '(none listed)'}`,
+      `services: ${
+        snapshot.provider.services.length
+          ? snapshot.provider.services.map((service) => field(service)).join(', ')
+          : '(none listed)'
+      }`,
     ].join('\n')
   );
 
