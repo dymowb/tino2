@@ -58,6 +58,70 @@ export type AiConfiguration = Record<
   AiConfigurationEntry
 >;
 
+export interface AppConfig {
+  maxProvidersPerQuote: number;
+  /** Hides the readiness entry point when the backend feature is off, so the
+   *  button is never shown for an endpoint that would 404. */
+  bookingReadinessEnabled?: boolean;
+  ai?: AiConfiguration;
+}
+
+/** Defaults must fail closed for flags: unknown means off. */
+export const DEFAULT_APP_CONFIG: AppConfig = {
+  maxProvidersPerQuote: 5,
+  bookingReadinessEnabled: false,
+};
+
+export interface ReadinessEvidence {
+  source: "booking" | "quote" | "request" | "provider" | "availability" | "message";
+  recordId: string;
+  field: string;
+  excerpt?: string;
+}
+
+export interface ReadinessFinding {
+  id: string;
+  category:
+    | "scope"
+    | "access"
+    | "materials"
+    | "schedule"
+    | "safety"
+    | "payment"
+    | "communication";
+  severity: "info" | "attention" | "blocking";
+  visibility: "shared" | "customer_only" | "provider_only";
+  statement: string;
+  evidence: ReadinessEvidence[];
+  resolutionQuestion?: string;
+}
+
+export interface ReadinessPlan {
+  bookingId: string;
+  sourceFingerprint: string;
+  readiness: "ready" | "needs_attention" | "blocked" | "incomplete";
+  agreedScope: string[];
+  exclusions: string[];
+  findings: ReadinessFinding[];
+  verification: {
+    droppedCount: number;
+    /** Stripped per reader by the API — the reasons quote rejected findings,
+     *  which may be private to the other role. Only the count is exposed. */
+    dropReasons?: string[];
+    semanticReviewRan: boolean;
+  };
+  generatedAt: string;
+  unavailableSections: string[];
+}
+
+export interface ReadinessRunResponse {
+  runId: string;
+  status: string;
+  plan: ReadinessPlan | null;
+  /** True when the booking changed after the plan was generated. */
+  stale: boolean;
+}
+
 export interface Provider {
   id: string;
   userId: string;
@@ -1858,15 +1922,15 @@ class ApiService {
 
   // Public, read-only client config (admin-tunable app_settings). Falls back to
   // sane defaults if the request fails so the UI never blocks on it.
-  async getAppConfig(): Promise<{ maxProvidersPerQuote: number; ai?: AiConfiguration }> {
+  async getAppConfig(): Promise<AppConfig> {
     try {
       const res =
-        await this.api.get<ApiResponse<{ maxProvidersPerQuote: number; ai?: AiConfiguration }>>(
+        await this.api.get<ApiResponse<AppConfig>>(
           "/config",
         );
-      return res.data.data ?? { maxProvidersPerQuote: 5 };
+      return res.data.data ?? DEFAULT_APP_CONFIG;
     } catch {
-      return { maxProvidersPerQuote: 5 };
+      return DEFAULT_APP_CONFIG;
     }
   }
 
@@ -1881,6 +1945,31 @@ class ApiService {
       { value },
     );
     return res.data.data!;
+  }
+
+  // ── Booking Readiness Copilot ───────────────────────────────────────────
+  // Read-only: these endpoints return an advisory plan. Acting on a finding
+  // still goes through the existing messaging/booking APIs.
+
+  async createReadinessRun(bookingId: string): Promise<ReadinessRunResponse> {
+    const res = await this.api.post<ApiResponse<ReadinessRunResponse>>(
+      `/bookings/${bookingId}/readiness-runs`,
+      undefined,
+      // The run is synchronous and calls two models: ~25s typical, and the
+      // backend's own stage timeouts allow up to 135s. The 10s client default
+      // aborts mid-run — the server still finishes, but the response is lost and
+      // the UI silently keeps showing the previous plan. (BR-2 replaces this
+      // with SSE progress, at which point the long POST goes away.)
+      { timeout: 150000 },
+    );
+    return res.data.data!;
+  }
+
+  async getLatestReadinessRun(bookingId: string): Promise<ReadinessRunResponse | null> {
+    const res = await this.api.get<ApiResponse<ReadinessRunResponse | null>>(
+      `/bookings/${bookingId}/readiness-runs/latest`,
+    );
+    return res.data.data ?? null;
   }
 }
 

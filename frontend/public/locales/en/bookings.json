@@ -256,5 +256,61 @@
     "respond": "Respond",
     "proposed_terms": "Customer's proposed terms",
     "confirm_or_counter": "confirm or send your own quote"
+  },
+  "readiness": {
+    "title": "Booking readiness",
+    "subtitle": "An AI review of what was agreed, with the questions still worth asking. It never changes your booking.",
+    "close": "Close",
+    "run": "Check readiness",
+    "running": "Reviewing…",
+    "rerun": "Run again",
+    "empty": "No readiness check has been run for this booking yet.",
+    "error": "The readiness check could not be completed. Please try again.",
+    "stale": "This booking changed after the check was run.",
+    "partial": "Part of this review was unavailable ({{sections}}), so it may be incomplete.",
+    "agreed_scope": "Agreed work",
+    "no_scope": "No agreed work could be established from the records.",
+    "exclusions": "Explicitly excluded",
+    "findings": "Worth checking ({{count}})",
+    "no_findings": "Nothing needs attention.",
+    "evidence": "Based on",
+    "verification": "{{dropped}} unsupported finding(s) removed",
+    "verification_hint": "Findings whose evidence could not be traced back to a record are dropped rather than shown.",
+    "unreviewed": "not semantically reviewed",
+    "generated_at": "Generated {{time}}",
+    "prepare": "Prepare",
+    "prepare_tooltip": "Review what was agreed before the appointment",
+    "level": {
+      "ready": "Looks ready",
+      "needs_attention": "Needs attention",
+      "blocked": "Blocked",
+      "incomplete": "Incomplete review"
+    },
+    "severity": {
+      "info": "Info",
+      "attention": "Attention",
+      "blocking": "Blocking"
+    },
+    "category": {
+      "scope": "Scope",
+      "access": "Access",
+      "materials": "Materials",
+      "schedule": "Schedule",
+      "safety": "Safety",
+      "payment": "Payment",
+      "communication": "Communication"
+    },
+    "visibility": {
+      "customer_only": "Only you",
+      "provider_only": "Only you"
+    },
+    "source": {
+      "booking": "Booking",
+      "quote": "Accepted quote",
+      "request": "Original request",
+      "provider": "Provider profile",
+      "availability": "Availability",
+      "message": "Message"
+    }
   }
 }

@@ -22,6 +22,7 @@ import authRoutes from '@/routes/auth';
 import userRoutes from '@/routes/users';
 import providerRoutes from '@/routes/providers';
 import bookingRoutes from '@/routes/bookings';
+import readinessRoutes from '@/routes/readiness';
 import quoteRoutes from '@/routes/quotes';
 import messageRoutes from '@/routes/messages';
 // Browser routes temporarily disabled due to compilation errors
@@ -136,6 +137,9 @@ export class App {
     this.app.use(`/api/${config.server.apiVersion}/users`, userRoutes);
     this.app.use(`/api/${config.server.apiVersion}/providers`, providerRoutes);
     this.app.use(`/api/${config.server.apiVersion}/bookings`, bookingRoutes);
+    // Mounted at the API root: it owns both /bookings/:id/readiness-runs and
+    // /readiness-runs/:runId, so it cannot sit under a single resource prefix.
+    this.app.use(`/api/${config.server.apiVersion}`, readinessRoutes);
     this.app.use(`/api/${config.server.apiVersion}/quotes`, quoteRoutes);
     this.app.use(`/api/${config.server.apiVersion}/messages`, messageRoutes);
     this.app.use(`/api/${config.server.apiVersion}/notifications`, notificationRoutes);
