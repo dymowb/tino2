@@ -226,6 +226,15 @@ const MyBookingsPage: React.FC = () => {
     enabled: isAuthenticated,
   });
 
+  // The readiness endpoints 404 when the backend feature is off, so the entry
+  // point is gated on the same flag rather than on booking status alone.
+  const { data: appConfig } = useQuery({
+    queryKey: ["app-config"],
+    queryFn: () => apiService.getAppConfig(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const readinessEnabled = appConfig?.bookingReadinessEnabled === true;
+
   const bookings: Booking[] = useMemo(
     () => (Array.isArray(bookingsData?.data) ? bookingsData!.data : []),
     [bookingsData],
@@ -691,7 +700,7 @@ const MyBookingsPage: React.FC = () => {
               alignItems: "center",
             }}
           >
-            {READINESS_ELIGIBLE_STATUSES.includes(booking.status) && (
+            {readinessEnabled && READINESS_ELIGIBLE_STATUSES.includes(booking.status) && (
               <Tooltip title={t("bookings:readiness.prepare_tooltip")}>
                 <Button
                   variant="outlined"

@@ -24,6 +24,17 @@ const EXCERPT_LENGTH = 160;
 
 export type ReadinessRole = 'customer' | 'provider';
 
+/**
+ * Every free-text field in the snapshot is participant-authored — a customer
+ * writes the booking/request description, a provider writes the quote
+ * description, notes and terms. All of it can carry an address, a phone number
+ * or an access code, and all of it reaches a third-party model, so it is
+ * scrubbed here at the boundary rather than at each use site.
+ */
+function sanitize(value: string | null | undefined): string {
+  return value ? scrubPii(value).text : '';
+}
+
 export class ReadinessAccessError extends Error {
   constructor(
     message: string,
@@ -105,7 +116,7 @@ export async function buildSnapshot(booking: Booking): Promise<ReadinessSnapshot
       id: booking.id,
       status: booking.status,
       serviceType: booking.serviceType,
-      description: booking.description,
+      description: sanitize(booking.description),
       scheduledDate: new Date(booking.scheduledDate).toISOString(),
       estimatedDuration: Number(booking.estimatedDuration),
       totalAmount: Number(booking.totalAmount),
@@ -113,7 +124,7 @@ export async function buildSnapshot(booking: Booking): Promise<ReadinessSnapshot
       // Free text the customer wrote — routinely carries gate/alarm codes, so it
       // gets the same scrubbing as messages before it reaches a model.
       specialInstructions: booking.specialInstructions
-        ? scrubPii(booking.specialInstructions).text
+        ? sanitize(booking.specialInstructions)
         : null,
       location: {
         city: booking.location?.city ?? '',
@@ -135,20 +146,30 @@ export async function buildSnapshot(booking: Booking): Promise<ReadinessSnapshot
           id: quote.id,
           estimatedPrice: Number(quote.estimatedPrice),
           estimatedDuration: Number(quote.estimatedDuration),
-          description: quote.description,
-          terms: Array.isArray(quote.terms) ? quote.terms : [],
-          notes: quote.notes || null,
+          description: sanitize(quote.description),
+          terms: Array.isArray(quote.terms)
+            ? quote.terms.map((term) => ({
+                item: sanitize(term?.item),
+                description: sanitize(term?.description),
+              }))
+            : [],
+          notes: quote.notes ? sanitize(quote.notes) : null,
         }
       : null,
     request: request
       ? {
           id: request.id,
           serviceType: request.serviceType,
-          description: request.description,
+          description: sanitize(request.description),
           preferredDate: request.preferredDate
             ? new Date(request.preferredDate).toISOString()
             : null,
-          requirements: Array.isArray(request.requirements) ? request.requirements : [],
+          requirements: Array.isArray(request.requirements)
+            ? request.requirements.map((req) => ({
+                category: sanitize(req?.category),
+                requirement: sanitize(req?.requirement),
+              }))
+            : [],
         }
       : null,
     provider: {

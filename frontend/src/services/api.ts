@@ -58,6 +58,20 @@ export type AiConfiguration = Record<
   AiConfigurationEntry
 >;
 
+export interface AppConfig {
+  maxProvidersPerQuote: number;
+  /** Hides the readiness entry point when the backend feature is off, so the
+   *  button is never shown for an endpoint that would 404. */
+  bookingReadinessEnabled?: boolean;
+  ai?: AiConfiguration;
+}
+
+/** Defaults must fail closed for flags: unknown means off. */
+export const DEFAULT_APP_CONFIG: AppConfig = {
+  maxProvidersPerQuote: 5,
+  bookingReadinessEnabled: false,
+};
+
 export interface ReadinessEvidence {
   source: "booking" | "quote" | "request" | "provider" | "availability" | "message";
   recordId: string;
@@ -1908,15 +1922,15 @@ class ApiService {
 
   // Public, read-only client config (admin-tunable app_settings). Falls back to
   // sane defaults if the request fails so the UI never blocks on it.
-  async getAppConfig(): Promise<{ maxProvidersPerQuote: number; ai?: AiConfiguration }> {
+  async getAppConfig(): Promise<AppConfig> {
     try {
       const res =
-        await this.api.get<ApiResponse<{ maxProvidersPerQuote: number; ai?: AiConfiguration }>>(
+        await this.api.get<ApiResponse<AppConfig>>(
           "/config",
         );
-      return res.data.data ?? { maxProvidersPerQuote: 5 };
+      return res.data.data ?? DEFAULT_APP_CONFIG;
     } catch {
-      return { maxProvidersPerQuote: 5 };
+      return DEFAULT_APP_CONFIG;
     }
   }
 

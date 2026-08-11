@@ -1411,6 +1411,17 @@ async function runSeeder(): Promise<void> {
       },
       ['key']
     );
+    await settingsRepo.upsert(
+      {
+        key: 'booking_readiness_enabled',
+        // Off by default: BR-1 is an opt-in beta slice, and the client hides its
+        // entry point when this is false so nobody sees a button that 404s.
+        value: 'false',
+        description:
+          'Enables the Booking Readiness Copilot on eligible bookings (advisory, read-only)',
+      },
+      ['key']
+    );
     logger.info('App settings seeded');
 
     logger.info('Database seeding completed! 🎉');
