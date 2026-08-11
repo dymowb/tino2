@@ -23,7 +23,9 @@ export function renderSnapshotForPrompt(snapshot: ReadinessSnapshot): string {
       `estimatedDuration: ${snapshot.booking.estimatedDuration} minutes`,
       `totalAmount: ${snapshot.booking.totalAmount}`,
       `specialInstructions: ${snapshot.booking.specialInstructions ?? '(none)'}`,
-      `location: ${snapshot.booking.location.address}, ${snapshot.booking.location.city}` +
+      // City/state only — the street line is withheld on purpose (see types.ts).
+      `location: ${snapshot.booking.location.city}, ${snapshot.booking.location.state}` +
+        `${snapshot.booking.location.hasStreetAddress ? '' : ' (no street address recorded)'}` +
         `${snapshot.booking.location.hasCoordinates ? '' : ' (address never geocoded)'}`,
     ].join('\n')
   );

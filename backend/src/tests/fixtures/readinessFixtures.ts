@@ -20,10 +20,10 @@ export function cleanSnapshot(): ReadinessSnapshot {
       paymentStatus: 'paid',
       specialInstructions: 'Gate code 4821',
       location: {
-        address: 'Rua Lauro Linhares 1200, apto 302',
         city: 'Florianópolis',
         state: 'SC',
         zipCode: '88036-002',
+        hasStreetAddress: true,
         hasCoordinates: true,
       },
     },
@@ -68,10 +68,10 @@ export function sparseSnapshot(): ReadinessSnapshot {
   snapshot.booking.description = 'orcamento teste';
   snapshot.booking.specialInstructions = null;
   snapshot.booking.location = {
-    address: '',
     city: 'Florianópolis',
     state: 'SC',
     zipCode: '',
+    hasStreetAddress: false,
     hasCoordinates: false,
   };
   snapshot.quote = null;

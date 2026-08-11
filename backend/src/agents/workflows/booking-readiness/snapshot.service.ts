@@ -110,12 +110,18 @@ export async function buildSnapshot(booking: Booking): Promise<ReadinessSnapshot
       estimatedDuration: Number(booking.estimatedDuration),
       totalAmount: Number(booking.totalAmount),
       paymentStatus: booking.paymentStatus,
-      specialInstructions: booking.specialInstructions || null,
+      // Free text the customer wrote — routinely carries gate/alarm codes, so it
+      // gets the same scrubbing as messages before it reaches a model.
+      specialInstructions: booking.specialInstructions
+        ? scrubPii(booking.specialInstructions).text
+        : null,
       location: {
-        address: booking.location?.address ?? '',
         city: booking.location?.city ?? '',
         state: booking.location?.state ?? '',
         zipCode: booking.location?.zipCode ?? '',
+        // Whether a street line exists is what drives an access finding; the
+        // line itself is identifying and is deliberately not sent to the model.
+        hasStreetAddress: Boolean(booking.location?.address?.trim()),
         // (0,0) is the sentinel this codebase uses for "never geocoded".
         hasCoordinates: Boolean(
           booking.location?.latitude &&
@@ -252,8 +258,11 @@ export function snapshotFingerprint(snapshot: ReadinessSnapshot): string {
     // Omitting them would let a plan report itself fresh after either changed.
     availability: snapshot.availability,
     provider: { id: snapshot.provider.id, services: snapshot.provider.services },
-    // Only the newest message id — earlier ones cannot change retroactively.
-    lastMessageId: snapshot.messages[snapshot.messages.length - 1]?.id ?? null,
+    // Content, not just the newest id: messages are editable (MessageService
+    // .updateMessage, and the entity carries isEdited/editedAt), so an edit to
+    // an earlier message changes what the agent was told while leaving any
+    // id-only fingerprint identical — a stale plan reporting itself as fresh.
+    messages: snapshot.messages.map((message) => ({ id: message.id, text: message.text })),
   });
 }
 

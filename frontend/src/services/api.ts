@@ -91,7 +91,9 @@ export interface ReadinessPlan {
   findings: ReadinessFinding[];
   verification: {
     droppedCount: number;
-    dropReasons: string[];
+    /** Stripped per reader by the API — the reasons quote rejected findings,
+     *  which may be private to the other role. Only the count is exposed. */
+    dropReasons?: string[];
     semanticReviewRan: boolean;
   };
   generatedAt: string;

@@ -33,9 +33,15 @@ export interface ReadinessFinding {
 export type ReadinessLevel = 'ready' | 'needs_attention' | 'blocked' | 'incomplete';
 
 export interface ReadinessVerification {
-  /** Findings the model produced but validation removed, with the reason. */
+  /** How many findings the model produced that validation removed. */
   droppedCount: number;
-  dropReasons: string[];
+  /**
+   * Why each was dropped. These strings quote the rejected finding's text, so a
+   * `customer_only` or `provider_only` statement can appear here — they are kept
+   * in the stored run for audit and **stripped per reader** by `applyRoleFilter`.
+   * Never return them to a participant.
+   */
+  dropReasons?: string[];
   /** False when the semantic pass could not run; findings are then unreviewed. */
   semanticReviewRan: boolean;
 }
@@ -88,11 +94,16 @@ export interface ReadinessSnapshot {
     totalAmount: number;
     paymentStatus: string;
     specialInstructions: string | null;
+    /**
+     * Deliberately no street line. The agent only needs to know whether an
+     * address exists and roughly where it is; shipping the exact address to a
+     * third-party model adds identifying data without improving a finding.
+     */
     location: {
-      address: string;
       city: string;
       state: string;
       zipCode: string;
+      hasStreetAddress: boolean;
       hasCoordinates: boolean;
     };
   };

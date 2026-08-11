@@ -151,6 +151,14 @@ export function applyRoleFilter(plan: ReadinessPlan, role: 'customer' | 'provide
   return {
     ...plan,
     findings,
+    verification: {
+      ...plan.verification,
+      // dropReasons quote the rejected finding's text, so a dropped
+      // customer_only/provider_only statement would reach the opposite role
+      // through this field even though the finding itself was filtered out.
+      // The count is all a participant needs; the reasons stay in the stored run.
+      dropReasons: undefined,
+    },
     // Recompute so a hidden blocking finding cannot leak through the headline.
     readiness: computeReadiness(findings, plan.readiness === 'incomplete'),
   };

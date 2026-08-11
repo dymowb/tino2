@@ -8,7 +8,8 @@ import {
 import { renderSnapshotForPrompt } from '@/agents/workflows/booking-readiness/prompt';
 import { fingerprint } from '@/agents/workflows/shared/SourceFingerprint';
 import { WorkflowRunner } from '@/agents/workflows/shared/WorkflowRunner';
-import { ReadinessFinding } from '@/agents/workflows/booking-readiness/types';
+import { ReadinessFinding, ReadinessPlan } from '@/agents/workflows/booking-readiness/types';
+import { applyRoleFilter } from '@/agents/workflows/booking-readiness/coordinator';
 import {
   BOOKING_ID,
   MESSAGE_ID,
@@ -128,6 +129,37 @@ describe('role visibility', () => {
     expect(customerView.some((f) => f.visibility === 'provider_only')).toBe(false);
     expect(providerView.some((f) => f.visibility === 'customer_only')).toBe(false);
   });
+
+  it('does not leak a dropped private finding through dropReasons', () => {
+    // dropReasons quote the rejected statement, so filtering findings alone is
+    // not enough — the text would reach the opposite role through this field.
+    // Deliberately not any visible finding's text: a role legitimately sees its
+    // own private findings, so reusing one would fail for the wrong reason.
+    const secret = 'CUSTOMER_ONLY_TEXT_THAT_MUST_NEVER_REACH_THE_PROVIDER';
+    const plan: ReadinessPlan = {
+      bookingId: BOOKING_ID,
+      sourceFingerprint: 'fp',
+      readiness: 'needs_attention',
+      agreedScope: [],
+      exclusions: [],
+      findings,
+      verification: {
+        droppedCount: 1,
+        dropReasons: [`duplicate of "${secret}"`],
+        semanticReviewRan: true,
+      },
+      generatedAt: new Date().toISOString(),
+      unavailableSections: [],
+    };
+
+    for (const role of ['customer', 'provider'] as const) {
+      const view = applyRoleFilter(plan, role);
+      expect(view.verification.dropReasons).toBeUndefined();
+      expect(JSON.stringify(view)).not.toContain(secret);
+      // The count still reaches the reader.
+      expect(view.verification.droppedCount).toBe(1);
+    }
+  });
 });
 
 describe('prompt rendering and the injection boundary', () => {
@@ -169,6 +201,14 @@ describe('prompt rendering and the injection boundary', () => {
     expect(renderSnapshotForPrompt(sparseSnapshot())).toContain('address never geocoded');
   });
 
+  it('never sends the street address to the model', () => {
+    // The agent needs to know whether an address exists, not what it is.
+    const rendered = renderSnapshotForPrompt(cleanSnapshot());
+    expect(rendered).not.toContain('Rua Lauro Linhares');
+    expect(rendered).toContain('Florianópolis, SC');
+    expect(renderSnapshotForPrompt(sparseSnapshot())).toContain('no street address recorded');
+  });
+
   it('tells the agent the quote outranks the request', () => {
     const rendered = renderSnapshotForPrompt(contradictorySnapshot());
     expect(rendered).toContain('authoritative on price, duration and terms');
@@ -185,6 +225,24 @@ describe('source fingerprint', () => {
     expect(fingerprint({ scheduledDate: '2026-09-01' })).not.toBe(
       fingerprint({ scheduledDate: '2026-09-02' })
     );
+  });
+
+  it('changes when an existing message is edited, not just when one is added', () => {
+    // Messages are editable (MessageService.updateMessage; the entity carries
+    // isEdited/editedAt), so hashing only the newest id would let an edited
+    // instruction leave a stale plan reporting itself as fresh.
+    const before = [
+      { id: 'm1', text: 'Gate code is 4821' },
+      { id: 'm2', text: 'See you Saturday' },
+    ];
+    const after = [
+      { id: 'm1', text: 'Gate code changed to 9137' },
+      { id: 'm2', text: 'See you Saturday' },
+    ];
+
+    expect(fingerprint({ messages: before })).not.toBe(fingerprint({ messages: after }));
+    // Same ids in both — an id-only hash would have collided here.
+    expect(before.map((m) => m.id)).toEqual(after.map((m) => m.id));
   });
 
   it('ignores undefined properties so optional fields do not churn the hash', () => {
