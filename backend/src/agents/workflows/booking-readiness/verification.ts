@@ -3,6 +3,7 @@ import logger from '@/config/logger';
 import { aiGateway } from '@/agents/services/ai-gateway.service';
 import { parseLlmJson } from '@/agents/utils/llm-json';
 import { excerptFor } from './snapshot.service';
+import { UNTRUSTED_DATA_NOTICE, field } from './prompt';
 import {
   EvidenceRef,
   FindingCategory,
@@ -107,13 +108,20 @@ export async function semanticReview(
 ): Promise<{ kept: ReadinessFinding[]; dropReasons: string[]; ran: boolean }> {
   if (findings.length === 0) return { kept: [], dropReasons: [], ran: true };
 
+  // Quote terms are provider-authored and finding statements are derived from
+  // participant text, so both get the same delimiting as the scope prompt.
+  // Without it a provider can put instructions in a quote term and make the
+  // reviewer discard legitimate findings, which reads to the user as "ready".
   const terms = snapshot.quote
     ? `price ${snapshot.quote.estimatedPrice}, duration ${snapshot.quote.estimatedDuration} minutes, ` +
-      `terms: ${snapshot.quote.terms.map((t) => `${t.item}=${t.description}`).join('; ') || 'none'}`
+      `terms: ${
+        snapshot.quote.terms.map((t) => `${field(t.item)}=${field(t.description)}`).join('; ') ||
+        'none'
+      }`
     : 'no accepted quote on this booking';
 
   const numbered = findings
-    .map((finding, i) => `${i + 1}. [${finding.severity}] ${finding.statement}`)
+    .map((finding, i) => `${i + 1}. [${finding.severity}] ${field(finding.statement)}`)
     .join('\n');
 
   try {
@@ -123,7 +131,8 @@ export async function semanticReview(
         '(a) the finding contradicts the accepted quote terms;\n' +
         '(b) the finding is speculation rather than something the data supports.\n' +
         'Return ONLY JSON: {"reject": [{"index": <1-based>, "reason": "..."}]}\n' +
-        'Reject sparingly. If a finding is merely cautious or obvious, keep it.',
+        'Reject sparingly. If a finding is merely cautious or obvious, keep it.\n' +
+        UNTRUSTED_DATA_NOTICE,
       userMessage: `ACCEPTED TERMS: ${terms}\n\nFINDINGS:\n${numbered}`,
       maxTokens: 600,
       signal,

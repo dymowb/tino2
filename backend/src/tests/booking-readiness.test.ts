@@ -280,6 +280,20 @@ describe('prompt rendering and the injection boundary', () => {
     expect(exposed).toEqual([]);
   });
 
+  it('delimits participant text in the semantic reviewer prompt too', () => {
+    // The reviewer decides which findings survive, so injected instructions in a
+    // provider-authored quote term could suppress legitimate findings and
+    // produce a false "ready". Same delimiting as the scope prompt.
+    const source = readFileSync(
+      join(__dirname, '../agents/workflows/booking-readiness/verification.ts'),
+      'utf-8'
+    );
+    expect(source).toContain('field(t.item)');
+    expect(source).toContain('field(t.description)');
+    expect(source).toContain('field(finding.statement)');
+    expect(source).toContain('UNTRUSTED_DATA_NOTICE');
+  });
+
   it('tells the agent that field and message content is untrusted', () => {
     const rendered = renderSnapshotForPrompt(cleanSnapshot());
     expect(rendered).toContain('HOW TO READ THIS DATA');

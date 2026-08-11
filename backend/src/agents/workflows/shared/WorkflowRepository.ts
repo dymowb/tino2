@@ -17,6 +17,19 @@ export class WorkflowAlreadyRunningError extends Error {
 
 const UNIQUE_VIOLATION = '23505';
 
+/**
+ * How long an in-flight run may hold the slot before another caller may reclaim
+ * it. Comfortably longer than the slowest possible run (the readiness stage
+ * timeouts total ~135s), so this only ever fires for a genuinely dead process.
+ */
+const LEASE_MS = 15 * 60 * 1000;
+
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    error instanceof QueryFailedError && (error as { code?: string }).code === UNIQUE_VIOLATION
+  );
+}
+
 export interface CreateRunInput {
   workflowType: string;
   subjectType: string;
@@ -45,21 +58,52 @@ export class WorkflowRepository {
    * Claims the in-flight slot for this subject. Relies on the partial unique
    * index rather than a read-then-write check, so two concurrent requests
    * cannot both pass a check and then both start an expensive model run.
+   *
+   * The slot is a **lease, not a permanent lock**. A process that dies between
+   * the insert and the completion leaves a `running` row that nothing will ever
+   * transition, and the unique index would then reject every future run for that
+   * subject forever. On conflict we therefore reclaim a lease that has already
+   * outlived any possible run.
    */
   async createRunning(input: CreateRunInput): Promise<AgentWorkflowRun> {
     try {
-      return await this.repo.save(
-        this.repo.create({ ...input, status: WorkflowRunStatus.RUNNING })
-      );
+      return await this.insertRunning(input);
     } catch (error) {
-      if (
-        error instanceof QueryFailedError &&
-        (error as { code?: string }).code === UNIQUE_VIOLATION
-      ) {
-        throw new WorkflowAlreadyRunningError();
+      if (!isUniqueViolation(error)) throw error;
+
+      if (!(await this.reclaimExpiredLease(input))) throw new WorkflowAlreadyRunningError();
+
+      try {
+        return await this.insertRunning(input);
+      } catch (retryError) {
+        // Another caller took the reclaimed slot first — genuinely busy now.
+        if (isUniqueViolation(retryError)) throw new WorkflowAlreadyRunningError();
+        throw retryError;
       }
-      throw error;
     }
+  }
+
+  private async insertRunning(input: CreateRunInput): Promise<AgentWorkflowRun> {
+    return this.repo.save(this.repo.create({ ...input, status: WorkflowRunStatus.RUNNING }));
+  }
+
+  /** Fails any in-flight run older than the lease, freeing the slot. */
+  private async reclaimExpiredLease(input: CreateRunInput): Promise<boolean> {
+    const result = await this.repo
+      .createQueryBuilder()
+      .update(AgentWorkflowRun)
+      .set({
+        status: WorkflowRunStatus.FAILED,
+        errorSummary: 'Abandoned: run exceeded its lease without completing',
+      })
+      .where('"workflowType" = :workflowType', { workflowType: input.workflowType })
+      .andWhere('"subjectType" = :subjectType', { subjectType: input.subjectType })
+      .andWhere('"subjectId" = :subjectId', { subjectId: input.subjectId })
+      .andWhere('status IN (:...statuses)', { statuses: IN_FLIGHT_STATUSES })
+      .andWhere('"createdAt" < :cutoff', { cutoff: new Date(Date.now() - LEASE_MS) })
+      .execute();
+
+    return (result.affected ?? 0) > 0;
   }
 
   async complete(runId: string, input: CompleteRunInput): Promise<AgentWorkflowRun | null> {
