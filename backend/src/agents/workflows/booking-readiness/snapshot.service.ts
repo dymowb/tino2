@@ -196,10 +196,27 @@ export async function buildSnapshot(booking: Booking): Promise<ReadinessSnapshot
  * here, attributed by role rather than name, and delimited at render time.
  */
 async function loadBookingMessages(booking: Booking): Promise<[SnapshotMessage[], boolean]> {
-  const conversations = await AppDataSource.getRepository(Conversation)
+  const providerUserId = await resolveProviderUserId(booking.providerId);
+  if (!providerUserId) return [[], false];
+
+  // `metadata.bookingId` alone is not proof of a legitimate booking conversation.
+  // MessageService deactivates any booking conversation whose participants are
+  // not exactly the two booking parties (it calls them squatted/poisoned), so
+  // reading by metadata alone would resurrect precisely those records, feed them
+  // to a model and surface them to participants as evidence. Apply the same rule
+  // the messaging service applies: active, and participants exactly these two.
+  const bookingParties = new Set([booking.customerId, providerUserId]);
+  const candidates = await AppDataSource.getRepository(Conversation)
     .createQueryBuilder('conversation')
+    .leftJoinAndSelect('conversation.participants', 'participants')
     .where("conversation.metadata ->> 'bookingId' = :bookingId", { bookingId: booking.id })
+    .andWhere('conversation.isActive = :isActive', { isActive: true })
     .getMany();
+
+  const conversations = candidates.filter((conversation) => {
+    const ids = new Set((conversation.participants || []).map((participant) => participant.id));
+    return ids.size === bookingParties.size && [...bookingParties].every((id) => ids.has(id));
+  });
 
   if (conversations.length === 0) return [[], false];
 
@@ -210,7 +227,6 @@ async function loadBookingMessages(booking: Booking): Promise<[SnapshotMessage[]
   });
 
   const truncated = rows.length > MESSAGE_WINDOW;
-  const providerUserId = await resolveProviderUserId(booking.providerId);
 
   const messages = rows
     .slice(0, MESSAGE_WINDOW)
