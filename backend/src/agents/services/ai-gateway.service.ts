@@ -144,12 +144,16 @@ export class AiGateway {
 
   async generate(
     profile: AiProfileName,
-    request: AiTextRequest
+    request: AiTextRequest,
+    // Callers with their own deadline must pass it, or the gateway's 30s default
+    // cuts a legitimately slower call short and starts a fallback beneath them.
+    options: { timeoutMs?: number } = {}
   ): Promise<AiGatewayResult<AiTextResponse>> {
     return this.execute({
       request,
       targets: getAiProfileChain(profile),
       validate: (response) => response,
+      timeoutMs: options.timeoutMs,
     });
   }
 
@@ -207,9 +211,14 @@ export class AiGateway {
       for (let retry = 0; retry <= retries; retry += 1) {
         attempts += 1;
         try {
+          // Each attempt gets its own controller so the timeout (or a caller
+          // abort) actually cancels the provider request. Racing alone would
+          // start the fallback while the abandoned call keeps generating and
+          // billing — the failure this gateway is supposed to contain.
           const response = await this.withTimeout(
-            adapter.generate(target.model, options.request),
-            timeoutMs
+            (signal) => adapter.generate(target.model, { ...options.request, signal }),
+            timeoutMs,
+            options.request.signal
           );
           const value = options.validate(response);
           logger.info('AI gateway request succeeded', {
@@ -234,20 +243,33 @@ export class AiGateway {
       : new Error('No configured AI provider completed the request');
   }
 
-  private async withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  private async withTimeout<T>(
+    start: (signal: AbortSignal) => Promise<T>,
+    timeoutMs: number,
+    callerSignal?: AbortSignal
+  ): Promise<T> {
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    callerSignal?.addEventListener('abort', abort, { once: true });
+    if (callerSignal?.aborted) controller.abort();
+
     let timer: NodeJS.Timeout | undefined;
     try {
       return await Promise.race([
-        promise,
+        start(controller.signal),
         new Promise<T>((_, reject) => {
-          timer = setTimeout(
-            () => reject(new Error(`AI request timed out after ${timeoutMs}ms`)),
-            timeoutMs
-          );
+          timer = setTimeout(() => {
+            controller.abort();
+            reject(new Error(`AI request timed out after ${timeoutMs}ms`));
+          }, timeoutMs);
         }),
       ]);
+    } catch (error) {
+      controller.abort();
+      throw error;
     } finally {
       if (timer) clearTimeout(timer);
+      callerSignal?.removeEventListener('abort', abort);
     }
   }
 }

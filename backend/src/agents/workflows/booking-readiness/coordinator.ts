@@ -119,7 +119,7 @@ function buildStages(snapshot: ReadinessSnapshot): WorkflowStage<ReadinessWorkfl
         required: true,
         timeoutMs: SCOPE_TIMEOUT_MS,
         run: async (_state, signal) => {
-          const { output } = await runScopeAgent(snapshot, signal);
+          const { output } = await runScopeAgent(snapshot, signal, SCOPE_TIMEOUT_MS);
           return { scope: output };
         },
       },
@@ -134,7 +134,7 @@ function buildStages(snapshot: ReadinessSnapshot): WorkflowStage<ReadinessWorkfl
             state.scope?.findings ?? [],
             state.snapshot
           );
-          const review = await semanticReview(findings, state.snapshot, signal);
+          const review = await semanticReview(findings, state.snapshot, signal, VERIFY_TIMEOUT_MS);
           return {
             verifiedFindings: review.kept,
             verification: buildVerification([...dropReasons, ...review.dropReasons], review.ran),

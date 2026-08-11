@@ -44,21 +44,28 @@ Return ONLY JSON:
 
 export async function runScopeAgent(
   snapshot: ReadinessSnapshot,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  timeoutMs?: number
 ): Promise<{
   output: ScopeAgentOutput;
   inputTokens: number;
   outputTokens: number;
 }> {
-  const result = await aiGateway.generate('reasoning', {
-    systemPrompt: SYSTEM_PROMPT,
-    userMessage: renderSnapshotForPrompt(snapshot),
-    // Generous on purpose. The reasoning profile is Opus 5, where thinking is on
-    // by default and max_tokens caps thinking *plus* the response — a tight
-    // budget silently truncates the JSON mid-object rather than erroring.
-    maxTokens: SCOPE_MAX_TOKENS,
-    signal,
-  });
+  const result = await aiGateway.generate(
+    'reasoning',
+    {
+      systemPrompt: SYSTEM_PROMPT,
+      userMessage: renderSnapshotForPrompt(snapshot),
+      // Generous on purpose. The reasoning profile is Opus 5, where thinking is on
+      // by default and max_tokens caps thinking *plus* the response — a tight
+      // budget silently truncates the JSON mid-object rather than erroring.
+      maxTokens: SCOPE_MAX_TOKENS,
+      signal,
+    },
+    // Without this the gateway applies its own 30s default and would abandon a
+    // valid slower call — and start a fallback — well inside the stage deadline.
+    { timeoutMs }
+  );
 
   const parsed = parseLlmJson<Partial<ScopeAgentOutput>>(result.value.text);
   if (!parsed) {

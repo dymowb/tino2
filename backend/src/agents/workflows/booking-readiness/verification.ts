@@ -104,7 +104,8 @@ export function validateFindings(
 export async function semanticReview(
   findings: ReadinessFinding[],
   snapshot: ReadinessSnapshot,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  timeoutMs?: number
 ): Promise<{ kept: ReadinessFinding[]; dropReasons: string[]; ran: boolean }> {
   if (findings.length === 0) return { kept: [], dropReasons: [], ran: true };
 
@@ -125,18 +126,22 @@ export async function semanticReview(
     .join('\n');
 
   try {
-    const result = await aiGateway.generate('fast', {
-      systemPrompt:
-        'You review draft findings about a booked service for two failure modes only:\n' +
-        '(a) the finding contradicts the accepted quote terms;\n' +
-        '(b) the finding is speculation rather than something the data supports.\n' +
-        'Return ONLY JSON: {"reject": [{"index": <1-based>, "reason": "..."}]}\n' +
-        'Reject sparingly. If a finding is merely cautious or obvious, keep it.\n' +
-        UNTRUSTED_DATA_NOTICE,
-      userMessage: `ACCEPTED TERMS: ${terms}\n\nFINDINGS:\n${numbered}`,
-      maxTokens: 600,
-      signal,
-    });
+    const result = await aiGateway.generate(
+      'fast',
+      {
+        systemPrompt:
+          'You review draft findings about a booked service for two failure modes only:\n' +
+          '(a) the finding contradicts the accepted quote terms;\n' +
+          '(b) the finding is speculation rather than something the data supports.\n' +
+          'Return ONLY JSON: {"reject": [{"index": <1-based>, "reason": "..."}]}\n' +
+          'Reject sparingly. If a finding is merely cautious or obvious, keep it.\n' +
+          UNTRUSTED_DATA_NOTICE,
+        userMessage: `ACCEPTED TERMS: ${terms}\n\nFINDINGS:\n${numbered}`,
+        maxTokens: 600,
+        signal,
+      },
+      { timeoutMs }
+    );
 
     const parsed = parseLlmJson<{ reject?: Array<{ index: number; reason: string }> }>(
       result.value.text
