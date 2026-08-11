@@ -183,7 +183,10 @@ export async function buildSnapshot(booking: Booking): Promise<ReadinessSnapshot
     },
     payment: {
       status: booking.paymentStatus,
-      escrowHeld: booking.paymentStatus === 'paid',
+      // holdPlacedAt is set when the provider starts the service (manual-capture
+      // hold); paymentStatus only becomes 'paid' later, at capture.
+      holdPlaced: Boolean(booking.holdPlacedAt),
+      captured: booking.paymentStatus === 'paid',
     },
     messages,
     messagesTruncated,

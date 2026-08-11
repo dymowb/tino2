@@ -48,10 +48,23 @@ export function cleanSnapshot(): ReadinessSnapshot {
       services: ['Limpeza Residencial'],
     },
     availability: { conflictingBookingCount: 0, checkedWindowHours: 4 },
-    payment: { status: 'paid', escrowHeld: true },
+    payment: { status: 'paid', holdPlaced: true, captured: true },
     messages: [],
     messagesTruncated: false,
   };
+}
+
+/**
+ * In progress with the escrow hold placed but not yet captured — `paymentStatus`
+ * is still `pending` here, which is exactly the state that used to be reported
+ * as "no escrow" and produced false payment findings.
+ */
+export function heldEscrowSnapshot(): ReadinessSnapshot {
+  const snapshot = cleanSnapshot();
+  snapshot.booking.status = 'in_progress';
+  snapshot.booking.paymentStatus = 'pending';
+  snapshot.payment = { status: 'pending', holdPlaced: true, captured: false };
+  return snapshot;
 }
 
 /** Quote and request disagree on the service — a real contradiction. */

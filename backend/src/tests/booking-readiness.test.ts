@@ -15,6 +15,7 @@ import {
   MESSAGE_ID,
   cleanSnapshot,
   contradictorySnapshot,
+  heldEscrowSnapshot,
   maliciousMessageSnapshot,
   rawFindings,
   sparseSnapshot,
@@ -292,6 +293,16 @@ describe('prompt rendering and the injection boundary', () => {
     expect(source).toContain('field(t.description)');
     expect(source).toContain('field(finding.statement)');
     expect(source).toContain('UNTRUSTED_DATA_NOTICE');
+  });
+
+  it('reports a placed escrow hold even while paymentStatus is still pending', () => {
+    // The hold is placed when the service starts; capture happens on completion,
+    // so paymentStatus stays 'pending' throughout. Deriving escrow from it told
+    // the agent the money was not secured and produced false payment findings.
+    const rendered = renderSnapshotForPrompt(heldEscrowSnapshot());
+    expect(rendered).toContain('escrowHoldPlaced: true');
+    expect(rendered).toContain('fundsCaptured: false');
+    expect(rendered).toContain('held booking legitimately shows status "pending"');
   });
 
   it('tells the agent that field and message content is untrusted', () => {

@@ -123,7 +123,10 @@ export function renderSnapshotForPrompt(snapshot: ReadinessSnapshot): string {
     [
       '## PAYMENT (source: "booking")',
       `status: ${snapshot.payment.status}`,
-      `escrowHeld: ${snapshot.payment.escrowHeld}`,
+      `escrowHoldPlaced: ${snapshot.payment.holdPlaced}`,
+      `fundsCaptured: ${snapshot.payment.captured}`,
+      'Note: funds are held in escrow from the start of the service and captured',
+      'on completion, so a held booking legitimately shows status "pending".',
     ].join('\n')
   );
 

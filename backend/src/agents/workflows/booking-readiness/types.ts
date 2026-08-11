@@ -131,9 +131,16 @@ export interface ReadinessSnapshot {
     conflictingBookingCount: number;
     checkedWindowHours: number;
   };
+  /**
+   * Escrow is a two-step lifecycle: the hold is placed when the service starts
+   * and the funds are captured only on completion. `paymentStatus` stays
+   * `pending` for the whole held period, so it cannot stand in for "is the money
+   * secured" — an eligible in_progress booking would read as unpaid.
+   */
   payment: {
     status: string;
-    escrowHeld: boolean;
+    holdPlaced: boolean;
+    captured: boolean;
   };
   messages: SnapshotMessage[];
   /** Set when the message window was truncated, so agents don't assume completeness. */
