@@ -3,6 +3,43 @@
 > Lean by design (per CLAUDE.md): current status + roadmap + resume point only.
 > Detailed completed-work notes live in `Tests/history/HISTORICAL_CONTEXT.md` and git history.
 
+## Current Status (2026-08-12) — Codex audit remediation, 5 stacked PRs open
+
+Source: `docs/code-audits/2026-08-10-complete-code-analysis.md` (Codex, audited `05d6ebb`).
+All findings re-verified against `main` first. 18 of 20 confirmed as written; **C2 was
+mis-framed** (points at a dormant `/payments` path) and the audit **missed the real money
+bug** — the live escrow hold charged `usd` for BRL prices, a ~5.4x overcharge.
+
+**Stacked PRs (each based on the previous — merge in order, retarget as they land):**
+
+| PR | Branch | Covers |
+|----|--------|--------|
+| #10 | `fix/payment-authorization` | C1 (refund had **no** ownership check), M1 (providerId vs userId on 3 endpoints) |
+| #11 | `fix/money-units-currency` | C2, L2, the BRL-vs-USD bug, refund serialization |
+| #12 | `fix/private-attachments` | H1 (attachments were world-readable static files) |
+| #13 | `feat/configurable-currency` | Tier 1: currency/locale as `app_settings` |
+| #14 | `fix/token-type-separation` | H7 (access token redeemable as refresh token) |
+
+**Policy call worth revisiting:** refunds are now **provider/admin only**. The paying customer
+cannot self-refund — their route is the existing dispute flow. The audit suggested allowing
+them; `processRefund` requires `SUCCEEDED` (money already captured), so self-refund after
+delivery would be fraud. Easy to loosen.
+
+**Codex review rounds (all fixed):** refund read-modify-write race → row lock held across the
+Stripe call; attachment self-grant bypass → write-time ownership check + uploader-anchored read;
+legacy attachments orphaned → backfill migration; Unicode filenames 500'd → RFC 5987 (busboy
+also hands filenames back as latin1); **attachment URL token exfiltration** → canonical-path
+allowlist both ends; invalid locale threw *after* the Stripe call → validated; `/config` and the
+payment path resolved currency independently → both now use `PlatformSettingsService`.
+
+**Ran against the shared dev/prod DB** (additive only): `message_attachments` table + the legacy
+backfill (6 rows migrated, 0 stale URLs), and `platform_currency`/`platform_locale` settings.
+`npm run migrate` is broken (points at a nonexistent file — audit H2); use `npm run migration:run`.
+
+**Deliberately not done:** M5 account deletion (decided: relabel as "Deactivate", not built),
+M10 lint baseline (churn), H3 traceability matrix. Remaining audit items (H2/H4/H5/H6, M2–M9)
+were scoped but not started — see the plan in this session's history.
+
 ## Current Status (2026-08-09) — BR-1 Booking Readiness Copilot delivered (read-only slice)
 
 Roadmap milestone 3 (`docs/07-Agentic-Product-Roadmap.md` §3), phase **BR-1**. Design decisions
