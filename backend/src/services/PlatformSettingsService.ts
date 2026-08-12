@@ -29,12 +29,30 @@ const CACHE_TTL_MS = 60_000;
 
 let cache: { currency: string; locale: string; loadedAt: number } | null = null;
 
-async function load(): Promise<{ currency: string; locale: string }> {
-  const envCurrency = process.env.PLATFORM_CURRENCY?.toUpperCase();
-  const envLocale = process.env.PLATFORM_LOCALE;
+/**
+ * True when Intl can actually use this tag. Both the canonicalisation and the
+ * formatter are exercised — a tag can be structurally valid yet still be rejected
+ * when a formatter is constructed with it.
+ */
+function isUsableLocale(locale: string): boolean {
+  try {
+    Intl.getCanonicalLocales(locale);
+    new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(1);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
-  let currency = envCurrency || DEFAULT_PLATFORM_CURRENCY;
-  let locale = envLocale || DEFAULT_PLATFORM_LOCALE;
+async function load(): Promise<{ currency: string; locale: string }> {
+  const envCurrency = process.env.PLATFORM_CURRENCY?.trim().toUpperCase();
+  const envLocale = process.env.PLATFORM_LOCALE?.trim();
+
+  // Environment values get the same validation as stored ones — a typo in a deploy
+  // env var must not be able to reach Stripe or throw inside a formatter either.
+  let currency =
+    envCurrency && isSupportedCurrency(envCurrency) ? envCurrency : DEFAULT_PLATFORM_CURRENCY;
+  let locale = envLocale && isUsableLocale(envLocale) ? envLocale : DEFAULT_PLATFORM_LOCALE;
 
   try {
     const rows = await AppDataSource.getRepository(AppSettings).find();
@@ -54,7 +72,19 @@ async function load(): Promise<{ currency: string; locale: string }> {
     }
 
     const storedLocale = byKey.get(LOCALE_KEY)?.trim();
-    if (storedLocale) locale = storedLocale;
+    if (storedLocale) {
+      // An invalid tag makes Intl.NumberFormat throw. That throw would land inside
+      // createPaymentIntent *after* the Stripe intent and payment row exist, so the
+      // request would fail while the payment persisted — and the retry would then be
+      // refused as a duplicate. Validate before it can get anywhere near that.
+      if (isUsableLocale(storedLocale)) {
+        locale = storedLocale;
+      } else {
+        logger.error(
+          `Ignoring unusable ${LOCALE_KEY}='${storedLocale}'; falling back to ${locale}`
+        );
+      }
+    }
   } catch (error) {
     // Settings are a refinement, not a dependency — a database hiccup must not take
     // the payment path down with it.

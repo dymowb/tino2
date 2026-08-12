@@ -3,11 +3,8 @@ import { AppDataSource } from '@/config/database';
 import { AppSettings } from '@/models/AppSettings';
 import logger from '@/config/logger';
 import { getAiConfigurationView } from '@/services/AiConfigurationService';
-import {
-  DEFAULT_PLATFORM_CURRENCY,
-  DEFAULT_PLATFORM_LOCALE,
-  isSupportedCurrency,
-} from '@/utils/money';
+import { DEFAULT_PLATFORM_CURRENCY, DEFAULT_PLATFORM_LOCALE } from '@/utils/money';
+import { getPlatformCurrency, getPlatformLocale } from '@/services/PlatformSettingsService';
 
 const router = Router();
 
@@ -25,12 +22,11 @@ const PUBLIC_FLAGS: Record<string, { key: string; default: boolean }> = {
   bookingReadinessEnabled: { key: 'booking_readiness_enabled', default: false },
 };
 
-// String settings. Money formatting has to agree between server and client, so the
-// client reads the same values the payment path uses rather than hardcoding them.
-const PUBLIC_STRINGS: Record<string, { key: string; default: string }> = {
-  platformCurrency: { key: 'platform_currency', default: DEFAULT_PLATFORM_CURRENCY },
-  platformLocale: { key: 'platform_locale', default: DEFAULT_PLATFORM_LOCALE },
-};
+// Money formatting has to agree between server and client, so the currency and
+// locale are resolved through the *same* service the payment path uses rather than
+// being read from app_settings a second time here. Re-reading independently meant a
+// deployment configuring PLATFORM_CURRENCY via the environment (with no database
+// row) charged in that currency while telling the client to display BRL.
 
 // GET /api/v1/config
 router.get('/', async (_req: Request, res: Response) => {
@@ -48,16 +44,8 @@ router.get('/', async (_req: Request, res: Response) => {
       const row = byKey.get(key);
       data[field] = row ? row.value === 'true' : def;
     }
-    for (const [field, { key, default: def }] of Object.entries(PUBLIC_STRINGS)) {
-      const stored = byKey.get(key)?.value?.trim();
-      // Currency is validated so a typo cannot desync client display from what the
-      // server actually charges.
-      if (field === 'platformCurrency') {
-        data[field] = stored && isSupportedCurrency(stored) ? stored.toUpperCase() : def;
-      } else {
-        data[field] = stored || def;
-      }
-    }
+    data.platformCurrency = await getPlatformCurrency();
+    data.platformLocale = await getPlatformLocale();
     res.json({ success: true, data: { ...data, ai: getAiConfigurationView() } });
   } catch (error) {
     logger.error('Error fetching public config:', error);
@@ -65,7 +53,8 @@ router.get('/', async (_req: Request, res: Response) => {
     const data: Record<string, number | boolean | string> = {};
     for (const [field, { default: def }] of Object.entries(PUBLIC_SETTINGS)) data[field] = def;
     for (const [field, { default: def }] of Object.entries(PUBLIC_FLAGS)) data[field] = def;
-    for (const [field, { default: def }] of Object.entries(PUBLIC_STRINGS)) data[field] = def;
+    data.platformCurrency = DEFAULT_PLATFORM_CURRENCY;
+    data.platformLocale = DEFAULT_PLATFORM_LOCALE;
     res.json({ success: true, data: { ...data, ai: getAiConfigurationView() } });
   }
 });
