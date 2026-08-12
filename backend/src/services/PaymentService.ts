@@ -10,7 +10,6 @@ import config from '@/config/environment';
 import notificationService from '@/services/NotificationService';
 import { NotificationType } from '@/models/Notification';
 import {
-  DEFAULT_PLATFORM_CURRENCY,
   formatMajorUnits,
   fromStripeMinorUnits,
   roundMajorUnits,
