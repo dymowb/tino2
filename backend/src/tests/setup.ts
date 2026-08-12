@@ -85,7 +85,21 @@ beforeEach(async () => {
     const quoted = tables
       .map(({ tablename }: { tablename: string }) => `"${tablename}"`)
       .join(', ');
-    await AppDataSource.query(`TRUNCATE TABLE ${quoted} RESTART IDENTITY CASCADE`);
+
+    // Several code paths write notifications fire-and-forget, so a previous test's
+    // inserts can still be in flight when this runs and deadlock against the
+    // TRUNCATE's ACCESS EXCLUSIVE locks. That is a harness timing artifact, not a
+    // product fault, so retry briefly before failing the run.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await AppDataSource.query(`TRUNCATE TABLE ${quoted} RESTART IDENTITY CASCADE`);
+        break;
+      } catch (error) {
+        const isDeadlock = error instanceof Error && /deadlock detected/i.test(error.message);
+        if (!isDeadlock || attempt >= 4) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 100 * (attempt + 1)));
+      }
+    }
   }
   jest.clearAllMocks();
 });

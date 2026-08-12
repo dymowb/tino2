@@ -21,6 +21,22 @@ const messageUpload = multer({
   limits: { fileSize: 10 * 1024 * 1024, files: 1 },
 });
 
+/**
+ * Build the filename part of a Content-Disposition header (RFC 6266 / RFC 5987).
+ *
+ * Node refuses to set a header containing bytes outside Latin-1, so interpolating a
+ * filename directly means any upload named in CJK, Cyrillic or with an emoji uploads
+ * fine and then 500s on every download. The ASCII `filename` is a lossy fallback for
+ * old clients; `filename*` carries the real UTF-8 name.
+ */
+function contentDispositionFilename(originalName: string): string {
+  const stripped = originalName.replace(/[\r\n"\\]/g, '_');
+  // eslint-disable-next-line no-control-regex
+  const asciiFallback = stripped.replace(/[^\x20-\x7e]/g, '_') || 'attachment';
+  const encoded = encodeURIComponent(stripped);
+  return `filename="${asciiFallback}"; filename*=UTF-8''${encoded}`;
+}
+
 export class MessageController {
   createConversation = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -333,7 +349,10 @@ export class MessageController {
 
         const stored = await messageAttachmentService.store(
           req.user!.userId,
-          req.file.originalname,
+          // busboy hands back multipart filenames as UTF-8 bytes read as latin1, so a
+          // name like "写真.png" arrives mojibake'd. Reinterpret before storing —
+          // otherwise the corruption is persisted and every later render shows it.
+          Buffer.from(req.file.originalname, 'latin1').toString('utf8'),
           req.file.buffer
         );
 
@@ -376,9 +395,11 @@ export class MessageController {
       res.setHeader('Content-Type', attachment.mimeType);
       res.setHeader('X-Content-Type-Options', 'nosniff');
       res.setHeader('Cache-Control', 'private, max-age=0, no-store');
-      const safeName = attachment.originalName.replace(/["\\\r\n]/g, '_');
       const disposition = attachment.mimeType.startsWith('image/') ? 'inline' : 'attachment';
-      res.setHeader('Content-Disposition', `${disposition}; filename="${safeName}"`);
+      res.setHeader(
+        'Content-Disposition',
+        `${disposition}; ${contentDispositionFilename(attachment.originalName)}`
+      );
       // The client reads the filename from this header to label the attachment, so
       // it has to survive a cross-origin deployment (VITE_API_URL on another host).
       res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');

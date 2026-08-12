@@ -1241,9 +1241,22 @@ class ApiService {
     const disposition = response.headers["content-disposition"] as
       | string
       | undefined;
-    const match = disposition?.match(/filename="([^"]*)"/);
 
-    return { blob: response.data as Blob, fileName: match?.[1] ?? null };
+    // Prefer the RFC 5987 `filename*`, which carries the real UTF-8 name; the plain
+    // `filename` is an ASCII-only fallback with non-Latin-1 characters replaced.
+    const extended = disposition?.match(/filename\*=UTF-8''([^;]+)/i);
+    const plain = disposition?.match(/filename="([^"]*)"/);
+    let fileName: string | null = null;
+    if (extended?.[1]) {
+      try {
+        fileName = decodeURIComponent(extended[1]);
+      } catch {
+        fileName = null;
+      }
+    }
+    if (!fileName) fileName = plain?.[1] ?? null;
+
+    return { blob: response.data as Blob, fileName };
   }
 
   async getConversation(conversationId: string): Promise<any> {
