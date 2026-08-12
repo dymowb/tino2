@@ -3,6 +3,7 @@ import App from '@/app';
 import { AppDataSource } from '@/config/database';
 import { BasicUser } from '@/models/BasicUser';
 import jwtService from '@/utils/jwt';
+import { resolveSocketUser } from '@/utils/socketAuth';
 
 /**
  * Access and refresh tokens are signed with the same secret and carry the same
@@ -90,6 +91,22 @@ describe('access and refresh token separation', () => {
       .get('/api/v1/auth/profile')
       .set('Authorization', `Bearer ${legacy}`)
       .expect(200);
+  });
+
+  it('refuses a refresh token on the Socket.IO handshake', async () => {
+    const { accessToken, refreshToken } = await account('token-socket@example.com');
+
+    // The handshake is a separate authentication entry point — it does not pass
+    // through the HTTP middleware — so it needs its own type check.
+    expect(resolveSocketUser(refreshToken)).toBeNull();
+    expect(resolveSocketUser(accessToken)).toMatchObject({ userId: expect.any(String) });
+  });
+
+  it('refuses a missing or malformed Socket.IO handshake token', async () => {
+    expect(resolveSocketUser(undefined)).toBeNull();
+    expect(resolveSocketUser('')).toBeNull();
+    expect(resolveSocketUser('not-a-jwt')).toBeNull();
+    expect(resolveSocketUser({ token: 'object' })).toBeNull();
   });
 
   it('no longer authenticates from a query-string token', async () => {

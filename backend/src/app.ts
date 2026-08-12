@@ -39,7 +39,7 @@ import configRoutes from '@/routes/config';
 import openApiRoutes from '@/routes/openapi';
 import messageService from '@/services/MessageService';
 import notificationService from '@/services/NotificationService';
-import jwt from './utils/jwt';
+import { resolveSocketUser } from '@/utils/socketAuth';
 import { requestContextMiddleware } from '@/observability/requestContext';
 import { getJobMetrics } from '@/observability/jobMetrics';
 import { validateAiConfiguration } from '@/agents/services/ai-gateway.service';
@@ -214,15 +214,13 @@ export class App {
 
   private initializeSocketIO(): void {
     this.io.use((socket, next) => {
-      const token = socket.handshake.auth.token;
-      if (!token) {
-        return next(new Error('Authentication error: token missing'));
-      }
-      const decoded = jwt.verifyToken(token);
-      if (!decoded) {
+      // The handshake is a bearer credential like any other, so resolveSocketUser
+      // demands an access token — a refresh token must not authenticate a socket.
+      const user = resolveSocketUser(socket.handshake.auth?.token);
+      if (!user) {
         return next(new Error('Authentication error: invalid token'));
       }
-      socket.data.userId = decoded.userId;
+      socket.data.userId = user.userId;
       next();
     });
 
