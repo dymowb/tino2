@@ -15,6 +15,7 @@ import { t } from '@/i18n';
 import quoteService from '@/services/QuoteService';
 import serviceCategoryService from '@/services/ServiceCategoryService';
 import rebookRefinementService from '@/services/RebookRefinementService';
+import { PLATFORM_CURRENCY, toStripeMinorUnits } from '@/utils/money';
 
 export class BookingController {
   private async loadRebookSource(bookingId: string, customerId: string) {
@@ -685,8 +686,11 @@ export class BookingController {
       let paymentIntent: any;
       try {
         paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(Number(booking.totalAmount) * 100),
-          currency: 'usd',
+          // Every price in this product is quoted in BRL (the UI renders R$, and quote
+          // requests store BRL budgets). This previously said 'usd', so a R$148 booking
+          // authorised $148 — roughly a 5x overcharge on the live escrow path.
+          amount: toStripeMinorUnits(Number(booking.totalAmount), PLATFORM_CURRENCY),
+          currency: PLATFORM_CURRENCY.toLowerCase(),
           customer: customer.stripeCustomerId,
           payment_method: customer.stripePaymentMethodId,
           capture_method: 'manual',

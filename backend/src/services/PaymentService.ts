@@ -9,11 +9,23 @@ import logger from '@/config/logger';
 import config from '@/config/environment';
 import notificationService from '@/services/NotificationService';
 import { NotificationType } from '@/models/Notification';
+import {
+  PLATFORM_CURRENCY,
+  formatMajorUnits,
+  fromStripeMinorUnits,
+  roundMajorUnits,
+  toStripeMinorUnits,
+} from '@/utils/money';
 
 export interface CreatePaymentIntentData {
   bookingId: string;
   customerId: string;
-  amount: number;
+  /**
+   * Accepted for backwards compatibility but **ignored**: the charged amount and
+   * currency are derived from the booking, so a custom client cannot request an
+   * intent for an amount of its own choosing.
+   */
+  amount?: number;
   currency?: string;
   paymentMethod?: PaymentMethod;
 }
@@ -48,6 +60,19 @@ export class PaymentAccessError extends Error {
   constructor(message = 'Unauthorized to access this payment') {
     super(message);
     this.name = 'PaymentAccessError';
+  }
+}
+
+/**
+ * Thrown when the request is well-formed and authorized but the payment is not in a
+ * state that permits it (already refunded, over-refunded, not yet captured).
+ * Typed rather than string-matched — the controller previously classified these by
+ * substring, which is how the 400 branch ended up unreachable behind a 403.
+ */
+export class PaymentStateError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PaymentStateError';
   }
 }
 
@@ -157,14 +182,23 @@ class PaymentService {
         throw new Error('Payment already exists for this booking');
       }
 
+      // The charged amount is derived from the booking, never taken from the request
+      // body. A custom client used to be able to ask for an intent at any amount it
+      // liked; `data.amount` is now only accepted for validation and is ignored here.
+      const currency = PLATFORM_CURRENCY;
+      const amount = Number(booking.totalAmount);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        throw new PaymentStateError('Booking has no payable amount');
+      }
+
       // Calculate fees (FR-060)
       const platformFeeRate = parseFloat(process.env.PLATFORM_FEE_RATE || '0.05');
       const stripeFeeRate = parseFloat(process.env.STRIPE_FEE_RATE || '0.029');
       const stripeFeeFixed = parseFloat(process.env.STRIPE_FEE_FIXED || '0.30');
 
-      const platformFee = Math.round(data.amount * platformFeeRate * 100) / 100;
-      const stripeFee = Math.round((data.amount * stripeFeeRate + stripeFeeFixed) * 100) / 100;
-      const providerAmount = Math.round((data.amount - platformFee - stripeFee) * 100) / 100;
+      const platformFee = roundMajorUnits(amount * platformFeeRate, currency);
+      const stripeFee = roundMajorUnits(amount * stripeFeeRate + stripeFeeFixed, currency);
+      const providerAmount = roundMajorUnits(amount - platformFee - stripeFee, currency);
 
       // Get or create Stripe customer
       let stripeCustomerId = booking.customer.stripeCustomerId;
@@ -186,8 +220,8 @@ class PaymentService {
 
       // Create payment intent with manual capture for escrow (FR-059, FR-061)
       const paymentIntent = await this.getStripe().paymentIntents.create({
-        amount: Math.round(data.amount * 100), // Convert to cents
-        currency: data.currency || 'usd',
+        amount: toStripeMinorUnits(amount, currency),
+        currency: currency.toLowerCase(),
         customer: stripeCustomerId,
         metadata: {
           bookingId: data.bookingId,
@@ -204,12 +238,13 @@ class PaymentService {
 
       // Create payment record
       const payment = this.paymentRepository.create({
-        id: paymentIntent.id,
+        // `id` is a generated uuid column. Assigning the Stripe `pi_…` id to it threw
+        // on save; the Stripe reference belongs in stripePaymentIntentId, which it is.
         bookingId: data.bookingId,
         customerId: data.customerId,
         providerId: booking.providerId,
-        amount: data.amount,
-        currency: data.currency || 'usd',
+        amount,
+        currency,
         platformFee,
         processingFee: stripeFee,
         providerAmount,
@@ -230,10 +265,12 @@ class PaymentService {
         .createNotification(booking.provider.userId, {
           type: NotificationType.PAYMENT,
           title: 'Payment Initiated',
-          message: `A payment of $${(data.amount / 100).toFixed(2)} has been initiated for your service`,
+          // `amount` is already in major units — the previous `/100` here rendered a
+          // R$275.00 payment as "$2.75" in the provider's notification.
+          message: `A payment of ${formatMajorUnits(amount, currency)} has been initiated for your service`,
           titleKey: 'titles.payment_initiated',
           messageKey: 'body.payment_initiated',
-          i18nParams: { amount: `$${(data.amount / 100).toFixed(2)}` },
+          i18nParams: { amount: formatMajorUnits(amount, currency) },
           actionUrl: `/payments/${savedPayment.id}`,
           metadata: { paymentId: savedPayment.id, bookingId: data.bookingId },
         })
@@ -281,7 +318,7 @@ class PaymentService {
       }
 
       if (payment.status === PaymentStatus.SUCCEEDED) {
-        throw new Error('Payment already confirmed');
+        throw new PaymentStateError('Payment already confirmed');
       }
 
       // Capture the payment intent
@@ -363,18 +400,43 @@ class PaymentService {
       }
 
       if (payment.status === PaymentStatus.REFUNDED) {
-        throw new Error('Payment already refunded');
+        throw new PaymentStateError('Payment already refunded');
       }
 
-      if (payment.status !== PaymentStatus.SUCCEEDED) {
-        throw new Error('Can only refund succeeded payments');
+      // A partially refunded payment still has a refundable balance, so it stays
+      // eligible; the amount bound below is what stops it being over-refunded.
+      if (
+        payment.status !== PaymentStatus.SUCCEEDED &&
+        payment.status !== PaymentStatus.PARTIALLY_REFUNDED
+      ) {
+        throw new PaymentStateError('Can only refund succeeded payments');
       }
 
-      // Create refund via Stripe
-      const refundAmount = data.amount ? Math.round(data.amount * 100) : undefined;
+      // `data.amount` is major units, matching how every other amount in the app is
+      // expressed. Bound it by what is actually left to refund so a partial refund
+      // cannot be stacked past the captured total.
+      const currency = payment.currency || PLATFORM_CURRENCY;
+      const capturedAmount = Number(payment.amount);
+      const alreadyRefunded = Number(payment.refundAmount ?? 0);
+      const remainingRefundable = roundMajorUnits(capturedAmount - alreadyRefunded, currency);
+
+      if (data.amount !== undefined) {
+        if (!Number.isFinite(data.amount) || data.amount <= 0) {
+          throw new PaymentStateError('Refund amount must be greater than 0');
+        }
+        if (data.amount > remainingRefundable) {
+          throw new PaymentStateError(
+            `Refund amount exceeds the refundable balance of ${formatMajorUnits(remainingRefundable, currency)}`
+          );
+        }
+      }
+
+      const requestedMinorUnits =
+        data.amount !== undefined ? toStripeMinorUnits(data.amount, currency) : undefined;
+
       const refund = await this.getStripe().refunds.create({
         payment_intent: payment.stripePaymentIntentId,
-        amount: refundAmount,
+        amount: requestedMinorUnits,
         reason: (data.reason as any) || 'requested_by_customer',
         metadata: {
           paymentId: data.paymentId,
@@ -383,12 +445,12 @@ class PaymentService {
       });
 
       // Update payment record
+      const refundedNow = fromStripeMinorUnits(refund.amount, currency);
+      const totalRefunded = roundMajorUnits(alreadyRefunded + refundedNow, currency);
       payment.status =
-        refundAmount && refundAmount < payment.amount * 100
-          ? PaymentStatus.PARTIALLY_REFUNDED
-          : PaymentStatus.REFUNDED;
+        totalRefunded < capturedAmount ? PaymentStatus.PARTIALLY_REFUNDED : PaymentStatus.REFUNDED;
       payment.refundedAt = new Date();
-      payment.refundAmount = refund.amount / 100;
+      payment.refundAmount = totalRefunded;
       payment.stripeRefundId = refund.id;
       payment.metadata = {
         ...payment.metadata,
@@ -620,17 +682,11 @@ class PaymentService {
       errors.push('Customer ID is required');
     }
 
-    if (!data.amount || data.amount <= 0) {
-      errors.push('Amount must be greater than 0');
-    }
-
-    if (data.amount > 999999.99) {
-      errors.push('Amount cannot exceed $999,999.99');
-    }
-
-    if (data.currency && !/^[A-Z]{3}$/.test(data.currency)) {
-      errors.push('Currency must be a valid 3-letter code');
-    }
+    // Amount and currency are intentionally not validated here: they are no longer
+    // inputs. Both are derived from the booking inside createPaymentIntent, and the
+    // payable-amount check lives there. Validating a client-supplied currency was
+    // also what made this endpoint reject its own frontend, which sent lowercase
+    // 'usd' against an uppercase-only regex.
 
     return errors;
   }

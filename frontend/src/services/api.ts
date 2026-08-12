@@ -1310,10 +1310,10 @@ class ApiService {
     return response.data.data!;
   }
 
+  // Amount and currency are derived from the booking server-side; the client does
+  // not get to choose what it is charged.
   async createPaymentIntent(paymentData: {
     bookingId: string;
-    amount: number;
-    currency?: string;
     description?: string;
     metadata?: Record<string, any>;
   }): Promise<any> {
