@@ -4,6 +4,7 @@ import Stripe from 'stripe';
 import { Payment, PaymentStatus, PaymentMethod } from '@/models/Payment';
 import { Booking, BookingStatus } from '@/models/Booking';
 import { User } from '@/models/User';
+import { Provider } from '@/models/Provider';
 import logger from '@/config/logger';
 import config from '@/config/environment';
 import notificationService from '@/services/NotificationService';
@@ -28,6 +29,26 @@ export interface RefundData {
   amount?: number;
   reason?: string;
   requestedBy: string;
+  requestedByUserType?: string;
+}
+
+/**
+ * Who the acting user is relative to a payment. `null` means "no relationship" —
+ * the caller must be treated as an outsider, not merely unauthorized.
+ */
+export type PaymentRole = 'admin' | 'customer' | 'provider' | null;
+
+export interface PaymentActor {
+  userId: string;
+  userType?: string;
+}
+
+/** Thrown when a caller has no relationship to the payment they addressed. */
+export class PaymentAccessError extends Error {
+  constructor(message = 'Unauthorized to access this payment') {
+    super(message);
+    this.name = 'PaymentAccessError';
+  }
 }
 
 export interface PaymentSummary {
@@ -43,6 +64,7 @@ class PaymentService {
   private paymentRepository: Repository<Payment>;
   private bookingRepository: Repository<Booking>;
   private userRepository: Repository<User>;
+  private providerRepository: Repository<Provider>;
 
   private getStripe(): Stripe {
     if (!this.stripe) {
@@ -59,6 +81,50 @@ class PaymentService {
     this.paymentRepository = AppDataSource.getRepository(Payment);
     this.bookingRepository = AppDataSource.getRepository(Booking);
     this.userRepository = AppDataSource.getRepository(User);
+    this.providerRepository = AppDataSource.getRepository(Provider);
+  }
+
+  /**
+   * Resolve the acting user's relationship to a payment.
+   *
+   * `payment.providerId` stores a **Provider entity** UUID, never a User UUID, so the
+   * provider comparison has to hop through `Provider.userId`. Comparing the two
+   * directly silently fails closed for legitimate providers and is the single most
+   * repeated authz bug in this codebase.
+   */
+  public async resolvePaymentRole(payment: Payment, actor: PaymentActor): Promise<PaymentRole> {
+    this.initRepositories();
+
+    if (actor.userType === 'admin') {
+      return 'admin';
+    }
+
+    if (payment.customerId === actor.userId) {
+      return 'customer';
+    }
+
+    const providerEntity = await this.providerRepository.findOne({
+      where: { userId: actor.userId },
+      select: ['id'],
+    });
+    if (providerEntity && providerEntity.id === payment.providerId) {
+      return 'provider';
+    }
+
+    return null;
+  }
+
+  /**
+   * Resolve the Provider entity id for a user, or null when they own no provider profile.
+   * Callers building `where` clauses against `payment.providerId` must use this.
+   */
+  public async resolveProviderEntityId(userId: string): Promise<string | null> {
+    this.initRepositories();
+    const providerEntity = await this.providerRepository.findOne({
+      where: { userId },
+      select: ['id'],
+    });
+    return providerEntity?.id ?? null;
   }
 
   /**
@@ -189,7 +255,11 @@ class PaymentService {
   /**
    * Confirm and capture payment (release from escrow)
    */
-  public async confirmPayment(paymentId: string, userId: string): Promise<Payment> {
+  public async confirmPayment(
+    paymentId: string,
+    userId: string,
+    userType?: string
+  ): Promise<Payment> {
     this.initRepositories();
 
     try {
@@ -202,9 +272,12 @@ class PaymentService {
         throw new Error('Payment not found');
       }
 
-      // Authorization check
-      if (userId !== payment.customerId && userId !== payment.providerId) {
-        throw new Error('Unauthorized to confirm this payment');
+      // Authorization check. Resolved through resolvePaymentRole because payment.providerId
+      // is a Provider entity id — the previous `userId !== payment.providerId` comparison
+      // could never match, so providers were locked out of capturing their own payments.
+      const role = await this.resolvePaymentRole(payment, { userId, userType });
+      if (role === null) {
+        throw new PaymentAccessError('Payment not found');
       }
 
       if (payment.status === PaymentStatus.SUCCEEDED) {
@@ -265,6 +338,28 @@ class PaymentService {
 
       if (!payment) {
         throw new Error('Payment not found');
+      }
+
+      // Authorization (FR-063). Refunds move real money, so this is resolved before any
+      // Stripe call and before leaking payment state through error messages.
+      //
+      // Policy: the assigned provider may refund their own customer (self-harming, so
+      // safe), and an admin may refund as dispute resolution. The paying customer may
+      // NOT refund themselves — their route to money back is POST /bookings/:id/dispute,
+      // which an admin adjudicates. Without this, a captured payment could be reversed
+      // unilaterally after the service was delivered.
+      const role = await this.resolvePaymentRole(payment, {
+        userId: data.requestedBy,
+        userType: data.requestedByUserType,
+      });
+
+      if (role === null) {
+        // Outsider: do not confirm the payment exists.
+        throw new PaymentAccessError('Payment not found');
+      }
+
+      if (role !== 'admin' && role !== 'provider') {
+        throw new PaymentAccessError('Unauthorized to refund this payment');
       }
 
       if (payment.status === PaymentStatus.REFUNDED) {

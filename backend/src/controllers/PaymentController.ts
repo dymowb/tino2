@@ -7,7 +7,7 @@ import { User } from '@/models/User';
 import { Provider } from '@/models/Provider';
 import logger from '@/config/logger';
 import { AuthenticatedRequest } from '@/types';
-import PaymentService from '@/services/PaymentService';
+import PaymentService, { PaymentAccessError } from '@/services/PaymentService';
 import { getStripeInstance, getStripeErrorMessage } from '@/config/stripe';
 import { t } from '@/i18n';
 
@@ -76,14 +76,25 @@ class PaymentController {
       const { id } = req.params;
       const paymentRepository = AppDataSource.getRepository(Payment);
 
+      // Ensure user can only access their own payments. providerId holds a Provider
+      // entity UUID, so a provider's scope has to be resolved via Provider.userId first;
+      // comparing it to req.user.userId 404s providers out of their own payments.
+      let ownershipScope: Record<string, string>;
+      if (req.user.userType === 'admin') {
+        ownershipScope = {};
+      } else if (req.user.userType === 'provider') {
+        const providerEntityId = await PaymentService.resolveProviderEntityId(req.user.userId);
+        if (!providerEntityId) {
+          res.status(404).json({ success: false, error: t(req, 'payment.not_found') });
+          return;
+        }
+        ownershipScope = { providerId: providerEntityId };
+      } else {
+        ownershipScope = { customerId: req.user.userId };
+      }
+
       const payment = await paymentRepository.findOne({
-        where: {
-          id,
-          // Ensure user can only access their own payments
-          ...(req.user.userType === 'customer'
-            ? { customerId: req.user.userId }
-            : { providerId: req.user.userId }),
-        },
+        where: { id, ...ownershipScope },
         relations: ['customer', 'provider', 'booking', 'booking.customer'],
       });
 
@@ -233,7 +244,7 @@ class PaymentController {
       const { id } = req.params;
 
       // Confirm payment using service
-      const payment = await PaymentService.confirmPayment(id, req.user.userId);
+      const payment = await PaymentService.confirmPayment(id, req.user.userId, req.user.userType);
 
       res.json({
         success: true,
@@ -242,10 +253,17 @@ class PaymentController {
     } catch (error) {
       logger.error('Error confirming payment:', error);
       const errMsg = error instanceof Error ? error.message : 'Unknown error';
-      if (errMsg === t(req, 'payment.not_found')) {
-        res.status(404).json({ success: false, error: errMsg });
-      } else if (errMsg.includes('Unauthorized')) {
-        res.status(403).json({ success: false, error: errMsg });
+      if (error instanceof PaymentAccessError) {
+        // Outsiders get 404 so the endpoint does not confirm the payment exists.
+        const outsider = errMsg === 'Payment not found';
+        res.status(outsider ? 404 : 403).json({
+          success: false,
+          error: outsider ? t(req, 'payment.not_found') : errMsg,
+        });
+      } else if (errMsg === 'Payment not found' || errMsg === t(req, 'payment.not_found')) {
+        res.status(404).json({ success: false, error: t(req, 'payment.not_found') });
+      } else if (errMsg.includes('already confirmed')) {
+        res.status(400).json({ success: false, error: errMsg });
       } else {
         res.status(500).json({ success: false, error: getStripeErrorMessage(error) });
       }
@@ -264,6 +282,7 @@ class PaymentController {
         amount,
         reason,
         requestedBy: req.user.userId,
+        requestedByUserType: req.user.userType,
       });
 
       res.json({
@@ -277,11 +296,18 @@ class PaymentController {
     } catch (error) {
       logger.error('Error processing refund:', error);
       const errMsg = error instanceof Error ? error.message : 'Unknown error';
-      if (errMsg === t(req, 'payment.not_found')) {
-        res.status(404).json({ success: false, error: errMsg });
-      } else if (errMsg.includes('Unauthorized') || errMsg.includes('only refund')) {
-        res.status(403).json({ success: false, error: errMsg });
+      if (error instanceof PaymentAccessError) {
+        // Outsiders get 404 so the endpoint does not confirm the payment exists.
+        const outsider = errMsg === 'Payment not found';
+        res.status(outsider ? 404 : 403).json({
+          success: false,
+          error: outsider ? t(req, 'payment.not_found') : errMsg,
+        });
+      } else if (errMsg === 'Payment not found' || errMsg === t(req, 'payment.not_found')) {
+        res.status(404).json({ success: false, error: t(req, 'payment.not_found') });
       } else if (errMsg.includes('Can only refund') || errMsg.includes('already refunded')) {
+        // State errors, not authorization errors. The previous ordering matched
+        // 'only refund' as a 403 first, making this 400 branch unreachable.
         res.status(400).json({ success: false, error: errMsg });
       } else {
         res.status(500).json({
@@ -333,13 +359,18 @@ class PaymentController {
     try {
       const { providerId } = req.params;
 
-      // Only allow access to own payments or admin access
-      if (req.user.userId !== providerId && req.user.userType !== 'admin') {
-        res.status(403).json({
-          success: false,
-          error: t(req, 'common.unauthorized_access'),
-        });
-        return;
+      // Only allow access to own payments or admin access. `providerId` is a Provider
+      // entity id, so it has to be resolved from the caller's userId — comparing it to
+      // req.user.userId directly 403s every provider out of their own earnings.
+      if (req.user.userType !== 'admin') {
+        const ownProviderId = await PaymentService.resolveProviderEntityId(req.user.userId);
+        if (!ownProviderId || ownProviderId !== providerId) {
+          res.status(403).json({
+            success: false,
+            error: t(req, 'common.unauthorized_access'),
+          });
+          return;
+        }
       }
 
       const paymentRepository = AppDataSource.getRepository(Payment);

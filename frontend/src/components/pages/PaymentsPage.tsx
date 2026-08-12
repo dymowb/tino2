@@ -92,6 +92,9 @@ const PaymentsPage: React.FC = () => {
 
   const currentUser = apiService.getStoredUser();
   const isProvider = currentUser?.userType === 'provider';
+  // Refunds are provider/admin-initiated. A customer's route to money back is the
+  // dispute flow, so showing them this action would only produce a 403.
+  const canInitiateRefund = isProvider || currentUser?.userType === 'admin';
 
   const { data: paymentsData, isLoading, refetch } = useQuery({
     queryKey: ['payments', currentTab, statusFilter],
@@ -527,12 +530,14 @@ const PaymentsPage: React.FC = () => {
           <DownloadIcon sx={{ mr: 1 }} fontSize="small" />
           {t('payments:actions.download_receipt')}
         </MenuItem>
-        {selectedPayment?.status === 'succeeded' && selectedPayment?.escrowStatus === 'held' && (
-          <MenuItem onClick={handleInitiateRefund}>
-            <RefreshIcon sx={{ mr: 1 }} fontSize="small" />
-            {t('payments:actions.initiate_refund')}
-          </MenuItem>
-        )}
+        {canInitiateRefund &&
+          selectedPayment?.status === 'succeeded' &&
+          selectedPayment?.escrowStatus === 'held' && (
+            <MenuItem onClick={handleInitiateRefund}>
+              <RefreshIcon sx={{ mr: 1 }} fontSize="small" />
+              {t('payments:actions.initiate_refund')}
+            </MenuItem>
+          )}
       </Menu>
 
       {/* Payment Dialog */}
