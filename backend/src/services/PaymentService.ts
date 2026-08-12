@@ -368,106 +368,123 @@ class PaymentService {
     this.initRepositories();
 
     try {
-      const payment = await this.paymentRepository.findOne({
-        where: { id: data.paymentId },
-        relations: ['booking', 'customer'],
-      });
-
-      if (!payment) {
-        throw new Error('Payment not found');
-      }
-
-      // Authorization (FR-063). Refunds move real money, so this is resolved before any
-      // Stripe call and before leaking payment state through error messages.
+      // The whole read-validate-refund-write sequence runs inside one transaction
+      // holding a row lock on the payment. Two refunds arriving together would
+      // otherwise both read the same `refundAmount`, both succeed at Stripe, and each
+      // write `alreadyRefunded + theirOwnRefund` — the second overwriting the first,
+      // so the database under-reports what Stripe actually returned.
       //
-      // Policy: the assigned provider may refund their own customer (self-harming, so
-      // safe), and an admin may refund as dispute resolution. The paying customer may
-      // NOT refund themselves — their route to money back is POST /bookings/:id/dispute,
-      // which an admin adjudicates. Without this, a captured payment could be reversed
-      // unilaterally after the service was delivered.
-      const role = await this.resolvePaymentRole(payment, {
-        userId: data.requestedBy,
-        userType: data.requestedByUserType,
-      });
-
-      if (role === null) {
-        // Outsider: do not confirm the payment exists.
-        throw new PaymentAccessError('Payment not found');
-      }
-
-      if (role !== 'admin' && role !== 'provider') {
-        throw new PaymentAccessError('Unauthorized to refund this payment');
-      }
-
-      if (payment.status === PaymentStatus.REFUNDED) {
-        throw new PaymentStateError('Payment already refunded');
-      }
-
-      // A partially refunded payment still has a refundable balance, so it stays
-      // eligible; the amount bound below is what stops it being over-refunded.
-      if (
-        payment.status !== PaymentStatus.SUCCEEDED &&
-        payment.status !== PaymentStatus.PARTIALLY_REFUNDED
-      ) {
-        throw new PaymentStateError('Can only refund succeeded payments');
-      }
-
-      // `data.amount` is major units, matching how every other amount in the app is
-      // expressed. Bound it by what is actually left to refund so a partial refund
-      // cannot be stacked past the captured total.
-      const currency = payment.currency || PLATFORM_CURRENCY;
-      const capturedAmount = Number(payment.amount);
-      const alreadyRefunded = Number(payment.refundAmount ?? 0);
-      const remainingRefundable = roundMajorUnits(capturedAmount - alreadyRefunded, currency);
-
-      if (data.amount !== undefined) {
-        if (!Number.isFinite(data.amount) || data.amount <= 0) {
-          throw new PaymentStateError('Refund amount must be greater than 0');
-        }
-        if (data.amount > remainingRefundable) {
-          throw new PaymentStateError(
-            `Refund amount exceeds the refundable balance of ${formatMajorUnits(remainingRefundable, currency)}`
-          );
-        }
-      }
-
-      const requestedMinorUnits =
-        data.amount !== undefined ? toStripeMinorUnits(data.amount, currency) : undefined;
-
-      const refund = await this.getStripe().refunds.create({
-        payment_intent: payment.stripePaymentIntentId,
-        amount: requestedMinorUnits,
-        reason: (data.reason as any) || 'requested_by_customer',
-        metadata: {
-          paymentId: data.paymentId,
-          requestedBy: data.requestedBy,
-        },
-      });
-
-      // Update payment record
-      const refundedNow = fromStripeMinorUnits(refund.amount, currency);
-      const totalRefunded = roundMajorUnits(alreadyRefunded + refundedNow, currency);
-      payment.status =
-        totalRefunded < capturedAmount ? PaymentStatus.PARTIALLY_REFUNDED : PaymentStatus.REFUNDED;
-      payment.refundedAt = new Date();
-      payment.refundAmount = totalRefunded;
-      payment.stripeRefundId = refund.id;
-      payment.metadata = {
-        ...payment.metadata,
-        refund_reason: data.reason,
-      };
-
-      await this.paymentRepository.save(payment);
-
-      // Update booking status if fully refunded
-      if (payment.status === PaymentStatus.REFUNDED) {
-        await this.bookingRepository.update(payment.bookingId, {
-          status: BookingStatus.CANCELLED,
+      // This does hold the lock for the duration of a network call to Stripe. That is
+      // the deliberate trade: refunds are rare and low-volume, and serialising them is
+      // far cheaper than reconciling a corrupted refund total after the fact.
+      return await AppDataSource.transaction(async (manager) => {
+        // No `relations` here: they compile to LEFT JOINs, and Postgres rejects
+        // FOR UPDATE against the nullable side of an outer join. Nothing below this
+        // point reads the joined entities — only payment.bookingId — so the lock
+        // costs nothing.
+        const payment = await manager.findOne(Payment, {
+          where: { id: data.paymentId },
+          lock: { mode: 'pessimistic_write' },
         });
-      }
 
-      logger.info(`Payment refunded: ${data.paymentId}, refund ID: ${refund.id}`);
-      return payment;
+        if (!payment) {
+          throw new Error('Payment not found');
+        }
+
+        // Authorization (FR-063). Refunds move real money, so this is resolved before any
+        // Stripe call and before leaking payment state through error messages.
+        //
+        // Policy: the assigned provider may refund their own customer (self-harming, so
+        // safe), and an admin may refund as dispute resolution. The paying customer may
+        // NOT refund themselves — their route to money back is POST /bookings/:id/dispute,
+        // which an admin adjudicates. Without this, a captured payment could be reversed
+        // unilaterally after the service was delivered.
+        const role = await this.resolvePaymentRole(payment, {
+          userId: data.requestedBy,
+          userType: data.requestedByUserType,
+        });
+
+        if (role === null) {
+          // Outsider: do not confirm the payment exists.
+          throw new PaymentAccessError('Payment not found');
+        }
+
+        if (role !== 'admin' && role !== 'provider') {
+          throw new PaymentAccessError('Unauthorized to refund this payment');
+        }
+
+        if (payment.status === PaymentStatus.REFUNDED) {
+          throw new PaymentStateError('Payment already refunded');
+        }
+
+        // A partially refunded payment still has a refundable balance, so it stays
+        // eligible; the amount bound below is what stops it being over-refunded.
+        if (
+          payment.status !== PaymentStatus.SUCCEEDED &&
+          payment.status !== PaymentStatus.PARTIALLY_REFUNDED
+        ) {
+          throw new PaymentStateError('Can only refund succeeded payments');
+        }
+
+        // `data.amount` is major units, matching how every other amount in the app is
+        // expressed. Bound it by what is actually left to refund so a partial refund
+        // cannot be stacked past the captured total.
+        const currency = payment.currency || PLATFORM_CURRENCY;
+        const capturedAmount = Number(payment.amount);
+        const alreadyRefunded = Number(payment.refundAmount ?? 0);
+        const remainingRefundable = roundMajorUnits(capturedAmount - alreadyRefunded, currency);
+
+        if (data.amount !== undefined) {
+          if (!Number.isFinite(data.amount) || data.amount <= 0) {
+            throw new PaymentStateError('Refund amount must be greater than 0');
+          }
+          if (data.amount > remainingRefundable) {
+            throw new PaymentStateError(
+              `Refund amount exceeds the refundable balance of ${formatMajorUnits(remainingRefundable, currency)}`
+            );
+          }
+        }
+
+        const requestedMinorUnits =
+          data.amount !== undefined ? toStripeMinorUnits(data.amount, currency) : undefined;
+
+        const refund = await this.getStripe().refunds.create({
+          payment_intent: payment.stripePaymentIntentId,
+          amount: requestedMinorUnits,
+          reason: (data.reason as any) || 'requested_by_customer',
+          metadata: {
+            paymentId: data.paymentId,
+            requestedBy: data.requestedBy,
+          },
+        });
+
+        // Update payment record
+        const refundedNow = fromStripeMinorUnits(refund.amount, currency);
+        const totalRefunded = roundMajorUnits(alreadyRefunded + refundedNow, currency);
+        payment.status =
+          totalRefunded < capturedAmount
+            ? PaymentStatus.PARTIALLY_REFUNDED
+            : PaymentStatus.REFUNDED;
+        payment.refundedAt = new Date();
+        payment.refundAmount = totalRefunded;
+        payment.stripeRefundId = refund.id;
+        payment.metadata = {
+          ...payment.metadata,
+          refund_reason: data.reason,
+        };
+
+        await manager.save(Payment, payment);
+
+        // Update booking status if fully refunded
+        if (payment.status === PaymentStatus.REFUNDED) {
+          await manager.update(Booking, payment.bookingId, {
+            status: BookingStatus.CANCELLED,
+          });
+        }
+
+        logger.info(`Payment refunded: ${data.paymentId}, refund ID: ${refund.id}`);
+        return payment;
+      });
     } catch (error) {
       logger.error('Error processing refund:', error);
       throw error;
