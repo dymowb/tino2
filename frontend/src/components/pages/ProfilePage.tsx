@@ -17,6 +17,7 @@ import { tokens } from '../../theme/theme';
 import PasswordChangeDialog from '../profile/PasswordChangeDialog';
 import AccountDeletionDialog from '../profile/AccountDeletionDialog';
 import PrivacySettingsDialog from '../profile/PrivacySettingsDialog';
+import { currencySymbol, formatMoney } from '../../utils/money';
 
 const ProfilePage: React.FC = () => {
   const { t, i18n } = useTranslation(['profile', 'common']);
@@ -109,8 +110,7 @@ const ProfilePage: React.FC = () => {
     s ? new Date(s).toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'pt-BR',
       { year: 'numeric', month: 'long', day: 'numeric' }) : t('profile:fields.not_provided');
 
-  const currency = (n: number) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(n) || 0);
+  const currency = (n: number) => formatMoney(n);
 
   const cardSx = {
     borderRadius: tokens.radius.lg,
@@ -273,7 +273,7 @@ const ProfilePage: React.FC = () => {
                 {editing
                   ? <TextField fullWidth size="small" type="number" value={form.hourlyRate}
                       onChange={e => onField('hourlyRate', parseFloat(e.target.value) || 0)}
-                      InputProps={{ startAdornment: <InputAdornment position="start">R$</InputAdornment> }} />
+                      InputProps={{ startAdornment: <InputAdornment position="start">{currencySymbol()}</InputAdornment> }} />
                   : readValue(`${currency(Number(provider.pricing?.baseRate))}/h`)}
               </Field>
               <Field label={t('profile:fields.service_radius')}>

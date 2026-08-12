@@ -1413,6 +1413,24 @@ async function runSeeder(): Promise<void> {
     );
     await settingsRepo.upsert(
       {
+        key: 'platform_currency',
+        value: 'BRL',
+        description:
+          'ISO currency code every price in this deployment is denominated in. Changing it ' +
+          'switches display and what Stripe is charged; it does NOT convert existing amounts.',
+      },
+      ['key']
+    );
+    await settingsRepo.upsert(
+      {
+        key: 'platform_locale',
+        value: 'pt-BR',
+        description: 'BCP-47 locale used to format money amounts (grouping and decimal marks)',
+      },
+      ['key']
+    );
+    await settingsRepo.upsert(
+      {
         key: 'booking_readiness_enabled',
         // Off by default: BR-1 is an opt-in beta slice, and the client hides its
         // entry point when this is false so nobody sees a button that 404s.

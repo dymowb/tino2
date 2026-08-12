@@ -44,6 +44,7 @@ import apiService from '../../services/api';
 import { format } from 'date-fns';
 import PaymentDialog from '../payments/PaymentDialog';
 import RefundDialog from '../payments/RefundDialog';
+import { formatMoney } from '../../utils/money';
 
 interface Payment {
   id: string;
@@ -214,13 +215,9 @@ const PaymentsPage: React.FC = () => {
     return colors[status as keyof typeof colors] || 'default';
   };
 
-  const formatAmount = (amount: number, currency = 'BRL') => {
-    // en-US grouping on a BRL amount rendered "R$6,678.00" instead of "R$ 6.678,00".
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency,
-    }).format(Number(amount) || 0);
-  };
+  // Currency defaults to the deployment's configured one; a payment row that
+  // records its own currency passes it explicitly.
+  const formatAmount = (amount: number, currency?: string) => formatMoney(amount, currency);
 
   const renderPaymentStats = () => {
     const stats = payments.reduce(

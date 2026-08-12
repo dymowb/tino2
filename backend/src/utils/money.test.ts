@@ -1,5 +1,6 @@
 import {
-  PLATFORM_CURRENCY,
+  DEFAULT_PLATFORM_CURRENCY,
+  isSupportedCurrency,
   currencyExponent,
   fromStripeMinorUnits,
   roundMajorUnits,
@@ -73,8 +74,16 @@ describe('money conversion', () => {
   });
 
   describe('platform currency', () => {
-    it('is BRL — every price in the product is quoted in reais', () => {
-      expect(PLATFORM_CURRENCY).toBe('BRL');
+    it('falls back to BRL when nothing is configured', () => {
+      expect(DEFAULT_PLATFORM_CURRENCY).toBe('BRL');
+    });
+
+    it('accepts only currencies the deployment is allowed to use', () => {
+      expect(isSupportedCurrency('BRL')).toBe(true);
+      expect(isSupportedCurrency('eur')).toBe(true);
+      // Rejecting unknown codes keeps a typo'd setting from reaching Stripe.
+      expect(isSupportedCurrency('XYZ')).toBe(false);
+      expect(isSupportedCurrency('')).toBe(false);
     });
   });
 });

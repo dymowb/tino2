@@ -37,17 +37,31 @@ const ZERO_DECIMAL_CURRENCIES = new Set([
 ]);
 
 /**
- * The currency every price in this deployment is denominated in.
+ * Fallbacks used when no platform currency/locale has been configured.
  *
- * Deliberately a single constant rather than a per-entity field: the product prices
- * exclusively in BRL today, and `Booking`/`Quote` carry no currency column. Making
- * this configurable per deployment is the next step and only has to change here —
- * which is precisely why nothing below hardcodes a currency literal.
+ * The live values come from `PlatformSettingsService`, which reads `app_settings`.
+ * These exist so money handling still works before settings load, or if the settings
+ * read fails — a payment path must not depend on a settings lookup succeeding.
  */
-export const PLATFORM_CURRENCY = 'BRL';
+export const DEFAULT_PLATFORM_CURRENCY = 'BRL';
+export const DEFAULT_PLATFORM_LOCALE = 'pt-BR';
 
-/** Locale used to render money server-side (notification fallback text, emails). */
-export const PLATFORM_LOCALE = 'pt-BR';
+/**
+ * Currencies this deployment can be configured to use.
+ *
+ * Restricted on purpose: an unrecognised code would reach Stripe and fail the charge,
+ * and every entry here must also be one Stripe supports for the account. Widening the
+ * list is a deliberate act, not an accident of configuration.
+ */
+const SUPPORTED_CURRENCIES = new Set(['BRL', 'USD', 'EUR', 'GBP', 'CAD', 'AUD', 'MXN', 'JPY']);
+
+export function isSupportedCurrency(currency: string): boolean {
+  return SUPPORTED_CURRENCIES.has(currency.toUpperCase());
+}
+
+export function supportedCurrencies(): string[] {
+  return [...SUPPORTED_CURRENCIES];
+}
 
 /** Number of decimal places Stripe expects for a currency. */
 export function currencyExponent(currency: string): number {
@@ -94,8 +108,12 @@ export function roundMajorUnits(amount: number, currency: string): number {
  * notifications also carry `i18nParams` so the client can format in the reader's
  * locale — but the fallback should still name the right currency.
  */
-export function formatMajorUnits(amount: number, currency: string): string {
-  return new Intl.NumberFormat(PLATFORM_LOCALE, {
+export function formatMajorUnits(
+  amount: number,
+  currency: string,
+  locale: string = DEFAULT_PLATFORM_LOCALE
+): string {
+  return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: currency.toUpperCase(),
   }).format(amount);

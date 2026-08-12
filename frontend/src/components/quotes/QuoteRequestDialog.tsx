@@ -41,6 +41,7 @@ import { toast } from 'react-hot-toast';
 import { apiService, QuoteRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import AddressAutocomplete from '../common/AddressAutocomplete';
+import { formatMoney } from '../../utils/money';
 
 interface QuoteRequestDialogProps {
   open: boolean;
@@ -413,10 +414,10 @@ const QuoteRequestDialog: React.FC<QuoteRequestDialogProps> = ({
                   max={2000}
                   step={25}
                   marks={[
-                    { value: 25, label: 'R$25' },
-                    { value: 500, label: 'R$500' },
-                    { value: 1000, label: 'R$1000' },
-                    { value: 2000, label: 'R$2000+' }
+                    { value: 25, label: formatMoney(25) },
+                    { value: 500, label: formatMoney(500) },
+                    { value: 1000, label: formatMoney(1000) },
+                    { value: 2000, label: `${formatMoney(2000)}+` }
                   ]}
                 />
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>

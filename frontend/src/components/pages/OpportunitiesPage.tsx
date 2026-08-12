@@ -26,12 +26,12 @@ import { apiService, QuoteRequest } from '../../services/api';
 import { tokens } from '../../theme/theme';
 import PageSkeleton from '../common/PageSkeleton';
 import QuoteSubmissionDialog from '../quotes/QuoteSubmissionDialog';
+import { formatMoney } from '../../utils/money';
 
 const formatServiceName = (s: string) =>
   s.replace(/_/g, ' ').replace(/(^|\s)(\S)/g, (_, sp, c) => sp + c.toUpperCase());
 
-const formatCurrency = (amount: number | string) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(amount));
+const formatCurrency = (amount: number | string) => formatMoney(amount);
 
 const URGENCY_COLOR: Record<string, string> = {
   urgent: tokens.color.terra, high: tokens.color.gold, medium: tokens.color.earth, low: tokens.color.stone,

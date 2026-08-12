@@ -10,12 +10,13 @@ import config from '@/config/environment';
 import notificationService from '@/services/NotificationService';
 import { NotificationType } from '@/models/Notification';
 import {
-  PLATFORM_CURRENCY,
+  DEFAULT_PLATFORM_CURRENCY,
   formatMajorUnits,
   fromStripeMinorUnits,
   roundMajorUnits,
   toStripeMinorUnits,
 } from '@/utils/money';
+import { getPlatformCurrency, getPlatformLocale } from '@/services/PlatformSettingsService';
 
 export interface CreatePaymentIntentData {
   bookingId: string;
@@ -185,7 +186,8 @@ class PaymentService {
       // The charged amount is derived from the booking, never taken from the request
       // body. A custom client used to be able to ask for an intent at any amount it
       // liked; `data.amount` is now only accepted for validation and is ignored here.
-      const currency = PLATFORM_CURRENCY;
+      const currency = await getPlatformCurrency();
+      const locale = await getPlatformLocale();
       const amount = Number(booking.totalAmount);
       if (!Number.isFinite(amount) || amount <= 0) {
         throw new PaymentStateError('Booking has no payable amount');
@@ -267,10 +269,10 @@ class PaymentService {
           title: 'Payment Initiated',
           // `amount` is already in major units — the previous `/100` here rendered a
           // R$275.00 payment as "$2.75" in the provider's notification.
-          message: `A payment of ${formatMajorUnits(amount, currency)} has been initiated for your service`,
+          message: `A payment of ${formatMajorUnits(amount, currency, locale)} has been initiated for your service`,
           titleKey: 'titles.payment_initiated',
           messageKey: 'body.payment_initiated',
-          i18nParams: { amount: formatMajorUnits(amount, currency) },
+          i18nParams: { amount: formatMajorUnits(amount, currency, locale) },
           actionUrl: `/payments/${savedPayment.id}`,
           metadata: { paymentId: savedPayment.id, bookingId: data.bookingId },
         })
@@ -429,7 +431,9 @@ class PaymentService {
         // `data.amount` is major units, matching how every other amount in the app is
         // expressed. Bound it by what is actually left to refund so a partial refund
         // cannot be stacked past the captured total.
-        const currency = payment.currency || PLATFORM_CURRENCY;
+        // A stored payment already records the currency it was created in; only fall
+        // back for rows written before the column was populated.
+        const currency = payment.currency || (await getPlatformCurrency());
         const capturedAmount = Number(payment.amount);
         const alreadyRefunded = Number(payment.refundAmount ?? 0);
         const remainingRefundable = roundMajorUnits(capturedAmount - alreadyRefunded, currency);
@@ -440,7 +444,7 @@ class PaymentService {
           }
           if (data.amount > remainingRefundable) {
             throw new PaymentStateError(
-              `Refund amount exceeds the refundable balance of ${formatMajorUnits(remainingRefundable, currency)}`
+              `Refund amount exceeds the refundable balance of ${formatMajorUnits(remainingRefundable, currency, await getPlatformLocale())}`
             );
           }
         }

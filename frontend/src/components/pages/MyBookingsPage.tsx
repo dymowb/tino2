@@ -60,6 +60,7 @@ import RequestCard from "../bookings/RequestCard";
 import ReadinessDrawer from "../bookings/ReadinessDrawer";
 import QuoteRequestDialog from "../quotes/QuoteRequestDialog";
 import { quoteHighlights } from "../../utils/quoteComparison";
+import { formatMoney } from '../../utils/money';
 
 const STATUS_BORDER: Record<string, string> = {
   pending: tokens.color.gold,
@@ -391,11 +392,7 @@ const MyBookingsPage: React.FC = () => {
       hour: "2-digit",
       minute: "2-digit",
     });
-  const formatCurrency = (amount: number | string) =>
-    new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(Number(amount));
+  const formatCurrency = (amount: number | string) => formatMoney(amount);
 
   // ── Build the unified customer job list (deduped: a booked request shows as a
   //    booking, not also as a request) ────────────────────────────────────────

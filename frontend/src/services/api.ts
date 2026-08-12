@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosResponse } from "axios";
 import { toast } from "react-hot-toast";
+import { configureMoney } from "../utils/money";
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -60,6 +61,10 @@ export type AiConfiguration = Record<
 
 export interface AppConfig {
   maxProvidersPerQuote: number;
+  /** ISO code every price in this deployment is denominated in. */
+  platformCurrency?: string;
+  /** BCP-47 locale used to format money amounts. */
+  platformLocale?: string;
   /** Hides the readiness entry point when the backend feature is off, so the
    *  button is never shown for an endpoint that would 404. */
   bookingReadinessEnabled?: boolean;
@@ -70,6 +75,8 @@ export interface AppConfig {
 export const DEFAULT_APP_CONFIG: AppConfig = {
   maxProvidersPerQuote: 5,
   bookingReadinessEnabled: false,
+  platformCurrency: "BRL",
+  platformLocale: "pt-BR",
 };
 
 export interface ReadinessEvidence {
@@ -1959,7 +1966,11 @@ class ApiService {
         await this.api.get<ApiResponse<AppConfig>>(
           "/config",
         );
-      return res.data.data ?? DEFAULT_APP_CONFIG;
+      const config = res.data.data ?? DEFAULT_APP_CONFIG;
+      // Seed the money formatter from the same values the server charges in, so
+      // display and charge can never disagree.
+      configureMoney(config.platformCurrency, config.platformLocale);
+      return config;
     } catch {
       return DEFAULT_APP_CONFIG;
     }

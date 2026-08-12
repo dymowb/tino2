@@ -12,7 +12,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline, GlobalStyles, Box, Button, Typography, useMediaQuery } from '@mui/material';
 import { AnimatePresence, motion } from 'framer-motion';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import apiService from './services/api';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { createAppTheme, tokens } from './theme/theme';
@@ -176,6 +177,16 @@ const QuotesRedirect: React.FC = () => {
 const AppContent: React.FC = () => {
   const { loading, isAuthenticated } = useAuth();
   const location = useLocation();
+
+  // Seeds the money formatter with the deployment's currency and locale. Fetched
+  // once here (rather than per screen) because formatMoney is used from plain
+  // helpers as well as components. Until it lands, the built-in defaults apply.
+  useQuery({
+    queryKey: ['app-config'],
+    queryFn: () => apiService.getAppConfig(),
+    staleTime: Infinity,
+  });
+
   const isAdminRoute = location.pathname.startsWith('/admin');
   const theme = useMediaQuery('(max-width:899px)'); // md breakpoint
   const isMobile = theme;
