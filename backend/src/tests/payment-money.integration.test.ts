@@ -194,4 +194,52 @@ describe('payment money handling', () => {
       .send({ amount: 300, reason: 'requested_by_customer' })
       .expect(400);
   });
+
+  it('does not lose a refund when two partial refunds race', async () => {
+    const customer = await account('money5-customer@example.com', 'customer');
+    const providerAccount = await account('money5-provider@example.com', 'provider');
+    const provider = await providerProfile(providerAccount.user.id);
+    const booking = await confirmedBooking(customer.user.id, provider.id, 275);
+    await withStripeCustomer(customer.user.id);
+
+    await request(server)
+      .post('/api/v1/payments/intent')
+      .set('Authorization', `Bearer ${customer.token}`)
+      .send({ bookingId: booking.id })
+      .expect(200);
+
+    const payment = await AppDataSource.getRepository(Payment).findOneByOrFail({
+      bookingId: booking.id,
+    });
+    await AppDataSource.getRepository(Payment).update(payment.id, {
+      status: PaymentStatus.SUCCEEDED,
+    });
+
+    // The shared Stripe mock reports a fixed 10000 minor units (R$100) per refund,
+    // which is exactly the amount requested below — so no override is needed. (An
+    // override here would be unreliable: PaymentService caches its own Stripe
+    // instance, which is not necessarily the most recently constructed one.)
+
+    // Two R$100 refunds issued concurrently against a R$275 payment. Without a row
+    // lock both read refundAmount=0 and each writes 100, losing one of them.
+    const [first, second] = await Promise.all([
+      request(server)
+        .post(`/api/v1/payments/${payment.id}/refund`)
+        .set('Authorization', `Bearer ${providerAccount.token}`)
+        .send({ amount: 100, reason: 'requested_by_customer' }),
+      request(server)
+        .post(`/api/v1/payments/${payment.id}/refund`)
+        .set('Authorization', `Bearer ${providerAccount.token}`)
+        .send({ amount: 100, reason: 'requested_by_customer' }),
+    ]);
+
+    expect([first.status, second.status].filter((s) => s === 200)).toHaveLength(2);
+
+    const settled = await AppDataSource.getRepository(Payment).findOneByOrFail({
+      id: payment.id,
+    });
+    // Both refunds must be reflected: 200, not 100.
+    expect(Number(settled.refundAmount)).toBe(200);
+    expect(settled.status).toBe(PaymentStatus.PARTIALLY_REFUNDED);
+  });
 });
