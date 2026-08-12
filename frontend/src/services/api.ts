@@ -1215,6 +1215,37 @@ class ApiService {
     return response.data.data!;
   }
 
+  /**
+   * Fetch a private message attachment as a blob.
+   *
+   * Attachments are no longer static files, so they cannot be pointed at directly
+   * from an `<img src>` or `<a href>` — those requests carry no Authorization
+   * header. The caller turns the blob into an object URL and is responsible for
+   * revoking it.
+   */
+  async fetchMessageAttachment(
+    url: string,
+  ): Promise<{ blob: Blob; fileName: string | null }> {
+    // `url` is an absolute API path (/api/v1/messages/attachments/:id) while the
+    // axios instance is already based at /api/v1, so strip the shared prefix.
+    const relative = url.replace(/^\/api\/v1/, "");
+    const response = await this.api.get(relative, {
+      responseType: "blob",
+      timeout: 60000,
+    });
+
+    // A message stores only the attachment URL, so the display name and type come
+    // back with the file itself: the filename from Content-Disposition, the type
+    // from the blob. Deriving either from the URL does not work — these paths
+    // carry no extension.
+    const disposition = response.headers["content-disposition"] as
+      | string
+      | undefined;
+    const match = disposition?.match(/filename="([^"]*)"/);
+
+    return { blob: response.data as Blob, fileName: match?.[1] ?? null };
+  }
+
   async getConversation(conversationId: string): Promise<any> {
     const response = await this.api.get<ApiResponse<any>>(
       `/messages/conversations/${conversationId}`,

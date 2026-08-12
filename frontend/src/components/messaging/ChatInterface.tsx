@@ -21,7 +21,6 @@ import {
   Delete as DeleteIcon,
   Reply as ReplyIcon,
   Close as CloseIcon,
-  InsertDriveFile as FileIcon,
   ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -31,6 +30,7 @@ import { toast } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import apiService from '../../services/api';
 import socketService from '../../services/socketService';
+import AttachmentPreview from './AttachmentPreview';
 import { tokens } from '../../theme/theme';
 
 interface Message {
@@ -70,7 +70,6 @@ interface Props {
   onBack?: () => void;
 }
 
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace('/api/v1', '') || '';
 
 const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate, onBack }) => {
   const { t } = useTranslation('messages');
@@ -395,22 +394,11 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate, 
 
                       {message.attachments && message.attachments.length > 0 && (
                         <Box sx={{ mt: message.message?.trim() ? 1 : 0, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                          {message.attachments.map((url, i) => {
-                            const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
-                            const fullUrl = `${API_BASE}${url}`;
-                            const fileName = url.split('/').pop() || 'attachment';
-                            return isImage ? (
-                              <Box key={i} component="img" src={fullUrl} alt="attachment"
-                                onClick={() => window.open(fullUrl, '_blank')}
-                                sx={{ maxWidth: 220, maxHeight: 220, borderRadius: tokens.radius.sm, cursor: 'pointer', display: 'block' }} />
-                            ) : (
-                              <Box key={i} component="a" href={fullUrl} target="_blank" rel="noopener noreferrer"
-                                sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'inherit', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
-                                <FileIcon fontSize="small" />
-                                <Typography sx={{ fontSize: '0.78rem' }}>{fileName}</Typography>
-                              </Box>
-                            );
-                          })}
+                          {/* Name and type are resolved from the response, not the
+                              URL — these paths are opaque ids with no extension. */}
+                          {message.attachments.map((url, i) => (
+                            <AttachmentPreview key={i} url={url} />
+                          ))}
                         </Box>
                       )}
 
@@ -471,20 +459,14 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate, 
         {pendingAttachments.length > 0 && (
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
             {pendingAttachments.map((att, idx) => {
-              const isImage = att.mimeType.startsWith('image/');
-              const fullUrl = `${API_BASE}${att.url}`;
               return (
                 <Box key={idx} sx={{ position: 'relative' }}>
-                  {isImage ? (
-                    <Box component="img" src={fullUrl} alt={att.originalName} sx={{ width: 60, height: 60, objectFit: 'cover', borderRadius: tokens.radius.sm }} />
-                  ) : (
-                    <Box sx={{ width: 60, height: 60, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: `1px solid ${borderCol}`, borderRadius: tokens.radius.sm }}>
-                      <FileIcon fontSize="small" />
-                      <Typography sx={{ fontSize: 8, px: 0.5, textAlign: 'center', wordBreak: 'break-all' }}>
-                        {att.originalName.length > 10 ? att.originalName.slice(0, 9) + '…' : att.originalName}
-                      </Typography>
-                    </Box>
-                  )}
+                  <AttachmentPreview
+                    url={att.url}
+                    originalName={att.originalName}
+                    mimeType={att.mimeType}
+                    thumbnail
+                  />
                   <IconButton size="small" onClick={() => removePendingAttachment(idx)}
                     sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'background.paper', p: 0.25, border: `1px solid ${borderCol}`, '&:hover': { bgcolor: 'background.paper' } }}>
                     <CloseIcon sx={{ fontSize: 13 }} />

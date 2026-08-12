@@ -4,39 +4,21 @@ import messageService from '@/services/MessageService';
 import { AuthenticatedRequest } from '@/types';
 import logger from '@/config/logger';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs/promises';
 import { t } from '@/i18n';
+import messageAttachmentService, {
+  AttachmentAccessError,
+  AttachmentValidationError,
+} from '@/services/MessageAttachmentService';
 
-// Configure multer for message file/image uploads
-const messageStorage = multer.diskStorage({
-  destination: async (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '../../uploads/messages');
-    try {
-      await fs.mkdir(uploadPath, { recursive: true });
-      cb(null, uploadPath);
-    } catch (error) {
-      cb(error as Error, uploadPath);
-    }
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
-    cb(null, filename);
-  },
-});
-
+/**
+ * Uploads are buffered in memory (bounded to 10MB) rather than written straight to
+ * disk, so nothing is persisted until its content has been validated. The previous
+ * configuration wrote the file first and decided whether it was allowed by looking
+ * at the filename extension.
+ */
 const messageUpload = multer({
-  storage: messageStorage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|pdf|doc|docx|txt|zip/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    if (extname) {
-      return cb(null, true);
-    }
-    cb(new Error('File type not allowed'));
-  },
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, files: 1 },
 });
 
 export class MessageController {
@@ -333,22 +315,70 @@ export class MessageController {
           res.status(400).json({ success: false, message: t(req, 'message.no_file') });
           return;
         }
-        const url = `/uploads/messages/${req.file.filename}`;
+
+        const stored = await messageAttachmentService.store(
+          req.user!.userId,
+          req.file.originalname,
+          req.file.buffer
+        );
+
         res.json({
           success: true,
           data: {
-            url,
-            originalName: req.file.originalname,
-            mimeType: req.file.mimetype,
-            size: req.file.size,
+            // An API path, not a static file path. Reading it requires authentication
+            // and conversation membership.
+            url: `/api/v1/messages/attachments/${stored.id}`,
+            originalName: stored.originalName,
+            mimeType: stored.mimeType,
+            size: stored.sizeBytes,
           },
         });
       } catch (error) {
+        if (error instanceof AttachmentValidationError) {
+          res
+            .status(400)
+            .json({ success: false, message: t(req, 'message.file_type_not_allowed') });
+          return;
+        }
         logger.error('Error uploading message attachment:', error);
         res.status(500).json({ success: false, message: t(req, 'message.upload_failed') });
       }
     },
   ];
+
+  // GET /messages/attachments/:id — authenticated, membership-checked file read
+  downloadAttachment = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const { attachment } = await messageAttachmentService.resolveForReader(
+        req.params.id,
+        req.user!.userId
+      );
+      const contents = await messageAttachmentService.readFile(attachment);
+
+      // The stored MIME type was derived from the file's own signature, so it is safe
+      // to send. nosniff stops the browser second-guessing it, and the quoted filename
+      // keeps a crafted originalName from breaking out of the header.
+      res.setHeader('Content-Type', attachment.mimeType);
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Cache-Control', 'private, max-age=0, no-store');
+      const safeName = attachment.originalName.replace(/["\\\r\n]/g, '_');
+      const disposition = attachment.mimeType.startsWith('image/') ? 'inline' : 'attachment';
+      res.setHeader('Content-Disposition', `${disposition}; filename="${safeName}"`);
+      // The client reads the filename from this header to label the attachment, so
+      // it has to survive a cross-origin deployment (VITE_API_URL on another host).
+      res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+
+      res.send(contents);
+    } catch (error) {
+      if (error instanceof AttachmentAccessError) {
+        // 404 rather than 403: an outsider should not learn that the id is real.
+        res.status(404).json({ success: false, message: t(req, 'message.attachment_not_found') });
+        return;
+      }
+      logger.error('Error reading message attachment:', error);
+      res.status(500).json({ success: false, message: t(req, 'common.internal_error') });
+    }
+  };
 }
 
 export default new MessageController();
