@@ -94,6 +94,7 @@
   "message.no_file": "No file uploaded",
   "message.file_type_not_allowed": "File type not allowed",
   "message.attachment_not_found": "Attachment not found",
+  "message.attachment_not_owned": "You can only attach files you uploaded",
   "message.upload_failed": "Failed to upload file",
   "provider.created": "Provider profile created successfully",
   "provider.not_found": "Provider not found",

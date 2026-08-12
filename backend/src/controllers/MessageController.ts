@@ -154,6 +154,14 @@ export class MessageController {
         });
         return;
       }
+      // Attaching a file the sender does not own is a bad request, not a server fault.
+      if (error instanceof AttachmentValidationError) {
+        res.status(400).json({
+          success: false,
+          message: t(req, 'message.attachment_not_owned'),
+        });
+        return;
+      }
       logger.error('Error sending message:', error);
       res.status(500).json({
         success: false,
@@ -256,6 +264,13 @@ export class MessageController {
         message: t(req, 'message.updated'),
       });
     } catch (error) {
+      if (error instanceof AttachmentValidationError) {
+        res.status(400).json({
+          success: false,
+          message: t(req, 'message.attachment_not_owned'),
+        });
+        return;
+      }
       logger.error('Error updating message:', error);
       res.status(500).json({
         success: false,

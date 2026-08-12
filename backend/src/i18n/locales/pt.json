@@ -94,6 +94,7 @@
   "message.no_file": "Nenhum arquivo enviado",
   "message.file_type_not_allowed": "Tipo de arquivo não permitido",
   "message.attachment_not_found": "Anexo não encontrado",
+  "message.attachment_not_owned": "Você só pode anexar arquivos que enviou",
   "message.upload_failed": "Falha ao enviar arquivo",
   "provider.created": "Perfil de prestador criado com sucesso",
   "provider.not_found": "Prestador não encontrado",

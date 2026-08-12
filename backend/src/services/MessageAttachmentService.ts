@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs/promises';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { AppDataSource } from '@/config/database';
 import { MessageAttachment } from '@/models/MessageAttachment';
 import logger from '@/config/logger';
@@ -189,7 +189,8 @@ class MessageAttachmentService {
     if (attachment.uploaderId !== readerId) {
       const permitted = await this.readerParticipatesInReferencingConversation(
         attachmentId,
-        readerId
+        readerId,
+        attachment.uploaderId
       );
       if (!permitted) {
         throw new AttachmentAccessError();
@@ -200,16 +201,22 @@ class MessageAttachmentService {
   }
 
   /**
-   * True when the reader is a participant of some conversation containing a message
-   * that references this attachment.
+   * True when the reader is a participant of a conversation where **the uploader**
+   * shared this attachment.
    *
-   * The reference is matched against the message's `attachments` array by API path,
-   * which is how the URL is stored on the message. Uses jsonb containment so the
-   * check stays a single indexed-ish query rather than loading messages.
+   * The `m."senderId" = uploaderId` condition is load-bearing. Without it, the check
+   * trusts any message referencing the id — so anyone who learned an attachment id
+   * could paste it into a message in their own conversation and thereby grant
+   * themselves access. Anchoring to the uploader means only the person who owns the
+   * file can decide where it is shared.
+   *
+   * `assertAttachmentsOwnedBy` blocks that at write time too; this is the second
+   * layer, and the one that still holds for attachments written before it existed.
    */
   private async readerParticipatesInReferencingConversation(
     attachmentId: string,
-    readerId: string
+    readerId: string,
+    uploaderId: string
   ): Promise<boolean> {
     const reference = `/api/v1/messages/attachments/${attachmentId}`;
     const rows = await AppDataSource.query(
@@ -217,11 +224,40 @@ class MessageAttachmentService {
          FROM messages m
          JOIN conversation_participants cp ON cp."conversationId" = m."conversationId"
         WHERE cp."userId" = $1
-          AND m."attachments" @> $2::jsonb
+          AND m."senderId" = $2
+          AND m."attachments" @> $3::jsonb
         LIMIT 1`,
-      [readerId, JSON.stringify([reference])]
+      [readerId, uploaderId, JSON.stringify([reference])]
     );
     return rows.length > 0;
+  }
+
+  /**
+   * Reject any attachment reference the given user did not upload.
+   *
+   * Called before a message is stored. Non-attachment strings (legacy `/uploads/...`
+   * paths already on old messages) are ignored so existing rows keep working.
+   */
+  public async assertAttachmentsOwnedBy(
+    userId: string,
+    attachments: string[] | undefined
+  ): Promise<void> {
+    if (!attachments || attachments.length === 0) return;
+
+    const ids = attachments
+      .map((url) => /^\/api\/v1\/messages\/attachments\/([0-9a-f-]{36})$/.exec(url)?.[1])
+      .filter((id): id is string => Boolean(id));
+
+    if (ids.length === 0) return;
+
+    const owned = await this.getRepository().find({
+      where: { id: In(ids), uploaderId: userId },
+      select: ['id'],
+    });
+
+    if (owned.length !== new Set(ids).size) {
+      throw new AttachmentValidationError('Attachment does not belong to this user');
+    }
   }
 
   /**
