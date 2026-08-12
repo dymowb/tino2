@@ -187,10 +187,18 @@ class MessageAttachmentService {
     }
 
     if (attachment.uploaderId !== readerId) {
+      // Rows backfilled from the pre-privacy era (marked by sizeBytes = 0) carry a
+      // best-guess uploader: the sender of the first message that referenced the
+      // file. If the same file was shared by more than one person, anchoring on that
+      // guess would lock out participants of the other conversations. For these rows
+      // conversation membership alone is sufficient and safe, because
+      // assertAttachmentsOwnedBy prevents any *new* message from referencing them —
+      // so the only referencing messages are ones that already existed.
+      const uploaderAnchor = attachment.sizeBytes > 0 ? attachment.uploaderId : null;
       const permitted = await this.readerParticipatesInReferencingConversation(
         attachmentId,
         readerId,
-        attachment.uploaderId
+        uploaderAnchor
       );
       if (!permitted) {
         throw new AttachmentAccessError();
@@ -216,7 +224,7 @@ class MessageAttachmentService {
   private async readerParticipatesInReferencingConversation(
     attachmentId: string,
     readerId: string,
-    uploaderId: string
+    uploaderId: string | null
   ): Promise<boolean> {
     const reference = `/api/v1/messages/attachments/${attachmentId}`;
     const rows = await AppDataSource.query(
@@ -224,7 +232,7 @@ class MessageAttachmentService {
          FROM messages m
          JOIN conversation_participants cp ON cp."conversationId" = m."conversationId"
         WHERE cp."userId" = $1
-          AND m."senderId" = $2
+          AND ($2::uuid IS NULL OR m."senderId" = $2::uuid)
           AND m."attachments" @> $3::jsonb
         LIMIT 1`,
       [readerId, uploaderId, JSON.stringify([reference])]
