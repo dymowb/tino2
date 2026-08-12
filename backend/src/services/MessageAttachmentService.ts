@@ -81,6 +81,13 @@ function looksLikeUtf8Text(buffer: Buffer): boolean {
   return !decoded.includes('�');
 }
 
+/**
+ * The only shape a stored attachment reference may take. Anchored at both ends so a
+ * sender cannot smuggle an absolute URL or a path escape into a message.
+ */
+const ATTACHMENT_REFERENCE =
+  /^\/api\/v1\/messages\/attachments\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/;
+
 export interface StoredAttachment {
   id: string;
   originalName: string;
@@ -252,18 +259,26 @@ class MessageAttachmentService {
   ): Promise<void> {
     if (!attachments || attachments.length === 0) return;
 
-    const ids = attachments
-      .map((url) => /^\/api\/v1\/messages\/attachments\/([0-9a-f-]{36})$/.exec(url)?.[1])
-      .filter((id): id is string => Boolean(id));
+    const ids: string[] = [];
+    for (const reference of attachments) {
+      const id = ATTACHMENT_REFERENCE.exec(reference)?.[1];
+      if (!id) {
+        // Anything that is not a canonical attachment path is refused outright.
+        // Previously unrecognised strings were ignored, which let a sender store an
+        // absolute external URL — the recipient's client would then fetch it with
+        // their own bearer token attached.
+        throw new AttachmentValidationError('Invalid attachment reference');
+      }
+      ids.push(id);
+    }
 
-    if (ids.length === 0) return;
-
+    const unique = [...new Set(ids)];
     const owned = await this.getRepository().find({
-      where: { id: In(ids), uploaderId: userId },
+      where: { id: In(unique), uploaderId: userId },
       select: ['id'],
     });
 
-    if (owned.length !== new Set(ids).size) {
+    if (owned.length !== unique.length) {
       throw new AttachmentValidationError('Attachment does not belong to this user');
     }
   }

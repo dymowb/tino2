@@ -224,6 +224,36 @@ describe('message attachments', () => {
     }
   });
 
+  it('refuses an attachment reference that is not a canonical attachment path', async () => {
+    const sender = await account('attach-absolute@example.com', 'customer');
+    const recipient = await account('attach-absolute2@example.com', 'provider');
+
+    const conversation = await request(server)
+      .post('/api/v1/messages/conversations')
+      .set('Authorization', `Bearer ${sender.token}`)
+      .send({ participantIds: [recipient.user.id], type: 'direct' })
+      .expect(201);
+
+    // An absolute external URL would be fetched by the recipient's client with
+    // their own bearer token attached — token exfiltration by message.
+    for (const hostile of [
+      'https://evil.example.com/steal',
+      '//evil.example.com/steal',
+      '/api/v1/messages/attachments/../../auth/profile',
+      'http://localhost:3002/api/v1/messages/attachments/00000000-0000-0000-0000-000000000000',
+    ]) {
+      await request(server)
+        .post('/api/v1/messages/messages')
+        .set('Authorization', `Bearer ${sender.token}`)
+        .send({
+          conversationId: conversation.body.data.id,
+          message: 'look',
+          attachments: [hostile],
+        })
+        .expect(400);
+    }
+  });
+
   it('does not let a user grant themselves access by referencing a stolen id', async () => {
     const victim = await account('attach-victim@example.com', 'customer');
     const attacker = await account('attach-attacker@example.com', 'provider');

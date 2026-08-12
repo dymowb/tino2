@@ -2,6 +2,13 @@ import axios, { AxiosInstance, AxiosResponse } from "axios";
 import { toast } from "react-hot-toast";
 import { configureMoney } from "../utils/money";
 
+/**
+ * The only shape a message attachment reference may take. Anchored at both ends so
+ * an attacker-controlled string cannot smuggle in an absolute URL or a path escape.
+ */
+export const MESSAGE_ATTACHMENT_URL =
+  /^\/api\/v1\/messages\/attachments\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/;
+
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
@@ -1233,10 +1240,17 @@ class ApiService {
   async fetchMessageAttachment(
     url: string,
   ): Promise<{ blob: Blob; fileName: string | null }> {
-    // `url` is an absolute API path (/api/v1/messages/attachments/:id) while the
-    // axios instance is already based at /api/v1, so strip the shared prefix.
-    const relative = url.replace(/^\/api\/v1/, "");
-    const response = await this.api.get(relative, {
+    // A message's `attachments` entries are arbitrary strings chosen by the sender.
+    // Handing one straight to the authenticated axios client would let a malicious
+    // sender store an absolute external URL and have the *viewer's* browser send
+    // their bearer token to that origin. Only a canonical attachment id is accepted,
+    // and the request path is rebuilt from it rather than taken from the message.
+    const id = MESSAGE_ATTACHMENT_URL.exec(url)?.[1];
+    if (!id) {
+      throw new Error("Unrecognized attachment reference");
+    }
+
+    const response = await this.api.get(`/messages/attachments/${id}`, {
       responseType: "blob",
       timeout: 60000,
     });
