@@ -39,6 +39,10 @@ services:
       - "3000:3000"
     volumes:
       - backend_uploads:/app/uploads
+      # Private message attachments. Deliberately outside /app/uploads (which is
+      # served statically) — but just as much real user data, so it needs its own
+      # persistent volume and a place in the backup policy.
+      - backend_private_storage:/app/storage
       - backend_logs:/app/logs
     depends_on:
       - postgres
@@ -200,6 +204,7 @@ volumes:
   redis_data:
     driver: local
   backend_uploads:
+  backend_private_storage:
     driver: local
   backend_logs:
     driver: local
