@@ -104,6 +104,23 @@ describe('platform currency configuration', () => {
     }
   });
 
+  it('does not let seeding overwrite a configured currency', async () => {
+    // Seeding used to upsert BRL unconditionally, which made PLATFORM_CURRENCY
+    // unreachable (a database row always wins) and reset any deliberate admin
+    // change on every reseed.
+    await setSetting('platform_currency', 'EUR');
+
+    await AppDataSource.getRepository(AppSettings)
+      .createQueryBuilder()
+      .insert()
+      .values([{ key: 'platform_currency', value: 'BRL' }])
+      .orIgnore()
+      .execute();
+    clearPlatformSettingsCache();
+
+    expect(await getPlatformCurrency()).toBe('EUR');
+  });
+
   it('ignores an unsupported currency supplied through the environment', async () => {
     await AppDataSource.getRepository(AppSettings).delete({ key: 'platform_currency' });
     process.env.PLATFORM_CURRENCY = 'XYZ';
