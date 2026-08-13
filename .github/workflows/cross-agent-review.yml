@@ -13,7 +13,7 @@ jobs:
     name: cross-agent-review
     runs-on: ubuntu-latest
     steps:
-      - name: Validate provenance label
+      - name: Resolve reviewer from provenance
         id: provenance
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
@@ -35,10 +35,56 @@ jobs:
               return;
             }
 
-            core.setOutput('source', labels[0].slice(prefix.length));
+            const label = labels[0].slice(prefix.length);
+
+            // Corroborate the label against the commits themselves. Trailers are part
+            // of the commit objects, so changing one changes its SHA and retriggers
+            // this workflow on `synchronize` — an author cannot quietly strip the
+            // evidence after review has run.
+            const commits = await github.paginate(github.rest.pulls.listCommits, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 100,
+            });
+            // Commit messages are untrusted text. They are only pattern-matched here,
+            // never interpolated into a shell or a prompt.
+            const claudeAuthored = commits.some((commit) =>
+              /^co-authored-by:\s*claude\b/im.test(commit.commit?.message || '')
+            );
+
+            // Routing rule: every pull request is reviewed by *some* agent. The label
+            // only decides which one. `human-or-mixed` no longer skips review — that
+            // was a self-service bypass, since anyone able to open a pull request
+            // could also apply the label that exempted it.
+            //
+            // The one mislabel still worth blocking is routing Claude-authored code to
+            // Claude, which would be self-review rather than cross-review.
+            if (claudeAuthored && label === 'codex') {
+              core.setFailed(
+                'Commits carry Claude co-authorship trailers, so this cannot be labelled ' +
+                'generated:codex — that would route Claude-authored changes to Claude for ' +
+                'self-review. Use generated:claude.'
+              );
+              return;
+            }
+
+            const reviewer = label === 'codex' ? 'claude' : 'codex';
+
+            core.setOutput('reviewer', reviewer);
+            core.setOutput('label', label);
+
+            await core.summary
+              .addHeading('Provenance', 3)
+              .addTable([
+                [{ data: 'Signal', header: true }, { data: 'Value', header: true }],
+                ['Declared label', `generated:${label}`],
+                ['Claude trailers in commits', claudeAuthored ? 'yes' : 'no'],
+                ['Assigned reviewer', reviewer],
+              ])
+              .write();
 
       - name: Checkout trusted base without submodules
-        if: steps.provenance.outputs.source != 'human-or-mixed'
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
@@ -48,7 +94,6 @@ jobs:
           git checkout --detach FETCH_HEAD
 
       - name: Capture untrusted PR diff
-        if: steps.provenance.outputs.source != 'human-or-mixed'
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -60,8 +105,8 @@ jobs:
             exit 1
           fi
 
-      - name: Codex reviews Claude-authored changes
-        if: steps.provenance.outputs.source == 'claude'
+      - name: Codex review
+        if: steps.provenance.outputs.reviewer == 'codex'
         id: codex_review
         uses: openai/codex-action@52fe01ec70a42f454c9d2ebd47598f9fd6893d56 # v1
         with:
@@ -76,8 +121,8 @@ jobs:
           sandbox: read-only
           safety-strategy: drop-sudo
 
-      - name: Claude reviews Codex-authored changes
-        if: steps.provenance.outputs.source == 'codex'
+      - name: Claude review
+        if: steps.provenance.outputs.reviewer == 'claude'
         id: claude_review
         uses: anthropics/claude-code-action@239e3a730883eeb5c53db12b0fc9573b3024b126 # v1
         with:
@@ -96,11 +141,11 @@ jobs:
             --json-schema '{"type":"object","additionalProperties":false,"properties":{"decision":{"type":"string","enum":["pass","block"]},"summary":{"type":"string"},"findings":{"type":"array","items":{"type":"object","additionalProperties":false,"properties":{"severity":{"type":"string","enum":["blocking","advisory"]},"file":{"type":"string"},"line":{"type":["integer","null"]},"message":{"type":"string"}},"required":["severity","file","line","message"]}}},"required":["decision","summary","findings"]}'
 
       - name: Publish and enforce review result
-        if: always() && steps.provenance.outputs.source != 'human-or-mixed' && steps.provenance.outputs.source != ''
+        if: always() && steps.provenance.outputs.reviewer != ''
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         env:
           REVIEW_JSON: ${{ steps.codex_review.outputs.final-message || steps.claude_review.outputs.structured_output }}
-          REVIEWER: ${{ steps.provenance.outputs.source == 'claude' && 'Codex' || 'Claude' }}
+          REVIEWER: ${{ steps.provenance.outputs.reviewer == 'codex' && 'Codex' || 'Claude' }}
         with:
           script: |
             let review;
@@ -160,7 +205,3 @@ jobs:
             if (review.decision !== 'pass') {
               core.setFailed(`${process.env.REVIEWER} found blocking issues.`);
             }
-
-      - name: Human or mixed provenance
-        if: steps.provenance.outputs.source == 'human-or-mixed'
-        run: echo "Cross-agent review is not required for human or materially mixed changes."
