@@ -15,7 +15,7 @@ import {
   ConversationSearchQuery,
   MessageSearchQuery,
 } from '@/types';
-import { toPublicUser } from '@/utils/serializers';
+import { toPublicUser, PublicUser } from '@/utils/serializers';
 import messageAttachmentService from '@/services/MessageAttachmentService';
 
 // Sanitize a message: strip sensitive fields from embedded sender/receiver/replyTo.sender
@@ -230,6 +230,52 @@ export class MessageService {
     const messagingClosed =
       bookingStatus === BookingStatus.COMPLETED || bookingStatus === BookingStatus.CANCELLED;
     return { bookingStatus, messagingClosed };
+  }
+
+  /**
+   * People this user is allowed to start a conversation with.
+   *
+   * Scoped to actual commercial relationships — anyone they share a booking or a
+   * quote with — rather than every account on the platform. A free-form directory
+   * of all users would leak the customer base to any provider who opened the
+   * dialog, and there is no product reason to message a stranger: every
+   * conversation in this product exists because of a booking or a quote.
+   *
+   * The join hops through providers.userId on purpose. `booking.providerId` and
+   * `quote.providerId` hold a Provider entity id, not a User id; comparing either
+   * to a user id directly is the single most repeated authorization bug in this
+   * codebase and would silently return nobody for providers.
+   */
+  async getContacts(userId: string, search?: string): Promise<PublicUser[]> {
+    const term = (search || '').trim();
+    const like = `%${term.toLowerCase()}%`;
+
+    const rows = await AppDataSource.query(
+      `WITH counterparties AS (
+         SELECT CASE WHEN b."customerId" = $1 THEN p."userId" ELSE b."customerId" END AS "userId"
+           FROM bookings b
+           JOIN providers p ON p.id = b."providerId"
+          WHERE b."customerId" = $1 OR p."userId" = $1
+         UNION
+         SELECT CASE WHEN q."customerId" = $1 THEN p."userId" ELSE q."customerId" END AS "userId"
+           FROM quotes q
+           JOIN providers p ON p.id = q."providerId"
+          WHERE q."customerId" = $1 OR p."userId" = $1
+       )
+       -- Email is matched against but never returned: PublicUser deliberately omits
+       -- it, and a counterparty's address is not needed to start a conversation.
+       SELECT DISTINCT u.id, u."firstName", u."lastName", u."userType", u."profileImage"
+         FROM counterparties c
+         JOIN users u ON u.id = c."userId"
+        WHERE u.id <> $1
+          AND u."isActive" = true
+          AND ($2 = '' OR lower(u."firstName" || ' ' || u."lastName") LIKE $3 OR lower(u.email) LIKE $3)
+        ORDER BY u."firstName", u."lastName"
+        LIMIT 50`,
+      [userId, term, like]
+    );
+
+    return rows;
   }
 
   async isConversationParticipant(conversationId: string, userId: string): Promise<boolean> {

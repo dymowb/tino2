@@ -338,6 +338,22 @@ export class MessageController {
     }
   };
 
+  // GET /messages/contacts — people the caller shares a booking or quote with
+  getContacts = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const search = typeof req.query.search === 'string' ? req.query.search : undefined;
+      const contacts = await messageService.getContacts(req.user!.userId, search);
+
+      res.json({ success: true, data: contacts });
+    } catch (error) {
+      logger.error('Error getting conversation contacts:', error);
+      res.status(500).json({
+        success: false,
+        message: t(req, 'common.internal_error'),
+      });
+    }
+  };
+
   uploadAttachment = [
     messageUpload.single('file'),
     async (req: AuthenticatedRequest, res: Response): Promise<void> => {

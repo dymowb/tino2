@@ -169,6 +169,20 @@ router.delete(
 // Get unread message count for current user
 router.get('/messages/unread/count', messageController.getUnreadMessageCount);
 
+// People the caller may start a conversation with. Scoped to existing booking or
+// quote relationships — not a directory of every account on the platform.
+router.get(
+  '/contacts',
+  [
+    query('search')
+      .optional()
+      .isString()
+      .isLength({ max: 100 })
+      .withMessage('Search must be a string with maximum 100 characters'),
+  ],
+  messageController.getContacts
+);
+
 // Upload a file attachment for use in a message
 router.post('/messages/upload', ...messageController.uploadAttachment);
 
