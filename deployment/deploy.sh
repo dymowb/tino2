@@ -224,7 +224,8 @@ run_migrations() {
 
     # Run migrations
     log_info "Executing database migrations..."
-    docker-compose -f "${SCRIPT_DIR}/docker-compose.yml" run --rm backend npm run db:migrate
+    # `db:migrate` has never existed in backend/package.json; the script is `migrate`.
+    docker-compose -f "${SCRIPT_DIR}/docker-compose.yml" run --rm backend npm run migrate
 
     if [[ $? -ne 0 ]]; then
         log_error "Database migrations failed"

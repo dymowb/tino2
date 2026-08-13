@@ -22,7 +22,7 @@
     "format:check": "prettier --check \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",
     "seed": "ts-node src/scripts/seedDatabase.ts",
-    "migrate": "ts-node src/scripts/runMigrations.ts",
+    "migrate": "npm run migration:run",
     "db:reset": "ts-node src/scripts/resetDatabase.ts",
     "migration:generate": "typeorm-ts-node-commonjs -d src/config/typeorm.data-source.ts migration:generate",
     "migration:run": "typeorm-ts-node-commonjs -d src/config/typeorm.data-source.ts migration:run",
