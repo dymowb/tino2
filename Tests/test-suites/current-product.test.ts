@@ -110,14 +110,19 @@ test.describe("customer experience", () => {
       /translation missing/i,
     );
 
-    await page.goto("/payments");
-    await expect(page.locator("main")).toBeVisible();
-    const horizontalOverflow = await page.evaluate(
-      () =>
-        document.documentElement.scrollWidth -
-        document.documentElement.clientWidth,
-    );
-    expect(horizontalOverflow).toBeLessThanOrEqual(2);
+    // Horizontal overflow across the primary customer-facing pages, not just one.
+    // A single page proved nothing about the rest: /payments has no nav entry and
+    // is one of the least-visited screens in the product.
+    for (const path of ["/", "/providers", "/bookings", "/messages", "/profile", "/payments"]) {
+      await page.goto(path);
+      await expect(page.locator("main")).toBeVisible();
+      const horizontalOverflow = await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth,
+      );
+      expect(horizontalOverflow, `${path} overflows horizontally at 390px`).toBeLessThanOrEqual(2);
+    }
   });
 
   test("has keyboard-reachable landmarks and labelled controls", async ({

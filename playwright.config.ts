@@ -14,8 +14,11 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : 4,
+  /* CI runs five browser projects against one shared pair of servers. Two workers
+   * match the standard runner's core count and roughly halve the wall clock, while
+   * staying low enough that the suite is not racing itself against a single backend
+   * and a single seeded database. */
+  workers: process.env.CI ? 2 : 4,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
     ['html', { outputFolder: 'Tests/results/reports' }],
