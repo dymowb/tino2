@@ -1411,6 +1411,31 @@ async function runSeeder(): Promise<void> {
       },
       ['key']
     );
+    // Inserted only when absent, and seeded from the environment when one is set.
+    //
+    // These two are unlike the other settings: they are deployment configuration, not
+    // product defaults. Upserting them would make `PLATFORM_CURRENCY=EUR` unreachable
+    // (a database row always wins over the environment) and would silently reset a
+    // deliberate admin change on every reseed.
+    await settingsRepo
+      .createQueryBuilder()
+      .insert()
+      .values([
+        {
+          key: 'platform_currency',
+          value: process.env.PLATFORM_CURRENCY?.trim().toUpperCase() || 'BRL',
+          description:
+            'ISO currency code every price in this deployment is denominated in. Changing it ' +
+            'switches display and what Stripe is charged; it does NOT convert existing amounts.',
+        },
+        {
+          key: 'platform_locale',
+          value: process.env.PLATFORM_LOCALE?.trim() || 'pt-BR',
+          description: 'BCP-47 locale used to format money amounts (grouping and decimal marks)',
+        },
+      ])
+      .orIgnore()
+      .execute();
     await settingsRepo.upsert(
       {
         key: 'booking_readiness_enabled',

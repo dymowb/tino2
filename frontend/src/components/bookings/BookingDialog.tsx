@@ -40,6 +40,7 @@ import { apiService, Provider, Booking } from "../../services/api";
 import { useAuth } from "../../contexts/AuthContext";
 import { tokens } from "../../theme/theme";
 import AddressAutocomplete from "../common/AddressAutocomplete";
+import { formatMoney } from '../../utils/money';
 
 interface BookingDialogProps {
   open: boolean;
@@ -409,11 +410,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({
       .replace(/_/g, " ")
       .replace(/(^|\s)(\S)/g, (_, s, c) => s + c.toUpperCase());
 
-  const formatCurrency = (v: number) =>
-    new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(v);
+  const formatCurrency = (v: number) => formatMoney(v);
 
   if (!provider) return null;
 

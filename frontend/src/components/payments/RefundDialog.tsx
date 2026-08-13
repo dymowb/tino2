@@ -29,6 +29,7 @@ import {
 import { useMutation } from '@tanstack/react-query';
 import apiService from '../../services/api';
 import { toast } from 'react-hot-toast';
+import { formatMoney } from '../../utils/money';
 
 interface Payment {
   id: string;
@@ -62,7 +63,7 @@ const RefundDialog: React.FC<Props> = ({
 }) => {
   const { t } = useTranslation('payments');
   const [refundType, setRefundType] = useState<'full' | 'partial'>('full');
-  const [refundAmount, setRefundAmount] = useState<number>(payment.amount / 100);
+  const [refundAmount, setRefundAmount] = useState<number>(Number(payment.amount) || 0);
   const [refundReason, setRefundReason] = useState('');
   const [refundApplicationFee, setRefundApplicationFee] = useState(false);
 
@@ -84,7 +85,7 @@ const RefundDialog: React.FC<Props> = ({
     setRefundType(type);
     
     if (type === 'full') {
-      setRefundAmount(payment.amount / 100);
+      setRefundAmount(Number(payment.amount) || 0);
     } else {
       setRefundAmount(0);
     }
@@ -120,12 +121,8 @@ const RefundDialog: React.FC<Props> = ({
     refundMutation.mutate({ paymentId: payment.id, refundData });
   };
 
-  const formatAmount = (amount: number, currency = payment.currency || 'BRL') => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency,
-    }).format(Number(amount) || 0);
-  };
+  const formatAmount = (amount: number, currency = payment.currency) =>
+    formatMoney(amount, currency);
 
   // The API returns money in major units (numeric(10,2)). Dividing by 100 here showed
   // a R$275.00 payment as R$2.75 and capped refunds at 1/100th of the real amount.

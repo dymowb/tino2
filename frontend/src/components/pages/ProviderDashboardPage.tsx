@@ -65,6 +65,7 @@ import LoadingSpinner from "../common/LoadingSpinner";
 import PageSkeleton from "../common/PageSkeleton";
 import { tokens } from "../../theme/theme";
 import ProfileCompletionPrompt from "../providers/ProfileCompletionPrompt";
+import { formatMoney } from '../../utils/money';
 
 // Stat card: large Fraunces number with color accent
 const StatCard: React.FC<{
@@ -161,11 +162,7 @@ const PendingBookingCard: React.FC<{
 }> = ({ booking, onAccept, onDecline, isPending }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
-  const formatCurrency = (v: any) =>
-    new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(Number(v));
+  const formatCurrency = (v: any) => formatMoney(v);
 
   return (
     <Box
@@ -443,11 +440,7 @@ const ProviderDashboardPage: React.FC = () => {
     }
   };
 
-  const formatCurrency = (v: any) =>
-    new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(Number(v));
+  const formatCurrency = (v: any) => formatMoney(v);
 
   const getStatusDot = (status: string) => {
     const map: Record<string, string> = {

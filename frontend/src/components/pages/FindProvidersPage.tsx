@@ -50,6 +50,7 @@ import ProviderDetailDrawer from "../assistant/ProviderDetailDrawer";
 import { tokens } from "../../theme/theme";
 import FavoriteButton from "../providers/FavoriteButton";
 import { useFavoriteProviders } from "../../hooks/useFavoriteProviders";
+import { formatMoney } from '../../utils/money';
 
 interface ExtendedProvider extends Provider {
   distance?: number;
@@ -275,7 +276,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
               color: "#fff",
             }}
           >
-            R${price}
+            {formatMoney(price)}
           </Typography>
           <Typography
             sx={{
@@ -909,7 +910,7 @@ const FindProvidersPage: React.FC = () => {
                     max={MAX_PRICE_CAP}
                     step={10}
                     marks={[
-                      { value: 50, label: "R$50" },
+                      { value: 50, label: formatMoney(50) },
                       { value: MAX_PRICE_CAP, label: "∞" },
                     ]}
                     valueLabelDisplay="auto"

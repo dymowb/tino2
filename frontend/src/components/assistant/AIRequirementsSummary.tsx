@@ -8,6 +8,7 @@ import {
   AttachMoney, LocationOn, Build, Warning,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { formatMoney } from '../../utils/money';
 
 export interface RequirementsSummary {
   serviceType: string;
@@ -88,7 +89,7 @@ const AIRequirementsSummary: React.FC<Props> = ({
   };
 
   const budgetDisplay = requirements.budget
-    ? [requirements.budget.min && `R$${requirements.budget.min}`, requirements.budget.max && `R$${requirements.budget.max}`]
+    ? [requirements.budget.min && formatMoney(requirements.budget.min), requirements.budget.max && formatMoney(requirements.budget.max)]
         .filter(Boolean).join(' – ')
     : '';
 

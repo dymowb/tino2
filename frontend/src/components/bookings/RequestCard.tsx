@@ -25,6 +25,7 @@ import {
 } from '@mui/icons-material';
 import { QuoteRequest, Quote } from '../../services/api';
 import { tokens } from '../../theme/theme';
+import { formatMoney } from '../../utils/money';
 
 interface RequestCardProps {
   request: QuoteRequest;
@@ -43,8 +44,7 @@ interface RequestCardProps {
 const formatServiceName = (service: string) =>
   service.replace(/_/g, ' ').replace(/(^|\s)(\S)/g, (_, s, c) => s + c.toUpperCase());
 
-const formatCurrency = (amount: number | string) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(amount));
+const formatCurrency = (amount: number | string) => formatMoney(amount);
 
 /**
  * A customer's quote request rendered as a lifecycle card in the unified Bookings

@@ -7,6 +7,7 @@ import { Search, CampaignOutlined, PersonPinCircleOutlined } from '@mui/icons-ma
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiService } from '../../services/api';
+import { formatMoney } from '../../utils/money';
 
 interface AdminQuoteRequest {
   id: string;
@@ -24,7 +25,7 @@ interface AdminQuoteRequest {
   quotes: { id: string; provider: string | null; price: number; status: string }[];
 }
 
-const fmtBRL = (n: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n);
+const fmtBRL = (n: number) => formatMoney(n);
 const QUOTE_STATUS_COLOR: Record<string, 'default' | 'success' | 'error' | 'warning'> = {
   pending: 'warning', accepted: 'success', rejected: 'error', withdrawn: 'default', expired: 'default',
 };

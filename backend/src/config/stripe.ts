@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 import config from './environment';
 import logger from './logger';
-import { PLATFORM_CURRENCY } from '@/utils/money';
+import { DEFAULT_PLATFORM_CURRENCY } from '@/utils/money';
 
 // Stripe configuration interface
 export interface StripeConfig {
@@ -108,7 +108,7 @@ export const calculateFees = (amount: number) => {
 // Validate payment amount
 export const validatePaymentAmount = (
   amount: number,
-  currency: string = PLATFORM_CURRENCY.toLowerCase()
+  currency: string = DEFAULT_PLATFORM_CURRENCY.toLowerCase()
 ): void => {
   if (amount <= 0) {
     throw new Error('Payment amount must be greater than 0');
