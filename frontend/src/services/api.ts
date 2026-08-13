@@ -1,6 +1,13 @@
 import axios, { AxiosInstance, AxiosResponse } from "axios";
 import { toast } from "react-hot-toast";
 
+/**
+ * The only shape a message attachment reference may take. Anchored at both ends so
+ * an attacker-controlled string cannot smuggle in an absolute URL or a path escape.
+ */
+export const MESSAGE_ATTACHMENT_URL =
+  /^\/api\/v1\/messages\/attachments\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/;
+
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
@@ -1213,6 +1220,57 @@ class ApiService {
       { headers: { "Content-Type": "multipart/form-data" }, timeout: 60000 },
     );
     return response.data.data!;
+  }
+
+  /**
+   * Fetch a private message attachment as a blob.
+   *
+   * Attachments are no longer static files, so they cannot be pointed at directly
+   * from an `<img src>` or `<a href>` — those requests carry no Authorization
+   * header. The caller turns the blob into an object URL and is responsible for
+   * revoking it.
+   */
+  async fetchMessageAttachment(
+    url: string,
+  ): Promise<{ blob: Blob; fileName: string | null }> {
+    // A message's `attachments` entries are arbitrary strings chosen by the sender.
+    // Handing one straight to the authenticated axios client would let a malicious
+    // sender store an absolute external URL and have the *viewer's* browser send
+    // their bearer token to that origin. Only a canonical attachment id is accepted,
+    // and the request path is rebuilt from it rather than taken from the message.
+    const id = MESSAGE_ATTACHMENT_URL.exec(url)?.[1];
+    if (!id) {
+      throw new Error("Unrecognized attachment reference");
+    }
+
+    const response = await this.api.get(`/messages/attachments/${id}`, {
+      responseType: "blob",
+      timeout: 60000,
+    });
+
+    // A message stores only the attachment URL, so the display name and type come
+    // back with the file itself: the filename from Content-Disposition, the type
+    // from the blob. Deriving either from the URL does not work — these paths
+    // carry no extension.
+    const disposition = response.headers["content-disposition"] as
+      | string
+      | undefined;
+
+    // Prefer the RFC 5987 `filename*`, which carries the real UTF-8 name; the plain
+    // `filename` is an ASCII-only fallback with non-Latin-1 characters replaced.
+    const extended = disposition?.match(/filename\*=UTF-8''([^;]+)/i);
+    const plain = disposition?.match(/filename="([^"]*)"/);
+    let fileName: string | null = null;
+    if (extended?.[1]) {
+      try {
+        fileName = decodeURIComponent(extended[1]);
+      } catch {
+        fileName = null;
+      }
+    }
+    if (!fileName) fileName = plain?.[1] ?? null;
+
+    return { blob: response.data as Blob, fileName };
   }
 
   async getConversation(conversationId: string): Promise<any> {

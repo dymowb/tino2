@@ -109,6 +109,14 @@ export class App {
     this.app.use(sanitizeInput);
     this.app.use(logSuspiciousActivity);
 
+    // Public assets only. Message attachments are private and deliberately live
+    // outside this tree (backend/storage/), reachable solely through the
+    // authenticated, membership-checked GET /api/v1/messages/attachments/:id.
+    // Files uploaded before that change still sit in uploads/messages, so that
+    // subtree is explicitly refused here rather than left readable by URL.
+    this.app.use('/uploads/messages', (_req, res) => {
+      res.status(404).json({ success: false, error: 'Not found' });
+    });
     this.app.use('/uploads', express.static('uploads'));
   }
 

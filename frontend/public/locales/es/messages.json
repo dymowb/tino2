@@ -28,7 +28,9 @@
     "typing": "escribiendo...",
     "participants": "{{count}} participante",
     "participants_other": "{{count}} participantes",
-    "participants_one": "{{count}} participante"
+    "participants_one": "{{count}} participante",
+    "attachment_unavailable": "Adjunto no disponible",
+    "attachment": "Adjunto"
   },
   "new": {
     "title": "Iniciar Nueva Conversación",

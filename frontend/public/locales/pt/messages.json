@@ -41,7 +41,9 @@
     "delete": "Excluir",
     "conversation_fallback": "Conversa",
     "participants_other": "{{count}} participantes",
-    "participants_one": "{{count}} participante"
+    "participants_one": "{{count}} participante",
+    "attachment_unavailable": "Anexo indisponível",
+    "attachment": "Anexo"
   },
   "errors": {
     "send_failed": "Falha ao enviar mensagem",

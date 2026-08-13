@@ -172,4 +172,14 @@ router.get('/messages/unread/count', messageController.getUnreadMessageCount);
 // Upload a file attachment for use in a message
 router.post('/messages/upload', ...messageController.uploadAttachment);
 
+// Read an attachment. Authenticated by the router-level `authenticate` above and
+// membership-checked in the service — attachments are no longer served as static files.
+// Declared without the `/messages` prefix the sibling routes use, so the public path
+// is /api/v1/messages/attachments/:id rather than a doubled /messages/messages/.
+router.get(
+  '/attachments/:id',
+  [param('id').isUUID().withMessage('Attachment ID must be a valid UUID')],
+  messageController.downloadAttachment
+);
+
 export default router;
