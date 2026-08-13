@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Validate provenance label
         id: provenance
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           script: |
             const prefix = 'generated:';
@@ -63,9 +63,14 @@ jobs:
       - name: Codex reviews Claude-authored changes
         if: steps.provenance.outputs.source == 'claude'
         id: codex_review
-        uses: openai/codex-action@v1
+        uses: openai/codex-action@52fe01ec70a42f454c9d2ebd47598f9fd6893d56 # v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          # The action installs the Codex CLI from npm at run time, and an empty
+          # value means `@openai/codex@latest`. Pinning the action to a SHA is
+          # therefore not enough on its own: the actual reviewer could change
+          # under us between two runs of identical workflow code.
+          codex-version: '0.147.0'
           prompt-file: .github/review/codex-review.md
           codex-args: '["--output-schema", ".github/review/cross-review-schema.json", "--ephemeral"]'
           sandbox: read-only
@@ -74,7 +79,7 @@ jobs:
       - name: Claude reviews Codex-authored changes
         if: steps.provenance.outputs.source == 'codex'
         id: claude_review
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@239e3a730883eeb5c53db12b0fc9573b3024b126 # v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ github.token }}
@@ -92,7 +97,7 @@ jobs:
 
       - name: Publish and enforce review result
         if: always() && steps.provenance.outputs.source != 'human-or-mixed' && steps.provenance.outputs.source != ''
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         env:
           REVIEW_JSON: ${{ steps.codex_review.outputs.final-message || steps.claude_review.outputs.structured_output }}
           REVIEWER: ${{ steps.provenance.outputs.source == 'claude' && 'Codex' || 'Claude' }}
