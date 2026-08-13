@@ -215,10 +215,11 @@ const PaymentsPage: React.FC = () => {
   };
 
   const formatAmount = (amount: number, currency = 'BRL') => {
-    return new Intl.NumberFormat('en-US', {
+    // en-US grouping on a BRL amount rendered "R$6,678.00" instead of "R$ 6.678,00".
+    return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency,
-    }).format(amount);
+    }).format(Number(amount) || 0);
   };
 
   const renderPaymentStats = () => {

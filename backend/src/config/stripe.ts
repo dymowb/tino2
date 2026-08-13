@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import config from './environment';
 import logger from './logger';
+import { PLATFORM_CURRENCY } from '@/utils/money';
 
 // Stripe configuration interface
 export interface StripeConfig {
@@ -26,7 +27,9 @@ const stripeConfig: StripeConfig = {
   processingFeeRate: parseFloat(process.env.STRIPE_FEE_RATE || '0.029'), // 2.9%
   processingFeeFixed: parseFloat(process.env.STRIPE_FEE_FIXED || '0.30'), // $0.30
   maxPaymentAmount: parseFloat(process.env.MAX_PAYMENT_AMOUNT || '999999.99'),
-  supportedCurrencies: (process.env.SUPPORTED_CURRENCIES || 'usd,eur,gbp,cad,aud').split(','),
+  // brl first: it is the currency this deployment actually prices in. Its absence
+  // meant validateCurrency would have rejected every real payment had it been wired.
+  supportedCurrencies: (process.env.SUPPORTED_CURRENCIES || 'brl,usd,eur,gbp,cad,aud').split(','),
   supportedPaymentMethods: ['card', 'us_bank_account', 'link', 'apple_pay', 'google_pay', 'paypal'],
 };
 
@@ -103,7 +106,10 @@ export const calculateFees = (amount: number) => {
 };
 
 // Validate payment amount
-export const validatePaymentAmount = (amount: number, currency: string = 'usd'): void => {
+export const validatePaymentAmount = (
+  amount: number,
+  currency: string = PLATFORM_CURRENCY.toLowerCase()
+): void => {
   if (amount <= 0) {
     throw new Error('Payment amount must be greater than 0');
   }
@@ -114,6 +120,7 @@ export const validatePaymentAmount = (amount: number, currency: string = 'usd'):
 
   // Minimum amounts by currency (in major units)
   const minimumAmounts: Record<string, number> = {
+    brl: 0.5,
     usd: 0.5,
     eur: 0.5,
     gbp: 0.3,

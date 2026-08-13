@@ -16,6 +16,7 @@ import {
   MessageSearchQuery,
 } from '@/types';
 import { toPublicUser } from '@/utils/serializers';
+import messageAttachmentService from '@/services/MessageAttachmentService';
 
 // Sanitize a message: strip sensitive fields from embedded sender/receiver/replyTo.sender
 function toPublicMessage(message: Message | null | undefined): any {
@@ -445,6 +446,11 @@ export class MessageService {
         throw new Error('MESSAGING_CLOSED');
       }
 
+      // You may only attach files you uploaded. Without this, anyone who learned an
+      // attachment id could reference it from a conversation they belong to and thereby
+      // grant themselves read access to someone else's private file.
+      await messageAttachmentService.assertAttachmentsOwnedBy(senderId, messageData.attachments);
+
       // Find the receiver (for direct conversations; undefined for group/support chats)
       const receiverId = conversation.participants.find(
         (participant) => participant.id !== senderId
@@ -646,6 +652,9 @@ export class MessageService {
       }
 
       if (updateData.attachments) {
+        // Same ownership rule as sending — editing a message must not become a way to
+        // attach a file someone else uploaded.
+        await messageAttachmentService.assertAttachmentsOwnedBy(senderId, updateData.attachments);
         message.attachments = updateData.attachments;
       }
 

@@ -88,10 +88,11 @@ const PaymentForm: React.FC<{
 
   useEffect(() => {
     if (selectedBooking) {
+      // Amount and currency are derived from the booking on the server, so they are
+      // deliberately not sent. Sending `totalAmount * 100` here while the backend also
+      // multiplied by 100 is what produced a 100x charge.
       createPaymentIntentMutation.mutate({
         bookingId: selectedBooking.id,
-        amount: selectedBooking.totalAmount * 100, // Convert to cents
-        currency: 'usd',
         description: t('new_payment.payment_for_service', { service: selectedBooking.serviceType }),
         metadata: {
           bookingId: selectedBooking.id,
