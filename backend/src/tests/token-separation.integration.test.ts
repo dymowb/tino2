@@ -1,3 +1,4 @@
+import jwt from 'jsonwebtoken';
 import request from 'supertest';
 import App from '@/app';
 import { AppDataSource } from '@/config/database';
@@ -77,20 +78,27 @@ describe('access and refresh token separation', () => {
     expect(jwtService.decodeToken(refreshToken)).toMatchObject({ type: 'refresh' });
   });
 
-  it('still accepts a legacy token issued before the claim existed', async () => {
+  it('rejects an untyped legacy token everywhere', async () => {
     const { user } = await account('token-legacy@example.com');
 
-    // Signed without a `type`, as tokens in circulation during the deploy will be.
-    const legacy = require('jsonwebtoken').sign(
+    // Signed without a `type`, as every token in circulation before this change is.
+    // Grandfathering these would leave them usable for either purpose until they
+    // expired — up to 7 days — which is most of the hole this closes. Deploying
+    // therefore invalidates existing sessions once; that is the intended trade.
+    const legacy = jwt.sign(
       { userId: user.id, id: user.id, email: user.email, userType: 'customer' },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET as string,
       { expiresIn: '15m' }
     );
 
     await request(server)
       .get('/api/v1/auth/profile')
       .set('Authorization', `Bearer ${legacy}`)
-      .expect(200);
+      .expect(401);
+
+    await request(server).post('/api/v1/auth/refresh').send({ refreshToken: legacy }).expect(401);
+
+    expect(resolveSocketUser(legacy)).toBeNull();
   });
 
   it('refuses a refresh token on the Socket.IO handshake', async () => {

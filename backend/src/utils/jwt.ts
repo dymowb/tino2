@@ -57,15 +57,16 @@ export class JWTService {
   /**
    * Verify a token and require it to be of the expected kind.
    *
-   * `expectedType` is optional only so that tokens issued before the claim existed
-   * keep working through a deploy: a token with no `type` is accepted. Once no such
-   * tokens remain in circulation (they expire within the refresh window), the
-   * fallback can be dropped and an absent type treated as invalid.
+   * A token with no `type` claim is **rejected**, not grandfathered. Accepting
+   * untyped tokens would have left every token minted before this change usable for
+   * either purpose until it expired — up to the 7-day refresh lifetime — which is
+   * most of the vulnerability this exists to close. The cost is that deploying it
+   * invalidates existing sessions once; users log in again.
    */
   verifyToken(token: string, expectedType?: TokenType): TypedJwtPayload | null {
     try {
       const payload = jwt.verify(token, this.secret) as TypedJwtPayload;
-      if (expectedType && payload.type && payload.type !== expectedType) {
+      if (expectedType && payload.type !== expectedType) {
         return null;
       }
       return payload;
