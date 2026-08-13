@@ -14,7 +14,12 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
+  /* Serial on CI, deliberately. The five browser projects share one backend and one
+   * seeded database, and several tests mutate that shared state — the favourites
+   * test saves a provider and then asserts the saved list is *empty*, which any
+   * concurrent project holding a favourite would break. Parallelising across
+   * projects needs per-project test data first; until then the wall clock is the
+   * price of a deterministic suite. */
   workers: process.env.CI ? 1 : 4,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
