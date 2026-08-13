@@ -92,7 +92,7 @@ const RefundDialog: React.FC<Props> = ({
 
   const handleRefundAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const amount = parseFloat(event.target.value);
-    if (!isNaN(amount) && amount >= 0 && amount <= payment.amount / 100) {
+    if (!isNaN(amount) && amount >= 0 && amount <= (Number(payment.amount) || 0)) {
       setRefundAmount(amount);
     }
   };
@@ -109,7 +109,9 @@ const RefundDialog: React.FC<Props> = ({
     }
 
     const refundData = {
-      amount: refundType === 'full' ? undefined : Math.round(refundAmount * 100),
+      // Major units — the server converts to Stripe minor units. Sending cents here
+      // while the server also multiplied by 100 inflated every partial refund 100x.
+      amount: refundType === 'full' ? undefined : refundAmount,
       reason: refundReason.trim(),
       refundApplicationFee,
       reverseTransfer: true, // Reverse the transfer to provider if applicable
@@ -118,16 +120,18 @@ const RefundDialog: React.FC<Props> = ({
     refundMutation.mutate({ paymentId: payment.id, refundData });
   };
 
-  const formatAmount = (amount: number, currency = 'USD') => {
-    return new Intl.NumberFormat('en-US', {
+  const formatAmount = (amount: number, currency = payment.currency || 'BRL') => {
+    return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency,
-    }).format(amount);
+    }).format(Number(amount) || 0);
   };
 
-  const maxRefundAmount = payment.amount / 100;
-  const platformFeeAmount = payment.platformFee / 100;
-  const providerAmount = payment.providerAmount / 100;
+  // The API returns money in major units (numeric(10,2)). Dividing by 100 here showed
+  // a R$275.00 payment as R$2.75 and capped refunds at 1/100th of the real amount.
+  const maxRefundAmount = Number(payment.amount) || 0;
+  const platformFeeAmount = Number(payment.platformFee) || 0;
+  const providerAmount = Number(payment.providerAmount) || 0;
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>

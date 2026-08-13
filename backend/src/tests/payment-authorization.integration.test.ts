@@ -100,7 +100,9 @@ describe('payment authorization', () => {
         state: 'SC',
         zipCode: '88000-000',
       },
-      totalAmount: 275,
+      // 100.00 so a full refund matches the shared Stripe mock's fixed 10000-minor-unit
+      // refund response; otherwise a "full" refund correctly reports as partial.
+      totalAmount: 100,
       status: BookingStatus.COMPLETED,
     });
 
@@ -108,11 +110,11 @@ describe('payment authorization', () => {
       bookingId: booking.id,
       customerId,
       providerId,
-      amount: 275,
+      amount: 100,
       currency: 'BRL',
       platformFee: 0,
       processingFee: 0,
-      providerAmount: 275,
+      providerAmount: 100,
       status: PaymentStatus.SUCCEEDED,
       paymentMethod: PaymentMethod.CREDIT_CARD,
       stripePaymentIntentId: 'pi_authz_test',

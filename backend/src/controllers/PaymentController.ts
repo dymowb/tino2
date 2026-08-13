@@ -7,7 +7,7 @@ import { User } from '@/models/User';
 import { Provider } from '@/models/Provider';
 import logger from '@/config/logger';
 import { AuthenticatedRequest } from '@/types';
-import PaymentService, { PaymentAccessError } from '@/services/PaymentService';
+import PaymentService, { PaymentAccessError, PaymentStateError } from '@/services/PaymentService';
 import { getStripeInstance, getStripeErrorMessage } from '@/config/stripe';
 import { t } from '@/i18n';
 
@@ -186,14 +186,14 @@ class PaymentController {
   // POST /api/payments/intent - Create payment intent (FR-057, FR-058, FR-059)
   public async createPaymentIntent(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const { bookingId, amount, currency, paymentMethod } = req.body;
+      // amount/currency are deliberately not read from the body — they are derived
+      // from the booking so a client cannot choose what it is charged.
+      const { bookingId, paymentMethod } = req.body;
 
       // Validate input using service
       const validationErrors = PaymentService.validatePaymentData({
         bookingId,
         customerId: req.user.userId,
-        amount,
-        currency,
         paymentMethod,
       });
 
@@ -210,8 +210,6 @@ class PaymentController {
       const result = await PaymentService.createPaymentIntent({
         bookingId,
         customerId: req.user.userId,
-        amount,
-        currency,
         paymentMethod,
       });
 
@@ -262,7 +260,7 @@ class PaymentController {
         });
       } else if (errMsg === 'Payment not found' || errMsg === t(req, 'payment.not_found')) {
         res.status(404).json({ success: false, error: t(req, 'payment.not_found') });
-      } else if (errMsg.includes('already confirmed')) {
+      } else if (error instanceof PaymentStateError) {
         res.status(400).json({ success: false, error: errMsg });
       } else {
         res.status(500).json({ success: false, error: getStripeErrorMessage(error) });
@@ -305,9 +303,10 @@ class PaymentController {
         });
       } else if (errMsg === 'Payment not found' || errMsg === t(req, 'payment.not_found')) {
         res.status(404).json({ success: false, error: t(req, 'payment.not_found') });
-      } else if (errMsg.includes('Can only refund') || errMsg.includes('already refunded')) {
+      } else if (error instanceof PaymentStateError) {
         // State errors, not authorization errors. The previous ordering matched
-        // 'only refund' as a 403 first, making this 400 branch unreachable.
+        // 'only refund' as a 403 first, making this 400 branch unreachable; typing
+        // them removes the substring guessing entirely.
         res.status(400).json({ success: false, error: errMsg });
       } else {
         res.status(500).json({
