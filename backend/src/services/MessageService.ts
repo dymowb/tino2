@@ -248,7 +248,10 @@ export class MessageService {
    */
   async getContacts(userId: string, search?: string): Promise<PublicUser[]> {
     const term = (search || '').trim();
-    const like = `%${term.toLowerCase()}%`;
+    // Escape LIKE metacharacters so a search term is matched literally. Without
+    // this, '%' and '_' act as wildcards supplied by the caller.
+    const escaped = term.toLowerCase().replace(/[\\%_]/g, (ch) => `\\${ch}`);
+    const like = `%${escaped}%`;
 
     const rows = await AppDataSource.query(
       `WITH counterparties AS (
@@ -262,14 +265,18 @@ export class MessageService {
            JOIN providers p ON p.id = q."providerId"
           WHERE q."customerId" = $1 OR p."userId" = $1
        )
-       -- Email is matched against but never returned: PublicUser deliberately omits
-       -- it, and a counterparty's address is not needed to start a conversation.
+       -- Only the name is searched. Matching on email while omitting it from the
+       -- response looked like a nice property — searchable but not disclosed — but
+       -- it is an oracle: LIKE wildcards let a caller probe a counterparty's address
+       -- one character at a time and reconstruct it from which searches return a
+       -- hit. Names are already visible in this list, so searching them reveals
+       -- nothing the response does not.
        SELECT DISTINCT u.id, u."firstName", u."lastName", u."userType", u."profileImage"
          FROM counterparties c
          JOIN users u ON u.id = c."userId"
         WHERE u.id <> $1
           AND u."isActive" = true
-          AND ($2 = '' OR lower(u."firstName" || ' ' || u."lastName") LIKE $3 OR lower(u.email) LIKE $3)
+          AND ($2 = '' OR lower(u."firstName" || ' ' || u."lastName") LIKE $3 ESCAPE '\\')
         ORDER BY u."firstName", u."lastName"
         LIMIT 50`,
       [userId, term, like]

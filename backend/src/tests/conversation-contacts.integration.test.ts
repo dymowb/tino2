@@ -145,16 +145,50 @@ describe('conversation contacts', () => {
     expect(result[0]).not.toHaveProperty('password');
   });
 
-  it('filters by name, and by email without disclosing it', async () => {
+  it('filters by name', async () => {
     const customer = await account('contacts-c5@example.com', 'customer');
     const providerAccount = await account('contacts-p5@example.com', 'provider', 'Zenaide');
     const provider = await providerProfile(providerAccount.user.id, 'Contacts Services');
     await bookingBetween(customer.user.id, provider.id);
 
     expect(await contacts(customer.token, 'Zena')).toHaveLength(1);
-    // Searchable by the address even though the response omits it.
-    expect(await contacts(customer.token, 'contacts-p5@example.com')).toHaveLength(1);
     expect(await contacts(customer.token, 'nobody-by-this-name')).toEqual([]);
+  });
+
+  it('does not let search probe email addresses', async () => {
+    const customer = await account('contacts-c6@example.com', 'customer');
+    const providerAccount = await account('contacts-p6@example.com', 'provider', 'Zenaide');
+    const provider = await providerProfile(providerAccount.user.id, 'Contacts Services');
+    await bookingBetween(customer.user.id, provider.id);
+
+    // Matching on email while omitting it from the response is an oracle: a caller
+    // can probe one character at a time and reconstruct the address from which
+    // searches return a hit. Email must not be searchable at all.
+    expect(await contacts(customer.token, 'contacts-p6@example.com')).toEqual([]);
+    expect(await contacts(customer.token, 'contacts-p6')).toEqual([]);
+    expect(await contacts(customer.token, '@example.com')).toEqual([]);
+  });
+
+  it('treats LIKE wildcards in the search term literally', async () => {
+    const customer = await account('contacts-c7@example.com', 'customer');
+    const providerAccount = await account('contacts-p7@example.com', 'provider', 'Zenaide');
+    const provider = await providerProfile(providerAccount.user.id, 'Contacts Services');
+    await bookingBetween(customer.user.id, provider.id);
+
+    // '%' and '_' must not act as caller-supplied wildcards.
+    expect(await contacts(customer.token, '%')).toEqual([]);
+    expect(await contacts(customer.token, 'Z_naide')).toEqual([]);
+    expect(await contacts(customer.token, 'Zenaide')).toHaveLength(1);
+  });
+
+  it('rejects a search term longer than the declared limit', async () => {
+    const customer = await account('contacts-c8@example.com', 'customer');
+
+    await request(server)
+      .get('/api/v1/messages/contacts')
+      .query({ search: 'x'.repeat(101) })
+      .set('Authorization', `Bearer ${customer.token}`)
+      .expect(400);
   });
 
   it('requires authentication', async () => {

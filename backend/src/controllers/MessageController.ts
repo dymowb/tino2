@@ -341,6 +341,18 @@ export class MessageController {
   // GET /messages/contacts — people the caller shares a booking or quote with
   getContacts = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      // The route declares a type and a 100-character bound on `search`; without
+      // this check those rules were declared and never enforced.
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({
+          success: false,
+          message: t(req, 'common.validation_failed'),
+          errors: errors.mapped(),
+        });
+        return;
+      }
+
       const search = typeof req.query.search === 'string' ? req.query.search : undefined;
       const contacts = await messageService.getContacts(req.user!.userId, search);
 
