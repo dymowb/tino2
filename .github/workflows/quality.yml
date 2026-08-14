@@ -78,8 +78,11 @@ jobs:
           npm test --prefix frontend
           npm run build --prefix frontend
 
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+      # All five projects defined in playwright.config.ts. Running only Chromium
+      # meant Firefox, WebKit and both mobile profiles were declared but never
+      # exercised, so a browser-specific regression could not be caught here.
+      - name: Install browsers
+        run: npx playwright install --with-deps chromium firefox webkit
 
       - name: Start product servers
         env:
@@ -119,7 +122,7 @@ jobs:
             exit 1
           fi
 
-      - name: Chromium product suite
+      - name: Product suite (Chromium, Firefox, WebKit, Mobile Chrome, Mobile Safari)
         env:
           PLAYWRIGHT_REUSE_SERVERS: "true"
         run: npm run test:ci
