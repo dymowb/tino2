@@ -63,8 +63,13 @@ jobs:
 
       - name: Dependency security
         run: |
+          # All three lockfiles. The frontend was previously installed but never
+          # audited, so a high-severity advisory in a dependency that ships to
+          # browsers would not have failed the build — the one place where a
+          # vulnerable package reaches users directly.
           npm audit --omit=dev --omit=optional --audit-level=high
           npm audit --prefix backend --omit=dev --omit=optional --audit-level=high
+          npm audit --prefix frontend --omit=dev --omit=optional --audit-level=high
 
       - name: Backend quality and integration tests
         run: |
