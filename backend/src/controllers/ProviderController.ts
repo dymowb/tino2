@@ -240,8 +240,11 @@ export class ProviderController {
         return;
       }
 
-      // Verify provider belongs to user
-      const existingProvider = await providerService.getProviderById(providerId);
+      // Verify provider belongs to user. includeInactive: a deactivated provider
+      // must still be able to load and manage their own record.
+      const existingProvider = await providerService.getProviderById(providerId, {
+        includeInactive: true,
+      });
       if (!existingProvider || existingProvider.userId !== userId) {
         const response: ApiResponse = {
           success: false,
@@ -373,8 +376,11 @@ export class ProviderController {
         return;
       }
 
-      // Verify provider belongs to user
-      const existingProvider = await providerService.getProviderById(providerId);
+      // Verify provider belongs to user. includeInactive: a deactivated provider
+      // must still be able to load and manage their own record.
+      const existingProvider = await providerService.getProviderById(providerId, {
+        includeInactive: true,
+      });
       if (!existingProvider || existingProvider.userId !== userId) {
         const response: ApiResponse = {
           success: false,
@@ -464,8 +470,11 @@ export class ProviderController {
         return;
       }
 
-      // Verify provider belongs to user
-      const existingProvider = await providerService.getProviderById(providerId);
+      // Verify provider belongs to user. includeInactive: a deactivated provider
+      // must still be able to load and manage their own record.
+      const existingProvider = await providerService.getProviderById(providerId, {
+        includeInactive: true,
+      });
       if (!existingProvider || existingProvider.userId !== userId) {
         const response: ApiResponse = {
           success: false,
