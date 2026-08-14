@@ -61,6 +61,21 @@ export class BasicUser {
   @Column({ type: 'timestamp', nullable: true })
   suspendedUntil?: Date;
 
+  /**
+   * Consecutive failed password attempts since the last success. Reset to zero on
+   * a successful login, and on the first attempt after a lockout expires.
+   */
+  @Column({ type: 'int', default: 0 })
+  failedLoginAttempts: number;
+
+  /**
+   * Set when the attempt threshold is crossed. Login is refused until this passes;
+   * the window is bounded so an attacker cannot lock a victim out permanently by
+   * guessing badly on purpose.
+   */
+  @Column({ type: 'timestamp', nullable: true })
+  lockedUntil?: Date | null;
+
   @Column({ nullable: true })
   emailVerificationToken?: string;
 

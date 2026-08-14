@@ -9,6 +9,18 @@ import logger from '@/config/logger';
 import { JwtPayload } from '@/types';
 import emailService from '@/services/EmailService';
 
+/**
+ * Thrown when an account is temporarily locked after repeated failed sign-ins.
+ * Typed so the retry window travels with the error instead of being stapled onto a
+ * plain Error and read back with a cast.
+ */
+export class AccountLockedError extends Error {
+  constructor(public readonly retryAfterSeconds: number) {
+    super('ACCOUNT_LOCKED');
+    this.name = 'AccountLockedError';
+  }
+}
+
 export class UserService {
   private userRepository: Repository<BasicUser>;
 
@@ -65,6 +77,53 @@ export class UserService {
     }
   }
 
+  /**
+   * Number of consecutive wrong passwords tolerated before an account is locked.
+   */
+  private static readonly MAX_FAILED_LOGIN_ATTEMPTS = 5;
+
+  /**
+   * How long a lockout lasts. Bounded on purpose: an attacker who knows a victim's
+   * email could otherwise deny them access indefinitely by failing on purpose, so
+   * the lockout has to expire on its own without support intervention.
+   */
+  private static readonly LOCKOUT_MINUTES = 15;
+
+  /**
+   * Count a failed password attempt and lock the account once the threshold is hit.
+   *
+   * Deliberately says nothing to the caller about how many attempts remain — the
+   * response for a wrong password is identical whether it was the first or the
+   * fourth, so the count cannot be probed.
+   */
+  private async recordFailedLogin(user: BasicUser): Promise<void> {
+    const attempts = (user.failedLoginAttempts || 0) + 1;
+
+    if (attempts >= UserService.MAX_FAILED_LOGIN_ATTEMPTS) {
+      const lockedUntil = new Date(Date.now() + UserService.LOCKOUT_MINUTES * 60 * 1000);
+      // Counter resets alongside the lock so the next window starts clean rather
+      // than locking again on the first wrong password after expiry.
+      await this.userRepository.update(user.id, { failedLoginAttempts: 0, lockedUntil });
+      logger.warn(`Account locked after ${attempts} failed login attempts: ${user.id}`);
+
+      emailService
+        .sendEmail({
+          to: user.email,
+          subject: 'Unusual sign-in activity on your account',
+          html:
+            `<p>There were ${attempts} failed sign-in attempts on your account, so we have ` +
+            `temporarily blocked sign-in for ${UserService.LOCKOUT_MINUTES} minutes.</p>` +
+            `<p>If this was you, wait and try again. If it was not, change your password ` +
+            `once you can sign in.</p>`,
+        })
+        .catch((error) => logger.error('Failed to send account lockout notification:', error));
+
+      return;
+    }
+
+    await this.userRepository.update(user.id, { failedLoginAttempts: attempts });
+  }
+
   async authenticateUser(
     email: string,
     password: string
@@ -87,6 +146,8 @@ export class UserService {
           'isActive',
           'isVerified',
           'suspendedUntil',
+          'failedLoginAttempts',
+          'lockedUntil',
           'createdAt',
           'updatedAt',
         ],
@@ -118,9 +179,26 @@ export class UserService {
         throw err;
       }
 
+      // Refuse while locked, before spending a bcrypt comparison on it.
+      if (user.lockedUntil && new Date() < new Date(user.lockedUntil)) {
+        throw new AccountLockedError(
+          Math.ceil((new Date(user.lockedUntil).getTime() - Date.now()) / 1000)
+        );
+      }
+
       const isPasswordValid = await passwordService.compare(password, user.password);
       if (!isPasswordValid) {
+        await this.recordFailedLogin(user);
         throw new Error('Invalid credentials');
+      }
+
+      // A success clears the counter, so the threshold measures *consecutive*
+      // failures rather than a lifetime total.
+      if (user.failedLoginAttempts > 0 || user.lockedUntil) {
+        await this.userRepository.update(user.id, {
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+        });
       }
 
       const tokenPayload: Omit<JwtPayload, 'iat' | 'exp'> = {

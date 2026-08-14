@@ -4,6 +4,7 @@
   "common.unauthorized": "Não autorizado",
   "auth.invalid_credentials": "Credenciais inválidas",
   "auth.account_suspended": "Sua conta foi suspensa. Entre em contato com o suporte.",
+  "auth.account_locked": "Muitas tentativas de login malsucedidas. O acesso está temporariamente bloqueado; tente novamente em instantes.",
   "auth.email_not_verified": "Verifique seu endereço de e-mail antes de fazer login.",
   "auth.login_success": "Login realizado com sucesso",
   "booking.cancel_success": "Reserva cancelada com sucesso",

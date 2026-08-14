@@ -4,6 +4,7 @@
   "common.unauthorized": "Unauthorized",
   "auth.invalid_credentials": "Invalid credentials",
   "auth.account_suspended": "Your account has been suspended. Please contact support.",
+  "auth.account_locked": "Too many failed sign-in attempts. Sign-in is temporarily blocked; please try again shortly.",
   "auth.email_not_verified": "Please verify your email address before logging in.",
   "auth.login_success": "Login successful",
   "booking.cancel_success": "Booking cancelled successfully",
