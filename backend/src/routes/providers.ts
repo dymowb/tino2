@@ -57,7 +57,10 @@ router.get(
       .optional()
       .isFloat({ min: 0.1, max: 100 })
       .withMessage('Radius must be between 0.1 and 100 km'),
-    query('services').optional().isString().withMessage('Services must be a string'),
+    // Accepts a repeated parameter or a comma-separated list, under either name.
+    query('services').optional(),
+    query('serviceTypes').optional(),
+    query('serviceType').optional().isString().withMessage('Service type must be a string'),
     query('minRating')
       .optional()
       .isFloat({ min: 0, max: 5 })

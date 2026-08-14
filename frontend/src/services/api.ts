@@ -827,9 +827,13 @@ class ApiService {
     queryParams.append("longitude", params.longitude.toString());
     if (params.radius) queryParams.append("radius", params.radius.toString());
 
-    // Send service type if any are selected
+    // Send every selected service, not just the first. This used to append
+    // `serviceTypes[0]` and discard the rest, so picking three services silently
+    // searched for one of them. A provider matches if they offer any of them.
     if (params.serviceTypes && params.serviceTypes.length > 0) {
-      queryParams.append("serviceType", params.serviceTypes[0]);
+      for (const serviceType of params.serviceTypes) {
+        queryParams.append("serviceTypes", serviceType);
+      }
     }
 
     if (params.sortBy) queryParams.append("sortBy", params.sortBy);
