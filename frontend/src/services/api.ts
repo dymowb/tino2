@@ -1280,6 +1280,24 @@ class ApiService {
     return { blob: response.data as Blob, fileName };
   }
 
+  /**
+   * People the current user may start a conversation with — those they share a
+   * booking or quote with. Deliberately not a directory of all users.
+   */
+  async getConversationContacts(search?: string): Promise<Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    userType: "customer" | "provider" | "admin";
+    profileImage?: string | null;
+  }>> {
+    const query = search ? `?search=${encodeURIComponent(search)}` : "";
+    const response = await this.api.get<ApiResponse<any[]>>(
+      `/messages/contacts${query}`,
+    );
+    return response.data.data ?? [];
+  }
+
   async getConversation(conversationId: string): Promise<any> {
     const response = await this.api.get<ApiResponse<any>>(
       `/messages/conversations/${conversationId}`,
