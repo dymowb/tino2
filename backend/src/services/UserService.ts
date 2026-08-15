@@ -97,31 +97,56 @@ export class UserService {
    * fourth, so the count cannot be probed.
    */
   private async recordFailedLogin(user: BasicUser): Promise<void> {
-    const attempts = (user.failedLoginAttempts || 0) + 1;
+    const lockedUntil = new Date(Date.now() + UserService.LOCKOUT_MINUTES * 60 * 1000);
 
-    if (attempts >= UserService.MAX_FAILED_LOGIN_ATTEMPTS) {
-      const lockedUntil = new Date(Date.now() + UserService.LOCKOUT_MINUTES * 60 * 1000);
-      // Counter resets alongside the lock so the next window starts clean rather
-      // than locking again on the first wrong password after expiry.
-      await this.userRepository.update(user.id, { failedLoginAttempts: 0, lockedUntil });
-      logger.warn(`Account locked after ${attempts} failed login attempts: ${user.id}`);
+    // One atomic statement. Deriving the next count in JavaScript from a row read
+    // earlier is a lost-update race: concurrent attempts all read the same value and
+    // write the same increment, so parallel guessing never reaches the threshold —
+    // which defeats the protection in precisely the case it exists for, since brute
+    // force is distributed by nature.
+    //
+    // Doing the increment, the threshold comparison and the lock in a single UPDATE
+    // means Postgres' row lock serialises concurrent attempts against this account,
+    // and each one sees the value the previous one committed.
+    //
+    // The WHERE also excludes rows already locked, so once one request crosses the
+    // threshold the rest stop counting instead of extending the window.
+    const rows = await this.userRepository.query(
+      `UPDATE "users"
+          SET "failedLoginAttempts" =
+                CASE WHEN "failedLoginAttempts" + 1 >= $2 THEN 0
+                     ELSE "failedLoginAttempts" + 1 END,
+              "lockedUntil" =
+                CASE WHEN "failedLoginAttempts" + 1 >= $2 THEN $3::timestamp
+                     ELSE "lockedUntil" END
+        WHERE "id" = $1
+          AND ("lockedUntil" IS NULL OR "lockedUntil" <= now())
+        RETURNING "lockedUntil"`,
+      [user.id, UserService.MAX_FAILED_LOGIN_ATTEMPTS, lockedUntil.toISOString()]
+    );
 
-      emailService
-        .sendEmail({
-          to: user.email,
-          subject: 'Unusual sign-in activity on your account',
-          html:
-            `<p>There were ${attempts} failed sign-in attempts on your account, so we have ` +
-            `temporarily blocked sign-in for ${UserService.LOCKOUT_MINUTES} minutes.</p>` +
-            `<p>If this was you, wait and try again. If it was not, change your password ` +
-            `once you can sign in.</p>`,
-        })
-        .catch((error) => logger.error('Failed to send account lockout notification:', error));
-
+    // Empty when the account was already locked by a concurrent attempt.
+    const justLocked = rows.length > 0 && rows[0].lockedUntil !== null;
+    if (!justLocked) {
       return;
     }
 
-    await this.userRepository.update(user.id, { failedLoginAttempts: attempts });
+    logger.warn(
+      `Account locked after ${UserService.MAX_FAILED_LOGIN_ATTEMPTS} failed login attempts: ${user.id}`
+    );
+
+    emailService
+      .sendEmail({
+        to: user.email,
+        subject: 'Unusual sign-in activity on your account',
+        html:
+          `<p>There were ${UserService.MAX_FAILED_LOGIN_ATTEMPTS} failed sign-in attempts on ` +
+          `your account, so we have temporarily blocked sign-in for ` +
+          `${UserService.LOCKOUT_MINUTES} minutes.</p>` +
+          `<p>If this was you, wait and try again. If it was not, change your password ` +
+          `once you can sign in.</p>`,
+      })
+      .catch((error) => logger.error('Failed to send account lockout notification:', error));
   }
 
   async authenticateUser(

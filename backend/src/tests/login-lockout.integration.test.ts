@@ -121,6 +121,50 @@ describe('login lockout', () => {
     await attempt(bystander, password).expect(200);
   });
 
+  it('locks under concurrent attempts, without losing counts', async () => {
+    const email = 'lock-concurrent@example.com';
+    await account(email);
+
+    // The threat this feature exists for is distributed, so the attempts that must
+    // be counted are the parallel ones. Deriving the next count in JavaScript from a
+    // row read earlier loses updates here: every request reads the same value and
+    // writes the same increment, so the threshold is never reached.
+    const attempts = await Promise.all(
+      Array.from({ length: 10 }, () => attempt(email, 'WrongPassword1!'))
+    );
+
+    // Every one is refused, and none leaks how close it came.
+    for (const response of attempts) {
+      expect([401, 423]).toContain(response.status);
+    }
+
+    // Ten parallel wrong passwords against a threshold of five must end locked.
+    const locked = await attempt(email, password);
+    expect(locked.status).toBe(423);
+
+    const user = await readUser(email);
+    expect(user.lockedUntil).not.toBeNull();
+  });
+
+  it('does not extend the lock window with further concurrent attempts', async () => {
+    const email = 'lock-window-extend@example.com';
+    const user = await account(email);
+
+    for (let i = 0; i < 5; i++) {
+      await attempt(email, 'WrongPassword1!');
+    }
+    const firstLock = (await readUser(email)).lockedUntil;
+    expect(firstLock).not.toBeNull();
+
+    await Promise.all(Array.from({ length: 5 }, () => attempt(email, 'WrongPassword1!')));
+
+    // A locked account stops counting, so continued guessing cannot push the
+    // release further out and turn a bounded lockout into a permanent one.
+    const secondLock = (await readUser(email)).lockedUntil;
+    expect(new Date(secondLock as Date).getTime()).toBe(new Date(firstLock as Date).getTime());
+    expect(user.id).toBeDefined();
+  });
+
   it('does not reveal whether an unknown address is locked', async () => {
     for (let i = 0; i < 6; i++) {
       const response = await attempt('lock-nobody@example.com', 'WrongPassword1!');
