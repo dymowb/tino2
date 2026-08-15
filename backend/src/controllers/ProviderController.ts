@@ -292,9 +292,23 @@ export class ProviderController {
       if (query.isBackgroundChecked)
         query.isBackgroundChecked = query.isBackgroundChecked === 'true';
 
-      // Parse array values
-      if (query.services && typeof query.services === 'string') {
-        query.services = query.services.split(',');
+      // Normalise every spelling of the service filter into `services`, which is
+      // what searchProviders actually reads and already ORs together.
+      //
+      // The client sent `serviceType` (singular). Nothing read it, so the filter was
+      // not merely limited to the first selection — it was dropped entirely, and the
+      // browse list ignored the service filter altogether.
+      //
+      // Accepts a repeated parameter (?serviceTypes=a&serviceTypes=b) or a
+      // comma-separated list (?serviceTypes=a,b); callers should not have to guess
+      // which form this API wants.
+      const rawServices = query.serviceTypes ?? query.services ?? query.serviceType;
+      if (rawServices) {
+        const list = Array.isArray(rawServices) ? rawServices : [rawServices];
+        query.services = list
+          .flatMap((value: string) => String(value).split(','))
+          .map((value: string) => value.trim())
+          .filter(Boolean);
       }
 
       const result = await providerService.searchProviders(query);
