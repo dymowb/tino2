@@ -14,8 +14,14 @@ two rounds per security PR was normal.
 
 The classes it catches, worth pre-empting before pushing:
 
-- **Read-modify-write races** on anything money- or counter-shaped. Wrap in a transaction
-  with a pessimistic row lock, even if that means holding the lock across a network call.
+- **Read-modify-write races** on anything money- or counter-shaped. Caught three times in
+  one session: cumulative refund totals, and the failed-login counter twice. Do the
+  increment, the comparison and the write in ONE statement, or hold a pessimistic row lock
+  across the whole sequence. Two follow-on traps once you go atomic: (a) a success path
+  that clears state read *before* a slow operation (bcrypt) will wipe a lock a concurrent
+  request just set — the clear must be conditional on no lock existing; (b) `RETURNING` a
+  column your CASE left unchanged does not mean you changed it, so "did I just cross the
+  threshold" needs its own signal.
 - **Self-grant authorization** — a check that trusts a record the attacker can create.
   Anchor authorization to the *owner's* action, and validate at write time too.
 - **Untrusted strings used as URLs/paths.** Anything a user stores that the client later
