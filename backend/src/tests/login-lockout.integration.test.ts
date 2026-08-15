@@ -308,6 +308,42 @@ describe('login lockout', () => {
     expect(Math.abs(Number(sqlMinutesAhead) - nodeMinutesAhead)).toBeLessThan(1);
   });
 
+  it('lets the owner back in through a password reset while the lock is live', async () => {
+    const email = 'lock-recovery@example.com';
+    const user = await account(email);
+
+    for (let i = 0; i < 5; i++) {
+      await attempt(email, 'WrongPassword1!').expect(401);
+    }
+    await attempt(email, password).expect(423);
+
+    // Expiry alone is not a way out: whoever locked the account can spend five more
+    // wrong passwords after every window and keep it shut for as long as they care
+    // to. The route back has to be one that failed sign-ins cannot reach, so it runs
+    // through the mailbox.
+    await request(server).post('/api/v1/auth/forgot-password').send({ email }).expect(200);
+
+    const { passwordResetToken } = await AppDataSource.getRepository(BasicUser)
+      .createQueryBuilder('user')
+      .select('user.passwordResetToken', 'passwordResetToken')
+      .where('user.id = :id', { id: user.id })
+      .getRawOne();
+    expect(passwordResetToken).toBeTruthy();
+
+    const newPassword = 'RecoveredPassword123!';
+    await request(server)
+      .post('/api/v1/auth/reset-password')
+      .send({ token: passwordResetToken, password: newPassword, newPassword })
+      .expect(200);
+
+    // In immediately, without waiting out someone else's lockout.
+    await attempt(email, newPassword).expect(200);
+
+    const after = await readUser(email);
+    expect(after.lockedUntil).toBeNull();
+    expect(after.failedLoginAttempts).toBe(0);
+  });
+
   it('does not reveal whether an unknown address is locked', async () => {
     for (let i = 0; i < 6; i++) {
       const response = await attempt('lock-nobody@example.com', 'WrongPassword1!');

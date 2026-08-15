@@ -83,9 +83,20 @@ export class UserService {
   private static readonly MAX_FAILED_LOGIN_ATTEMPTS = 5;
 
   /**
-   * How long a lockout lasts. Bounded on purpose: an attacker who knows a victim's
-   * email could otherwise deny them access indefinitely by failing on purpose, so
-   * the lockout has to expire on its own without support intervention.
+   * How long a lockout lasts.
+   *
+   * The window expires on its own so that a single burst of guessing does not need
+   * support intervention to clear — but expiry alone does not make the lockout
+   * harmless. Nothing stops an attacker who knows the address from spending five
+   * wrong passwords after every expiry and keeping the account shut indefinitely;
+   * any per-account lockout trades online guessing for that denial of service, and
+   * a shorter window only lowers the cost of sustaining it.
+   *
+   * What bounds it is that the owner has a route back that failed sign-ins cannot
+   * touch: a password reset clears the lock (`resetPassword`), and it is reached
+   * through the mailbox rather than the login form. The lockout is what makes
+   * guessing expensive; the reset is what keeps it from being a way to lock
+   * someone out of their own account.
    */
   private static readonly LOCKOUT_MINUTES = 15;
 
@@ -384,8 +395,13 @@ export class UserService {
 
       const hashedNewPassword = await passwordService.hash(newPassword);
 
+      // Same reasoning as the reset route: whoever proved the current password is
+      // the owner, so a lockout accumulated by someone else guessing does not
+      // survive it and greet them at their next sign-in.
       await this.userRepository.update(id, {
         password: hashedNewPassword,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
       });
 
       if (process.env.REDIS_ENABLED === 'true') {
@@ -585,10 +601,18 @@ export class UserService {
     }
 
     const hashedPassword = await passwordService.hash(newPassword);
+    // Clearing the lockout is the point of this being a recovery route. A lockout
+    // expires on its own, but nothing stops an attacker who knows the address from
+    // spending five wrong passwords every fifteen minutes to keep a victim out
+    // indefinitely — the lockout on its own converts online guessing into denial of
+    // service. Proving control of the mailbox is the way back in, and an attacker
+    // making failed sign-in attempts cannot interfere with it.
     await this.userRepository.update(user.id, {
       password: hashedPassword,
       passwordResetToken: undefined,
       passwordResetExpiry: undefined,
+      failedLoginAttempts: 0,
+      lockedUntil: null,
     });
 
     logger.info(`Password reset successfully for: ${user.id}`);
