@@ -7,7 +7,7 @@ const credentials = {
   admin: { email: "admin@demo.com", password: "Demo123!" },
 };
 
-async function apiLogin(
+async function apiSession(
   request: APIRequestContext,
   role: keyof typeof credentials,
 ) {
@@ -18,7 +18,15 @@ async function apiLogin(
     response.ok(),
     `${role} login failed: ${await response.text()}`,
   ).toBeTruthy();
-  return (await response.json()).data.accessToken as string;
+  const { data } = await response.json();
+  return { token: data.accessToken as string, userId: data.user.id as string };
+}
+
+async function apiLogin(
+  request: APIRequestContext,
+  role: keyof typeof credentials,
+) {
+  return (await apiSession(request, role)).token;
 }
 
 async function uiLogin(page: Page, role: keyof typeof credentials) {
@@ -247,30 +255,112 @@ test.describe("admin experience", () => {
 });
 
 test.describe("API domain contracts", () => {
-  test("role-scoped booking, quote, messaging, payment, and review APIs respond", async ({
+  /**
+   * These assert the response a caller can actually rely on, not merely that
+   * something came back. The previous version accepted any status below 500 that
+   * was not 401, which is weak enough to have hidden two of its own cases: it
+   * asked for `/quotes/requests/my` and `/quotes/available`, neither of which is
+   * a route. Both were being swallowed by the `:requestId` and `:quoteId`
+   * patterns and answered 400 "Valid request ID required" — a passing test for an
+   * endpoint that does not exist. Exact status codes are what make that visible.
+   */
+  test("role-scoped booking, quote, messaging, payment, and review APIs answer with their documented shape", async ({
     request,
   }) => {
-    const customer = await apiLogin(request, "customer");
-    const provider = await apiLogin(request, "provider");
+    const customer = await apiSession(request, "customer");
+    const provider = await apiSession(request, "provider");
+
+    // `collection` locates the list inside each envelope — the three shapes in use
+    // are a bare `data` array, `data.<name>` with sibling paging fields, and
+    // `data.payments` — so a route silently changing shape fails here.
     const cases = [
-      [customer, "/bookings"],
-      [customer, "/quotes/requests/my"],
-      [customer, "/messages/conversations"],
-      [customer, "/payments"],
-      [customer, "/reviews/customer/my"],
-      [provider, "/quotes/available"],
-      [provider, "/reviews/provider/my"],
+      {
+        session: customer,
+        path: "/bookings",
+        collection: (data: any) => data,
+        ownedBy: "customerId",
+      },
+      {
+        session: customer,
+        path: "/quotes/requests",
+        collection: (data: any) => data.quoteRequests,
+        ownedBy: "customerId",
+      },
+      { session: customer, path: "/quotes", collection: (d: any) => d.quotes },
+      {
+        session: customer,
+        path: "/messages/conversations",
+        collection: (data: any) => data,
+      },
+      {
+        session: customer,
+        path: "/payments",
+        collection: (data: any) => data.payments,
+      },
+      {
+        session: customer,
+        path: "/reviews/customer/my",
+        collection: (data: any) => data,
+        ownedBy: "customerId",
+      },
+      {
+        session: provider,
+        path: "/quotes/requests",
+        collection: (data: any) => data.quoteRequests,
+      },
+      { session: provider, path: "/quotes", collection: (d: any) => d.quotes },
+      {
+        session: provider,
+        path: "/reviews/provider/my",
+        collection: (data: any) => data,
+      },
     ] as const;
 
-    for (const [token, path] of cases) {
+    for (const { session, path, collection, ...rest } of cases) {
       const response = await request.get(`${API}${path}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${session.token}` },
       });
-      expect(
-        response.status(),
-        `${path}: ${await response.text()}`,
-      ).toBeLessThan(500);
-      expect(response.status()).not.toBe(401);
+      const body = await response.text();
+
+      expect(response.status(), `${path}: ${body}`).toBe(200);
+
+      const payload = JSON.parse(body);
+      expect(payload.success, `${path}: ${body}`).toBe(true);
+
+      const items = collection(payload.data);
+      expect(Array.isArray(items), `${path} returned ${typeof items}`).toBe(
+        true,
+      );
+
+      // Where the caller owns the records by user id, every row has to be theirs —
+      // a 200 carrying someone else's data is the failure worth catching, and it
+      // is invisible to a status-code check. (Provider-owned collections are keyed
+      // on the Provider entity id rather than the user id, so they are checked for
+      // shape only.)
+      const ownedBy = (rest as { ownedBy?: string }).ownedBy;
+      if (ownedBy) {
+        const foreign = items.filter(
+          (item: Record<string, unknown>) => item[ownedBy] !== session.userId,
+        );
+        expect(foreign, `${path} returned rows owned by someone else`).toEqual(
+          [],
+        );
+      }
     }
+  });
+
+  test("a collection route rejects a malformed id instead of guessing", async ({
+    request,
+  }) => {
+    const customer = await apiSession(request, "customer");
+
+    // `/quotes/requests/my` reads like a route but is not one; it lands on
+    // `/quotes/requests/:requestId`. Pinning the 400 keeps the previous test's
+    // fictitious endpoints from quietly coming back as passing cases.
+    const response = await request.get(`${API}/quotes/requests/my`, {
+      headers: { Authorization: `Bearer ${customer.token}` },
+    });
+    expect(response.status()).toBe(400);
+    expect((await response.json()).errors).toHaveProperty("requestId");
   });
 });
