@@ -80,7 +80,7 @@ export class User {
   failedLoginAttempts: number;
 
   /** Login is refused until this passes. Bounded, so a lockout always expires. */
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   lockedUntil: Date | null;
 
   @Column({ nullable: true, select: false })

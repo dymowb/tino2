@@ -2,6 +2,8 @@ import request from 'supertest';
 import App from '@/app';
 import { AppDataSource } from '@/config/database';
 import { BasicUser } from '@/models/BasicUser';
+import { passwordService } from '@/utils/password';
+import emailService from '@/services/EmailService';
 
 /**
  * The IP rate limiter in front of /auth/login throttles one noisy source but does
@@ -163,6 +165,147 @@ describe('login lockout', () => {
     const secondLock = (await readUser(email)).lockedUntil;
     expect(new Date(secondLock as Date).getTime()).toBe(new Date(firstLock as Date).getTime());
     expect(user.id).toBeDefined();
+  });
+
+  it('does not let a correct password in flight undo a lock applied while it was checked', async () => {
+    const email = 'lock-toctou@example.com';
+    await account(email);
+
+    // The row is read before the password comparison, and bcrypt is slow by design —
+    // long enough for concurrent guesses to lock the account while a correct password
+    // is still being checked. Hold the comparison open to make that window
+    // deterministic rather than hoping to hit it by timing.
+    let releaseSuccess: () => void = () => {};
+    const held = new Promise<void>((resolve) => {
+      releaseSuccess = resolve;
+    });
+    let reachedComparison: () => void = () => {};
+    const inFlight = new Promise<void>((resolve) => {
+      reachedComparison = resolve;
+    });
+
+    const realCompare = passwordService.compare.bind(passwordService);
+    const compare = jest
+      .spyOn(passwordService, 'compare')
+      .mockImplementation(async (plain: string, hash: string) => {
+        const result = await realCompare(plain, hash);
+        if (plain === password) {
+          reachedComparison();
+          await held;
+        }
+        return result;
+      });
+
+    try {
+      const success = attempt(email, password).then((response) => response);
+      await inFlight;
+
+      for (let i = 0; i < 5; i++) {
+        await attempt(email, 'WrongPassword1!').expect(401);
+      }
+      expect((await readUser(email)).lockedUntil).not.toBeNull();
+
+      releaseSuccess();
+      const response = await success;
+
+      // Knowing the password does not entitle this request to tokens: by the time it
+      // finished, the account was locked. Otherwise an attacker who also knows the
+      // password can race a login against their own failures to clear the lock.
+      expect(response.status).toBe(423);
+      expect(response.body?.data?.accessToken).toBeUndefined();
+
+      // And the lock itself must survive — the stale snapshot must not wipe it.
+      const after = await readUser(email);
+      expect(after.lockedUntil).not.toBeNull();
+      expect(new Date(after.lockedUntil as Date).getTime()).toBeGreaterThan(Date.now());
+    } finally {
+      compare.mockRestore();
+      releaseSuccess();
+    }
+  });
+
+  it('warns the owner when the lock is applied, and only then', async () => {
+    const email = 'lock-stale-warning@example.com';
+    const user = await account(email);
+
+    const sendEmail = jest
+      .spyOn(emailService, 'sendEmail')
+      .mockResolvedValue({ success: true } as never);
+
+    try {
+      for (let i = 0; i < 4; i++) {
+        await attempt(email, 'WrongPassword1!').expect(401);
+      }
+      // A wrong password on its own is not news. Mailing the owner every time trains
+      // them to ignore the one that matters, and turns the login form into a way to
+      // send mail to any address on demand.
+      expect(sendEmail).not.toHaveBeenCalled();
+
+      await attempt(email, 'WrongPassword1!').expect(401);
+      expect(sendEmail).toHaveBeenCalledTimes(1);
+      expect(sendEmail.mock.calls[0][0]).toMatchObject({ to: email });
+
+      // Let the window pass. The counter is already zero — locking resets it.
+      await AppDataSource.getRepository(BasicUser).update(user.id, {
+        lockedUntil: new Date(Date.now() - 1_000),
+      });
+      sendEmail.mockClear();
+
+      await attempt(email, 'WrongPassword1!').expect(401);
+
+      // First failure of a fresh window, so still no warning.
+      expect(sendEmail).not.toHaveBeenCalled();
+
+      // The expired lock is cleared rather than left lying around as a value that
+      // reads as "locked" to anything testing it for presence.
+      const after = await readUser(email);
+      expect(after.failedLoginAttempts).toBe(1);
+      expect(after.lockedUntil).toBeNull();
+    } finally {
+      sendEmail.mockRestore();
+    }
+  });
+
+  it('stores the lock as an instant, so the window is the configured one', async () => {
+    const email = 'lock-window-length@example.com';
+    await account(email);
+
+    // The lock is written by the database and read back by node. As `timestamp
+    // without time zone` the stored value carried no zone, so the two sides read it
+    // in their own: with the database on UTC and the process on UTC-7 — the ordinary
+    // arrangement, and the one this machine is in — a fifteen-minute lockout was
+    // enforced as seven hours and fifteen, and the Retry-After said so.
+    //
+    // The column type is asserted directly because the behavioural check below only
+    // catches this where the two zones actually differ; on a runner with both on UTC
+    // the old column happens to behave. This assertion holds everywhere.
+    const [column] = await AppDataSource.query(
+      `SELECT data_type FROM information_schema.columns
+        WHERE table_name = 'users' AND column_name = 'lockedUntil'`
+    );
+    expect(column.data_type).toBe('timestamp with time zone');
+
+    for (let i = 0; i < 5; i++) {
+      await attempt(email, 'WrongPassword1!').expect(401);
+    }
+
+    const locked = await attempt(email, password);
+    expect(locked.status).toBe(423);
+    expect(locked.body.retryAfterSeconds).toBeGreaterThan(13 * 60);
+    expect(locked.body.retryAfterSeconds).toBeLessThanOrEqual(15 * 60);
+
+    // Both readers agree on when the lock ends, whatever zone either is in.
+    const stored = await readUser(email);
+    const nodeMinutesAhead = (new Date(stored.lockedUntil as Date).getTime() - Date.now()) / 60_000;
+    expect(nodeMinutesAhead).toBeGreaterThan(13);
+    expect(nodeMinutesAhead).toBeLessThanOrEqual(15);
+
+    const [{ sqlMinutesAhead }] = await AppDataSource.query(
+      `SELECT EXTRACT(EPOCH FROM ("lockedUntil" - now())) / 60 AS "sqlMinutesAhead"
+         FROM "users" WHERE "email" = $1`,
+      [email]
+    );
+    expect(Math.abs(Number(sqlMinutesAhead) - nodeMinutesAhead)).toBeLessThan(1);
   });
 
   it('does not reveal whether an unknown address is locked', async () => {

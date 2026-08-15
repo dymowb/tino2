@@ -73,7 +73,7 @@ export class BasicUser {
    * the window is bounded so an attacker cannot lock a victim out permanently by
    * guessing badly on purpose.
    */
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   lockedUntil?: Date | null;
 
   @Column({ nullable: true })
