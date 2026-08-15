@@ -9,6 +9,18 @@ import logger from '@/config/logger';
 import { JwtPayload } from '@/types';
 import emailService from '@/services/EmailService';
 
+/**
+ * Thrown when an account is temporarily locked after repeated failed sign-ins.
+ * Typed so the retry window travels with the error instead of being stapled onto a
+ * plain Error and read back with a cast.
+ */
+export class AccountLockedError extends Error {
+  constructor(public readonly retryAfterSeconds: number) {
+    super('ACCOUNT_LOCKED');
+    this.name = 'AccountLockedError';
+  }
+}
+
 export class UserService {
   private userRepository: Repository<BasicUser>;
 
@@ -65,6 +77,105 @@ export class UserService {
     }
   }
 
+  /**
+   * Number of consecutive wrong passwords tolerated before an account is locked.
+   */
+  private static readonly MAX_FAILED_LOGIN_ATTEMPTS = 5;
+
+  /**
+   * How long a lockout lasts.
+   *
+   * The window expires on its own so that a single burst of guessing does not need
+   * support intervention to clear — but expiry alone does not make the lockout
+   * harmless. Nothing stops an attacker who knows the address from spending five
+   * wrong passwords after every expiry and keeping the account shut indefinitely;
+   * any per-account lockout trades online guessing for that denial of service, and
+   * a shorter window only lowers the cost of sustaining it.
+   *
+   * What bounds it is that the owner has a route back that failed sign-ins cannot
+   * touch: a password reset clears the lock (`resetPassword`), and it is reached
+   * through the mailbox rather than the login form. The lockout is what makes
+   * guessing expensive; the reset is what keeps it from being a way to lock
+   * someone out of their own account.
+   */
+  private static readonly LOCKOUT_MINUTES = 15;
+
+  /**
+   * Count a failed password attempt and lock the account once the threshold is hit.
+   *
+   * Deliberately says nothing to the caller about how many attempts remain — the
+   * response for a wrong password is identical whether it was the first or the
+   * fourth, so the count cannot be probed.
+   */
+  private async recordFailedLogin(user: BasicUser): Promise<void> {
+    // One atomic statement. Deriving the next count in JavaScript from a row read
+    // earlier is a lost-update race: concurrent attempts all read the same value and
+    // write the same increment, so parallel guessing never reaches the threshold —
+    // which defeats the protection in precisely the case it exists for, since brute
+    // force is distributed by nature.
+    //
+    // Doing the increment, the threshold comparison and the lock in a single UPDATE
+    // means Postgres' row lock serialises concurrent attempts against this account,
+    // and each one sees the value the previous one committed.
+    //
+    // The WHERE also excludes rows already locked, so once one request crosses the
+    // threshold the rest stop counting instead of extending the window.
+    //
+    // The non-threshold branch clears "lockedUntil" rather than carrying the old
+    // value forward. Only an expired lock can reach here (the WHERE excludes live
+    // ones), and leaving that stale timestamp in place made "did we just lock?"
+    // unanswerable from the returned row: every wrong password after a lockout
+    // expired looked like a fresh lock and sent the warning email again.
+    //
+    // The UPDATE is wrapped in a CTE so the statement's command tag is SELECT.
+    // TypeORM rewrites the result of a bare UPDATE to `[rows, affectedCount]`, so
+    // `rows[0]` was the row *array* and `rows[0].lockedUntil` was always undefined —
+    // which read as "just locked" on every wrong password. Do not unwrap this back
+    // into a plain UPDATE.
+    const rows: Array<{ justLocked: boolean }> = await this.userRepository.query(
+      `WITH updated AS (
+         UPDATE "users"
+            SET "failedLoginAttempts" =
+                  CASE WHEN "failedLoginAttempts" + 1 >= $2 THEN 0
+                       ELSE "failedLoginAttempts" + 1 END,
+                "lockedUntil" =
+                  CASE WHEN "failedLoginAttempts" + 1 >= $2
+                       THEN now() + make_interval(mins => $3)
+                       ELSE NULL END
+          WHERE "id" = $1
+            AND ("lockedUntil" IS NULL OR "lockedUntil" <= now())
+          RETURNING "lockedUntil"
+       )
+       SELECT ("lockedUntil" IS NOT NULL) AS "justLocked" FROM updated`,
+      [user.id, UserService.MAX_FAILED_LOGIN_ATTEMPTS, UserService.LOCKOUT_MINUTES]
+    );
+
+    // Empty when the account was already locked by a concurrent attempt. Otherwise
+    // the flag means this statement is the one that crossed the threshold — the
+    // threshold branch is the only writer of a non-null value.
+    const justLocked = rows.length > 0 && rows[0].justLocked === true;
+    if (!justLocked) {
+      return;
+    }
+
+    logger.warn(
+      `Account locked after ${UserService.MAX_FAILED_LOGIN_ATTEMPTS} failed login attempts: ${user.id}`
+    );
+
+    emailService
+      .sendEmail({
+        to: user.email,
+        subject: 'Unusual sign-in activity on your account',
+        html:
+          `<p>There were ${UserService.MAX_FAILED_LOGIN_ATTEMPTS} failed sign-in attempts on ` +
+          `your account, so we have temporarily blocked sign-in for ` +
+          `${UserService.LOCKOUT_MINUTES} minutes.</p>` +
+          `<p>If this was you, wait and try again. If it was not, change your password ` +
+          `once you can sign in.</p>`,
+      })
+      .catch((error) => logger.error('Failed to send account lockout notification:', error));
+  }
+
   async authenticateUser(
     email: string,
     password: string
@@ -87,6 +198,8 @@ export class UserService {
           'isActive',
           'isVerified',
           'suspendedUntil',
+          'failedLoginAttempts',
+          'lockedUntil',
           'createdAt',
           'updatedAt',
         ],
@@ -118,10 +231,66 @@ export class UserService {
         throw err;
       }
 
+      // Refuse while locked, before spending a bcrypt comparison on it.
+      if (user.lockedUntil && new Date() < new Date(user.lockedUntil)) {
+        throw new AccountLockedError(
+          Math.ceil((new Date(user.lockedUntil).getTime() - Date.now()) / 1000)
+        );
+      }
+
       const isPasswordValid = await passwordService.compare(password, user.password);
       if (!isPasswordValid) {
+        await this.recordFailedLogin(user);
         throw new Error('Invalid credentials');
       }
+
+      // A success clears the counter, so the threshold measures *consecutive*
+      // failures rather than a lifetime total.
+      //
+      // `user` was read before the bcrypt comparison, which is deliberately slow —
+      // easily long enough for concurrent wrong passwords to cross the threshold
+      // while this one is in flight. Clearing from that stale snapshot would erase a
+      // lock applied during the comparison *and* hand out tokens anyway, so an
+      // attacker racing a correct-password request against their own guesses could
+      // undo the lockout. Re-read and clear in one guarded statement instead: a live
+      // lock is preserved and reported, anything else (including an expired lock) is
+      // cleared. Runs unconditionally rather than only when the stale snapshot showed
+      // failures, because the stale snapshot is exactly what cannot be trusted here;
+      // the cost is one row update per successful login.
+      //
+      // CTE-wrapped for the same reason as the failure path: TypeORM reshapes the
+      // result of a bare UPDATE into `[rows, affectedCount]`.
+      const resetRows: Array<{ lockedUntil: Date | null }> = await this.userRepository.query(
+        `WITH reset AS (
+           UPDATE "users"
+              SET "failedLoginAttempts" =
+                    CASE WHEN "lockedUntil" > now() THEN "failedLoginAttempts" ELSE 0 END,
+                  "lockedUntil" =
+                    CASE WHEN "lockedUntil" > now() THEN "lockedUntil" ELSE NULL END
+            WHERE "id" = $1
+            RETURNING "lockedUntil"
+         )
+         SELECT "lockedUntil" FROM reset`,
+        [user.id]
+      );
+
+      if (resetRows.length === 0) {
+        // The account disappeared between the read and here.
+        throw new Error('Invalid credentials');
+      }
+
+      const activeLock: Date | null = resetRows[0].lockedUntil
+        ? new Date(resetRows[0].lockedUntil)
+        : null;
+      if (activeLock) {
+        throw new AccountLockedError(
+          Math.max(1, Math.ceil((activeLock.getTime() - Date.now()) / 1000))
+        );
+      }
+
+      // Keep the returned snapshot consistent with what was just written.
+      user.failedLoginAttempts = 0;
+      user.lockedUntil = null;
 
       const tokenPayload: Omit<JwtPayload, 'iat' | 'exp'> = {
         userId: user.id,
@@ -226,8 +395,13 @@ export class UserService {
 
       const hashedNewPassword = await passwordService.hash(newPassword);
 
+      // Same reasoning as the reset route: whoever proved the current password is
+      // the owner, so a lockout accumulated by someone else guessing does not
+      // survive it and greet them at their next sign-in.
       await this.userRepository.update(id, {
         password: hashedNewPassword,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
       });
 
       if (process.env.REDIS_ENABLED === 'true') {
@@ -427,10 +601,18 @@ export class UserService {
     }
 
     const hashedPassword = await passwordService.hash(newPassword);
+    // Clearing the lockout is the point of this being a recovery route. A lockout
+    // expires on its own, but nothing stops an attacker who knows the address from
+    // spending five wrong passwords every fifteen minutes to keep a victim out
+    // indefinitely — the lockout on its own converts online guessing into denial of
+    // service. Proving control of the mailbox is the way back in, and an attacker
+    // making failed sign-in attempts cannot interfere with it.
     await this.userRepository.update(user.id, {
       password: hashedPassword,
       passwordResetToken: undefined,
       passwordResetExpiry: undefined,
+      failedLoginAttempts: 0,
+      lockedUntil: null,
     });
 
     logger.info(`Password reset successfully for: ${user.id}`);
