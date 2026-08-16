@@ -13,3 +13,5 @@
 - [Node 22 toolchain via nvm](project_node22_toolchain.md) — Repo needs Node 22.12; source nvm in every Bash call or you silently get system Node 18.
 - [Doc separation — CLAUDE.md vs SESSION_CONTEXT](feedback_doc_separation.md) — CLAUDE.md = durable how-to-work guidance; project status/roadmap/caveats go in SESSION_CONTEXT, not duplicated. Prune resolved items.
 - [Codex review rounds](project_codex_review_rounds.md) — cross-agent-review blocks security PRs on real races/injection; budget 2-3 rounds and pre-empt the usual classes.
+- [TypeORM raw UPDATE result shape](project_typeorm_raw_update_shape.md) — .query() on UPDATE/DELETE returns [rows, rowCount]; rows[0].col is always undefined and fails open. Wrap in a CTE.
+- [Silently-degrading paths are verification blind spots](project_silent_degradation_blind_spot.md) — catch-and-return-[] looks like "no data"; exercise the dependency for real. Memory DB is snake_case, entities camelCase.
