@@ -5,6 +5,7 @@ import { BasicUser } from '@/models/BasicUser';
 import { Conversation, ConversationType } from '@/models/Conversation';
 import { Message } from '@/models/Message';
 import { Notification, NotificationType } from '@/models/Notification';
+import { Provider } from '@/models/Provider';
 import { MemoryDataSource } from '@/config/memoryDatabase';
 import MemoryMigrationDataSource from '@/config/memory.data-source';
 
@@ -303,6 +304,109 @@ describe('personal data export', () => {
       // A derived encoding of text that is already in the file, at roughly a
       // thousand floats per row. Nothing to port, plenty to bloat.
       expect(JSON.stringify(response.body)).not.toContain('embedding');
+    });
+  });
+
+  describe('completeness', () => {
+    /**
+     * The failure this export exists to fix is a list of fields that quietly falls
+     * behind what is stored. Enumerating the entity's own columns and requiring
+     * each one to be either exported or explicitly excluded means adding a column
+     * fails here until somebody decides which it is — rather than shipping an
+     * export that silently omits it.
+     */
+    function undecidedColumns(
+      entity: typeof BasicUser | typeof Provider,
+      exported: Record<string, unknown>,
+      excluded: string[]
+    ) {
+      const columns = AppDataSource.getMetadata(entity).columns.map((c) => c.propertyName);
+      return columns.filter((c) => !(c in exported) && !excluded.includes(c));
+    }
+
+    it('accounts for every column on the profile', async () => {
+      const { token } = await account('export-complete-user@example.com');
+      const { profile } = (await exportFor(token).expect(200)).body;
+
+      expect(
+        undecidedColumns(BasicUser, profile, [
+          // Credentials and single-use tokens. Handing these to anyone, including
+          // their owner, only creates a copy to lose.
+          'password',
+          'emailVerificationToken',
+          'emailVerificationExpiry',
+          'passwordResetToken',
+          'passwordResetExpiry',
+          // Moderation state written by staff about the account.
+          'suspensionReason',
+          'suspensionComment',
+          'suspendedUntil',
+          // Brute-force counters: operational, not personal history.
+          'failedLoginAttempts',
+          'lockedUntil',
+        ])
+      ).toEqual([]);
+    });
+
+    it('accounts for every column on the provider profile', async () => {
+      const { user, token } = await account('export-complete-provider@example.com');
+      await AppDataSource.getRepository(Provider).save({
+        userId: user.id,
+        businessName: 'Complete Services',
+        description: 'Everything, everywhere',
+        services: ['cleaning'],
+        location: {
+          latitude: -27.6,
+          longitude: -48.5,
+          address: 'Rua Teste, 1',
+          city: 'Florianópolis',
+          state: 'SC',
+          zipCode: '88000-000',
+          country: 'BR',
+        },
+        availableHours: {
+          monday: { start: '09:00', end: '17:00', available: true },
+          tuesday: { start: '09:00', end: '17:00', available: true },
+          wednesday: { start: '09:00', end: '17:00', available: true },
+          thursday: { start: '09:00', end: '17:00', available: true },
+          friday: { start: '09:00', end: '17:00', available: true },
+          saturday: { start: '09:00', end: '17:00', available: false },
+          sunday: { start: '09:00', end: '17:00', available: false },
+        },
+        portfolioImages: ['/uploads/portfolios/one.jpg'],
+        certifications: [{ name: 'NR-10', issuer: 'SENAI', dateObtained: new Date() }],
+        insurance: {
+          provider: 'Seguradora',
+          policyNumber: 'POL-1',
+          coverage: 100000,
+          expiryDate: new Date(),
+        },
+      } as never);
+
+      const { providerProfile } = (await exportFor(token).expect(200)).body;
+
+      expect(
+        undecidedColumns(Provider, providerProfile, [
+          // The join back to the account, already the subject of this export.
+          'userId',
+          // Staff identities and staff-to-staff notes. The decision is theirs to
+          // have; who made it and what was said internally is not.
+          'verifiedBy',
+          'rejectedBy',
+          'adminNotes',
+        ])
+      ).toEqual([]);
+
+      // The fields the review flagged, present rather than merely accounted for.
+      expect(providerProfile.portfolioImages).toEqual(['/uploads/portfolios/one.jpg']);
+      expect(providerProfile.certifications).toHaveLength(1);
+      expect(providerProfile.insurance).toMatchObject({ policyNumber: 'POL-1' });
+      expect(providerProfile.responseRate).not.toBeUndefined();
+      expect(providerProfile.averageResponseTime).not.toBeUndefined();
+      expect(providerProfile.updatedAt).not.toBeUndefined();
+
+      // And the exclusions really are excluded.
+      expect(JSON.stringify(providerProfile)).not.toContain('adminNotes');
     });
   });
 

@@ -166,12 +166,25 @@ export class DataExportService {
             serviceRadius: num(provider.serviceRadius),
             location: provider.location,
             availableHours: provider.availableHours,
+            portfolioImages: provider.portfolioImages,
+            certifications: provider.certifications,
+            insurance: provider.insurance,
+            isBackgroundChecked: provider.isBackgroundChecked,
+            isInsured: provider.isInsured,
             rating: num(provider.rating),
             totalReviews: num(provider.totalReviews),
             completedJobs: num(provider.completedJobs),
+            responseRate: num(provider.responseRate),
+            averageResponseTime: num(provider.averageResponseTime),
             verifiedAt: provider.verifiedAt,
+            rejectedAt: provider.rejectedAt,
+            // The reason given for a verification decision is about them and is
+            // theirs to have. Who reviewed it (`verifiedBy`, `rejectedBy`) is a
+            // staff identity, and `adminNotes` is staff talking to each other.
+            verificationNotes: provider.verificationNotes,
             isActive: provider.isActive,
             createdAt: provider.createdAt,
+            updatedAt: provider.updatedAt,
           }
         : null,
       bookings,
@@ -478,6 +491,7 @@ export class DataExportService {
         MemoryDataSource.query(
           `SELECT "id", "summary", "importance", "workflow_id" AS "workflowId",
                   "booking_id" AS "bookingId", "occurred_at" AS "occurredAt",
+                  "access_count" AS "accessCount", "reflected_at" AS "reflectedAt",
                   "is_active" AS "isActive", "created_at" AS "createdAt",
                   "expires_at" AS "expiresAt", "last_accessed_at" AS "lastAccessedAt",
                   "metadata"
@@ -489,6 +503,8 @@ export class DataExportService {
         MemoryDataSource.query(
           `SELECT "id", "rule_text" AS "ruleText", "prompt_fragment" AS "promptFragment",
                   "confidence", "status", "version", "auto_approved" AS "autoApproved",
+                  "source_episode_ids" AS "sourceEpisodeIds",
+                  "approval_threshold_used" AS "approvalThresholdUsed",
                   "created_at" AS "createdAt", "activated_at" AS "activatedAt",
                   "deprecated_at" AS "deprecatedAt"
              FROM "procedural_rules"
@@ -498,7 +514,8 @@ export class DataExportService {
         ),
         MemoryDataSource.query(
           `SELECT "id", "query_text" AS "queryText", "memory_type" AS "memoryType",
-                  "workflow_id" AS "workflowId", "retrieved_at" AS "retrievedAt"
+                  "results", "workflow_id" AS "workflowId", "latency_ms" AS "latencyMs",
+                  "retrieved_at" AS "retrievedAt"
              FROM "memory_retrieval_log"
             WHERE "user_id" = $1
             ORDER BY "retrieved_at" DESC`,
@@ -507,7 +524,8 @@ export class DataExportService {
         MemoryDataSource.query(
           `SELECT "id", "memory_type" AS "memoryType", "action",
                   "memory_id" AS "memoryId", "source_content" AS "sourceContent",
-                  "extracted_content" AS "extractedContent", "created_at" AS "createdAt"
+                  "extracted_content" AS "extractedContent",
+                  "dedup_decision" AS "dedupDecision", "created_at" AS "createdAt"
              FROM "memory_write_log"
             WHERE "user_id" = $1
             ORDER BY "created_at" DESC`,
