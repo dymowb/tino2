@@ -5,7 +5,8 @@ import { BasicUser } from '@/models/BasicUser';
 import { Conversation, ConversationType } from '@/models/Conversation';
 import { Message } from '@/models/Message';
 import { Notification, NotificationType } from '@/models/Notification';
-import MemoryDataSource from '@/config/memory.data-source';
+import { MemoryDataSource } from '@/config/memoryDatabase';
+import MemoryMigrationDataSource from '@/config/memory.data-source';
 
 /**
  * "Download my data" used to serialize the profile the user was already looking
@@ -174,10 +175,23 @@ describe('personal data export', () => {
     // the memory data source is not initialized by default and the code path
     // returned an empty list before reaching the query.
     beforeAll(async () => {
+      // Schema first, through the CLI data source — the only one whose migration
+      // glob matches TypeScript files. The application instance points at compiled
+      // `.js`, so asking it to migrate finds nothing and silently leaves an empty
+      // database that only looks fine where a previous run already built one.
+      if (!MemoryMigrationDataSource.isInitialized) {
+        await MemoryMigrationDataSource.initialize();
+      }
+      await MemoryMigrationDataSource.runMigrations();
+      await MemoryMigrationDataSource.destroy();
+
+      // Everything else runs through the instance the application initializes at
+      // boot and the export actually reads. Exercising the other one proved
+      // nothing about production: they are separate objects on the same database,
+      // and only this one is ever connected inside the server.
       if (!MemoryDataSource.isInitialized) {
         await MemoryDataSource.initialize();
       }
-      await MemoryDataSource.runMigrations();
     });
 
     afterAll(async () => {

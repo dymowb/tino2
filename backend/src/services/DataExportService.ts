@@ -1,6 +1,6 @@
 import { In, Repository } from 'typeorm';
 import { AppDataSource } from '@/config/database';
-import MemoryDataSource from '@/config/memory.data-source';
+import { MemoryDataSource, isMemoryEnabled } from '@/config/memoryDatabase';
 import { BasicUser } from '@/models/BasicUser';
 import { Booking } from '@/models/Booking';
 import { Conversation } from '@/models/Conversation';
@@ -428,8 +428,24 @@ export class DataExportService {
   }
 
   private async assistantMemory(userId: string): Promise<AssistantMemoryExport> {
-    if (!MemoryDataSource.isInitialized) {
+    // The data source the *application* initializes at boot, not the one the
+    // TypeORM CLI uses for migrations. They are two separate instances pointed at
+    // the same database, and the CLI's is never initialized inside the running
+    // server: reading from it would have left `isInitialized` false in every
+    // deployment and quietly emptied this section of every export.
+    if (!isMemoryEnabled()) {
       return { ...EMPTY_ASSISTANT_MEMORY };
+    }
+
+    if (!MemoryDataSource.isInitialized) {
+      // Configured but not connected is a fault, not an empty history, and the
+      // difference has to be visible in the file rather than inferred from it.
+      logger.warn('Data export ran with the memory database configured but not connected');
+      return {
+        ...EMPTY_ASSISTANT_MEMORY,
+        unavailable: true,
+        reason: 'assistant memory store not connected at export time',
+      };
     }
 
     try {
