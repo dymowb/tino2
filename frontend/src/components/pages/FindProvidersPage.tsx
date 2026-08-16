@@ -1024,7 +1024,10 @@ const FindProvidersPage: React.FC = () => {
           {/* Results */}
           {isLoading && (
             <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
-              <CircularProgress />
+              {/* A progressbar with no name is announced as "progress bar" and
+                  nothing else, which is the one thing a screen reader user
+                  already knows. */}
+              <CircularProgress aria-label={t("providers:loading")} />
             </Box>
           )}
 
@@ -1126,7 +1129,10 @@ const FindProvidersPage: React.FC = () => {
           </Typography>
           {favoritesQuery.isLoading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
-              <CircularProgress />
+              {/* A progressbar with no name is announced as "progress bar" and
+                  nothing else, which is the one thing a screen reader user
+                  already knows. */}
+              <CircularProgress aria-label={t("providers:loading")} />
             </Box>
           ) : favoritesQuery.favorites.length === 0 ? (
             <Box sx={{ textAlign: "center", py: 10 }}>

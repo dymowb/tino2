@@ -214,7 +214,16 @@ const ProfilePage: React.FC = () => {
               <Chip
                 size="small"
                 label={t(`common:user_type.${profile?.userType}`, profile?.userType || '')}
-                sx={{ textTransform: 'capitalize', bgcolor: alpha(tokens.color.terra, 0.12), color: tokens.color.terra, fontWeight: 600 }}
+                // terra on a 12% terra tint is about 3.8:1 — under AA for label-sized
+                // text. The darker shade of the same hue clears it without changing
+                // the look; in dark mode the tint is the dark surface, so the light
+                // shade is the one that reads.
+                sx={{
+                  textTransform: 'capitalize',
+                  bgcolor: alpha(tokens.color.terra, 0.12),
+                  color: isDark ? tokens.color.terraLight : tokens.color.terraDark,
+                  fontWeight: 600,
+                }}
               />
             </Box>
           </Stack>

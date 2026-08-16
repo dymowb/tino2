@@ -26,7 +26,7 @@ import apiService from '../../services/api';
 import socketService from '../../services/socketService';
 import ChatInterface from '../messaging/ChatInterface';
 import NewConversationDialog from '../messaging/NewConversationDialog';
-import { tokens } from '../../theme/theme';
+import { tokens, resetButtonSx } from '../../theme/theme';
 
 interface Participant {
   id: string;
@@ -208,11 +208,18 @@ const MessagingPage: React.FC = () => {
         transition={{ duration: 0.25, delay: Math.min(index * 0.025, 0.3), ease: [0.16, 1, 0.3, 1] }}
       >
         <Box
+          component="button"
+          type="button"
           data-conv-id={c.id}
           onClick={() => setSelectedConversation(c.id)}
+          // Announces which conversation is open. The selected row is marked only
+          // by a border and a tint, which tells a sighted user everything and a
+          // screen reader user nothing.
+          aria-current={selected ? 'true' : undefined}
           sx={{
+            ...resetButtonSx,
             display: 'flex', alignItems: 'center', gap: 1.5,
-            px: 2, py: 1.5, cursor: 'pointer',
+            px: 2, py: 1.5,
             borderLeft: `3px solid ${selected ? tokens.color.terra : 'transparent'}`,
             bgcolor: selected ? (isDark ? alpha(tokens.color.terra, 0.1) : alpha(tokens.color.terra, 0.06)) : 'transparent',
             transition: 'background-color 0.15s ease',

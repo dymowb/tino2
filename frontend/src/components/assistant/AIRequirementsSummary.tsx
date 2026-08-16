@@ -9,6 +9,7 @@ import {
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { formatMoney } from '../../utils/money';
+import { resetButtonSx } from '../../theme/theme';
 
 export interface RequirementsSummary {
   serviceType: string;
@@ -66,9 +67,13 @@ const AIRequirementsSummary: React.FC<Props> = ({
     return (
       <Tooltip title={t('summary.clickToEdit', 'Click to edit')}>
         <Box
+          component="button"
+          type="button"
           onClick={() => { setDraft(value); setEditingField(fieldKey); }}
           sx={{
-            display: 'flex', alignItems: 'center', gap: 0.75, cursor: 'pointer', flex: 1,
+            ...resetButtonSx,
+            display: 'flex', alignItems: 'center', gap: 0.75, flex: 1,
+            width: 'auto',
             minWidth: 120, px: 1, py: 0.5, borderRadius: 1,
             '&:hover': { bgcolor: 'action.hover' },
           }}
@@ -106,9 +111,13 @@ const AIRequirementsSummary: React.FC<Props> = ({
     <Paper variant="outlined" sx={{ mb: 3, overflow: 'hidden' }}>
       {/* Header */}
       <Box
+        component="button"
+        type="button"
+        aria-expanded={expanded}
         sx={{
+          ...resetButtonSx,
           display: 'flex', alignItems: 'center', px: 2, py: 1.25,
-          bgcolor: 'primary.50', cursor: 'pointer', userSelect: 'none',
+          bgcolor: 'primary.50', userSelect: 'none',
         }}
         onClick={() => setExpanded(e => !e)}
       >

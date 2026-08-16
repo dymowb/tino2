@@ -66,6 +66,7 @@ import PageSkeleton from "../common/PageSkeleton";
 import { tokens } from "../../theme/theme";
 import ProfileCompletionPrompt from "../providers/ProfileCompletionPrompt";
 import { formatMoney } from '../../utils/money';
+import { resetButtonSx } from '../../theme/theme';
 
 // Stat card: large Fraunces number with color accent
 const StatCard: React.FC<{
@@ -541,13 +542,17 @@ const ProviderDashboardPage: React.FC = () => {
             { value: "year", label: t("dashboard:period.this_year") },
           ].map((opt) => (
             <Box
+              component="button"
+              type="button"
               key={opt.value}
               onClick={() => setSelectedPeriod(opt.value)}
+              aria-pressed={selectedPeriod === opt.value}
               sx={{
+                ...resetButtonSx,
+                width: "auto",
                 px: 2,
                 py: 0.5,
                 borderRadius: tokens.radius.full,
-                cursor: "pointer",
                 fontSize: "0.8125rem",
                 fontWeight: 500,
                 fontFamily: tokens.font.body,

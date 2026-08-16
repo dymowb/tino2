@@ -11,7 +11,7 @@ import {
   Menu,
   MenuItem,
   List,
-  ListItem,
+  ListItemButton,
   ListItemIcon,
   ListItemText,
   Divider,
@@ -250,9 +250,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
       <List sx={{ p: 0 }}>
         {notifications.data.map((notification: Notification) => (
           <React.Fragment key={notification.id}>
-            <ListItem
+            <ListItemButton
               sx={{
-                cursor: 'pointer',
                 bgcolor: !notification.isRead ? 'action.hover' : 'transparent',
                 '&:hover': { bgcolor: 'action.selected' },
                 borderLeft: notification.priority === 'urgent' ? '4px solid' : 'none',
@@ -314,7 +313,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   <CheckCircle />
                 </IconButton>
               </Box>
-            </ListItem>
+            </ListItemButton>
             <Divider />
           </React.Fragment>
         ))}
