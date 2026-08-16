@@ -410,11 +410,25 @@ export class DataExportService {
       // Raw query because the embedding columns are not on the entity — and the
       // vectors are not selected here anyway: they are a derived representation,
       // meaningless outside this system and enormous next to the text they encode.
+      //
+      // This table is snake_case in the database while the entity is camelCase, so
+      // the column names have to be written as the schema has them and aliased
+      // back. Every other raw query against this store does the same.
       const rows: Array<Record<string, unknown>> = await MemoryDataSource.query(
-        `SELECT "id", "kind", "content", "confidence", "source", "createdAt", "updatedAt"
+        `SELECT "id",
+                "content",
+                "confidence",
+                "importance",
+                "source_type"  AS "sourceType",
+                "source_ref"   AS "sourceRef",
+                "is_active"    AS "isActive",
+                "created_at"   AS "createdAt",
+                "expires_at"   AS "expiresAt",
+                "last_accessed_at" AS "lastAccessedAt",
+                "metadata"
            FROM "semantic_memories"
-          WHERE "userId" = $1
-          ORDER BY "createdAt" DESC`,
+          WHERE "user_id" = $1
+          ORDER BY "created_at" DESC`,
         [userId]
       );
       return rows;

@@ -5,6 +5,7 @@ import { BasicUser } from '@/models/BasicUser';
 import { Conversation, ConversationType } from '@/models/Conversation';
 import { Message } from '@/models/Message';
 import { Notification, NotificationType } from '@/models/Notification';
+import MemoryDataSource from '@/config/memory.data-source';
 
 /**
  * "Download my data" used to serialize the profile the user was already looking
@@ -158,6 +159,68 @@ describe('personal data export', () => {
 
     // Contact details are not part of "who this was with".
     expect(serialized).not.toContain('export-them@example.com');
+  });
+
+  describe('assistant memory', () => {
+    // Exercised against a real memory database on purpose. The first version of
+    // this query named columns that do not exist — the table is snake_case while
+    // the entity is camelCase — and every export would have caught the SQL error
+    // and reported memory as unavailable. Nothing in the suite noticed, because
+    // the memory data source is not initialized by default and the code path
+    // returned an empty list before reaching the query.
+    beforeAll(async () => {
+      if (!MemoryDataSource.isInitialized) {
+        await MemoryDataSource.initialize();
+      }
+      await MemoryDataSource.runMigrations();
+    });
+
+    afterAll(async () => {
+      if (MemoryDataSource.isInitialized) {
+        await MemoryDataSource.destroy();
+      }
+    });
+
+    beforeEach(async () => {
+      await MemoryDataSource.query('TRUNCATE TABLE "semantic_memories" CASCADE');
+    });
+
+    it('carries what the assistant remembers about the account holder', async () => {
+      const { user, token } = await account('export-memory@example.com');
+
+      await MemoryDataSource.query(
+        `INSERT INTO "semantic_memories" ("user_id", "content", "confidence", "source_type")
+         VALUES ($1, $2, 0.9, 'extraction')`,
+        [user.id, 'Prefers appointments in the morning']
+      );
+
+      const response = await exportFor(token).expect(200);
+
+      expect(response.body.assistantMemory).toHaveLength(1);
+      expect(response.body.assistantMemory[0]).toMatchObject({
+        content: 'Prefers appointments in the morning',
+        confidence: 0.9,
+        sourceType: 'extraction',
+      });
+      // A silent SQL failure reports itself rather than looking like an empty
+      // history, so the absence of that marker is part of the assertion.
+      expect(JSON.stringify(response.body.assistantMemory)).not.toContain('unavailable');
+    });
+
+    it('does not carry another account holder’s memories', async () => {
+      const mine = await account('export-memory-mine@example.com');
+      const theirs = await account('export-memory-theirs@example.com', 'Theirs');
+
+      await MemoryDataSource.query(
+        `INSERT INTO "semantic_memories" ("user_id", "content", "confidence", "source_type")
+         VALUES ($1, $2, 0.9, 'extraction')`,
+        [theirs.user.id, 'THEIR_PRIVATE_MEMORY']
+      );
+
+      const response = await exportFor(mine.token).expect(200);
+      expect(response.body.assistantMemory).toEqual([]);
+      expect(JSON.stringify(response.body)).not.toContain('THEIR_PRIVATE_MEMORY');
+    });
   });
 
   it('exports each account separately', async () => {
