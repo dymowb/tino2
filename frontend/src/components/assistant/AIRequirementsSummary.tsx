@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Box, Paper, Typography, TextField, Chip, IconButton, Collapse,
+  Box, Paper, Typography, TextField, Chip, Collapse,
   Alert, Button, Stack, Tooltip,
 } from '@mui/material';
 import {
@@ -131,7 +131,12 @@ const AIRequirementsSummary: React.FC<Props> = ({
             size="small" color="warning" variant="outlined" sx={{ mr: 1 }}
           />
         )}
-        <IconButton size="small">{expanded ? <ExpandLess /> : <ExpandMore />}</IconButton>
+        {/* Decoration, not a control: the header itself is the toggle. As an
+            IconButton this was a <button> inside a <button> — invalid semantics
+            and a second, unlabelled tab stop that did nothing. */}
+        <Box aria-hidden sx={{ display: 'flex', p: '5px', color: 'action.active' }}>
+          {expanded ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
+        </Box>
       </Box>
 
       <Collapse in={expanded}>

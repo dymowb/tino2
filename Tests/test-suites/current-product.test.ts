@@ -188,10 +188,20 @@ test.describe("customer experience", () => {
     const conversationId = await row.getAttribute("data-conv-id");
     await page.keyboard.press("Enter");
 
-    // Enter selected it, and the selection is announced rather than only tinted.
-    await expect(
-      page.locator(`[data-conv-id="${conversationId}"]`),
-    ).toHaveAttribute("aria-current", "true");
+    // Enter opened the thread. Asserted through the composer because on narrow
+    // viewports the list is replaced by the conversation rather than sitting
+    // beside it — the row the key was pressed on is gone by now, which is exactly
+    // what the mobile projects caught and a Chromium-only run could not.
+    await expect(page.locator("textarea").first()).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // Where the list stays on screen, the open conversation is announced rather
+    // than only tinted.
+    const stillListed = page.locator(`[data-conv-id="${conversationId}"]`);
+    if ((await stillListed.count()) > 0) {
+      await expect(stillListed).toHaveAttribute("aria-current", "true");
+    }
   });
 
   test("primary pages pass automated accessibility checks", async ({

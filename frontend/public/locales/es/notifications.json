@@ -148,5 +148,6 @@
     "days_ago_other": "Hace {{count}} días",
     "days_ago_one": "Hace {{count}} día"
   },
-  "back": "Volver"
+  "back": "Volver",
+  "select": "Seleccionar notificación"
 }

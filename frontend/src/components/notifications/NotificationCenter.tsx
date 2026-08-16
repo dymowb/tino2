@@ -11,6 +11,7 @@ import {
   Menu,
   MenuItem,
   List,
+  ListItem,
   ListItemButton,
   ListItemIcon,
   ListItemText,
@@ -250,13 +251,36 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
       <List sx={{ p: 0 }}>
         {notifications.data.map((notification: Notification) => (
           <React.Fragment key={notification.id}>
-            <ListItemButton
+            {/* The row opens the notification and the icon marks it selected: two
+                actions, so two sibling controls. Nesting the second inside the
+                first is invalid semantics and buries it — `secondaryAction`
+                renders it outside the row button, which is why it exists. */}
+            <ListItem
+              disablePadding
+              secondaryAction={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {!notification.isRead && (
+                    <Circle sx={{ fontSize: 8, color: 'primary.main' }} />
+                  )}
+                  <IconButton
+                    size="small"
+                    aria-label={t('select')}
+                    aria-pressed={selectedNotifications.includes(notification.id)}
+                    onClick={() => handleSelectNotification(notification.id)}
+                    color={selectedNotifications.includes(notification.id) ? 'primary' : 'default'}
+                  >
+                    <CheckCircle />
+                  </IconButton>
+                </Box>
+              }
               sx={{
                 bgcolor: !notification.isRead ? 'action.hover' : 'transparent',
-                '&:hover': { bgcolor: 'action.selected' },
                 borderLeft: notification.priority === 'urgent' ? '4px solid' : 'none',
                 borderLeftColor: 'error.main'
               }}
+            >
+            <ListItemButton
+              sx={{ '&:hover': { bgcolor: 'action.selected' } }}
               onClick={() => handleNotificationClick(notification)}
             >
               <ListItemIcon>
@@ -298,22 +322,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   </Box>
                 }
               />
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {!notification.isRead && (
-                  <Circle sx={{ fontSize: 8, color: 'primary.main' }} />
-                )}
-                <IconButton
-                  size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSelectNotification(notification.id);
-                  }}
-                  color={selectedNotifications.includes(notification.id) ? 'primary' : 'default'}
-                >
-                  <CheckCircle />
-                </IconButton>
-              </Box>
             </ListItemButton>
+            </ListItem>
             <Divider />
           </React.Fragment>
         ))}
