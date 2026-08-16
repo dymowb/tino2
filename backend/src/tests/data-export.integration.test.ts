@@ -79,9 +79,14 @@ describe('personal data export', () => {
       'conversations',
       'notifications',
       'favoriteProviders',
-      'assistantMemory',
     ]) {
       expect(`${key}:${Array.isArray(data[key])}`).toBe(`${key}:true`);
+    }
+
+    // Assistant memory is a shape of its own: five stores, each of which has to be
+    // present rather than collapsed into one list.
+    for (const key of ['semantic', 'episodic', 'proceduralRules', 'retrievalLog', 'writeLog']) {
+      expect(`${key}:${Array.isArray(data.assistantMemory[key])}`).toBe(`${key}:true`);
     }
 
     expect(data.notifications).toHaveLength(1);
@@ -182,44 +187,108 @@ describe('personal data export', () => {
     });
 
     beforeEach(async () => {
-      await MemoryDataSource.query('TRUNCATE TABLE "semantic_memories" CASCADE');
+      await MemoryDataSource.query(
+        `TRUNCATE TABLE "semantic_memories", "episodic_memories", "procedural_rules",
+                        "memory_retrieval_log", "memory_write_log" CASCADE`
+      );
     });
 
-    it('carries what the assistant remembers about the account holder', async () => {
-      const { user, token } = await account('export-memory@example.com');
-
+    /**
+     * One row in every user-scoped table the memory database has. Exporting only
+     * the facts and stopping there is the same failure as exporting only the
+     * profile: what the assistant concluded about someone, what it recorded them
+     * doing, and what they typed at it are all theirs.
+     */
+    async function seedEveryMemoryStore(userId: string, marker: string) {
       await MemoryDataSource.query(
         `INSERT INTO "semantic_memories" ("user_id", "content", "confidence", "source_type")
          VALUES ($1, $2, 0.9, 'extraction')`,
-        [user.id, 'Prefers appointments in the morning']
+        [userId, `${marker}_SEMANTIC prefers mornings`]
+      );
+      await MemoryDataSource.query(
+        `INSERT INTO "episodic_memories" ("user_id", "summary", "occurred_at")
+         VALUES ($1, $2, now())`,
+        [userId, `${marker}_EPISODIC booked a cleaning`]
+      );
+      await MemoryDataSource.query(
+        `INSERT INTO "procedural_rules" ("user_id", "rule_text", "prompt_fragment", "confidence", "status")
+         VALUES ($1, $2, $3, 0.9, 'active')`,
+        [userId, `${marker}_RULE always confirm the address`, `${marker}_FRAGMENT confirm address`]
+      );
+      await MemoryDataSource.query(
+        `INSERT INTO "memory_retrieval_log" ("user_id", "query_text", "memory_type")
+         VALUES ($1, $2, 'semantic')`,
+        [userId, `${marker}_QUERY who cleaned my flat`]
+      );
+      await MemoryDataSource.query(
+        `INSERT INTO "memory_write_log" ("user_id", "memory_type", "action", "source_content")
+         VALUES ($1, 'semantic', 'created', $2)`,
+        [userId, `${marker}_WRITE original message text`]
+      );
+    }
+
+    it('carries every store the assistant keeps, not only the facts', async () => {
+      const { user, token } = await account('export-memory@example.com');
+      await seedEveryMemoryStore(user.id, 'MINE');
+
+      const { assistantMemory } = (await exportFor(token).expect(200)).body;
+
+      expect(assistantMemory.semantic[0]).toMatchObject({
+        content: 'MINE_SEMANTIC prefers mornings',
+        confidence: 0.9,
+        sourceType: 'extraction',
+      });
+      expect(assistantMemory.episodic[0]).toMatchObject({
+        summary: 'MINE_EPISODIC booked a cleaning',
+      });
+      expect(assistantMemory.proceduralRules[0]).toMatchObject({
+        ruleText: 'MINE_RULE always confirm the address',
+        status: 'active',
+      });
+      expect(assistantMemory.retrievalLog[0]).toMatchObject({
+        queryText: 'MINE_QUERY who cleaned my flat',
+        memoryType: 'semantic',
+      });
+      expect(assistantMemory.writeLog[0]).toMatchObject({
+        sourceContent: 'MINE_WRITE original message text',
+        action: 'created',
+      });
+
+      // A silent SQL failure reports itself rather than looking like an empty
+      // history, so the absence of that marker is part of the assertion.
+      expect(assistantMemory.unavailable).toBeUndefined();
+    });
+
+    it('does not carry another account holder\u2019s memories', async () => {
+      const mine = await account('export-memory-mine@example.com');
+      const theirs = await account('export-memory-theirs@example.com', 'Theirs');
+      await seedEveryMemoryStore(theirs.user.id, 'THEIRS');
+
+      const response = await exportFor(mine.token).expect(200);
+
+      expect(response.body.assistantMemory).toMatchObject({
+        semantic: [],
+        episodic: [],
+        proceduralRules: [],
+        retrievalLog: [],
+        writeLog: [],
+      });
+      expect(JSON.stringify(response.body)).not.toContain('THEIRS_');
+    });
+
+    it('never carries embedding vectors', async () => {
+      const { user, token } = await account('export-memory-vectors@example.com');
+      await seedEveryMemoryStore(user.id, 'VECTOR');
+      await MemoryDataSource.query(
+        `UPDATE "semantic_memories" SET "embedding" = $2 WHERE "user_id" = $1`,
+        [user.id, `[${Array.from({ length: 1024 }, () => '0.5').join(',')}]`]
       );
 
       const response = await exportFor(token).expect(200);
 
-      expect(response.body.assistantMemory).toHaveLength(1);
-      expect(response.body.assistantMemory[0]).toMatchObject({
-        content: 'Prefers appointments in the morning',
-        confidence: 0.9,
-        sourceType: 'extraction',
-      });
-      // A silent SQL failure reports itself rather than looking like an empty
-      // history, so the absence of that marker is part of the assertion.
-      expect(JSON.stringify(response.body.assistantMemory)).not.toContain('unavailable');
-    });
-
-    it('does not carry another account holder’s memories', async () => {
-      const mine = await account('export-memory-mine@example.com');
-      const theirs = await account('export-memory-theirs@example.com', 'Theirs');
-
-      await MemoryDataSource.query(
-        `INSERT INTO "semantic_memories" ("user_id", "content", "confidence", "source_type")
-         VALUES ($1, $2, 0.9, 'extraction')`,
-        [theirs.user.id, 'THEIR_PRIVATE_MEMORY']
-      );
-
-      const response = await exportFor(mine.token).expect(200);
-      expect(response.body.assistantMemory).toEqual([]);
-      expect(JSON.stringify(response.body)).not.toContain('THEIR_PRIVATE_MEMORY');
+      // A derived encoding of text that is already in the file, at roughly a
+      // thousand floats per row. Nothing to port, plenty to bloat.
+      expect(JSON.stringify(response.body)).not.toContain('embedding');
     });
   });
 

@@ -41,6 +41,29 @@ function num(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+/**
+ * Every user-scoped table in the assistant's memory database. Kept as a named
+ * shape so adding a table there is a compile error here rather than a silently
+ * incomplete export.
+ */
+export interface AssistantMemoryExport {
+  semantic: Record<string, unknown>[];
+  episodic: Record<string, unknown>[];
+  proceduralRules: Record<string, unknown>[];
+  retrievalLog: Record<string, unknown>[];
+  writeLog: Record<string, unknown>[];
+  unavailable?: boolean;
+  reason?: string;
+}
+
+const EMPTY_ASSISTANT_MEMORY: AssistantMemoryExport = {
+  semantic: [],
+  episodic: [],
+  proceduralRules: [],
+  retrievalLog: [],
+  writeLog: [],
+};
+
 export interface DataExport {
   meta: {
     format: string;
@@ -59,7 +82,7 @@ export interface DataExport {
   conversations: Record<string, unknown>[];
   notifications: Record<string, unknown>[];
   favoriteProviders: Record<string, unknown>[];
-  assistantMemory: Record<string, unknown>[];
+  assistantMemory: AssistantMemoryExport;
 }
 
 export class DataExportService {
@@ -116,6 +139,7 @@ export class DataExportService {
           'Messages written by the people you talked to are not included; your own are, in full.',
           'Payment gateway identifiers are omitted. Card details are never stored by this platform.',
           'Uploaded files are referenced by name and URL rather than embedded.',
+          'Assistant memory covers all five stores: facts, episodes, derived rules, and the retrieval and write logs. Embedding vectors are omitted — they are a derived encoding of the text already included.',
         ],
       },
       profile: {
@@ -403,41 +427,89 @@ export class DataExportService {
     });
   }
 
-  private async assistantMemory(userId: string) {
-    if (!MemoryDataSource.isInitialized) return [];
+  private async assistantMemory(userId: string): Promise<AssistantMemoryExport> {
+    if (!MemoryDataSource.isInitialized) {
+      return { ...EMPTY_ASSISTANT_MEMORY };
+    }
 
     try {
-      // Raw query because the embedding columns are not on the entity — and the
-      // vectors are not selected here anyway: they are a derived representation,
+      // Raw queries because the embedding columns are not on the entities — and no
+      // vector is selected here anyway: they are a derived representation,
       // meaningless outside this system and enormous next to the text they encode.
       //
-      // This table is snake_case in the database while the entity is camelCase, so
-      // the column names have to be written as the schema has them and aliased
-      // back. Every other raw query against this store does the same.
-      const rows: Array<Record<string, unknown>> = await MemoryDataSource.query(
-        `SELECT "id",
-                "content",
-                "confidence",
-                "importance",
-                "source_type"  AS "sourceType",
-                "source_ref"   AS "sourceRef",
-                "is_active"    AS "isActive",
-                "created_at"   AS "createdAt",
-                "expires_at"   AS "expiresAt",
-                "last_accessed_at" AS "lastAccessedAt",
-                "metadata"
-           FROM "semantic_memories"
-          WHERE "user_id" = $1
-          ORDER BY "created_at" DESC`,
-        [userId]
-      );
-      return rows;
+      // These tables are snake_case in the database while the entities are
+      // camelCase, so the column names have to be written as the schema has them
+      // and aliased back. Every other raw query against this store does the same.
+      //
+      // All five user-scoped tables are exported, not just the facts. What the
+      // assistant concluded about someone (`procedural_rules`), what it recorded
+      // them doing (`episodic_memories`), and what they typed at it
+      // (`memory_retrieval_log.query_text`) are as personal as the profile, and an
+      // export that quietly stopped at one table would be the same failure this
+      // whole change exists to fix.
+      const [semantic, episodic, proceduralRules, retrievalLog, writeLog] = await Promise.all([
+        MemoryDataSource.query(
+          `SELECT "id", "content", "confidence", "importance",
+                  "source_type" AS "sourceType", "source_ref" AS "sourceRef",
+                  "is_active" AS "isActive", "created_at" AS "createdAt",
+                  "expires_at" AS "expiresAt", "last_accessed_at" AS "lastAccessedAt",
+                  "metadata"
+             FROM "semantic_memories"
+            WHERE "user_id" = $1
+            ORDER BY "created_at" DESC`,
+          [userId]
+        ),
+        MemoryDataSource.query(
+          `SELECT "id", "summary", "importance", "workflow_id" AS "workflowId",
+                  "booking_id" AS "bookingId", "occurred_at" AS "occurredAt",
+                  "is_active" AS "isActive", "created_at" AS "createdAt",
+                  "expires_at" AS "expiresAt", "last_accessed_at" AS "lastAccessedAt",
+                  "metadata"
+             FROM "episodic_memories"
+            WHERE "user_id" = $1
+            ORDER BY "occurred_at" DESC`,
+          [userId]
+        ),
+        MemoryDataSource.query(
+          `SELECT "id", "rule_text" AS "ruleText", "prompt_fragment" AS "promptFragment",
+                  "confidence", "status", "version", "auto_approved" AS "autoApproved",
+                  "created_at" AS "createdAt", "activated_at" AS "activatedAt",
+                  "deprecated_at" AS "deprecatedAt"
+             FROM "procedural_rules"
+            WHERE "user_id" = $1
+            ORDER BY "created_at" DESC`,
+          [userId]
+        ),
+        MemoryDataSource.query(
+          `SELECT "id", "query_text" AS "queryText", "memory_type" AS "memoryType",
+                  "workflow_id" AS "workflowId", "retrieved_at" AS "retrievedAt"
+             FROM "memory_retrieval_log"
+            WHERE "user_id" = $1
+            ORDER BY "retrieved_at" DESC`,
+          [userId]
+        ),
+        MemoryDataSource.query(
+          `SELECT "id", "memory_type" AS "memoryType", "action",
+                  "memory_id" AS "memoryId", "source_content" AS "sourceContent",
+                  "extracted_content" AS "extractedContent", "created_at" AS "createdAt"
+             FROM "memory_write_log"
+            WHERE "user_id" = $1
+            ORDER BY "created_at" DESC`,
+          [userId]
+        ),
+      ]);
+
+      return { semantic, episodic, proceduralRules, retrievalLog, writeLog };
     } catch (error) {
       // The assistant memory lives in its own database. If it is unreachable the
       // rest of the export is still worth delivering, so this degrades instead of
       // failing — and says so rather than looking like an empty history.
       logger.warn('Data export could not read assistant memory:', error);
-      return [{ unavailable: true, reason: 'assistant memory store unreachable at export time' }];
+      return {
+        ...EMPTY_ASSISTANT_MEMORY,
+        unavailable: true,
+        reason: 'assistant memory store unreachable at export time',
+      };
     }
   }
 }
