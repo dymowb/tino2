@@ -61,6 +61,7 @@ import ReadinessDrawer from "../bookings/ReadinessDrawer";
 import QuoteRequestDialog from "../quotes/QuoteRequestDialog";
 import { quoteHighlights } from "../../utils/quoteComparison";
 import { formatMoney } from '../../utils/money';
+import { resetButtonSx } from '../../theme/theme';
 
 const STATUS_BORDER: Record<string, string> = {
   pending: tokens.color.gold,
@@ -1385,9 +1386,13 @@ const MyBookingsPage: React.FC = () => {
       <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 4 }}>
         {stageOptions.map((opt) => (
           <Box
+            component="button"
+            type="button"
             key={opt.value}
             onClick={() => setStage(opt.value)}
-            sx={chipSx(stage === opt.value)}
+            // A filter is on or off, and the only thing saying which was a colour.
+            aria-pressed={stage === opt.value}
+            sx={{ ...resetButtonSx, width: 'auto', ...chipSx(stage === opt.value) }}
           >
             {opt.label}
             {opt.count > 0 ? ` (${opt.count})` : ""}

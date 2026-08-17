@@ -14,6 +14,9 @@ export const tokens = {
     stone:       '#6B5E52',
     stoneLight:  '#8B7B6E',
     gold:        '#D4A853',
+    // Text-safe gold. The bright one is 1.9:1 on a light surface — fine as a
+    // tint or a fill, unreadable as a label.
+    goldDark:    '#8A6520',
     night:       '#0D1F17',
     nightCard:   '#132B1E',
     nightBorder: '#1F3D2A',
@@ -29,6 +32,40 @@ export const tokens = {
     lg:   '24px',
     xl:   '32px',
     full: '9999px',
+  },
+} as const;
+
+/**
+ * Styles a real `<button>` back into a plain surface.
+ *
+ * For the rows, cards and chips that are genuinely interactive but do not look
+ * like buttons — a conversation in the message list, a filter chip, an expander.
+ * These were `<Box onClick>`, which no keyboard can reach and no screen reader
+ * announces as operable: the click handler is the only thing that makes them
+ * work, and a pointer is the only thing that can produce a click.
+ *
+ * Use with `component="button" type="button"`, so the element carries the button
+ * role, tab order and Enter/Space activation the browser already implements,
+ * while the surrounding `sx` still controls how it looks. Pair it with
+ * `aria-pressed` on a toggle, `aria-expanded` on an expander, or `aria-current`
+ * on a selection within a list — the visual "this one is selected" treatment is
+ * invisible to anyone not looking at it.
+ */
+export const resetButtonSx = {
+  appearance: 'none',
+  border: 0,
+  m: 0,
+  background: 'none',
+  font: 'inherit',
+  color: 'inherit',
+  textAlign: 'left',
+  width: '100%',
+  cursor: 'pointer',
+  // Keyboard focus has to be visible, and only for keyboard use — an outline on
+  // every mouse click reads as a rendering fault and invites its own removal.
+  '&:focus-visible': {
+    outline: `2px solid ${tokens.color.terra}`,
+    outlineOffset: '-2px',
   },
 } as const;
 
@@ -84,6 +121,23 @@ export const createAppTheme = (mode: 'light' | 'dark' = 'light') =>
     shape: { borderRadius: 16 },
 
     components: {
+      // MUI gives every CircularProgress `role="progressbar"`, and a progressbar
+      // with no accessible name is announced as "progress bar" and nothing else.
+      // There are around fifty of them across the app, so the floor is set here
+      // rather than at fifty call sites — including ones not written yet. Call
+      // sites that can say something more useful pass their own translated
+      // `aria-label`, which overrides this.
+      //
+      // Known limitation: this default cannot be translated. `defaultProps` is
+      // evaluated once when the theme is built, so reading the i18n instance here
+      // would freeze whichever language happened to load first — worse than a
+      // consistent English fallback. Naming the spinner is the part that decides
+      // whether it is announced at all.
+      MuiCircularProgress: {
+        defaultProps: {
+          'aria-label': 'Loading',
+        },
+      },
       MuiButton: {
         styleOverrides: {
           root: {

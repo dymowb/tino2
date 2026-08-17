@@ -26,7 +26,7 @@ import apiService from '../../services/api';
 import socketService from '../../services/socketService';
 import ChatInterface from '../messaging/ChatInterface';
 import NewConversationDialog from '../messaging/NewConversationDialog';
-import { tokens } from '../../theme/theme';
+import { tokens, resetButtonSx } from '../../theme/theme';
 
 interface Participant {
   id: string;
@@ -61,8 +61,21 @@ interface Conversation {
 }
 
 // Deterministic warm accent per conversation — same palette logic used on provider cards.
-const ACCENTS = [tokens.color.earth, tokens.color.terra, tokens.color.gold, tokens.color.stone, tokens.color.earthLight];
-function accentFor(seed: string): string {
+//
+// Two colours per accent, because these are used both as a tint behind something
+// and as the text on top of it, and those are different jobs. Measured on the
+// light surface, the bright palette reaches 1.9:1 for gold and 3.9:1 for terra as
+// text — well under AA, and invisible to a contrast checker that can only see the
+// tint. `text` is the readable shade of the same hue; `tint` is unchanged, so the
+// colour identity of a conversation is exactly as it was.
+const ACCENTS = [
+  { tint: tokens.color.earth, text: tokens.color.earth },
+  { tint: tokens.color.terra, text: tokens.color.terraDark },
+  { tint: tokens.color.gold, text: tokens.color.goldDark },
+  { tint: tokens.color.stone, text: tokens.color.stone },
+  { tint: tokens.color.earthLight, text: tokens.color.earthLight },
+];
+function accentFor(seed: string): { tint: string; text: string } {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) hash = seed.charCodeAt(i) + ((hash << 5) - hash);
   return ACCENTS[Math.abs(hash) % ACCENTS.length];
@@ -208,11 +221,18 @@ const MessagingPage: React.FC = () => {
         transition={{ duration: 0.25, delay: Math.min(index * 0.025, 0.3), ease: [0.16, 1, 0.3, 1] }}
       >
         <Box
+          component="button"
+          type="button"
           data-conv-id={c.id}
           onClick={() => setSelectedConversation(c.id)}
+          // Announces which conversation is open. The selected row is marked only
+          // by a border and a tint, which tells a sighted user everything and a
+          // screen reader user nothing.
+          aria-current={selected ? 'true' : undefined}
           sx={{
+            ...resetButtonSx,
             display: 'flex', alignItems: 'center', gap: 1.5,
-            px: 2, py: 1.5, cursor: 'pointer',
+            px: 2, py: 1.5,
             borderLeft: `3px solid ${selected ? tokens.color.terra : 'transparent'}`,
             bgcolor: selected ? (isDark ? alpha(tokens.color.terra, 0.1) : alpha(tokens.color.terra, 0.06)) : 'transparent',
             transition: 'background-color 0.15s ease',
@@ -225,8 +245,11 @@ const MessagingPage: React.FC = () => {
           ) : (
             <Avatar sx={{
               width: 46, height: 46,
-              bgcolor: alpha(accent, isDark ? 0.25 : 0.16),
-              color: accent,
+              bgcolor: alpha(accent.tint, isDark ? 0.25 : 0.16),
+              // On the dark surface the hue itself is too dark to read, so the
+              // tint carries the identity and the text goes near-white — the same
+              // approach the profile service chips already take.
+              color: isDark ? tokens.color.paper : accent.text,
               fontFamily: tokens.font.display, fontWeight: 600, fontSize: '1.05rem',
             }}>
               {initials}
@@ -285,10 +308,13 @@ const MessagingPage: React.FC = () => {
                 display: 'inline-flex', alignItems: 'center', mt: 0.5,
                 px: 1, py: 0.1,
                 borderRadius: tokens.radius.full,
-                border: `1px solid ${alpha(accent, 0.35)}`,
-                bgcolor: alpha(accent, isDark ? 0.16 : 0.08),
+                border: `1px solid ${alpha(accent.tint, 0.35)}`,
+                bgcolor: alpha(accent.tint, isDark ? 0.16 : 0.08),
               }}>
-                <Typography sx={{ fontFamily: tokens.font.body, fontSize: '0.65rem', fontWeight: 600, color: accent }}>
+                <Typography sx={{
+                  fontFamily: tokens.font.body, fontSize: '0.65rem', fontWeight: 600,
+                  color: isDark ? tokens.color.paper : accent.text,
+                }}>
                   {c.metadata.serviceType}
                 </Typography>
               </Box>

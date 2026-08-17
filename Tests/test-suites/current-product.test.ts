@@ -1,4 +1,5 @@
 import { test, expect, APIRequestContext, Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 
 const API = "http://127.0.0.1:3100/api/v1";
 const credentials = {
@@ -142,6 +143,114 @@ test.describe("customer experience", () => {
     const images = page.locator("img");
     for (let index = 0; index < (await images.count()); index += 1) {
       await expect(images.nth(index)).toHaveAttribute("alt");
+    }
+
+    // The name of this test promised keyboard reachability and nothing in it went
+    // near a keyboard. Tab from the top and require that focus actually lands on
+    // something operable — a page whose controls are all `<div onClick>` passes
+    // every landmark and alt-text check ever written and cannot be used without a
+    // mouse.
+    await page.keyboard.press("Tab");
+    const focused = await page.evaluate(() => {
+      const el = document.activeElement;
+      if (!el || el === document.body) return null;
+      return {
+        tag: el.tagName.toLowerCase(),
+        role: el.getAttribute("role"),
+        tabIndex: (el as HTMLElement).tabIndex,
+      };
+    });
+    expect(focused, "Tab from the top of the page focused nothing").not.toBeNull();
+    expect(
+      ["a", "button", "input", "select", "textarea"].includes(focused!.tag) ||
+        focused!.role === "button" ||
+        focused!.role === "link",
+    ).toBe(true);
+  });
+
+  test("conversations can be opened from the keyboard alone", async ({
+    page,
+  }) => {
+    await page.goto("/messages");
+    await expect(page.locator("main")).toBeVisible();
+
+    // Conversation rows were `<Box onClick>`: no tab stop, no Enter handler, no
+    // announced role. A pointer was the only way to read your own messages.
+    const row = page.locator("[data-conv-id]").first();
+    await expect(row).toBeVisible({ timeout: 15_000 });
+
+    const tag = await row.evaluate((el) => el.tagName.toLowerCase());
+    expect(tag).toBe("button");
+
+    await row.focus();
+    await expect(row).toBeFocused();
+
+    const conversationId = await row.getAttribute("data-conv-id");
+    await page.keyboard.press("Enter");
+
+    // Enter opened the thread. Asserted through the composer because on narrow
+    // viewports the list is replaced by the conversation rather than sitting
+    // beside it — the row the key was pressed on is gone by now, which is exactly
+    // what the mobile projects caught and a Chromium-only run could not.
+    await expect(page.locator("textarea").first()).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // Where the list stays on screen, the open conversation is announced rather
+    // than only tinted.
+    const stillListed = page.locator(`[data-conv-id="${conversationId}"]`);
+    if ((await stillListed.count()) > 0) {
+      await expect(stillListed).toHaveAttribute("aria-current", "true");
+    }
+  });
+
+  test("primary pages pass automated accessibility checks", async ({
+    page,
+    browserName,
+  }) => {
+    // Landmarks and alt text were the whole of the previous coverage. axe adds the
+    // classes that are mechanical to detect — contrast, names on controls, ARIA
+    // misuse, duplicate ids — across the pages a customer actually lives in.
+    //
+    // Contrast is enforced on Chromium only, and that is a judgement about the
+    // tool rather than a gap in the requirement. axe derives contrast from
+    // rendered colour, and where it cannot work out what sits behind an element
+    // it guesses — the engines disagree about when that happens. WebKit reported
+    // the conversation titles as failures: `text.primary` on cream, around 15:1,
+    // which no reading of the rule makes a failure. Chromium reported no
+    // violation on the same DOM. A gate that fails on fifteen-to-one contrast
+    // teaches everyone to switch it off, so it runs where it is trustworthy.
+    //
+    // Every other rule stays on for all five engines: they read the DOM rather
+    // than the pixels, and they do not disagree.
+    const axe = new AxeBuilder({ page }).withTags([
+      "wcag2a",
+      "wcag2aa",
+      "wcag21a",
+      "wcag21aa",
+    ]);
+    if (browserName !== "chromium") {
+      axe.disableRules(["color-contrast"]);
+    }
+
+    for (const path of ["/providers", "/bookings", "/messages", "/profile"]) {
+      await page.goto(path);
+      await expect(page.locator("main")).toBeVisible();
+
+      const results = await axe.analyze();
+
+      const serious = results.violations.filter((violation) =>
+        ["serious", "critical"].includes(violation.impact ?? ""),
+      );
+
+      expect(
+        serious.map(
+          (v) =>
+            `${path} — ${v.id}: ${v.help} → ${v.nodes
+              .map((n) => n.target.join(" "))
+              .join(", ")}`,
+        ),
+      ).toEqual([]);
     }
   });
 

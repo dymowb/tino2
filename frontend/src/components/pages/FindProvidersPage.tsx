@@ -50,7 +50,7 @@ import ProviderDetailDrawer from "../assistant/ProviderDetailDrawer";
 import { tokens } from "../../theme/theme";
 import FavoriteButton from "../providers/FavoriteButton";
 import { useFavoriteProviders } from "../../hooks/useFavoriteProviders";
-import { formatMoney } from '../../utils/money';
+import { formatMoney } from "../../utils/money";
 
 interface ExtendedProvider extends Provider {
   distance?: number;
@@ -405,7 +405,12 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
             count={provider.totalReviews}
           />
           {!provider.isActive && (
-            <Chip label={t("providers:favorites.unavailable")} size="small" color="default" sx={{ mt: 1 }} />
+            <Chip
+              label={t("providers:favorites.unavailable")}
+              size="small"
+              color="default"
+              sx={{ mt: 1 }}
+            />
           )}
         </Box>
 
@@ -500,38 +505,49 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
             gap: 1,
           }}
         >
-          <Tooltip title={t("providers:card.request_quote_tip")}>
-            <Button
-              variant="outlined"
-              color="primary"
-              size="small"
-              onClick={onQuote}
-              disabled={!provider.isActive}
-              sx={{
-                borderRadius: tokens.radius.full,
-                fontSize: "0.8rem",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {t("providers:card.request_quote")}
-            </Button>
+          {/* The span is what makes a tooltip on a disabled button work at all:
+              a disabled button fires no events, so MUI has nothing to listen to
+              and React logs it. These tooltips exist to explain *why* the button
+              is disabled, which is precisely when they were failing to appear.
+              `describeChild` keeps the tooltip off the span as an `aria-label` —
+              prohibited on a plain span, and it would have shadowed the button's
+              own text besides. */}
+          <Tooltip title={t("providers:card.request_quote_tip")} describeChild>
+            <span>
+              <Button
+                variant="outlined"
+                color="primary"
+                size="small"
+                onClick={onQuote}
+                disabled={!provider.isActive}
+                sx={{
+                  borderRadius: tokens.radius.full,
+                  fontSize: "0.8rem",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {t("providers:card.request_quote")}
+              </Button>
+            </span>
           </Tooltip>
-          <Tooltip title={t("providers:card.book_now_tip")}>
-            <Button
-              variant="contained"
-              color="secondary"
-              size="small"
-              endIcon={<ArrowForward sx={{ fontSize: "0.9rem" }} />}
-              onClick={onBook}
-              disabled={!provider.isActive}
-              sx={{
-                borderRadius: tokens.radius.full,
-                fontSize: "0.8rem",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {t("providers:card.book_now")}
-            </Button>
+          <Tooltip title={t("providers:card.book_now_tip")} describeChild>
+            <span>
+              <Button
+                variant="contained"
+                color="secondary"
+                size="small"
+                endIcon={<ArrowForward sx={{ fontSize: "0.9rem" }} />}
+                onClick={onBook}
+                disabled={!provider.isActive}
+                sx={{
+                  borderRadius: tokens.radius.full,
+                  fontSize: "0.8rem",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {t("providers:card.book_now")}
+              </Button>
+            </span>
           </Tooltip>
         </Box>
       </Box>
@@ -718,7 +734,9 @@ const FindProvidersPage: React.FC = () => {
             fontWeight: 700,
             letterSpacing: "0.16em",
             textTransform: "uppercase",
-            color: tokens.color.terra,
+            // 11.5px terra is 4.3:1 on this surface — an eyebrow label is small
+            // text, so it needs 4.5. Same hue, darker shade.
+            color: tokens.color.terraDark,
             mb: 1,
           }}
         >
@@ -773,7 +791,11 @@ const FindProvidersPage: React.FC = () => {
               onKeyPress={(e) => e.key === "Enter" && handleAddressSearch()}
               InputProps={{
                 endAdornment: (
-                  <IconButton size="small" onClick={handleAddressSearch}>
+                  <IconButton
+                    size="small"
+                    onClick={handleAddressSearch}
+                    aria-label={t("providers:search.search_by_address")}
+                  >
                     <Search fontSize="small" />
                   </IconButton>
                 ),
@@ -1024,7 +1046,10 @@ const FindProvidersPage: React.FC = () => {
           {/* Results */}
           {isLoading && (
             <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
-              <CircularProgress />
+              {/* A progressbar with no name is announced as "progress bar" and
+                  nothing else, which is the one thing a screen reader user
+                  already knows. */}
+              <CircularProgress aria-label={t("providers:loading")} />
             </Box>
           )}
 
@@ -1126,7 +1151,10 @@ const FindProvidersPage: React.FC = () => {
           </Typography>
           {favoritesQuery.isLoading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
-              <CircularProgress />
+              {/* A progressbar with no name is announced as "progress bar" and
+                  nothing else, which is the one thing a screen reader user
+                  already knows. */}
+              <CircularProgress aria-label={t("providers:loading")} />
             </Box>
           ) : favoritesQuery.favorites.length === 0 ? (
             <Box sx={{ textAlign: "center", py: 10 }}>

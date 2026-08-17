@@ -136,5 +136,6 @@
     "customers_only_quote": "Only customers can request quotes",
     "login_required_booking": "Please log in to book services",
     "customers_only_booking": "Only customers can book services"
-  }
+  },
+  "loading": "Loading providers"
 }

@@ -38,6 +38,7 @@ import {
 import { useQuery, useMutation } from '@tanstack/react-query';
 import apiService from '../../services/api';
 import { toast } from 'react-hot-toast';
+import { resetButtonSx } from '../../theme/theme';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_example');
 
@@ -338,10 +339,13 @@ const PaymentDialog: React.FC<Props> = ({
               <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
                 {bookingsData?.data?.map((booking: Booking) => (
                   <Card
+                    component="button"
+                    type="button"
                     key={booking.id}
                     sx={{
+                      ...resetButtonSx,
+                      display: 'block',
                       mb: 2,
-                      cursor: 'pointer',
                       '&:hover': { boxShadow: 3 }
                     }}
                     onClick={() => handleBookingSelect(booking)}
