@@ -3,42 +3,71 @@
 > Lean by design (per CLAUDE.md): current status + roadmap + resume point only.
 > Detailed completed-work notes live in `Tests/history/HISTORICAL_CONTEXT.md` and git history.
 
-## Current Status (2026-08-12) — Codex audit remediation, 5 stacked PRs open
+## Current Status (2026-08-17) — Codex audit remediation COMPLETE
 
 Source: `docs/code-audits/2026-08-10-complete-code-analysis.md` (Codex, audited `05d6ebb`).
-All findings re-verified against `main` first. 18 of 20 confirmed as written; **C2 was
-mis-framed** (points at a dormant `/payments` path) and the audit **missed the real money
-bug** — the live escrow hold charged `usd` for BRL prices, a ~5.4x overcharge.
+Every finding re-verified against `main` before fixing; several were larger or differently
+shaped than written, and one real money bug (`usd` charged for BRL prices, ~5.4x) was missed
+by the audit entirely.
 
-**Stacked PRs (each based on the previous — merge in order, retarget as they land):**
+**All findings closed.** Merged: #10–#14 + #15 (C1, C2, H1, H7, L2, M1, and the BRL/USD
+overcharge), #16 (H6), #17 + #19 (H2), #18 (H5), #20 (H4), #21 (M5), #22 (M2), #23, #24 (M8),
+#25 (M3), #26 (M9), #27 (H3 contract tests), #28 (M6), #30 (M7). **#29 (M4 accessibility) is
+the last one open** — green on its previous head, rebased and re-running at the time of
+writing.
 
-| PR | Branch | Covers |
-|----|--------|--------|
-| #10 | `fix/payment-authorization` | C1 (refund had **no** ownership check), M1 (providerId vs userId on 3 endpoints) |
-| #11 | `fix/money-units-currency` | C2, L2, the BRL-vs-USD bug, refund serialization |
-| #12 | `fix/private-attachments` | H1 (attachments were world-readable static files) |
-| #13 | `feat/configurable-currency` | Tier 1: currency/locale as `app_settings` |
-| #14 | `fix/token-type-separation` | H7 (access token redeemable as refresh token) |
+**Deliberately not done, with reasons:** M5 account deletion (relabelled "Deactivate" rather
+than built), M10 lint baseline (churn — the baseline is exactly **146** warnings; do not add
+any), H3's requirements traceability matrix (documentation exercise, not code).
 
-**Policy call worth revisiting:** refunds are now **provider/admin only**. The paying customer
-cannot self-refund — their route is the existing dispute flow. The audit suggested allowing
-them; `processRefund` requires `SUCCEEDED` (money already captured), so self-refund after
-delivery would be fraud. Easy to loosen.
+### What the last four items actually turned out to be
 
-**Codex review rounds (all fixed):** refund read-modify-write race → row lock held across the
-Stripe call; attachment self-grant bypass → write-time ownership check + uploader-anchored read;
-legacy attachments orphaned → backfill migration; Unicode filenames 500'd → RFC 5987 (busboy
-also hands filenames back as latin1); **attachment URL token exfiltration** → canonical-path
-allowlist both ends; invalid locale threw *after* the Stripe call → validated; `/config` and the
-payment path resolved currency independently → both now use `PlatformSettingsService`.
+- **M9 lockout** — reported as 2 defects, was 4. The warning email fired on *every* wrong
+  password because TypeORM returns `[rows, rowCount]` for a bare UPDATE, so `rows[0].col` was
+  always `undefined` and passed a `!== null` check. And `lockedUntil` was `timestamp without
+  time zone`, written from SQL but read back in node — with the DB on UTC and the process on
+  UTC-7, a 15-minute lockout was enforced as **7h15m**.
+- **H3 contract tests** — the assertion was `status < 500 && !== 401`, weak enough to hide two
+  of its own cases: `/quotes/requests/my` and `/quotes/available` are not routes and were
+  answering 400. Now exact status, envelope shape, and per-row ownership.
+- **M6 data export** — was `getProfile()` serialized in the browser. Now server-assembled,
+  ~192KB for the demo customer. Four review rounds, one root cause: the memory section
+  returned an empty list on trouble, so wrong columns, wrong table set and wrong data source
+  each produced a plausible-looking export instead of an error.
+- **M4 accessibility** — 8 `<Box onClick>` controls became real buttons; axe now gates four
+  pages. `color-contrast` runs on **Chromium only**: WebKit flagged `text.primary` on cream
+  (~15:1) as a failure while Chromium found none on the same DOM. Every other rule runs on
+  all five engines.
 
-**Ran against the shared dev/prod DB** (additive only): `message_attachments` table + the legacy
-backfill (6 rows migrated, 0 stale URLs), and `platform_currency`/`platform_locale` settings.
-`npm run migrate` is broken (points at a nonexistent file — audit H2); use `npm run migration:run`.
+### ⚠️ Outstanding — needs a deliberate window
 
-**Deliberately not done:** M5 account deletion (decided: relabel as "Deactivate", not built),
-M10 lint baseline (churn), H3 traceability matrix. Remaining audit items (H2/H4/H5/H6, M2–M9)
-were scoped but not started — see the plan in this session's history.
+- **Migration `1781400000000-LockedUntilTimestamptz` is NOT applied to the shared dev/prod DB.**
+  It is an `ALTER COLUMN TYPE`, not additive, so it was left for a chosen moment. Safe when run
+  (0 non-null `lockedUntil` rows; session TZ is UTC so Postgres skips the table rewrite).
+- **Deploying `main` logs every user out once** — untyped legacy JWTs are now rejected (H7).
+  Intended, but time it deliberately, and pair it with the migration above.
+- **Repository ruleset (owner-only):** enable "dismiss stale reviews on push" and "require
+  approval of the most recent push". #30 enforces this in the workflow; the ruleset is the
+  layer a future workflow edit cannot weaken.
+- **Known a11y gap, not blocking:** the Browse & Filter tab has pre-existing `aria-label` on
+  plain spans/divs (favourite button, verified/insured badges). Outside the pages the axe gate
+  scans. Its own piece of work.
+
+### Traps worth remembering (all cost a review round)
+
+- `repository.query()` on a bare UPDATE/DELETE returns `[rows, rowCount]`, so `rows[0].col` is
+  `undefined` and fails *open*. Wrap the statement in a CTE so the command tag stays SELECT.
+- The memory store is **snake_case** (`user_id`, `source_type`, `created_at`) while its
+  entities are camelCase, and it has **two DataSource objects**: `config/memoryDatabase` (the
+  one the server initializes and every caller imports) and `config/memory.data-source` (TypeORM
+  CLI only). Reading from the wrong one silently yields nothing.
+- A path that catches and returns `[]` is invisible to live verification: an empty list reads
+  as "nothing stored", not "never ran". Exercise the dependency for real.
+- `memory.data-source.ts` calls `dotenv.config()` at import, so before this round any test
+  touching memory connected to the **shared development memory store**. `src/tests/setup.ts`
+  now pins and guards `MEMORY_DATABASE_URL` the same way it guards the app database.
+- Jest wipes the test database (`TRUNCATE` in `beforeEach`), so **reseed before any Playwright
+  run** that follows `npm test`.
 
 ## Current Status (2026-08-09) — BR-1 Booking Readiness Copilot delivered (read-only slice)
 
