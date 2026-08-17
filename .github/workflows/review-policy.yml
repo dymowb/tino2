@@ -41,6 +41,8 @@ jobs:
               per_page: 100,
             });
 
+            const headSha = pullRequest.head.sha;
+
             const latestReviewByUser = new Map();
             for (const review of reviews) {
               const reviewer = review.user?.login;
@@ -52,13 +54,29 @@ jobs:
               }
             }
 
-            const approvers = [...latestReviewByUser.values()]
-              .filter((review) => review.state === 'APPROVED')
-              .map((review) => review.user.login);
+            const latestReviews = [...latestReviewByUser.values()];
+            const approvals = latestReviews.filter((review) => review.state === 'APPROVED');
 
-            if (approvers.length === 0) {
+            // An approval is of a diff, not of a pull request. Without this the
+            // reviewer's verdict on one commit silently carried over to whatever
+            // was pushed afterwards, which is the same as not requiring review for
+            // any change made after the first approval.
+            const currentApprovals = approvals.filter((review) => review.commit_id === headSha);
+            const staleApprovals = approvals.filter((review) => review.commit_id !== headSha);
+
+            if (currentApprovals.length === 0) {
+              if (staleApprovals.length > 0) {
+                const names = staleApprovals.map((review) => review.user.login).join(', ');
+                core.setFailed(
+                  `Approval from ${names} was given for an earlier commit and does not cover ${headSha.slice(0, 7)}. ` +
+                    'Request a fresh review after the latest push.'
+                );
+                return;
+              }
+
               core.setFailed(`Pull requests opened by ${authorLogin} require one approval from another user.`);
               return;
             }
 
-            core.info(`Approval requirement satisfied by ${approvers.join(', ')}.`);
+            const approvers = currentApprovals.map((review) => review.user.login);
+            core.info(`Approval requirement satisfied for ${headSha.slice(0, 7)} by ${approvers.join(', ')}.`);
