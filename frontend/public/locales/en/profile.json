@@ -142,7 +142,7 @@
     "visibility_private": "Private (visible only to providers with an active booking)",
     "visibility_desc": "Controls who can find your profile when searching for service customers.",
     "export_title": "Data Export",
-    "export_desc": "Download a copy of all your account data including profile, bookings, and reviews in JSON format.",
+    "export_desc": "Download a copy of your account data in JSON format: profile, bookings, quotes, payments, reviews, notifications, saved providers, assistant memory, and the messages you wrote. Messages written by other people are not included.",
     "export_button": "Download My Data",
     "export_success": "Data exported successfully",
     "export_error": "Failed to export data",

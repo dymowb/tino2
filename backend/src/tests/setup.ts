@@ -26,6 +26,25 @@ if (!/localhost:5434\/tino_test$/.test(testDatabaseUrl) && process.env.CI !== 't
 
 process.env.DATABASE_URL = testDatabaseUrl;
 
+// The memory data source calls `dotenv.config()` and reads MEMORY_DATABASE_URL at
+// import time, so without this a test that touches assistant memory connects to
+// whatever `backend/.env` points at — the shared development store, holding real
+// users' memories. Pinned here with the same refusal as the application database.
+const testMemoryDatabaseUrl =
+  process.env.TEST_MEMORY_DATABASE_URL ??
+  'postgresql://tino_memory_test:tino_memory_test@localhost:5435/tino_memory_test';
+
+if (process.env.MEMORY_DATABASE_URL === testMemoryDatabaseUrl) {
+  throw new Error(
+    'TEST_MEMORY_DATABASE_URL must not equal the configured application MEMORY_DATABASE_URL'
+  );
+}
+if (!/localhost:5435\/tino_memory_test$/.test(testMemoryDatabaseUrl) && process.env.CI !== 'true') {
+  throw new Error('Refusing to run tests against a non-local, non-test memory database');
+}
+
+process.env.MEMORY_DATABASE_URL = testMemoryDatabaseUrl;
+
 jest.mock('stripe', () => {
   return jest.fn().mockImplementation(() => ({
     paymentIntents: {

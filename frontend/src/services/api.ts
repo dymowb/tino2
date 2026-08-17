@@ -636,6 +636,23 @@ class ApiService {
     return response.data.data!;
   }
 
+  /**
+   * Portable copy of everything the platform holds about the signed-in user.
+   *
+   * Assembled server-side. The client cannot build this itself — it would only
+   * ever contain what the UI happens to have endpoints for, which is how the
+   * export came to be a copy of the profile screen. Requested as a blob and
+   * saved as-is so the file the user opens is exactly what the server produced.
+   */
+  async exportMyData(): Promise<Blob> {
+    const response = await this.api.get("/users/export", {
+      responseType: "blob",
+      // Larger than the default: this walks every collection the account touches.
+      timeout: 120000,
+    });
+    return response.data as Blob;
+  }
+
   async updateProfile(updates: Partial<User>): Promise<User> {
     const response = await this.api.put<ApiResponse<User>>(
       "/auth/profile",
