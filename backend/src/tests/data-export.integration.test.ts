@@ -310,18 +310,29 @@ describe('personal data export', () => {
   describe('completeness', () => {
     /**
      * The failure this export exists to fix is a list of fields that quietly falls
-     * behind what is stored. Enumerating the entity's own columns and requiring
-     * each one to be either exported or explicitly excluded means adding a column
-     * fails here until somebody decides which it is — rather than shipping an
-     * export that silently omits it.
+     * behind what is stored. Requiring each column to be either exported or
+     * explicitly excluded means adding one fails here until somebody decides which
+     * it is — rather than shipping an export that silently omits it.
+     *
+     * Read from `information_schema`, not from entity metadata. `BasicUser` is a
+     * partial mapping of the `users` table — `lastLogin` and the Stripe
+     * identifiers are physical columns no property covers — so a check built on
+     * the entity is blind to exactly the columns most likely to be forgotten.
      */
-    function undecidedColumns(
-      entity: typeof BasicUser | typeof Provider,
+    async function undecidedColumns(
+      table: string,
       exported: Record<string, unknown>,
       excluded: string[]
     ) {
-      const columns = AppDataSource.getMetadata(entity).columns.map((c) => c.propertyName);
-      return columns.filter((c) => !(c in exported) && !excluded.includes(c));
+      const rows: Array<{ column_name: string }> = await AppDataSource.query(
+        `SELECT column_name FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = $1`,
+        [table]
+      );
+      return rows
+        .map((r) => r.column_name)
+        .filter((c) => !(c in exported) && !excluded.includes(c))
+        .sort();
     }
 
     it('accounts for every column on the profile', async () => {
@@ -329,7 +340,7 @@ describe('personal data export', () => {
       const { profile } = (await exportFor(token).expect(200)).body;
 
       expect(
-        undecidedColumns(BasicUser, profile, [
+        await undecidedColumns('users', profile, [
           // Credentials and single-use tokens. Handing these to anyone, including
           // their owner, only creates a copy to lose.
           'password',
@@ -344,6 +355,10 @@ describe('personal data export', () => {
           // Brute-force counters: operational, not personal history.
           'failedLoginAttempts',
           'lockedUntil',
+          // Gateway identifiers, excluded for the same reason as on payments:
+          // plumbing, useless outside this platform, one more thing to leak.
+          'stripeCustomerId',
+          'stripePaymentMethodId',
         ])
       ).toEqual([]);
     });
@@ -386,7 +401,7 @@ describe('personal data export', () => {
       const { providerProfile } = (await exportFor(token).expect(200)).body;
 
       expect(
-        undecidedColumns(Provider, providerProfile, [
+        await undecidedColumns('providers', providerProfile, [
           // The join back to the account, already the subject of this export.
           'userId',
           // Staff identities and staff-to-staff notes. The decision is theirs to

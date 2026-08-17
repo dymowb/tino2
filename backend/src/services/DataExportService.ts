@@ -98,6 +98,14 @@ export class DataExportService {
       throw new Error('User not found');
     }
 
+    // `BasicUser` is a partial mapping of the `users` table: `lastLogin` and the
+    // two Stripe identifiers are physical columns no entity property covers, so
+    // neither the export nor a completeness check built on entity metadata could
+    // see them. Read the one that belongs to the account holder directly.
+    const [extra] = await AppDataSource.query(`SELECT "lastLogin" FROM "users" WHERE "id" = $1`, [
+      userId,
+    ]);
+
     // A provider's own records hang off the Provider entity, not the user id —
     // the distinction that has caused authorization bugs in this codebase more
     // than once. Resolve it up front so every provider-side query uses it.
@@ -153,6 +161,7 @@ export class DataExportService {
         isVerified: user.isVerified,
         profileImage: user.profileImage,
         settings: user.settings,
+        lastLogin: extra?.lastLogin ?? null,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },
