@@ -305,8 +305,6 @@ export const paymentValidation = {
       .withMessage('Valid payment method is required'),
   ],
 
-  confirmPayment: [param('id').isUUID().withMessage('Valid payment ID is required')],
-
   refund: [
     param('id').isUUID().withMessage('Valid payment ID is required'),
     body('amount')

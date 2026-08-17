@@ -1428,19 +1428,6 @@ class ApiService {
     return response.data.data!;
   }
 
-  async confirmPayment(
-    paymentId: string,
-    paymentMethodId?: string,
-  ): Promise<any> {
-    const response = await this.api.post<ApiResponse<any>>(
-      `/payments/${paymentId}/confirm`,
-      {
-        paymentMethodId,
-      },
-    );
-    return response.data.data!;
-  }
-
   async refundPayment(
     paymentId: string,
     refundData: {

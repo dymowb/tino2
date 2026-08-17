@@ -237,38 +237,6 @@ class PaymentController {
   }
 
   // POST /api/payments/:id/confirm - Confirm payment (capture escrow funds)
-  public async confirmPayment(req: AuthenticatedRequest, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
-
-      // Confirm payment using service
-      const payment = await PaymentService.confirmPayment(id, req.user.userId, req.user.userType);
-
-      res.json({
-        success: true,
-        data: payment,
-      });
-    } catch (error) {
-      logger.error('Error confirming payment:', error);
-      const errMsg = error instanceof Error ? error.message : 'Unknown error';
-      if (error instanceof PaymentAccessError) {
-        // Outsiders get 404 so the endpoint does not confirm the payment exists.
-        const outsider = errMsg === 'Payment not found';
-        res.status(outsider ? 404 : 403).json({
-          success: false,
-          error: outsider ? t(req, 'payment.not_found') : errMsg,
-        });
-      } else if (errMsg === 'Payment not found' || errMsg === t(req, 'payment.not_found')) {
-        res.status(404).json({ success: false, error: t(req, 'payment.not_found') });
-      } else if (error instanceof PaymentStateError) {
-        res.status(400).json({ success: false, error: errMsg });
-      } else {
-        res.status(500).json({ success: false, error: getStripeErrorMessage(error) });
-      }
-    }
-  }
-
-  // POST /api/payments/:id/refund - Process refund (FR-063)
   public async refundPayment(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
