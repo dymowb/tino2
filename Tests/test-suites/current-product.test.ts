@@ -206,17 +206,38 @@ test.describe("customer experience", () => {
 
   test("primary pages pass automated accessibility checks", async ({
     page,
+    browserName,
   }) => {
     // Landmarks and alt text were the whole of the previous coverage. axe adds the
     // classes that are mechanical to detect — contrast, names on controls, ARIA
     // misuse, duplicate ids — across the pages a customer actually lives in.
+    //
+    // Contrast is enforced on Chromium only, and that is a judgement about the
+    // tool rather than a gap in the requirement. axe derives contrast from
+    // rendered colour, and where it cannot work out what sits behind an element
+    // it guesses — the engines disagree about when that happens. WebKit reported
+    // the conversation titles as failures: `text.primary` on cream, around 15:1,
+    // which no reading of the rule makes a failure. Chromium reported no
+    // violation on the same DOM. A gate that fails on fifteen-to-one contrast
+    // teaches everyone to switch it off, so it runs where it is trustworthy.
+    //
+    // Every other rule stays on for all five engines: they read the DOM rather
+    // than the pixels, and they do not disagree.
+    const axe = new AxeBuilder({ page }).withTags([
+      "wcag2a",
+      "wcag2aa",
+      "wcag21a",
+      "wcag21aa",
+    ]);
+    if (browserName !== "chromium") {
+      axe.disableRules(["color-contrast"]);
+    }
+
     for (const path of ["/providers", "/bookings", "/messages", "/profile"]) {
       await page.goto(path);
       await expect(page.locator("main")).toBeVisible();
 
-      const results = await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze();
+      const results = await axe.analyze();
 
       const serious = results.violations.filter((violation) =>
         ["serious", "critical"].includes(violation.impact ?? ""),
