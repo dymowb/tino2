@@ -54,5 +54,10 @@
   "errors": {
     "startFailed": "Error al iniciar el asistente. Inténtalo de nuevo.",
     "messageFailed": "Error al enviar tu mensaje. Inténtalo de nuevo."
+  },
+  "voice": {
+    "idle": "Hablar con la IA",
+    "recording": "Detener grabación",
+    "transcribing": "Transcribiendo…"
   }
 }

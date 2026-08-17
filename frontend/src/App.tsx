@@ -12,7 +12,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline, GlobalStyles, Box, Button, Typography, useMediaQuery } from '@mui/material';
 import { AnimatePresence, motion } from 'framer-motion';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import apiService from './services/api';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { createAppTheme, tokens } from './theme/theme';
@@ -176,6 +177,22 @@ const QuotesRedirect: React.FC = () => {
 const AppContent: React.FC = () => {
   const { loading, isAuthenticated } = useAuth();
   const location = useLocation();
+
+  // Seeds the money formatter with the deployment's currency and locale. Fetched
+  // once here (rather than per screen) because formatMoney is used from plain
+  // helpers as well as components.
+  //
+  // `isPending` is read deliberately. TanStack Query only re-renders on result
+  // properties that were actually accessed, and configureMoney writes to module
+  // state that React does not observe — so ignoring the result would let a
+  // configured EUR deployment render BRL amounts until some unrelated re-render.
+  // Reading it both subscribes this component and gives us something to gate on.
+  const { isPending: configPending } = useQuery({
+    queryKey: ['app-config'],
+    queryFn: () => apiService.getAppConfig(),
+    staleTime: Infinity,
+  });
+
   const isAdminRoute = location.pathname.startsWith('/admin');
   const theme = useMediaQuery('(max-width:899px)'); // md breakpoint
   const isMobile = theme;
@@ -183,7 +200,10 @@ const AppContent: React.FC = () => {
     path => location.pathname === path || location.pathname.startsWith(`${path}/`),
   );
 
-  if (loading) return <LoadingSpinner />;
+  // Nothing renders before the currency is known, so no screen can paint an amount
+  // in the wrong currency and then silently correct itself. getAppConfig swallows
+  // failures and resolves to defaults, so this cannot hang on a bad response.
+  if (loading || configPending) return <LoadingSpinner />;
 
   // Mobile bottom nav adds 56px; add padding so content isn't hidden under it
   const bottomPad = isMobile && isAuthenticated && !isAdminRoute ? '56px' : 0;

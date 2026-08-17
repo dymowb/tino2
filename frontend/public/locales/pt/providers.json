@@ -136,5 +136,6 @@
     "customers_only_quote": "Apenas clientes podem solicitar orçamentos",
     "login_required_booking": "Por favor, faça login para reservar serviços",
     "customers_only_booking": "Apenas clientes podem reservar serviços"
-  }
+  },
+  "loading": "Carregando profissionais"
 }

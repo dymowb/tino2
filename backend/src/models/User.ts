@@ -75,6 +75,14 @@ export class User {
   @Column({ type: 'timestamp', nullable: true })
   suspendedUntil: Date;
 
+  /** Consecutive failed password attempts since the last success. */
+  @Column({ type: 'int', default: 0 })
+  failedLoginAttempts: number;
+
+  /** Login is refused until this passes. Bounded, so a lockout always expires. */
+  @Column({ type: 'timestamptz', nullable: true })
+  lockedUntil: Date | null;
+
   @Column({ nullable: true, select: false })
   emailVerificationToken: string;
 

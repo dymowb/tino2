@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { userService } from '@/services/UserService';
+import { userService, AccountLockedError } from '@/services/UserService';
 import { ApiResponse } from '@/types';
 import logger from '@/config/logger';
 import { UserType } from '@/models/User';
@@ -118,6 +118,23 @@ export class AuthController {
         });
         return;
       }
+      // 423 Locked, with the remaining time, so the user can tell "wrong password"
+      // apart from "temporarily blocked" and knows when to try again. This does
+      // confirm the account exists — but registration already rejects a duplicate
+      // email outright, so enumeration is possible regardless, and leaving a locked
+      // user with an unexplained failure is the worse trade.
+      if (error instanceof AccountLockedError) {
+        const { retryAfterSeconds } = error;
+        res.setHeader('Retry-After', String(retryAfterSeconds));
+        res.status(423).json({
+          success: false,
+          error: 'ACCOUNT_LOCKED',
+          message: t(req, 'auth.account_locked'),
+          retryAfterSeconds,
+        });
+        return;
+      }
+
       // Map the service's known thrown messages to localized strings; anything else
       // falls back to a generic invalid-credentials message (don't leak internals).
       const raw = error instanceof Error ? error.message : '';

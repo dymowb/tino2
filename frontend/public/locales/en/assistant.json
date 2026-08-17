@@ -96,5 +96,10 @@
   "errors": {
     "startFailed": "Failed to start the assistant. Please try again.",
     "messageFailed": "Failed to send your message. Please try again."
+  },
+  "voice": {
+    "idle": "Talk to the assistant",
+    "recording": "Stop recording",
+    "transcribing": "Transcribing…"
   }
 }

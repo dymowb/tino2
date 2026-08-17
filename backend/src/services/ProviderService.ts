@@ -91,14 +91,39 @@ export class ProviderService {
     }
   }
 
-  async getProviderById(providerId: string): Promise<Provider | null> {
+  /**
+   * Look up a provider by id.
+   *
+   * Excludes deactivated providers by default, matching what search and listing
+   * already do. Without that, a provider hidden from every list stayed fetchable by
+   * direct id — so deactivating an account did not actually take its public profile
+   * down, and the deactivation dialog's claim that the profile stops being visible
+   * was untrue.
+   *
+   * `includeInactive` exists for the owner-facing paths: a deactivated provider must
+   * still be able to load and manage their own record. It defaults to false so any
+   * new caller fails closed.
+   */
+  async getProviderById(
+    providerId: string,
+    options: { includeInactive?: boolean } = {}
+  ): Promise<Provider | null> {
     try {
-      const provider = await this.providerRepository.findOne({
-        where: { id: providerId },
-        relations: ['user', 'reviews'],
-      });
+      const query = this.providerRepository
+        .createQueryBuilder('provider')
+        .leftJoinAndSelect('provider.user', 'user')
+        .leftJoinAndSelect('provider.reviews', 'reviews')
+        .where('provider.id = :providerId', { providerId });
 
-      return provider;
+      if (!options.includeInactive) {
+        // Both flags matter: `provider.isActive` is the profile toggle, while
+        // deactivating an account sets `users.isActive = false`.
+        query
+          .andWhere('provider.isActive = :isActive', { isActive: true })
+          .andWhere('user.isActive = :userIsActive', { userIsActive: true });
+      }
+
+      return await query.getOne();
     } catch (error) {
       logger.error('Error fetching provider by ID:', error);
       throw error;

@@ -3,6 +3,106 @@
 > Lean by design (per CLAUDE.md): current status + roadmap + resume point only.
 > Detailed completed-work notes live in `Tests/history/HISTORICAL_CONTEXT.md` and git history.
 
+## Current Status (2026-08-17) — Codex audit remediation COMPLETE
+
+Source: `docs/code-audits/2026-08-10-complete-code-analysis.md` (Codex, audited `05d6ebb`).
+Every finding re-verified against `main` before fixing; several were larger or differently
+shaped than written, and one real money bug (`usd` charged for BRL prices, ~5.4x) was missed
+by the audit entirely.
+
+**All findings closed.** Merged: #10–#14 + #15 (C1, C2, H1, H7, L2, M1, and the BRL/USD
+overcharge), #16 (H6), #17 + #19 (H2), #18 (H5), #20 (H4), #21 (M5), #22 (M2), #23, #24 (M8),
+#25 (M3), #26 (M9), #27 (H3 contract tests), #28 (M6), #29 (M4), #30 (M7).
+
+**Deliberately not done, with reasons:** M5 account deletion (relabelled "Deactivate" rather
+than built), M10 lint baseline (churn — the baseline is exactly **146** warnings; do not add
+any), H3's requirements traceability matrix (documentation exercise, not code).
+
+### What the last four items actually turned out to be
+
+- **M9 lockout** — reported as 2 defects, was 4. The warning email fired on *every* wrong
+  password because TypeORM returns `[rows, rowCount]` for a bare UPDATE, so `rows[0].col` was
+  always `undefined` and passed a `!== null` check. And `lockedUntil` was `timestamp without
+  time zone`, written from SQL but read back in node — with the DB on UTC and the process on
+  UTC-7, a 15-minute lockout was enforced as **7h15m**.
+- **H3 contract tests** — the assertion was `status < 500 && !== 401`, weak enough to hide two
+  of its own cases: `/quotes/requests/my` and `/quotes/available` are not routes and were
+  answering 400. Now exact status, envelope shape, and per-row ownership.
+- **M6 data export** — was `getProfile()` serialized in the browser. Now server-assembled,
+  ~192KB for the demo customer. Four review rounds, one root cause: the memory section
+  returned an empty list on trouble, so wrong columns, wrong table set and wrong data source
+  each produced a plausible-looking export instead of an error.
+- **M4 accessibility** — 8 `<Box onClick>` controls became real buttons; axe now gates four
+  pages. `color-contrast` runs on **Chromium only**: WebKit flagged `text.primary` on cream
+  (~15:1) as a failure while Chromium found none on the same DOM. Every other rule runs on
+  all five engines.
+
+### ⚠️ Outstanding — needs a deliberate window
+
+- **Migration `1781400000000-LockedUntilTimestamptz` is NOT applied to the shared dev/prod DB.**
+  It is an `ALTER COLUMN TYPE`, not additive, so it was left for a chosen moment. Safe when run
+  (0 non-null `lockedUntil` rows; session TZ is UTC so Postgres skips the table rewrite).
+- **Deploying `main` logs every user out once** — untyped legacy JWTs are now rejected (H7).
+  Intended, but time it deliberately, and pair it with the migration above.
+- **Repository ruleset (owner-only):** enable "dismiss stale reviews on push" and "require
+  approval of the most recent push". #30 enforces this in the workflow; the ruleset is the
+  layer a future workflow edit cannot weaken.
+- **Known a11y gap, not blocking:** the Browse & Filter tab has pre-existing `aria-label` on
+  plain spans/divs (favourite button, verified/insured badges). Outside the pages the axe gate
+  scans. Its own piece of work.
+
+### Traps worth remembering (all cost a review round)
+
+- `repository.query()` on a bare UPDATE/DELETE returns `[rows, rowCount]`, so `rows[0].col` is
+  `undefined` and fails *open*. Wrap the statement in a CTE so the command tag stays SELECT.
+- The memory store is **snake_case** (`user_id`, `source_type`, `created_at`) while its
+  entities are camelCase, and it has **two DataSource objects**: `config/memoryDatabase` (the
+  one the server initializes and every caller imports) and `config/memory.data-source` (TypeORM
+  CLI only). Reading from the wrong one silently yields nothing.
+- A path that catches and returns `[]` is invisible to live verification: an empty list reads
+  as "nothing stored", not "never ran". Exercise the dependency for real.
+- `memory.data-source.ts` calls `dotenv.config()` at import, so before this round any test
+  touching memory connected to the **shared development memory store**. `src/tests/setup.ts`
+  now pins and guards `MEMORY_DATABASE_URL` the same way it guards the app database.
+- Jest wipes the test database (`TRUNCATE` in `beforeEach`), so **reseed before any Playwright
+  run** that follows `npm test`.
+
+## Current Status (2026-08-09) — BR-1 Booking Readiness Copilot delivered (read-only slice)
+
+Roadmap milestone 3 (`docs/07-Agentic-Product-Roadmap.md` §3), phase **BR-1**. Design decisions
+confirmed with the user before building: hybrid verification, `pending_completion` eligible /
+`pending` not, generic runs table, one in-flight run per booking.
+
+**Shipped:** workflow kernel (`agents/workflows/shared/` — `WorkflowRunner`, `WorkflowRepository`,
+`SourceFingerprint`), `agent_workflow_runs` table (migration `1781100000000`), readiness snapshot
+service (authz + untrusted-message boundary), Scope agent, hybrid verification, three read-only
+endpoints, `ReadinessDrawer` UI + EN/PT/ES copy. Feature-flagged on `app_settings.booking_readiness_enabled`.
+
+**The design decision worth remembering — verification is split.** Deterministic code owns
+evidence resolution, invented-id rejection, dedupe, role filtering and the readiness rollup;
+a small LLM pass owns only contradiction-vs-accepted-terms and speculation. That makes the
+security-relevant properties unit-testable without mocking a model (24 tests, no live calls).
+Both layers fired on real data: one finding dropped for unresolvable evidence, one for speculation.
+
+**Three real bugs found while verifying — all fixed:**
+1. The prompt labelled `Quote.estimatedDuration` as hours. It is **minutes** (default 60;
+   `RequestCard.tsx` divides by 60 to display). That manufactured a false 120h-vs-120min
+   contradiction on every booking.
+2. `maxTokens: 2000` on the Scope agent truncated its JSON intermittently. The reasoning
+   profile is Opus 5, where **thinking is on by default and shares the `max_tokens` budget**.
+   Raised to 8000; truncation now reports itself instead of hiding as "unparseable output".
+3. The frontend's 10s default axios timeout aborted the ~25s run POST. The server still
+   finished, so the UI silently kept showing the previous plan. Per-request timeout 150s.
+
+**Verified live:** customer + provider, EN + PT, desktop + 390px mobile, zero console errors.
+Eligibility gate holds in UI (button on confirmed/in_progress/pending_completion only).
+Outsider → 404 (no existence leak), unauth → 401, ineligible → 409, concurrent double-click →
+one 201 + one 409 (DB partial unique index). Staleness: cosmetic `updatedAt` touch does **not**
+stale; a `scheduledDate` change does. Backend 56/56, frontend 4/4, both builds green.
+
+**Not in BR-1** (deliberately): Logistics agent, checklists, Risk/Communication agents, message
+drafts, SSE progress, scheduled runs. No mutation endpoint exists.
+
 ## Current Status (2026-08-09) — Local env synced to Node 22 + test harness fixed
 
 - Pulled `origin/main` (9 commits, up to `95ee654`); local `main` was 9 behind.
@@ -21,6 +121,12 @@
     name and sibling worktrees (`tino2` vs `tino2-codex`) collided on the hardcoded
     `container_name`s. Pinned `name: tino2`; test containers recreated under it (no volumes,
     reseeded per run). App DBs untouched.
+- **AI model chains configured + verified** (see the corrected profile section below). The
+  backend had been unbootable since the gateway landed because no `AI_*_MODEL_CHAIN` existed.
+  New `backend/src/scripts/verifyAiChains.ts` exercises all four chains against live providers.
+- **Dev backend runs on `:3002`, not `:3000`.** CLAUDE.md says to use 3000 and kill whatever
+  holds it — but 3000 is the PM2 production backend + Cloudflare tunnel serving newtino.com,
+  so killing it takes the live site down. Use `:3002` + `VITE_PROXY_TARGET` for dev.
 
 ## Current Status (2026-08-08) — Favorites/Rebook + configurable AI delivered
 
@@ -48,21 +154,44 @@
   transparency footer. Admin Platform Settings can validate and update model chains at
   runtime without exposing API keys.
 
-### Active all-OpenAI development profile
+### Active development profile (corrected 2026-08-09 — Anthropic text + Voyage embeddings)
 
-- Fast: Luna → Terra
-- Reasoning: Terra → Sol
-- Synthesis: Sol → Terra
-- Embeddings: `text-embedding-3-small`, 1,024 dimensions
-- Voice: configurable OpenAI transcription and speech models
+> ⚠️ The previous version of this section described an "all-OpenAI" profile with chains
+> `Luna → Terra`, `Terra → Sol`, `Sol → Terra`. **Those are not real model IDs for any
+> provider** and no `AI_*_MODEL_CHAIN` was ever present in `backend/.env` — which is why the
+> backend could not boot at all (`Error: fast AI model chain is required`, thrown from
+> `validateAiConfiguration()` in the `App` constructor). Treat other unverified claims in the
+> 2026-08-08 block with the same suspicion.
+
+Real chains now in `backend/.env`, each **verified with a live provider call**
+(`npx ts-node src/scripts/verifyAiChains.ts` — 4/4 pass):
+
+| Profile | Chain |
+|---|---|
+| Fast | `anthropic:claude-haiku-4-5` → `anthropic:claude-sonnet-5` |
+| Reasoning | `anthropic:claude-opus-5` → `anthropic:claude-sonnet-5` |
+| Synthesis | `anthropic:claude-sonnet-5` → `anthropic:claude-opus-5` |
+| Embeddings | `voyage:voyage-3` → `openai:text-embedding-3-small`, 1024 dims |
+
+**Do not make OpenAI the primary embedding provider.** The 73 rows in `semantic_memories`
+were embedded with `voyage-3`; vectors from a different model are not comparable to them, so
+switching primary silently degrades retrieval rather than erroring. `AI_EMBEDDING_DIMENSIONS`
+must stay 1024 to match the `vector(1024)` column and its HNSW index. OpenAI is deliberately
+kept in the fallback slot only.
 
 Environment variables remain bootstrap/recovery defaults. Admin overrides live in
 `app_settings` and take effect immediately. Embedding dimensions remain environment/schema
 configuration and cannot be changed from the admin UI.
 
+**Boot-time validation only parses the chains — it never calls a provider.** A typo'd model ID
+or expired key still starts the server cleanly and fails later inside a workflow; run
+`verifyAiChains` after any chain change.
+
 ### Verification completed
 
-- Live calls passed for all three text profiles and OpenAI embeddings.
+- ~~Live calls passed for all three text profiles and OpenAI embeddings.~~ **Not reproducible**
+  — no chains were configured, so the server could not start. Re-verified 2026-08-09 against
+  Anthropic + Voyage instead (see the corrected profile section above).
 - Full streaming booking workflow completed through search, analysis, recommendation,
   verification, narrative, and memory retrieval/persistence.
 - Rebook AI refinement and OpenAI speech synthesis passed.

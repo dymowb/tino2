@@ -20,8 +20,10 @@ import {
   Rating,
   useTheme,
   alpha,
+  Tooltip,
 } from "@mui/material";
 import {
+  AutoAwesome,
   Schedule,
   LocationOn,
   Payment,
@@ -55,8 +57,11 @@ import { tokens } from "../../theme/theme";
 import PageSkeleton from "../common/PageSkeleton";
 import BookingDialog from "../bookings/BookingDialog";
 import RequestCard from "../bookings/RequestCard";
+import ReadinessDrawer from "../bookings/ReadinessDrawer";
 import QuoteRequestDialog from "../quotes/QuoteRequestDialog";
 import { quoteHighlights } from "../../utils/quoteComparison";
+import { formatMoney } from '../../utils/money';
+import { resetButtonSx } from '../../theme/theme';
 
 const STATUS_BORDER: Record<string, string> = {
   pending: tokens.color.gold,
@@ -139,6 +144,14 @@ const ACTIVE_BOOKING_STATUSES = [
 ];
 const DONE_BOOKING_STATUSES = ["completed"];
 
+// Mirrors ELIGIBLE_STATUSES in the backend snapshot service. `pending` is absent
+// on purpose: nothing is actually agreed until the quote is accepted.
+const READINESS_ELIGIBLE_STATUSES = [
+  "confirmed",
+  "in_progress",
+  "pending_completion",
+];
+
 // A "job" in the unified hub:
 //  - customer: an open request (awaiting/receiving quotes) or a booking
 //  - provider: a submitted quote (awaiting customer / closed) or a booking
@@ -185,6 +198,9 @@ const MyBookingsPage: React.FC = () => {
   const [rebookBookingId, setRebookBookingId] = useState<string | null>(null);
   const [showNewRequest, setShowNewRequest] = useState(false);
   const [compareQuotes, setCompareQuotes] = useState<Quote[] | null>(null);
+  const [readinessBookingId, setReadinessBookingId] = useState<string | null>(
+    null,
+  );
 
   // ── Data ──────────────────────────────────────────────────────────────────
   const {
@@ -211,6 +227,15 @@ const MyBookingsPage: React.FC = () => {
     queryFn: () => apiService.searchQuotes({ limit: 100 }),
     enabled: isAuthenticated,
   });
+
+  // The readiness endpoints 404 when the backend feature is off, so the entry
+  // point is gated on the same flag rather than on booking status alone.
+  const { data: appConfig } = useQuery({
+    queryKey: ["app-config"],
+    queryFn: () => apiService.getAppConfig(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const readinessEnabled = appConfig?.bookingReadinessEnabled === true;
 
   const bookings: Booking[] = useMemo(
     () => (Array.isArray(bookingsData?.data) ? bookingsData!.data : []),
@@ -368,11 +393,7 @@ const MyBookingsPage: React.FC = () => {
       hour: "2-digit",
       minute: "2-digit",
     });
-  const formatCurrency = (amount: number | string) =>
-    new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(Number(amount));
+  const formatCurrency = (amount: number | string) => formatMoney(amount);
 
   // ── Build the unified customer job list (deduped: a booked request shows as a
   //    booking, not also as a request) ────────────────────────────────────────
@@ -677,6 +698,31 @@ const MyBookingsPage: React.FC = () => {
               alignItems: "center",
             }}
           >
+            {readinessEnabled && READINESS_ELIGIBLE_STATUSES.includes(booking.status) && (
+              <Tooltip title={t("bookings:readiness.prepare_tooltip")}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<AutoAwesome fontSize="small" />}
+                  onClick={() => setReadinessBookingId(booking.id)}
+                  data-testid="readiness-open"
+                  data-booking-id={booking.id}
+                  sx={{
+                    borderColor: tokens.color.gold,
+                    color: tokens.color.gold,
+                    borderRadius: tokens.radius.full,
+                    px: 2.5,
+                    "&:hover": {
+                      borderColor: tokens.color.gold,
+                      bgcolor: alpha(tokens.color.gold, 0.08),
+                    },
+                  }}
+                >
+                  {t("bookings:readiness.prepare")}
+                </Button>
+              </Tooltip>
+            )}
+
             {booking.status === "pending" && isProvider && (
               <>
                 <Button
@@ -1340,9 +1386,13 @@ const MyBookingsPage: React.FC = () => {
       <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 4 }}>
         {stageOptions.map((opt) => (
           <Box
+            component="button"
+            type="button"
             key={opt.value}
             onClick={() => setStage(opt.value)}
-            sx={chipSx(stage === opt.value)}
+            // A filter is on or off, and the only thing saying which was a colour.
+            aria-pressed={stage === opt.value}
+            sx={{ ...resetButtonSx, width: 'auto', ...chipSx(stage === opt.value) }}
           >
             {opt.label}
             {opt.count > 0 ? ` (${opt.count})` : ""}
@@ -1493,6 +1543,12 @@ const MyBookingsPage: React.FC = () => {
       <QuoteRequestDialog
         open={showNewRequest}
         onClose={() => setShowNewRequest(false)}
+      />
+
+      <ReadinessDrawer
+        bookingId={readinessBookingId}
+        open={Boolean(readinessBookingId)}
+        onClose={() => setReadinessBookingId(null)}
       />
 
       {/* Dispute Dialog */}

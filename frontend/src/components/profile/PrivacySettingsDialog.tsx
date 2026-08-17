@@ -11,7 +11,6 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { apiService, User } from '../../services/api';
-import { useAuth } from '../../contexts/AuthContext';
 
 interface PrivacySettingsDialogProps {
   open: boolean;
@@ -20,7 +19,6 @@ interface PrivacySettingsDialogProps {
 
 const PrivacySettingsDialog: React.FC<PrivacySettingsDialogProps> = ({ open, onClose }) => {
   const { t } = useTranslation(['profile', 'common']);
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [profilePublic, setProfilePublic] = useState(true);
   const [exporting, setExporting] = useState(false);
@@ -65,13 +63,15 @@ const PrivacySettingsDialog: React.FC<PrivacySettingsDialogProps> = ({ open, onC
   const handleExportData = async () => {
     setExporting(true);
     try {
-      const profile = await apiService.getProfile();
-      const dataStr = JSON.stringify(profile, null, 2);
-      const blob = new Blob([dataStr], { type: 'application/json' });
+      // The server assembles this. Building it here from `getProfile()` is what
+      // made "download my data" hand back a copy of the name and email already
+      // on screen, with bookings, quotes, payments, reviews, messages and
+      // assistant memory all absent.
+      const blob = await apiService.exportMyData();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `tino2-data-${user?.email ?? 'export'}.json`;
+      a.download = `tino2-data-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
       toast.success(t('profile:privacy.export_success'));

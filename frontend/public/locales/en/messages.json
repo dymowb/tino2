@@ -41,7 +41,9 @@
     "delete": "Delete",
     "conversation_fallback": "Conversation",
     "participants_other": "{{count}} participants",
-    "participants_one": "{{count}} participant"
+    "participants_one": "{{count}} participant",
+    "attachment_unavailable": "Attachment unavailable",
+    "attachment": "Attachment"
   },
   "errors": {
     "send_failed": "Failed to send message",

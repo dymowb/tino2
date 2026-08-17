@@ -32,7 +32,8 @@ interface User {
   id: string;
   firstName: string;
   lastName: string;
-  email: string;
+  // No email: the contacts endpoint matches on it but does not return it, so a
+  // counterparty's address is never disclosed to the other party.
   userType: 'customer' | 'provider';
   profileImage?: string;
 }
@@ -62,47 +63,21 @@ const NewConversationDialog: React.FC<Props> = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [conversationType, setConversationType] = useState<'direct' | 'group' | 'support'>('direct');
-  const [users, setUsers] = useState<User[]>([]);
 
-  // Mock users query - replace with actual API call
-  const { isLoading: usersLoading } = useQuery({
-    queryKey: ['users', searchTerm],
-    queryFn: async () => {
-      // This would be replaced with actual user search API
-      const mockUsers: User[] = [
-        {
-          id: '1',
-          firstName: 'John',
-          lastName: 'Smith',
-          email: 'john@example.com',
-          userType: 'provider',
-        },
-        {
-          id: '2',
-          firstName: 'Sarah',
-          lastName: 'Johnson',
-          email: 'sarah@example.com',
-          userType: 'customer',
-        },
-        {
-          id: '3',
-          firstName: 'Mike',
-          lastName: 'Wilson',
-          email: 'mike@example.com',
-          userType: 'provider',
-        },
-      ];
-      
-      const filtered = mockUsers.filter(user =>
-        `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      
-      setUsers(filtered);
-      return filtered;
-    },
+  // Real contacts, scoped server-side to people this user shares a booking or
+  // quote with. This previously returned three hardcoded fake users whose ids
+  // were "1", "2" and "3" — selecting one submitted a non-UUID to a UUID-backed
+  // API, so the dialog could not create a conversation at all.
+  const { data, isLoading: usersLoading } = useQuery({
+    queryKey: ['conversation-contacts', searchTerm],
+    queryFn: () => apiService.getConversationContacts(searchTerm || undefined),
     enabled: open,
   });
+
+  // Read the query result directly rather than mirroring it into state. Copying it
+  // via useEffect with a `= []` default meant a fresh array identity on every
+  // render, so the effect re-fired forever ("Maximum update depth exceeded").
+  const users: User[] = (data ?? []) as User[];
 
   const createConversationMutation = useMutation({
     mutationFn: apiService.createConversation,
@@ -268,9 +243,6 @@ const NewConversationDialog: React.FC<Props> = ({
                           primary={`${user.firstName} ${user.lastName}`}
                           secondary={
                             <Box>
-                              <Typography variant="body2" color="text.secondary">
-                                {user.email}
-                              </Typography>
                               <Chip 
                                 label={user.userType} 
                                 size="small" 

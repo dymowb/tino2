@@ -22,6 +22,7 @@ import authRoutes from '@/routes/auth';
 import userRoutes from '@/routes/users';
 import providerRoutes from '@/routes/providers';
 import bookingRoutes from '@/routes/bookings';
+import readinessRoutes from '@/routes/readiness';
 import quoteRoutes from '@/routes/quotes';
 import messageRoutes from '@/routes/messages';
 // Browser routes temporarily disabled due to compilation errors
@@ -38,7 +39,7 @@ import configRoutes from '@/routes/config';
 import openApiRoutes from '@/routes/openapi';
 import messageService from '@/services/MessageService';
 import notificationService from '@/services/NotificationService';
-import jwt from './utils/jwt';
+import { resolveSocketUser } from '@/utils/socketAuth';
 import { requestContextMiddleware } from '@/observability/requestContext';
 import { getJobMetrics } from '@/observability/jobMetrics';
 import { validateAiConfiguration } from '@/agents/services/ai-gateway.service';
@@ -108,6 +109,14 @@ export class App {
     this.app.use(sanitizeInput);
     this.app.use(logSuspiciousActivity);
 
+    // Public assets only. Message attachments are private and deliberately live
+    // outside this tree (backend/storage/), reachable solely through the
+    // authenticated, membership-checked GET /api/v1/messages/attachments/:id.
+    // Files uploaded before that change still sit in uploads/messages, so that
+    // subtree is explicitly refused here rather than left readable by URL.
+    this.app.use('/uploads/messages', (_req, res) => {
+      res.status(404).json({ success: false, error: 'Not found' });
+    });
     this.app.use('/uploads', express.static('uploads'));
   }
 
@@ -136,6 +145,9 @@ export class App {
     this.app.use(`/api/${config.server.apiVersion}/users`, userRoutes);
     this.app.use(`/api/${config.server.apiVersion}/providers`, providerRoutes);
     this.app.use(`/api/${config.server.apiVersion}/bookings`, bookingRoutes);
+    // Mounted at the API root: it owns both /bookings/:id/readiness-runs and
+    // /readiness-runs/:runId, so it cannot sit under a single resource prefix.
+    this.app.use(`/api/${config.server.apiVersion}`, readinessRoutes);
     this.app.use(`/api/${config.server.apiVersion}/quotes`, quoteRoutes);
     this.app.use(`/api/${config.server.apiVersion}/messages`, messageRoutes);
     this.app.use(`/api/${config.server.apiVersion}/notifications`, notificationRoutes);
@@ -202,15 +214,13 @@ export class App {
 
   private initializeSocketIO(): void {
     this.io.use((socket, next) => {
-      const token = socket.handshake.auth.token;
-      if (!token) {
-        return next(new Error('Authentication error: token missing'));
-      }
-      const decoded = jwt.verifyToken(token);
-      if (!decoded) {
+      // The handshake is a bearer credential like any other, so resolveSocketUser
+      // demands an access token — a refresh token must not authenticate a socket.
+      const user = resolveSocketUser(socket.handshake.auth?.token);
+      if (!user) {
         return next(new Error('Authentication error: invalid token'));
       }
-      socket.data.userId = decoded.userId;
+      socket.data.userId = user.userId;
       next();
     });
 

@@ -1,4 +1,5 @@
 import { test, expect, APIRequestContext, Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 
 const API = "http://127.0.0.1:3100/api/v1";
 const credentials = {
@@ -7,7 +8,7 @@ const credentials = {
   admin: { email: "admin@demo.com", password: "Demo123!" },
 };
 
-async function apiLogin(
+async function apiSession(
   request: APIRequestContext,
   role: keyof typeof credentials,
 ) {
@@ -18,7 +19,15 @@ async function apiLogin(
     response.ok(),
     `${role} login failed: ${await response.text()}`,
   ).toBeTruthy();
-  return (await response.json()).data.accessToken as string;
+  const { data } = await response.json();
+  return { token: data.accessToken as string, userId: data.user.id as string };
+}
+
+async function apiLogin(
+  request: APIRequestContext,
+  role: keyof typeof credentials,
+) {
+  return (await apiSession(request, role)).token;
 }
 
 async function uiLogin(page: Page, role: keyof typeof credentials) {
@@ -110,14 +119,19 @@ test.describe("customer experience", () => {
       /translation missing/i,
     );
 
-    await page.goto("/payments");
-    await expect(page.locator("main")).toBeVisible();
-    const horizontalOverflow = await page.evaluate(
-      () =>
-        document.documentElement.scrollWidth -
-        document.documentElement.clientWidth,
-    );
-    expect(horizontalOverflow).toBeLessThanOrEqual(2);
+    // Horizontal overflow across the primary customer-facing pages, not just one.
+    // A single page proved nothing about the rest: /payments has no nav entry and
+    // is one of the least-visited screens in the product.
+    for (const path of ["/", "/providers", "/bookings", "/messages", "/profile", "/payments"]) {
+      await page.goto(path);
+      await expect(page.locator("main")).toBeVisible();
+      const horizontalOverflow = await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth,
+      );
+      expect(horizontalOverflow, `${path} overflows horizontally at 390px`).toBeLessThanOrEqual(2);
+    }
   });
 
   test("has keyboard-reachable landmarks and labelled controls", async ({
@@ -129,6 +143,114 @@ test.describe("customer experience", () => {
     const images = page.locator("img");
     for (let index = 0; index < (await images.count()); index += 1) {
       await expect(images.nth(index)).toHaveAttribute("alt");
+    }
+
+    // The name of this test promised keyboard reachability and nothing in it went
+    // near a keyboard. Tab from the top and require that focus actually lands on
+    // something operable — a page whose controls are all `<div onClick>` passes
+    // every landmark and alt-text check ever written and cannot be used without a
+    // mouse.
+    await page.keyboard.press("Tab");
+    const focused = await page.evaluate(() => {
+      const el = document.activeElement;
+      if (!el || el === document.body) return null;
+      return {
+        tag: el.tagName.toLowerCase(),
+        role: el.getAttribute("role"),
+        tabIndex: (el as HTMLElement).tabIndex,
+      };
+    });
+    expect(focused, "Tab from the top of the page focused nothing").not.toBeNull();
+    expect(
+      ["a", "button", "input", "select", "textarea"].includes(focused!.tag) ||
+        focused!.role === "button" ||
+        focused!.role === "link",
+    ).toBe(true);
+  });
+
+  test("conversations can be opened from the keyboard alone", async ({
+    page,
+  }) => {
+    await page.goto("/messages");
+    await expect(page.locator("main")).toBeVisible();
+
+    // Conversation rows were `<Box onClick>`: no tab stop, no Enter handler, no
+    // announced role. A pointer was the only way to read your own messages.
+    const row = page.locator("[data-conv-id]").first();
+    await expect(row).toBeVisible({ timeout: 15_000 });
+
+    const tag = await row.evaluate((el) => el.tagName.toLowerCase());
+    expect(tag).toBe("button");
+
+    await row.focus();
+    await expect(row).toBeFocused();
+
+    const conversationId = await row.getAttribute("data-conv-id");
+    await page.keyboard.press("Enter");
+
+    // Enter opened the thread. Asserted through the composer because on narrow
+    // viewports the list is replaced by the conversation rather than sitting
+    // beside it — the row the key was pressed on is gone by now, which is exactly
+    // what the mobile projects caught and a Chromium-only run could not.
+    await expect(page.locator("textarea").first()).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // Where the list stays on screen, the open conversation is announced rather
+    // than only tinted.
+    const stillListed = page.locator(`[data-conv-id="${conversationId}"]`);
+    if ((await stillListed.count()) > 0) {
+      await expect(stillListed).toHaveAttribute("aria-current", "true");
+    }
+  });
+
+  test("primary pages pass automated accessibility checks", async ({
+    page,
+    browserName,
+  }) => {
+    // Landmarks and alt text were the whole of the previous coverage. axe adds the
+    // classes that are mechanical to detect — contrast, names on controls, ARIA
+    // misuse, duplicate ids — across the pages a customer actually lives in.
+    //
+    // Contrast is enforced on Chromium only, and that is a judgement about the
+    // tool rather than a gap in the requirement. axe derives contrast from
+    // rendered colour, and where it cannot work out what sits behind an element
+    // it guesses — the engines disagree about when that happens. WebKit reported
+    // the conversation titles as failures: `text.primary` on cream, around 15:1,
+    // which no reading of the rule makes a failure. Chromium reported no
+    // violation on the same DOM. A gate that fails on fifteen-to-one contrast
+    // teaches everyone to switch it off, so it runs where it is trustworthy.
+    //
+    // Every other rule stays on for all five engines: they read the DOM rather
+    // than the pixels, and they do not disagree.
+    const axe = new AxeBuilder({ page }).withTags([
+      "wcag2a",
+      "wcag2aa",
+      "wcag21a",
+      "wcag21aa",
+    ]);
+    if (browserName !== "chromium") {
+      axe.disableRules(["color-contrast"]);
+    }
+
+    for (const path of ["/providers", "/bookings", "/messages", "/profile"]) {
+      await page.goto(path);
+      await expect(page.locator("main")).toBeVisible();
+
+      const results = await axe.analyze();
+
+      const serious = results.violations.filter((violation) =>
+        ["serious", "critical"].includes(violation.impact ?? ""),
+      );
+
+      expect(
+        serious.map(
+          (v) =>
+            `${path} — ${v.id}: ${v.help} → ${v.nodes
+              .map((n) => n.target.join(" "))
+              .join(", ")}`,
+        ),
+      ).toEqual([]);
     }
   });
 
@@ -242,30 +364,112 @@ test.describe("admin experience", () => {
 });
 
 test.describe("API domain contracts", () => {
-  test("role-scoped booking, quote, messaging, payment, and review APIs respond", async ({
+  /**
+   * These assert the response a caller can actually rely on, not merely that
+   * something came back. The previous version accepted any status below 500 that
+   * was not 401, which is weak enough to have hidden two of its own cases: it
+   * asked for `/quotes/requests/my` and `/quotes/available`, neither of which is
+   * a route. Both were being swallowed by the `:requestId` and `:quoteId`
+   * patterns and answered 400 "Valid request ID required" — a passing test for an
+   * endpoint that does not exist. Exact status codes are what make that visible.
+   */
+  test("role-scoped booking, quote, messaging, payment, and review APIs answer with their documented shape", async ({
     request,
   }) => {
-    const customer = await apiLogin(request, "customer");
-    const provider = await apiLogin(request, "provider");
+    const customer = await apiSession(request, "customer");
+    const provider = await apiSession(request, "provider");
+
+    // `collection` locates the list inside each envelope — the three shapes in use
+    // are a bare `data` array, `data.<name>` with sibling paging fields, and
+    // `data.payments` — so a route silently changing shape fails here.
     const cases = [
-      [customer, "/bookings"],
-      [customer, "/quotes/requests/my"],
-      [customer, "/messages/conversations"],
-      [customer, "/payments"],
-      [customer, "/reviews/customer/my"],
-      [provider, "/quotes/available"],
-      [provider, "/reviews/provider/my"],
+      {
+        session: customer,
+        path: "/bookings",
+        collection: (data: any) => data,
+        ownedBy: "customerId",
+      },
+      {
+        session: customer,
+        path: "/quotes/requests",
+        collection: (data: any) => data.quoteRequests,
+        ownedBy: "customerId",
+      },
+      { session: customer, path: "/quotes", collection: (d: any) => d.quotes },
+      {
+        session: customer,
+        path: "/messages/conversations",
+        collection: (data: any) => data,
+      },
+      {
+        session: customer,
+        path: "/payments",
+        collection: (data: any) => data.payments,
+      },
+      {
+        session: customer,
+        path: "/reviews/customer/my",
+        collection: (data: any) => data,
+        ownedBy: "customerId",
+      },
+      {
+        session: provider,
+        path: "/quotes/requests",
+        collection: (data: any) => data.quoteRequests,
+      },
+      { session: provider, path: "/quotes", collection: (d: any) => d.quotes },
+      {
+        session: provider,
+        path: "/reviews/provider/my",
+        collection: (data: any) => data,
+      },
     ] as const;
 
-    for (const [token, path] of cases) {
+    for (const { session, path, collection, ...rest } of cases) {
       const response = await request.get(`${API}${path}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${session.token}` },
       });
-      expect(
-        response.status(),
-        `${path}: ${await response.text()}`,
-      ).toBeLessThan(500);
-      expect(response.status()).not.toBe(401);
+      const body = await response.text();
+
+      expect(response.status(), `${path}: ${body}`).toBe(200);
+
+      const payload = JSON.parse(body);
+      expect(payload.success, `${path}: ${body}`).toBe(true);
+
+      const items = collection(payload.data);
+      expect(Array.isArray(items), `${path} returned ${typeof items}`).toBe(
+        true,
+      );
+
+      // Where the caller owns the records by user id, every row has to be theirs —
+      // a 200 carrying someone else's data is the failure worth catching, and it
+      // is invisible to a status-code check. (Provider-owned collections are keyed
+      // on the Provider entity id rather than the user id, so they are checked for
+      // shape only.)
+      const ownedBy = (rest as { ownedBy?: string }).ownedBy;
+      if (ownedBy) {
+        const foreign = items.filter(
+          (item: Record<string, unknown>) => item[ownedBy] !== session.userId,
+        );
+        expect(foreign, `${path} returned rows owned by someone else`).toEqual(
+          [],
+        );
+      }
     }
+  });
+
+  test("a collection route rejects a malformed id instead of guessing", async ({
+    request,
+  }) => {
+    const customer = await apiSession(request, "customer");
+
+    // `/quotes/requests/my` reads like a route but is not one; it lands on
+    // `/quotes/requests/:requestId`. Pinning the 400 keeps the previous test's
+    // fictitious endpoints from quietly coming back as passing cases.
+    const response = await request.get(`${API}/quotes/requests/my`, {
+      headers: { Authorization: `Bearer ${customer.token}` },
+    });
+    expect(response.status()).toBe(400);
+    expect((await response.json()).errors).toHaveProperty("requestId");
   });
 });

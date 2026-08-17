@@ -294,13 +294,11 @@ export const idParamValidation = [param('id').isUUID().withMessage('Valid ID is 
 export const paymentValidation = {
   createIntent: [
     body('bookingId').isUUID().withMessage('Valid booking ID is required'),
-    body('amount')
-      .isFloat({ min: 0.5, max: 999999.99 })
-      .withMessage('Payment amount must be between $0.50 and $999,999.99'),
-    body('currency')
-      .optional()
-      .isIn(['usd', 'eur', 'gbp', 'cad', 'aud'])
-      .withMessage('Supported currencies: USD, EUR, GBP, CAD, AUD'),
+    // Amount and currency are derived from the booking server-side and ignored if
+    // sent, so they are optional here. (This validator is not currently wired to
+    // POST /payments/intent; it is kept consistent so wiring it later is safe.)
+    body('amount').optional().isFloat({ min: 0.5, max: 999999.99 }),
+    body('currency').optional().isIn(['brl', 'usd', 'eur', 'gbp', 'cad', 'aud']),
     body('paymentMethod')
       .optional()
       .isIn(['credit_card', 'debit_card', 'bank_transfer', 'paypal', 'apple_pay', 'google_pay'])

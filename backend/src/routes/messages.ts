@@ -169,7 +169,31 @@ router.delete(
 // Get unread message count for current user
 router.get('/messages/unread/count', messageController.getUnreadMessageCount);
 
+// People the caller may start a conversation with. Scoped to existing booking or
+// quote relationships — not a directory of every account on the platform.
+router.get(
+  '/contacts',
+  [
+    query('search')
+      .optional()
+      .isString()
+      .isLength({ max: 100 })
+      .withMessage('Search must be a string with maximum 100 characters'),
+  ],
+  messageController.getContacts
+);
+
 // Upload a file attachment for use in a message
 router.post('/messages/upload', ...messageController.uploadAttachment);
+
+// Read an attachment. Authenticated by the router-level `authenticate` above and
+// membership-checked in the service — attachments are no longer served as static files.
+// Declared without the `/messages` prefix the sibling routes use, so the public path
+// is /api/v1/messages/attachments/:id rather than a doubled /messages/messages/.
+router.get(
+  '/attachments/:id',
+  [param('id').isUUID().withMessage('Attachment ID must be a valid UUID')],
+  messageController.downloadAttachment
+);
 
 export default router;

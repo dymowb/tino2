@@ -9,6 +9,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
 import { userService } from '@/services/UserService';
+import { dataExportService } from '@/services/DataExportService';
 import { t } from '@/i18n';
 
 // Configure multer for profile image uploads
@@ -166,6 +167,38 @@ class UserController {
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : t(req, 'common.internal_error'),
+      });
+    }
+  }
+
+  /**
+   * GET /api/users/export — everything the platform holds about the caller.
+   *
+   * Assembled server-side on purpose. The client used to build this file out of
+   * `getProfile()`, so a "download your data" button produced a copy of the name
+   * and email the user was already looking at — bookings, quotes, payments,
+   * reviews, messages and assistant memory were all missing. A client can only
+   * export what it has endpoints for and remembers to ask for; the server knows
+   * what it stores.
+   */
+  public async exportData(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const data = await dataExportService.exportForUser(req.user.userId);
+
+      // Named for the person, dated so successive exports do not overwrite each
+      // other in a downloads folder.
+      const stamp = new Date().toISOString().slice(0, 10);
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="tino2-data-export-${stamp}.json"`
+      );
+      res.send(JSON.stringify(data, null, 2));
+    } catch (error) {
+      logger.error('Error exporting user data:', error);
+      res.status(500).json({
+        success: false,
+        error: t(req, 'common.internal_error'),
       });
     }
   }

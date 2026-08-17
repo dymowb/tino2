@@ -253,5 +253,61 @@
     "respond": "Responder",
     "proposed_terms": "Términos propuestos por el cliente",
     "confirm_or_counter": "confirma o envía tu propio presupuesto"
+  },
+  "readiness": {
+    "title": "Preparación de la reserva",
+    "subtitle": "Una revisión con IA de lo acordado, con las preguntas que aún conviene hacer. Nunca cambia tu reserva.",
+    "close": "Cerrar",
+    "run": "Verificar preparación",
+    "running": "Revisando…",
+    "rerun": "Ejecutar de nuevo",
+    "empty": "Todavía no se ha hecho ninguna verificación para esta reserva.",
+    "error": "No se pudo completar la verificación. Inténtalo de nuevo.",
+    "stale": "Esta reserva cambió después de la verificación.",
+    "partial": "Parte de esta revisión no estuvo disponible ({{sections}}), por lo que puede estar incompleta.",
+    "agreed_scope": "Trabajo acordado",
+    "no_scope": "No se pudo establecer el trabajo acordado a partir de los registros.",
+    "exclusions": "Excluido explícitamente",
+    "findings": "Vale la pena revisar ({{count}})",
+    "no_findings": "Nada requiere atención.",
+    "evidence": "Basado en",
+    "verification": "{{dropped}} hallazgo(s) sin respaldo eliminado(s)",
+    "verification_hint": "Los hallazgos cuya evidencia no pudo rastrearse hasta un registro se descartan en lugar de mostrarse.",
+    "unreviewed": "sin revisión semántica",
+    "generated_at": "Generado el {{time}}",
+    "prepare": "Preparar",
+    "prepare_tooltip": "Revisa lo acordado antes de la cita",
+    "level": {
+      "ready": "Parece listo",
+      "needs_attention": "Necesita atención",
+      "blocked": "Bloqueado",
+      "incomplete": "Revisión incompleta"
+    },
+    "severity": {
+      "info": "Información",
+      "attention": "Atención",
+      "blocking": "Bloqueo"
+    },
+    "category": {
+      "scope": "Alcance",
+      "access": "Acceso",
+      "materials": "Materiales",
+      "schedule": "Agenda",
+      "safety": "Seguridad",
+      "payment": "Pago",
+      "communication": "Comunicación"
+    },
+    "visibility": {
+      "customer_only": "Solo tú",
+      "provider_only": "Solo tú"
+    },
+    "source": {
+      "booking": "Reserva",
+      "quote": "Presupuesto aceptado",
+      "request": "Solicitud original",
+      "provider": "Perfil del profesional",
+      "availability": "Disponibilidad",
+      "message": "Mensaje"
+    }
   }
 }

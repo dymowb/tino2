@@ -15,6 +15,8 @@ import { t } from '@/i18n';
 import quoteService from '@/services/QuoteService';
 import serviceCategoryService from '@/services/ServiceCategoryService';
 import rebookRefinementService from '@/services/RebookRefinementService';
+import { toStripeMinorUnits } from '@/utils/money';
+import { getPlatformCurrency } from '@/services/PlatformSettingsService';
 
 export class BookingController {
   private async loadRebookSource(bookingId: string, customerId: string) {
@@ -681,12 +683,16 @@ export class BookingController {
       // Stripe is initialised only after owner + state + payment-method checks pass,
       // so authz/state errors return proper 4xx instead of a 500 when Stripe is absent.
       const stripe = getStripeInstance();
+      const platformCurrency = await getPlatformCurrency();
       const fees = calculateFees(Number(booking.totalAmount));
       let paymentIntent: any;
       try {
         paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(Number(booking.totalAmount) * 100),
-          currency: 'usd',
+          // Every price in this product is quoted in BRL (the UI renders R$, and quote
+          // requests store BRL budgets). This previously said 'usd', so a R$148 booking
+          // authorised $148 — roughly a 5x overcharge on the live escrow path.
+          amount: toStripeMinorUnits(Number(booking.totalAmount), platformCurrency),
+          currency: platformCurrency.toLowerCase(),
           customer: customer.stripeCustomerId,
           payment_method: customer.stripePaymentMethodId,
           capture_method: 'manual',

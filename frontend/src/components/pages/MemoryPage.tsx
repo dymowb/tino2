@@ -87,6 +87,7 @@ interface MemoryStats {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 import i18n from '../../i18n';
+import { resetButtonSx } from '../../theme/theme';
 
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -246,7 +247,10 @@ const MemoryPage: React.FC = () => {
       <Card variant="outlined" sx={{ mb: 3 }}>
         <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
           <Box
-            sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }}
+            component="button"
+            type="button"
+            aria-expanded={statsOpen}
+            sx={{ ...resetButtonSx, display: 'flex', alignItems: 'center', gap: 1 }}
             onClick={() => setStatsOpen(o => !o)}
           >
             <BarChartIcon fontSize="small" color="action" />

@@ -238,7 +238,10 @@ const Navigation: React.FC = () => {
                 <Avatar
                   sx={{
                     width: 34, height: 34,
-                    bgcolor: tokens.color.terra,
+                    // Cream on terra is 4.3:1 — under AA for a 15px initial, and
+                    // this avatar is on every page in the product. Same hue, one
+                    // shade down, 6.3:1.
+                    bgcolor: tokens.color.terraDark,
                     fontFamily: tokens.font.display,
                     fontSize: '0.9375rem',
                     fontWeight: 500,

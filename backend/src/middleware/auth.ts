@@ -33,7 +33,8 @@ export const authenticate = async (
       }
     }
 
-    const payload = jwtService.verifyToken(token);
+    // 'access' — a refresh token must not be usable as a bearer credential.
+    const payload = jwtService.verifyToken(token, 'access');
     if (!payload) {
       res.status(401).json({
         success: false,
@@ -112,7 +113,7 @@ export const optionalAuth = async (
         isBlacklisted = await redisClient.exists(`blacklist:${token}`);
       }
       if (!isBlacklisted) {
-        const payload = jwtService.verifyToken(token);
+        const payload = jwtService.verifyToken(token, 'access');
         if (payload) {
           req.user = payload;
         }
@@ -177,11 +178,11 @@ export const extractTokenFromRequest = (req: Request): string | null => {
     return cookieToken;
   }
 
-  const queryToken = req.query.token;
-  if (queryToken && typeof queryToken === 'string') {
-    return queryToken;
-  }
-
+  // Deliberately no `?token=` fallback. Query strings land in server logs, proxy
+  // logs, browser history and Referer headers, so accepting a credential there
+  // leaks it. Nothing needs it: the Socket.IO handshake passes the token via
+  // `auth.token`, and email verification/reset links carry their own single-use
+  // tokens read directly by those handlers rather than through this function.
   return null;
 };
 
@@ -212,7 +213,9 @@ export const refreshTokenMiddleware = async (
       }
     }
 
-    const payload = jwtService.verifyToken(refreshToken);
+    // 'refresh' — this is the check that stops an access token being redeemed for
+    // a fresh token pair, which is what made the two interchangeable.
+    const payload = jwtService.verifyToken(refreshToken, 'refresh');
     if (!payload) {
       res.status(401).json({
         success: false,

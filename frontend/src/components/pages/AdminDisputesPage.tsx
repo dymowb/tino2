@@ -9,6 +9,7 @@ import {
 import { Gavel, Person, Business, AttachMoney } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import apiService from '../../services/api';
+import { formatMoney } from '../../utils/money';
 
 interface DisputeBooking {
   id: string;
@@ -34,9 +35,7 @@ const AdminDisputesPage: React.FC = () => {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<'open' | 'resolved' | 'all'>('open');
 
-  // All platform amounts are BRL; format pt-BR (R$ 1.234,56) to match the rest of the app.
-  const formatCurrency = (v: number | string) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v));
+  const formatCurrency = (v: number | string) => formatMoney(v);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-disputes', filter],

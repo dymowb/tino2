@@ -24,6 +24,12 @@ router.delete('/profile', rateLimiters.strict, UserController.deleteProfile.bind
 //   UserController.handleProfileImageUpload
 // );
 
+// GET /api/users/export - Portable copy of everything held about the caller (M6)
+// Registered before `/:id`, which would otherwise swallow it and answer as though
+// "export" were a user id — the shadowing that left two endpoints in the contract
+// test asserting routes that did not exist.
+router.get('/export', rateLimiters.strict, UserController.exportData.bind(UserController));
+
 // GET /api/users/:id - Get user by ID (public profile view)
 router.get('/:id', UserController.getUserById);
 

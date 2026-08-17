@@ -38,6 +38,7 @@ import {
 import { useQuery, useMutation } from '@tanstack/react-query';
 import apiService from '../../services/api';
 import { toast } from 'react-hot-toast';
+import { resetButtonSx } from '../../theme/theme';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_example');
 
@@ -88,10 +89,11 @@ const PaymentForm: React.FC<{
 
   useEffect(() => {
     if (selectedBooking) {
+      // Amount and currency are derived from the booking on the server, so they are
+      // deliberately not sent. Sending `totalAmount * 100` here while the backend also
+      // multiplied by 100 is what produced a 100x charge.
       createPaymentIntentMutation.mutate({
         bookingId: selectedBooking.id,
-        amount: selectedBooking.totalAmount * 100, // Convert to cents
-        currency: 'usd',
         description: t('new_payment.payment_for_service', { service: selectedBooking.serviceType }),
         metadata: {
           bookingId: selectedBooking.id,
@@ -337,10 +339,13 @@ const PaymentDialog: React.FC<Props> = ({
               <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
                 {bookingsData?.data?.map((booking: Booking) => (
                   <Card
+                    component="button"
+                    type="button"
                     key={booking.id}
                     sx={{
+                      ...resetButtonSx,
+                      display: 'block',
                       mb: 2,
-                      cursor: 'pointer',
                       '&:hover': { boxShadow: 3 }
                     }}
                     onClick={() => handleBookingSelect(booking)}

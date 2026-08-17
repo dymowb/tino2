@@ -103,6 +103,10 @@ Thumbs.db
 # Upload directories
 /backend/uploads/
 
+# Private attachment storage — deliberately outside uploads/, which is served
+# statically. Never expose this path through a web server.
+/backend/storage/
+
 # Testing
 /coverage
 

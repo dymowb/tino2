@@ -44,6 +44,7 @@ import apiService from '../../services/api';
 import { format } from 'date-fns';
 import PaymentDialog from '../payments/PaymentDialog';
 import RefundDialog from '../payments/RefundDialog';
+import { formatMoney } from '../../utils/money';
 
 interface Payment {
   id: string;
@@ -92,6 +93,9 @@ const PaymentsPage: React.FC = () => {
 
   const currentUser = apiService.getStoredUser();
   const isProvider = currentUser?.userType === 'provider';
+  // Refunds are provider/admin-initiated. A customer's route to money back is the
+  // dispute flow, so showing them this action would only produce a 403.
+  const canInitiateRefund = isProvider || currentUser?.userType === 'admin';
 
   const { data: paymentsData, isLoading, refetch } = useQuery({
     queryKey: ['payments', currentTab, statusFilter],
@@ -211,12 +215,9 @@ const PaymentsPage: React.FC = () => {
     return colors[status as keyof typeof colors] || 'default';
   };
 
-  const formatAmount = (amount: number, currency = 'BRL') => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-    }).format(amount);
-  };
+  // Currency defaults to the deployment's configured one; a payment row that
+  // records its own currency passes it explicitly.
+  const formatAmount = (amount: number, currency?: string) => formatMoney(amount, currency);
 
   const renderPaymentStats = () => {
     const stats = payments.reduce(
@@ -527,12 +528,14 @@ const PaymentsPage: React.FC = () => {
           <DownloadIcon sx={{ mr: 1 }} fontSize="small" />
           {t('payments:actions.download_receipt')}
         </MenuItem>
-        {selectedPayment?.status === 'succeeded' && selectedPayment?.escrowStatus === 'held' && (
-          <MenuItem onClick={handleInitiateRefund}>
-            <RefreshIcon sx={{ mr: 1 }} fontSize="small" />
-            {t('payments:actions.initiate_refund')}
-          </MenuItem>
-        )}
+        {canInitiateRefund &&
+          selectedPayment?.status === 'succeeded' &&
+          selectedPayment?.escrowStatus === 'held' && (
+            <MenuItem onClick={handleInitiateRefund}>
+              <RefreshIcon sx={{ mr: 1 }} fontSize="small" />
+              {t('payments:actions.initiate_refund')}
+            </MenuItem>
+          )}
       </Menu>
 
       {/* Payment Dialog */}

@@ -129,5 +129,6 @@
     "customers_only_quote": "Solo los clientes pueden solicitar cotizaciones",
     "login_required_booking": "Por favor inicia sesión para reservar servicios",
     "customers_only_booking": "Solo los clientes pueden reservar servicios"
-  }
+  },
+  "loading": "Cargando profesionales"
 }

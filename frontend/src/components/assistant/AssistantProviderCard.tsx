@@ -30,6 +30,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { WorkflowProviderResult, ProviderAnalysis } from "../../services/api";
 import FavoriteButton from "../providers/FavoriteButton";
+import { formatMoney } from '../../utils/money';
 
 interface AssistantProviderCardProps {
   provider: WorkflowProviderResult;
@@ -174,7 +175,7 @@ const AssistantProviderCard: React.FC<AssistantProviderCardProps> = ({
         {provider.pricing && (
           <Box sx={{ mb: 2 }}>
             <Typography variant="h6" color="primary.main">
-              R${provider.pricing.baseRate}
+              {formatMoney(provider.pricing.baseRate)}
               <Typography
                 component="span"
                 variant="body2"

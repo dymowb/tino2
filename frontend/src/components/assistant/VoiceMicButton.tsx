@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { IconButton, Tooltip, Box, keyframes } from '@mui/material';
 import { Mic, MicOff, Stop } from '@mui/icons-material';
 import { tokens } from '../../theme/theme';
@@ -18,6 +19,7 @@ const pulse = keyframes`
 `;
 
 const VoiceMicButton: React.FC<VoiceMicButtonProps> = ({ onTranscript, disabled }) => {
+  const { t } = useTranslation('assistant');
   const [state, setState] = useState<RecordState>('idle');
   const [error, setError] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -82,16 +84,26 @@ const VoiceMicButton: React.FC<VoiceMicButtonProps> = ({ onTranscript, disabled 
     else if (state === 'recording') stopRecording();
   };
 
-  const label = state === 'idle' ? 'Falar com a IA'
-               : state === 'recording' ? 'Parar gravação'
-               : 'Transcrevendo…';
+  // These were hardcoded Portuguese in an app that ships three languages — and
+  // once the label became the button's accessible name, an English or Spanish
+  // screen-reader user would have been read Portuguese.
+  const label =
+    state === 'idle' ? t('voice.idle')
+    : state === 'recording' ? t('voice.recording')
+    : t('voice.transcribing');
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
-      <Tooltip title={error ?? label} arrow>
+      {/* `describeChild` matters here: without it MUI puts `aria-label` on the
+          child, and the child is the <span> that exists so a disabled button can
+          still show a tooltip. `aria-label` on a plain span is prohibited ARIA and
+          named nothing. The button carries its own name; the tooltip only
+          describes it. */}
+      <Tooltip title={error ?? label} arrow describeChild>
         <span>
           <IconButton
             onClick={handleClick}
+            aria-label={label}
             disabled={disabled || state === 'transcribing'}
             size="large"
             sx={{

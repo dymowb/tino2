@@ -11,6 +11,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiService } from '../../services/api';
+import { formatMoney } from '../../utils/money';
 
 // ── Stat card component ──────────────────────────────────────────────
 interface StatCardProps {
@@ -74,7 +75,7 @@ const AdminDashboardPage: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             label={t('dashboard.stats.gross_revenue')}
-            value={stats?.totalRevenue != null ? `R$${Number(stats.totalRevenue).toFixed(2)}` : '—'}
+            value={stats?.totalRevenue != null ? formatMoney(stats.totalRevenue) : '—'}
             icon={<TrendingUp fontSize="large" />}
             color="success.dark"
           />
@@ -82,7 +83,7 @@ const AdminDashboardPage: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             label={t('dashboard.stats.refunds')}
-            value={stats?.totalRefunds != null ? `R$${Number(stats.totalRefunds).toFixed(2)}` : '—'}
+            value={stats?.totalRefunds != null ? formatMoney(stats.totalRefunds) : '—'}
             icon={<TrendingDown fontSize="large" />}
             color="error.main"
           />
@@ -90,7 +91,7 @@ const AdminDashboardPage: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             label={t('dashboard.stats.net_revenue')}
-            value={stats?.netRevenue != null ? `R$${Number(stats.netRevenue).toFixed(2)}` : '—'}
+            value={stats?.netRevenue != null ? formatMoney(stats.netRevenue) : '—'}
             icon={<AccountBalance fontSize="large" />}
             color="primary.main"
           />

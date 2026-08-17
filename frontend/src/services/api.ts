@@ -1,5 +1,13 @@
 import axios, { AxiosInstance, AxiosResponse } from "axios";
 import { toast } from "react-hot-toast";
+import { configureMoney } from "../utils/money";
+
+/**
+ * The only shape a message attachment reference may take. Anchored at both ends so
+ * an attacker-controlled string cannot smuggle in an absolute URL or a path escape.
+ */
+export const MESSAGE_ATTACHMENT_URL =
+  /^\/api\/v1\/messages\/attachments\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/;
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -57,6 +65,76 @@ export type AiConfiguration = Record<
   "fast" | "reasoning" | "synthesis" | "rebook" | "embedding" | "transcription" | "speech",
   AiConfigurationEntry
 >;
+
+export interface AppConfig {
+  maxProvidersPerQuote: number;
+  /** ISO code every price in this deployment is denominated in. */
+  platformCurrency?: string;
+  /** BCP-47 locale used to format money amounts. */
+  platformLocale?: string;
+  /** Hides the readiness entry point when the backend feature is off, so the
+   *  button is never shown for an endpoint that would 404. */
+  bookingReadinessEnabled?: boolean;
+  ai?: AiConfiguration;
+}
+
+/** Defaults must fail closed for flags: unknown means off. */
+export const DEFAULT_APP_CONFIG: AppConfig = {
+  maxProvidersPerQuote: 5,
+  bookingReadinessEnabled: false,
+  platformCurrency: "BRL",
+  platformLocale: "pt-BR",
+};
+
+export interface ReadinessEvidence {
+  source: "booking" | "quote" | "request" | "provider" | "availability" | "message";
+  recordId: string;
+  field: string;
+  excerpt?: string;
+}
+
+export interface ReadinessFinding {
+  id: string;
+  category:
+    | "scope"
+    | "access"
+    | "materials"
+    | "schedule"
+    | "safety"
+    | "payment"
+    | "communication";
+  severity: "info" | "attention" | "blocking";
+  visibility: "shared" | "customer_only" | "provider_only";
+  statement: string;
+  evidence: ReadinessEvidence[];
+  resolutionQuestion?: string;
+}
+
+export interface ReadinessPlan {
+  bookingId: string;
+  sourceFingerprint: string;
+  readiness: "ready" | "needs_attention" | "blocked" | "incomplete";
+  agreedScope: string[];
+  exclusions: string[];
+  findings: ReadinessFinding[];
+  verification: {
+    droppedCount: number;
+    /** Stripped per reader by the API — the reasons quote rejected findings,
+     *  which may be private to the other role. Only the count is exposed. */
+    dropReasons?: string[];
+    semanticReviewRan: boolean;
+  };
+  generatedAt: string;
+  unavailableSections: string[];
+}
+
+export interface ReadinessRunResponse {
+  runId: string;
+  status: string;
+  plan: ReadinessPlan | null;
+  /** True when the booking changed after the plan was generated. */
+  stale: boolean;
+}
 
 export interface Provider {
   id: string;
@@ -558,6 +636,23 @@ class ApiService {
     return response.data.data!;
   }
 
+  /**
+   * Portable copy of everything the platform holds about the signed-in user.
+   *
+   * Assembled server-side. The client cannot build this itself — it would only
+   * ever contain what the UI happens to have endpoints for, which is how the
+   * export came to be a copy of the profile screen. Requested as a blob and
+   * saved as-is so the file the user opens is exactly what the server produced.
+   */
+  async exportMyData(): Promise<Blob> {
+    const response = await this.api.get("/users/export", {
+      responseType: "blob",
+      // Larger than the default: this walks every collection the account touches.
+      timeout: 120000,
+    });
+    return response.data as Blob;
+  }
+
   async updateProfile(updates: Partial<User>): Promise<User> {
     const response = await this.api.put<ApiResponse<User>>(
       "/auth/profile",
@@ -749,9 +844,13 @@ class ApiService {
     queryParams.append("longitude", params.longitude.toString());
     if (params.radius) queryParams.append("radius", params.radius.toString());
 
-    // Send service type if any are selected
+    // Send every selected service, not just the first. This used to append
+    // `serviceTypes[0]` and discard the rest, so picking three services silently
+    // searched for one of them. A provider matches if they offer any of them.
     if (params.serviceTypes && params.serviceTypes.length > 0) {
-      queryParams.append("serviceType", params.serviceTypes[0]);
+      for (const serviceType of params.serviceTypes) {
+        queryParams.append("serviceTypes", serviceType);
+      }
     }
 
     if (params.sortBy) queryParams.append("sortBy", params.sortBy);
@@ -1151,6 +1250,75 @@ class ApiService {
     return response.data.data!;
   }
 
+  /**
+   * Fetch a private message attachment as a blob.
+   *
+   * Attachments are no longer static files, so they cannot be pointed at directly
+   * from an `<img src>` or `<a href>` — those requests carry no Authorization
+   * header. The caller turns the blob into an object URL and is responsible for
+   * revoking it.
+   */
+  async fetchMessageAttachment(
+    url: string,
+  ): Promise<{ blob: Blob; fileName: string | null }> {
+    // A message's `attachments` entries are arbitrary strings chosen by the sender.
+    // Handing one straight to the authenticated axios client would let a malicious
+    // sender store an absolute external URL and have the *viewer's* browser send
+    // their bearer token to that origin. Only a canonical attachment id is accepted,
+    // and the request path is rebuilt from it rather than taken from the message.
+    const id = MESSAGE_ATTACHMENT_URL.exec(url)?.[1];
+    if (!id) {
+      throw new Error("Unrecognized attachment reference");
+    }
+
+    const response = await this.api.get(`/messages/attachments/${id}`, {
+      responseType: "blob",
+      timeout: 60000,
+    });
+
+    // A message stores only the attachment URL, so the display name and type come
+    // back with the file itself: the filename from Content-Disposition, the type
+    // from the blob. Deriving either from the URL does not work — these paths
+    // carry no extension.
+    const disposition = response.headers["content-disposition"] as
+      | string
+      | undefined;
+
+    // Prefer the RFC 5987 `filename*`, which carries the real UTF-8 name; the plain
+    // `filename` is an ASCII-only fallback with non-Latin-1 characters replaced.
+    const extended = disposition?.match(/filename\*=UTF-8''([^;]+)/i);
+    const plain = disposition?.match(/filename="([^"]*)"/);
+    let fileName: string | null = null;
+    if (extended?.[1]) {
+      try {
+        fileName = decodeURIComponent(extended[1]);
+      } catch {
+        fileName = null;
+      }
+    }
+    if (!fileName) fileName = plain?.[1] ?? null;
+
+    return { blob: response.data as Blob, fileName };
+  }
+
+  /**
+   * People the current user may start a conversation with — those they share a
+   * booking or quote with. Deliberately not a directory of all users.
+   */
+  async getConversationContacts(search?: string): Promise<Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    userType: "customer" | "provider" | "admin";
+    profileImage?: string | null;
+  }>> {
+    const query = search ? `?search=${encodeURIComponent(search)}` : "";
+    const response = await this.api.get<ApiResponse<any[]>>(
+      `/messages/contacts${query}`,
+    );
+    return response.data.data ?? [];
+  }
+
   async getConversation(conversationId: string): Promise<any> {
     const response = await this.api.get<ApiResponse<any>>(
       `/messages/conversations/${conversationId}`,
@@ -1246,10 +1414,10 @@ class ApiService {
     return response.data.data!;
   }
 
+  // Amount and currency are derived from the booking server-side; the client does
+  // not get to choose what it is charged.
   async createPaymentIntent(paymentData: {
     bookingId: string;
-    amount: number;
-    currency?: string;
     description?: string;
     metadata?: Record<string, any>;
   }): Promise<any> {
@@ -1858,15 +2026,19 @@ class ApiService {
 
   // Public, read-only client config (admin-tunable app_settings). Falls back to
   // sane defaults if the request fails so the UI never blocks on it.
-  async getAppConfig(): Promise<{ maxProvidersPerQuote: number; ai?: AiConfiguration }> {
+  async getAppConfig(): Promise<AppConfig> {
     try {
       const res =
-        await this.api.get<ApiResponse<{ maxProvidersPerQuote: number; ai?: AiConfiguration }>>(
+        await this.api.get<ApiResponse<AppConfig>>(
           "/config",
         );
-      return res.data.data ?? { maxProvidersPerQuote: 5 };
+      const config = res.data.data ?? DEFAULT_APP_CONFIG;
+      // Seed the money formatter from the same values the server charges in, so
+      // display and charge can never disagree.
+      configureMoney(config.platformCurrency, config.platformLocale);
+      return config;
     } catch {
-      return { maxProvidersPerQuote: 5 };
+      return DEFAULT_APP_CONFIG;
     }
   }
 
@@ -1881,6 +2053,31 @@ class ApiService {
       { value },
     );
     return res.data.data!;
+  }
+
+  // ── Booking Readiness Copilot ───────────────────────────────────────────
+  // Read-only: these endpoints return an advisory plan. Acting on a finding
+  // still goes through the existing messaging/booking APIs.
+
+  async createReadinessRun(bookingId: string): Promise<ReadinessRunResponse> {
+    const res = await this.api.post<ApiResponse<ReadinessRunResponse>>(
+      `/bookings/${bookingId}/readiness-runs`,
+      undefined,
+      // The run is synchronous and calls two models: ~25s typical, and the
+      // backend's own stage timeouts allow up to 135s. The 10s client default
+      // aborts mid-run — the server still finishes, but the response is lost and
+      // the UI silently keeps showing the previous plan. (BR-2 replaces this
+      // with SSE progress, at which point the long POST goes away.)
+      { timeout: 150000 },
+    );
+    return res.data.data!;
+  }
+
+  async getLatestReadinessRun(bookingId: string): Promise<ReadinessRunResponse | null> {
+    const res = await this.api.get<ApiResponse<ReadinessRunResponse | null>>(
+      `/bookings/${bookingId}/readiness-runs/latest`,
+    );
+    return res.data.data ?? null;
   }
 }
 

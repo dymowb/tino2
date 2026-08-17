@@ -21,6 +21,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { WorkflowProviderResult } from "../../services/api";
 import FavoriteButton from "../providers/FavoriteButton";
+import { formatMoney } from '../../utils/money';
 
 interface Props {
   provider: WorkflowProviderResult | null;
@@ -154,7 +155,7 @@ const ProviderDetailDrawer: React.FC<Props> = ({
                 sx={{ color: "text.secondary", mt: "2px", fontSize: 18 }}
               />
               <Typography variant="body2">
-                R$ {provider.pricing.baseRate}{" "}
+                {formatMoney(provider.pricing.baseRate)}{" "}
                 {t(
                   `providers:card.${provider.pricing.rateType || "hourly"}`,
                   "/hora",

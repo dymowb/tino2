@@ -17,6 +17,7 @@ import { tokens } from '../../theme/theme';
 import PasswordChangeDialog from '../profile/PasswordChangeDialog';
 import AccountDeletionDialog from '../profile/AccountDeletionDialog';
 import PrivacySettingsDialog from '../profile/PrivacySettingsDialog';
+import { currencySymbol, formatMoney } from '../../utils/money';
 
 const ProfilePage: React.FC = () => {
   const { t, i18n } = useTranslation(['profile', 'common']);
@@ -109,8 +110,7 @@ const ProfilePage: React.FC = () => {
     s ? new Date(s).toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'pt-BR',
       { year: 'numeric', month: 'long', day: 'numeric' }) : t('profile:fields.not_provided');
 
-  const currency = (n: number) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(n) || 0);
+  const currency = (n: number) => formatMoney(n);
 
   const cardSx = {
     borderRadius: tokens.radius.lg,
@@ -214,7 +214,16 @@ const ProfilePage: React.FC = () => {
               <Chip
                 size="small"
                 label={t(`common:user_type.${profile?.userType}`, profile?.userType || '')}
-                sx={{ textTransform: 'capitalize', bgcolor: alpha(tokens.color.terra, 0.12), color: tokens.color.terra, fontWeight: 600 }}
+                // terra on a 12% terra tint is about 3.8:1 — under AA for label-sized
+                // text. The darker shade of the same hue clears it without changing
+                // the look; in dark mode the tint is the dark surface, so the light
+                // shade is the one that reads.
+                sx={{
+                  textTransform: 'capitalize',
+                  bgcolor: alpha(tokens.color.terra, 0.12),
+                  color: isDark ? tokens.color.terraLight : tokens.color.terraDark,
+                  fontWeight: 600,
+                }}
               />
             </Box>
           </Stack>
@@ -273,7 +282,7 @@ const ProfilePage: React.FC = () => {
                 {editing
                   ? <TextField fullWidth size="small" type="number" value={form.hourlyRate}
                       onChange={e => onField('hourlyRate', parseFloat(e.target.value) || 0)}
-                      InputProps={{ startAdornment: <InputAdornment position="start">R$</InputAdornment> }} />
+                      InputProps={{ startAdornment: <InputAdornment position="start">{currencySymbol()}</InputAdornment> }} />
                   : readValue(`${currency(Number(provider.pricing?.baseRate))}/h`)}
               </Field>
               <Field label={t('profile:fields.service_radius')}>

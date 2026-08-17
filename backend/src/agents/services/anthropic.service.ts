@@ -18,6 +18,8 @@ export interface ClaudeRequest {
   userMessage: string;
   maxTokens?: number;
   temperature?: number;
+  /** Cancels the in-flight request so a caller timeout stops the spend, not just the wait. */
+  signal?: AbortSignal;
 }
 
 /**
@@ -75,18 +77,21 @@ class AnthropicService {
     try {
       const startTime = Date.now();
 
-      const response = await this.client.messages.create({
-        model: request.model,
-        system: request.systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: request.userMessage,
-          },
-        ],
-        max_tokens: request.maxTokens || 1024,
-        temperature: request.temperature || 1.0,
-      });
+      const response = await this.client.messages.create(
+        {
+          model: request.model,
+          system: request.systemPrompt,
+          messages: [
+            {
+              role: 'user',
+              content: request.userMessage,
+            },
+          ],
+          max_tokens: request.maxTokens || 1024,
+          temperature: request.temperature || 1.0,
+        },
+        { signal: request.signal }
+      );
 
       const duration = Date.now() - startTime;
 
