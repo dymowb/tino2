@@ -12,9 +12,7 @@ by the audit entirely.
 
 **All findings closed.** Merged: #10–#14 + #15 (C1, C2, H1, H7, L2, M1, and the BRL/USD
 overcharge), #16 (H6), #17 + #19 (H2), #18 (H5), #20 (H4), #21 (M5), #22 (M2), #23, #24 (M8),
-#25 (M3), #26 (M9), #27 (H3 contract tests), #28 (M6), #30 (M7). **#29 (M4 accessibility) is
-the last one open** — green on its previous head, rebased and re-running at the time of
-writing.
+#25 (M3), #26 (M9), #27 (H3 contract tests), #28 (M6), #29 (M4), #30 (M7).
 
 **Deliberately not done, with reasons:** M5 account deletion (relabelled "Deactivate" rather
 than built), M10 lint baseline (churn — the baseline is exactly **146** warnings; do not add
