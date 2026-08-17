@@ -120,6 +120,15 @@ Thumbs.db
 .env.development
 .env.production
 
+# Backups of the above. A copy of an env file holds the same secrets as the file
+# it copies, and the rules above do not match a suffixed name — `.env.production`
+# is ignored while `.env.production.bak.20260816` is not, so one `git add -A` in
+# that directory commits production credentials. Deploys make these routinely.
+.env*.bak
+.env*.bak.*
+.env*.backup
+.env*.backup.*
+
 # MongoDB data
 /mongodb-data/
 
