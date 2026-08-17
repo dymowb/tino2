@@ -718,7 +718,9 @@ const FindProvidersPage: React.FC = () => {
             fontWeight: 700,
             letterSpacing: "0.16em",
             textTransform: "uppercase",
-            color: tokens.color.terra,
+            // 11.5px terra is 4.3:1 on this surface — an eyebrow label is small
+            // text, so it needs 4.5. Same hue, darker shade.
+            color: tokens.color.terraDark,
             mb: 1,
           }}
         >

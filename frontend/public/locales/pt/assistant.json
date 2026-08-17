@@ -96,5 +96,10 @@
   "errors": {
     "startFailed": "Falha ao iniciar o assistente. Tente novamente.",
     "messageFailed": "Falha ao enviar sua mensagem. Tente novamente."
+  },
+  "voice": {
+    "idle": "Falar com a IA",
+    "recording": "Parar gravação",
+    "transcribing": "Transcrevendo…"
   }
 }

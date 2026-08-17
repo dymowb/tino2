@@ -14,6 +14,9 @@ export const tokens = {
     stone:       '#6B5E52',
     stoneLight:  '#8B7B6E',
     gold:        '#D4A853',
+    // Text-safe gold. The bright one is 1.9:1 on a light surface — fine as a
+    // tint or a fill, unreadable as a label.
+    goldDark:    '#8A6520',
     night:       '#0D1F17',
     nightCard:   '#132B1E',
     nightBorder: '#1F3D2A',
