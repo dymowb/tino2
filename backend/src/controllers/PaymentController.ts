@@ -236,7 +236,7 @@ class PaymentController {
     }
   }
 
-  // POST /api/payments/:id/confirm - Confirm payment (capture escrow funds)
+  // POST /api/payments/:id/refund - Refund a captured payment (FR-063)
   public async refundPayment(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
