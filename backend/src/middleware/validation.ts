@@ -292,19 +292,6 @@ export const paginationValidation = [
 export const idParamValidation = [param('id').isUUID().withMessage('Valid ID is required')];
 
 export const paymentValidation = {
-  createIntent: [
-    body('bookingId').isUUID().withMessage('Valid booking ID is required'),
-    // Amount and currency are derived from the booking server-side and ignored if
-    // sent, so they are optional here. (This validator is not currently wired to
-    // POST /payments/intent; it is kept consistent so wiring it later is safe.)
-    body('amount').optional().isFloat({ min: 0.5, max: 999999.99 }),
-    body('currency').optional().isIn(['brl', 'usd', 'eur', 'gbp', 'cad', 'aud']),
-    body('paymentMethod')
-      .optional()
-      .isIn(['credit_card', 'debit_card', 'bank_transfer', 'paypal', 'apple_pay', 'google_pay'])
-      .withMessage('Valid payment method is required'),
-  ],
-
   refund: [
     param('id').isUUID().withMessage('Valid payment ID is required'),
     body('amount')
