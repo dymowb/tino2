@@ -677,6 +677,21 @@ export class BookingController {
         return;
       }
 
+      // Everything that can fail without touching Stripe happens before the claim, and
+      // nothing but the Stripe call happens after it. The claim is not reversible from
+      // an error path — this handler cannot tell a failure that preceded the request
+      // from one that followed it — so anything able to throw between taking it and
+      // making the request would strand the booking with no hold in existence.
+      // `getStripeInstance()` is the live example: it throws outright when Stripe is
+      // unconfigured, which is the ordinary state of a dev environment.
+      const stripe = getStripeInstance();
+      const platformCurrency = await getPlatformCurrency();
+      const fees = calculateFees(Number(booking.totalAmount));
+
+      // The amount authorised, captured here so the write below can prove the booking
+      // still costs what Stripe was asked for.
+      const authorisedAmount = Number(booking.totalAmount);
+
       // Claim the right to place the hold before calling Stripe, not after.
       // Read-check-call-save let two concurrent starts both observe `confirmed` and
       // both authorise the customer's card — a provider double-clicking "Start
@@ -723,18 +738,9 @@ export class BookingController {
       }
       const claimStamp = claimed[0].claim_stamp;
 
-      // Create PaymentIntent with manual capture = escrow hold
-      // The interesting design decision: we don't charge yet — capture_method:'manual'
-      // authorises the funds (freezes them on the card) without moving money.
-      // Stripe is initialised only after owner + state + payment-method checks pass,
-      // so authz/state errors return proper 4xx instead of a 500 when Stripe is absent.
-      const stripe = getStripeInstance();
-      const platformCurrency = await getPlatformCurrency();
-      const fees = calculateFees(Number(booking.totalAmount));
-      // The amount authorised, captured here so the write below can prove the booking
-      // still costs what Stripe was asked for.
-      const authorisedAmount = Number(booking.totalAmount);
-
+      // Create PaymentIntent with manual capture = escrow hold. The interesting design
+      // decision: we don't charge yet — capture_method:'manual' authorises the funds
+      // (freezes them on the card) without moving money.
       let paymentIntent: any;
       try {
         paymentIntent = await stripe.paymentIntents.create(

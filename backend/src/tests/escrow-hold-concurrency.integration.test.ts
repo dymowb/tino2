@@ -307,6 +307,33 @@ describe('escrow hold placement', () => {
     expect(stripeMock().paymentIntents.create).toHaveBeenCalledTimes(1);
   });
 
+  it('does not strand a booking when preparation fails before Stripe is reached', async () => {
+    const { providerAccount, booking } = await startable('hold-prep-fails');
+
+    // Anything that throws before the request is made — `getStripeInstance()` on an
+    // unconfigured environment is the live example — must not leave a claim behind.
+    // The claim is not reversible from an error path, because this handler cannot tell
+    // a failure that preceded the request from one that followed it, so the only safe
+    // arrangement is for nothing but the request itself to sit after the claim.
+    const settings = await import('@/services/PlatformSettingsService');
+    const spy = jest
+      .spyOn(settings, 'getPlatformCurrency')
+      .mockRejectedValueOnce(new Error('settings unavailable'));
+
+    try {
+      await start(booking.id, providerAccount.token).expect(500);
+    } finally {
+      spy.mockRestore();
+    }
+
+    // Startable again: no hold can exist, so no claim should either.
+    const after = await reload(booking.id);
+    expect(after.holdPlacedAt).toBeNull();
+    expect(after.status).toBe(BookingStatus.CONFIRMED);
+
+    await start(booking.id, providerAccount.token).expect(200);
+  });
+
   it('still refuses to start a booking that is not startable at all', async () => {
     const { providerAccount, booking } = await startable('hold-completed');
     await AppDataSource.getRepository(Booking).update(
