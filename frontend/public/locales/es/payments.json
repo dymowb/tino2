@@ -9,7 +9,6 @@
   "export": "Exportar",
   "loading_payments": "Cargando pagos...",
   "no_payments_found": "No se encontraron pagos",
-
   "stats": {
     "total_payments": "Pagos Totales",
     "successful": "Exitosos",
@@ -17,7 +16,6 @@
     "platform_fees": "Comisiones de la Plataforma",
     "total_collected": "Total recaudado"
   },
-
   "table": {
     "payment_id": "ID de Pago",
     "service": "Servicio",
@@ -29,7 +27,6 @@
     "actions": "Acciones",
     "fee": "Comisión"
   },
-
   "status": {
     "pending": "Pendiente",
     "processing": "Procesando",
@@ -38,13 +35,11 @@
     "cancelled": "Cancelado",
     "refunded": "Reembolsado"
   },
-
   "escrow_status": {
     "held": "Retenido",
     "released": "Liberado",
     "disputed": "En Disputa"
   },
-
   "payment_method": {
     "card": "Tarjeta",
     "bank": "Transferencia Bancaria",
@@ -52,56 +47,12 @@
     "apple_pay": "Apple Pay",
     "google_pay": "Google Pay"
   },
-
   "actions": {
     "view_details": "Ver Detalles",
     "download_receipt": "Descargar Recibo",
     "initiate_refund": "Iniciar Reembolso",
     "dispute": "Disputar Pago"
   },
-
-  "new_payment": {
-    "title": "Procesar Pago",
-    "steps": {
-      "select_booking": "Seleccionar Reserva",
-      "payment_details": "Detalles del Pago",
-      "confirmation": "Confirmación"
-    },
-    "select_booking_title": "Seleccionar una Reserva para Pagar",
-    "select_booking_subtitle": "Elige una reserva confirmada que requiera pago",
-    "no_bookings_available": "No hay reservas confirmadas disponibles para pago. Asegúrate de tener reservas que estén confirmadas por el proveedor.",
-    "payment_information": "Información de Pago",
-    "secure_payment": "Pago Seguro con Protección de Depósito",
-    "escrow_info": "Tu pago se mantendrá de forma segura en depósito hasta que se complete el servicio. El proveedor solo recibirá el pago después de que confirmes tu satisfacción.",
-    "booking_summary": "Resumen de Reserva",
-    "service": "Servicio:",
-    "provider": "Proveedor:",
-    "date": "Fecha:",
-    "total_amount": "Monto Total:",
-    "card_details": "Detalles de la Tarjeta",
-    "payment_info_secure": "Tu información de pago está encriptada y segura",
-    "amount": "Monto",
-    "payment_method": "Método de Pago",
-    "add_payment_method": "Agregar Método de Pago",
-    "card_number": "Número de Tarjeta",
-    "expiry_date": "Fecha de Vencimiento",
-    "cvv": "CVV",
-    "cardholder_name": "Nombre del Titular",
-    "billing_address": "Dirección de Facturación",
-    "save_card": "Guardar tarjeta para uso futuro",
-    "submit": "Procesar Pago",
-    "pay_amount": "Pagar ${{amount}}",
-    "processing": "Procesando...",
-    "cancel": "Cancelar",
-    "back": "Atrás",
-    "success": "¡Pago exitoso! Los fondos se mantienen en depósito hasta la finalización del servicio.",
-    "error": "Error en el pago",
-    "intent_error": "Error al crear intención de pago",
-    "payment_for_service": "Pago por {{service}}",
-    "card_element_not_found": "Elemento de tarjeta no encontrado",
-    "unexpected_error": "Ocurrió un error inesperado"
-  },
-
   "refund": {
     "title": "Procesar Reembolso",
     "request_title": "Solicitar Reembolso",
@@ -144,7 +95,6 @@
     "request_success": "Solicitud de reembolso enviada",
     "request_error": "Error al enviar solicitud de reembolso"
   },
-
   "filters": {
     "all_status": "Todos los Estados",
     "search_placeholder": "Buscar pagos..."

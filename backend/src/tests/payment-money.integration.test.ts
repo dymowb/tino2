@@ -6,7 +6,7 @@ import { BasicUser } from '@/models/BasicUser';
 import { Provider } from '@/models/Provider';
 import { Booking, BookingStatus } from '@/models/Booking';
 import { User } from '@/models/User';
-import { Payment, PaymentStatus } from '@/models/Payment';
+import { Payment, PaymentMethod, PaymentStatus } from '@/models/Payment';
 
 /**
  * What actually reaches Stripe.
@@ -84,6 +84,38 @@ describe('payment money handling', () => {
     });
   }
 
+  /**
+   * A succeeded payment row to refund against.
+   *
+   * These used to be created by POSTing `/payments/intent`, which no longer exists:
+   * that path authorised funds nothing could capture, so it was retired. Refunds
+   * still operate on payment rows, so the fixture builds one directly rather than
+   * through a payment flow.
+   */
+  async function succeededPayment(
+    bookingId: string,
+    customerId: string,
+    providerId: string,
+    amount: number
+  ) {
+    const repo = AppDataSource.getRepository(Payment);
+    return repo.save(
+      repo.create({
+        bookingId,
+        customerId,
+        providerId,
+        amount,
+        currency: 'BRL',
+        platformFee: 13.75,
+        processingFee: 8.28,
+        providerAmount: amount - 13.75 - 8.28,
+        status: PaymentStatus.SUCCEEDED,
+        paymentMethod: PaymentMethod.CREDIT_CARD,
+        stripePaymentIntentId: 'pi_test_refundable',
+      } as Partial<Payment>)
+    );
+  }
+
   async function confirmedBooking(customerId: string, providerId: string, totalAmount: number) {
     return AppDataSource.getRepository(Booking).save({
       customerId,
@@ -129,43 +161,6 @@ describe('payment money handling', () => {
     expect(createCall.currency).toBe('brl');
   });
 
-  it('derives the intent amount from the booking and ignores a client-supplied amount', async () => {
-    const customer = await account('money2-customer@example.com', 'customer');
-    const providerAccount = await account('money2-provider@example.com', 'provider');
-    const provider = await providerProfile(providerAccount.user.id);
-    const booking = await confirmedBooking(customer.user.id, provider.id, 275);
-    await withStripeCustomer(customer.user.id);
-
-    await request(server)
-      .post('/api/v1/payments/intent')
-      .set('Authorization', `Bearer ${customer.token}`)
-      // A hostile client asking to be charged one cent for a R$275 booking.
-      .send({ bookingId: booking.id, amount: 0.01, currency: 'usd' })
-      .expect(200);
-
-    const createCall = stripeMock().paymentIntents.create.mock.calls.at(-1)[0];
-
-    expect(createCall.amount).toBe(27500);
-    expect(createCall.currency).toBe('brl');
-  });
-
-  it('persists the payment in major units so the stored amount matches the booking', async () => {
-    const customer = await account('money3-customer@example.com', 'customer');
-    const providerAccount = await account('money3-provider@example.com', 'provider');
-    const provider = await providerProfile(providerAccount.user.id);
-    const booking = await confirmedBooking(customer.user.id, provider.id, 275);
-    await withStripeCustomer(customer.user.id);
-
-    const response = await request(server)
-      .post('/api/v1/payments/intent')
-      .set('Authorization', `Bearer ${customer.token}`)
-      .send({ bookingId: booking.id })
-      .expect(200);
-
-    // Stored as 275.00, not 27500 and not 2.75.
-    expect(Number(response.body.data.amount)).toBe(275);
-  });
-
   it('rejects a partial refund larger than the refundable balance', async () => {
     const customer = await account('money4-customer@example.com', 'customer');
     const providerAccount = await account('money4-provider@example.com', 'provider');
@@ -173,20 +168,7 @@ describe('payment money handling', () => {
     const booking = await confirmedBooking(customer.user.id, provider.id, 275);
     await withStripeCustomer(customer.user.id);
 
-    const intent = await request(server)
-      .post('/api/v1/payments/intent')
-      .set('Authorization', `Bearer ${customer.token}`)
-      .send({ bookingId: booking.id })
-      .expect(200);
-
-    expect(intent.body.success).toBe(true);
-
-    const payment = await AppDataSource.getRepository(Payment).findOneByOrFail({
-      bookingId: booking.id,
-    });
-    await AppDataSource.getRepository(Payment).update(payment.id, {
-      status: PaymentStatus.SUCCEEDED,
-    });
+    const payment = await succeededPayment(booking.id, customer.user.id, provider.id, 275);
 
     await request(server)
       .post(`/api/v1/payments/${payment.id}/refund`)
@@ -202,18 +184,7 @@ describe('payment money handling', () => {
     const booking = await confirmedBooking(customer.user.id, provider.id, 275);
     await withStripeCustomer(customer.user.id);
 
-    await request(server)
-      .post('/api/v1/payments/intent')
-      .set('Authorization', `Bearer ${customer.token}`)
-      .send({ bookingId: booking.id })
-      .expect(200);
-
-    const payment = await AppDataSource.getRepository(Payment).findOneByOrFail({
-      bookingId: booking.id,
-    });
-    await AppDataSource.getRepository(Payment).update(payment.id, {
-      status: PaymentStatus.SUCCEEDED,
-    });
+    const payment = await succeededPayment(booking.id, customer.user.id, provider.id, 275);
 
     // The shared Stripe mock reports a fixed 10000 minor units (R$100) per refund,
     // which is exactly the amount requested below — so no override is needed. (An

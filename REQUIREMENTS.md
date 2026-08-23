@@ -799,7 +799,6 @@ PUT    /api/messages/:id/read
 ```
 GET    /api/payments
 GET    /api/payments/:id
-POST   /api/payments/intent
 POST   /api/payments/:id/refund
 GET    /api/payments/customer/:customerId
 GET    /api/payments/provider/:providerId

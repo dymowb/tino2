@@ -1,13 +1,11 @@
 import { Repository } from 'typeorm';
 import { AppDataSource } from '@/config/database';
 import Stripe from 'stripe';
-import { Payment, PaymentStatus, PaymentMethod } from '@/models/Payment';
+import { Payment, PaymentStatus } from '@/models/Payment';
 import { Booking, BookingStatus } from '@/models/Booking';
 import { User } from '@/models/User';
 import { Provider } from '@/models/Provider';
 import logger from '@/config/logger';
-import config from '@/config/environment';
-import notificationService from '@/services/NotificationService';
 import { NotificationType } from '@/models/Notification';
 import {
   formatMajorUnits,
@@ -16,25 +14,6 @@ import {
   toStripeMinorUnits,
 } from '@/utils/money';
 import { getPlatformCurrency, getPlatformLocale } from '@/services/PlatformSettingsService';
-
-export interface CreatePaymentIntentData {
-  bookingId: string;
-  customerId: string;
-  /**
-   * Accepted for backwards compatibility but **ignored**: the charged amount and
-   * currency are derived from the booking, so a custom client cannot request an
-   * intent for an amount of its own choosing.
-   */
-  amount?: number;
-  currency?: string;
-  paymentMethod?: PaymentMethod;
-}
-
-export interface PaymentIntentResult {
-  clientSecret: string;
-  paymentIntentId: string;
-  payment: Payment;
-}
 
 export interface RefundData {
   paymentId: string;
@@ -150,144 +129,6 @@ class PaymentService {
       select: ['id'],
     });
     return providerEntity?.id ?? null;
-  }
-
-  /**
-   * Create payment intent with escrow functionality (FR-057, FR-058, FR-059)
-   */
-  public async createPaymentIntent(data: CreatePaymentIntentData): Promise<PaymentIntentResult> {
-    this.initRepositories();
-
-    try {
-      // Validate booking exists and belongs to customer
-      const booking = await this.bookingRepository.findOne({
-        where: { id: data.bookingId, customerId: data.customerId },
-        relations: ['provider', 'customer'],
-      });
-
-      if (!booking) {
-        throw new Error('Booking not found or unauthorized');
-      }
-
-      if (booking.status === BookingStatus.CANCELLED) {
-        throw new Error('Cannot create payment for cancelled booking');
-      }
-
-      // Check if payment already exists
-      const existingPayment = await this.paymentRepository.findOne({
-        where: { bookingId: data.bookingId },
-      });
-
-      if (existingPayment && existingPayment.status !== PaymentStatus.FAILED) {
-        throw new Error('Payment already exists for this booking');
-      }
-
-      // The charged amount is derived from the booking, never taken from the request
-      // body. A custom client used to be able to ask for an intent at any amount it
-      // liked; `data.amount` is now only accepted for validation and is ignored here.
-      const currency = await getPlatformCurrency();
-      const locale = await getPlatformLocale();
-      const amount = Number(booking.totalAmount);
-      if (!Number.isFinite(amount) || amount <= 0) {
-        throw new PaymentStateError('Booking has no payable amount');
-      }
-
-      // Calculate fees (FR-060)
-      const platformFeeRate = parseFloat(process.env.PLATFORM_FEE_RATE || '0.05');
-      const stripeFeeRate = parseFloat(process.env.STRIPE_FEE_RATE || '0.029');
-      const stripeFeeFixed = parseFloat(process.env.STRIPE_FEE_FIXED || '0.30');
-
-      const platformFee = roundMajorUnits(amount * platformFeeRate, currency);
-      const stripeFee = roundMajorUnits(amount * stripeFeeRate + stripeFeeFixed, currency);
-      const providerAmount = roundMajorUnits(amount - platformFee - stripeFee, currency);
-
-      // Get or create Stripe customer
-      let stripeCustomerId = booking.customer.stripeCustomerId;
-      if (!stripeCustomerId) {
-        const customer = await this.getStripe().customers.create({
-          email: booking.customer.email,
-          name: `${booking.customer.firstName} ${booking.customer.lastName}`,
-          metadata: {
-            userId: booking.customer.id,
-          },
-        });
-        stripeCustomerId = customer.id;
-
-        // Update user with Stripe customer ID
-        await this.userRepository.update(booking.customerId, {
-          stripeCustomerId,
-        });
-      }
-
-      // Create payment intent with manual capture for escrow (FR-059, FR-061)
-      const paymentIntent = await this.getStripe().paymentIntents.create({
-        amount: toStripeMinorUnits(amount, currency),
-        currency: currency.toLowerCase(),
-        customer: stripeCustomerId,
-        metadata: {
-          bookingId: data.bookingId,
-          customerId: data.customerId,
-          providerId: booking.providerId,
-          platformFee: platformFee.toString(),
-          stripeFee: stripeFee.toString(),
-          providerAmount: providerAmount.toString(),
-        },
-        capture_method: 'manual', // Hold funds until service completion
-        description: `Payment for ${booking.serviceType} booking`,
-        receipt_email: booking.customer.email,
-      });
-
-      // Create payment record
-      const payment = this.paymentRepository.create({
-        // `id` is a generated uuid column. Assigning the Stripe `pi_…` id to it threw
-        // on save; the Stripe reference belongs in stripePaymentIntentId, which it is.
-        bookingId: data.bookingId,
-        customerId: data.customerId,
-        providerId: booking.providerId,
-        amount,
-        currency,
-        platformFee,
-        processingFee: stripeFee,
-        providerAmount,
-        status: PaymentStatus.PENDING,
-        paymentMethod: data.paymentMethod || PaymentMethod.CREDIT_CARD,
-        stripePaymentIntentId: paymentIntent.id,
-        metadata: {
-          requiresCapture: true,
-          escrowHold: true,
-          stripeCustomerId,
-        },
-      });
-
-      const savedPayment = await this.paymentRepository.save(payment);
-
-      // Notify provider of incoming payment
-      notificationService
-        .createNotification(booking.provider.userId, {
-          type: NotificationType.PAYMENT,
-          title: 'Payment Initiated',
-          // `amount` is already in major units — the previous `/100` here rendered a
-          // R$275.00 payment as "$2.75" in the provider's notification.
-          message: `A payment of ${formatMajorUnits(amount, currency, locale)} has been initiated for your service`,
-          titleKey: 'titles.payment_initiated',
-          messageKey: 'body.payment_initiated',
-          i18nParams: { amount: formatMajorUnits(amount, currency, locale) },
-          actionUrl: `/payments/${savedPayment.id}`,
-          metadata: { paymentId: savedPayment.id, bookingId: data.bookingId },
-        })
-        .catch((err) => logger.error('Failed to send payment notification:', err));
-
-      logger.info(`Payment intent created: ${paymentIntent.id} for booking ${data.bookingId}`);
-
-      return {
-        clientSecret: paymentIntent.client_secret!,
-        paymentIntentId: paymentIntent.id,
-        payment: savedPayment,
-      };
-    } catch (error) {
-      logger.error('Error creating payment intent:', error);
-      throw error;
-    }
   }
 
   /**
@@ -614,29 +455,6 @@ class PaymentService {
       await this.paymentRepository.save(payment);
       logger.warn(`Dispute created for payment: ${payment.id}, dispute ID: ${dispute.id}`);
     }
-  }
-
-  /**
-   * Validate payment data
-   */
-  public validatePaymentData(data: CreatePaymentIntentData): string[] {
-    const errors: string[] = [];
-
-    if (!data.bookingId) {
-      errors.push('Booking ID is required');
-    }
-
-    if (!data.customerId) {
-      errors.push('Customer ID is required');
-    }
-
-    // Amount and currency are intentionally not validated here: they are no longer
-    // inputs. Both are derived from the booking inside createPaymentIntent, and the
-    // payable-amount check lives there. Validating a client-supplied currency was
-    // also what made this endpoint reject its own frontend, which sent lowercase
-    // 'usd' against an uppercase-only regex.
-
-    return errors;
   }
 }
 

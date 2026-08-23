@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { AppDataSource } from '@/config/database';
-import Stripe from 'stripe';
-import { Payment, PaymentStatus, PaymentMethod } from '@/models/Payment';
+import { Payment } from '@/models/Payment';
 import { Booking } from '@/models/Booking';
 import { User } from '@/models/User';
 import { Provider } from '@/models/Provider';
@@ -180,59 +179,6 @@ class PaymentController {
     } catch (error) {
       logger.error('Error saving payment method:', error);
       res.status(500).json({ success: false, error: getStripeErrorMessage(error) });
-    }
-  }
-
-  // POST /api/payments/intent - Create payment intent (FR-057, FR-058, FR-059)
-  public async createPaymentIntent(req: AuthenticatedRequest, res: Response): Promise<void> {
-    try {
-      // amount/currency are deliberately not read from the body — they are derived
-      // from the booking so a client cannot choose what it is charged.
-      const { bookingId, paymentMethod } = req.body;
-
-      // Validate input using service
-      const validationErrors = PaymentService.validatePaymentData({
-        bookingId,
-        customerId: req.user.userId,
-        paymentMethod,
-      });
-
-      if (validationErrors.length > 0) {
-        res.status(400).json({
-          success: false,
-          error: t(req, 'common.validation_failed'),
-          details: validationErrors,
-        });
-        return;
-      }
-
-      // Create payment intent using service
-      const result = await PaymentService.createPaymentIntent({
-        bookingId,
-        customerId: req.user.userId,
-        paymentMethod,
-      });
-
-      res.json({
-        success: true,
-        data: {
-          clientSecret: result.clientSecret,
-          paymentIntentId: result.paymentIntentId,
-          amount: result.payment.amount,
-          platformFee: result.payment.platformFee,
-          processingFee: result.payment.processingFee,
-          providerAmount: result.payment.providerAmount,
-        },
-      });
-    } catch (error) {
-      logger.error('Error creating payment intent:', error);
-
-      const errorMessage = getStripeErrorMessage(error);
-
-      res.status(500).json({
-        success: false,
-        error: errorMessage,
-      });
     }
   }
 

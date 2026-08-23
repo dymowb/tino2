@@ -207,4 +207,20 @@ describe('escrow capture authorization', () => {
     });
     expect(paymentAfter.status).toBe(PaymentRowStatus.PENDING);
   });
+
+  it('no longer exposes the second way to authorise funds either', async () => {
+    const { customer, booking } = await scenario('escrow-intent', BookingStatus.PENDING_COMPLETION);
+
+    // `POST /payments/intent` authorised funds with manual capture, and nothing in
+    // the product ever captured them: `autoCapture` selects `Booking` rows by
+    // `booking.stripePaymentIntentId` and never reads `payments`, and the only
+    // capture for a payment row was the route removed above. Holding a customer's
+    // money on a path that cannot complete is worse than not offering the path.
+    const response = await request(server)
+      .post('/api/v1/payments/intent')
+      .set('Authorization', `Bearer ${customer.token}`)
+      .send({ bookingId: booking.id, paymentMethod: 'credit_card' });
+
+    expect(response.status).toBe(404);
+  });
 });
