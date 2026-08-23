@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { AppDataSource } from '@/config/database';
-import Stripe from 'stripe';
-import { Payment, PaymentStatus, PaymentMethod } from '@/models/Payment';
+import { Payment } from '@/models/Payment';
 import { Booking } from '@/models/Booking';
 import { User } from '@/models/User';
 import { Provider } from '@/models/Provider';
@@ -183,92 +182,7 @@ class PaymentController {
     }
   }
 
-  // POST /api/payments/intent - Create payment intent (FR-057, FR-058, FR-059)
-  public async createPaymentIntent(req: AuthenticatedRequest, res: Response): Promise<void> {
-    try {
-      // amount/currency are deliberately not read from the body — they are derived
-      // from the booking so a client cannot choose what it is charged.
-      const { bookingId, paymentMethod } = req.body;
-
-      // Validate input using service
-      const validationErrors = PaymentService.validatePaymentData({
-        bookingId,
-        customerId: req.user.userId,
-        paymentMethod,
-      });
-
-      if (validationErrors.length > 0) {
-        res.status(400).json({
-          success: false,
-          error: t(req, 'common.validation_failed'),
-          details: validationErrors,
-        });
-        return;
-      }
-
-      // Create payment intent using service
-      const result = await PaymentService.createPaymentIntent({
-        bookingId,
-        customerId: req.user.userId,
-        paymentMethod,
-      });
-
-      res.json({
-        success: true,
-        data: {
-          clientSecret: result.clientSecret,
-          paymentIntentId: result.paymentIntentId,
-          amount: result.payment.amount,
-          platformFee: result.payment.platformFee,
-          processingFee: result.payment.processingFee,
-          providerAmount: result.payment.providerAmount,
-        },
-      });
-    } catch (error) {
-      logger.error('Error creating payment intent:', error);
-
-      const errorMessage = getStripeErrorMessage(error);
-
-      res.status(500).json({
-        success: false,
-        error: errorMessage,
-      });
-    }
-  }
-
-  // POST /api/payments/:id/confirm - Confirm payment (capture escrow funds)
-  public async confirmPayment(req: AuthenticatedRequest, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
-
-      // Confirm payment using service
-      const payment = await PaymentService.confirmPayment(id, req.user.userId, req.user.userType);
-
-      res.json({
-        success: true,
-        data: payment,
-      });
-    } catch (error) {
-      logger.error('Error confirming payment:', error);
-      const errMsg = error instanceof Error ? error.message : 'Unknown error';
-      if (error instanceof PaymentAccessError) {
-        // Outsiders get 404 so the endpoint does not confirm the payment exists.
-        const outsider = errMsg === 'Payment not found';
-        res.status(outsider ? 404 : 403).json({
-          success: false,
-          error: outsider ? t(req, 'payment.not_found') : errMsg,
-        });
-      } else if (errMsg === 'Payment not found' || errMsg === t(req, 'payment.not_found')) {
-        res.status(404).json({ success: false, error: t(req, 'payment.not_found') });
-      } else if (error instanceof PaymentStateError) {
-        res.status(400).json({ success: false, error: errMsg });
-      } else {
-        res.status(500).json({ success: false, error: getStripeErrorMessage(error) });
-      }
-    }
-  }
-
-  // POST /api/payments/:id/refund - Process refund (FR-063)
+  // POST /api/payments/:id/refund - Refund a captured payment (FR-063)
   public async refundPayment(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
