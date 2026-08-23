@@ -3,6 +3,84 @@
 > Lean by design (per CLAUDE.md): current status + roadmap + resume point only.
 > Detailed completed-work notes live in `Tests/history/HISTORICAL_CONTEXT.md` and git history.
 
+## Current Status (2026-08-23) — Codex follow-up audit (`2026-08-16`), HN1 done, HN2 in review
+
+Source: `docs/code-audits/2026-08-16-follow-up-code-analysis.md` (Codex, audited `3414f19`).
+12 new findings (3 high). Each spot-checked against source before acting; two were wrong as
+written (see below).
+
+**Merged — #33 `4a4bb36`, HN1 + the legacy payments lifecycle.** The capture route
+`POST /payments/:id/confirm` let the *provider* capture escrow before the customer confirmed
+anything, and dragged finished bookings back to `confirmed`. It became provider-reachable
+through my own M1 fix in the previous round — fixing the reported symptom widened the real
+defect. Deleted rather than repaired. `POST /payments/intent` went with it: it authorised
+funds with `capture_method: 'manual'` that **nothing in the product could ever capture**
+(`autoCapture` reads `Booking` rows, never `payments`), and `PaymentDialog` checked for
+`'succeeded'` on a manual-capture intent, which never occurs. Route, dialog, `PaymentsPage`
+entry point and orphaned copy all removed.
+
+> ⚠️ **Consequence worth knowing:** nothing now writes the `payments` table outside the
+> seeder, because the booking escrow path records only `booking.stripePaymentIntentId`.
+> Payment history, revenue views and `processRefund` were already blind to real bookings for
+> that reason. Recording payments from the booking lifecycle is the follow-up, and it is a
+> feature rather than a fix.
+
+**In review — #34, HN2, the escrow hold.** Scoped deliberately (see below) to: an atomic
+`holdPlacedAt` claim taken **before** the Stripe call, a per-booking idempotency key, and a
+final write conditioned on `status`, a null intent id, **and the amount actually authorised**.
+
+### The lesson from this round, which cost seven review rounds
+
+The first version tried to make every failure self-healing — a lease so a dead attempt could
+be taken over, a fencing token so a superseded attempt could not write, reconciliation against
+Stripe when the idempotency key stopped replaying. **Each fix created the next defect**, and
+three consecutive findings were one error in different costumes: treating *"an intent exists"*
+or *"I found nothing"* as a fact about the customer's money. (The same shape `M6`'s
+catch-and-return-`[]` had. It is the recurring one here.)
+
+The scoped version does not recover automatically. A claim never expires: an attempt that dies
+mid-flight leaves the booking **stuck and alerting**, because every automatic takeover has to
+answer "did the first attempt place a hold?" and every way of answering it from inside the
+handler is a guess about money. A stuck booking is visible and fixable; a wrong guess
+authorises a card twice.
+
+**Not done, deliberately:** automatic recovery of an interrupted hold. It wants someone who can
+verify Stripe's durability semantics against the docs — idempotency records are pruned at 24h
+while a manual-capture authorisation lives ~7 days, which I got wrong twice.
+
+### Two findings that were wrong as written — verify before complying
+
+- "`api.ts` still exposes `confirmPayment()`" — it was deleted in the same commit.
+- "`confirm-completion` leaves `Payment` PENDING" — the booking escrow path never creates a
+  `Payment` row at all, and the `payment_intent.succeeded` webhook already sets `SUCCEEDED`.
+
+Both were rebutted with evidence and the reviewer accepted. The date complaint in the audit's
+LN1 is likewise noise: its environment clock was a day behind, not the report.
+
+### Still open from the follow-up audit
+
+**HN3** DB TLS `rejectUnauthorized: false` — literally true but *not* a live High: prod
+`DATABASE_URL` is `localhost` with `sslmode=disable`, so TLS never engages. Fix as a safe
+default before the DB ever moves off-box. **MN2** email case-sensitivity, **MN3** Spanish
+(missing `admin`/`memory` namespaces *and* `api.ts` maps every non-`en` locale to `pt`),
+**MN4** readiness staleness fails open, **MN5** no AI cost limiter, **MN6** unvalidated
+`actionUrl` → `window.location.href`. All confirmed in source; none started.
+
+### Traps this round added
+
+- `bookings.holdPlacedAt`/`startedAt` are `timestamp without time zone` — the `lockedUntil`
+  bug's column type. A JS `Date` through the driver uses the **node** clock while `NOW()` uses
+  the **database's** (7h apart locally). Stamp and compare server-side, or don't compare.
+- `PaymentService` builds its **own** Stripe client rather than sharing `config/stripe`'s
+  singleton, and the test mock hands out a fresh object per `new Stripe()`. Patching the
+  singleton silently patches something the code never touches — a rejection set there yields a
+  cheerful 200.
+- `setup.ts`'s `jest.clearAllMocks()` empties `Stripe.mock.results`, so read the instance
+  through the lazy singleton, not `mock.results`.
+- A concurrency test whose mock returns a **fixed** id cannot tell one hold from two, and
+  `mock.results[].value` for an **async** mock is the promise, not the value. Both made
+  assertions that passed against the bug.
+
 ## Current Status (2026-08-17) — Codex audit remediation COMPLETE
 
 Source: `docs/code-audits/2026-08-10-complete-code-analysis.md` (Codex, audited `05d6ebb`).
