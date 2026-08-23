@@ -677,6 +677,48 @@ export class BookingController {
         return;
       }
 
+      // Claim the right to place the hold before calling Stripe, not after.
+      // Read-check-call-save let two concurrent starts both observe `confirmed` and
+      // both authorise the customer's card — a provider double-clicking "Start
+      // Service" was enough. This UPDATE is the serialization point: exactly one
+      // caller takes the claim, and the loser gets 409 without reaching Stripe.
+      //
+      // The claim is `holdPlacedAt`, deliberately not the booking status. Moving the
+      // row to `in_progress` up front would invent a state the rest of the system does
+      // not expect — `markBookingComplete` gates on that status alone, so a booking
+      // could be completed, and then confirmed for capture, with no hold behind it.
+      // `in_progress` means "work started *and* funds held", and it still does.
+      //
+      // The claim does not expire. An attempt that dies mid-flight leaves the booking
+      // stuck rather than retryable, and that is the intended trade: any automatic
+      // takeover has to answer "did the first attempt place a hold?", and every way of
+      // answering it from here is a guess about money. A stuck booking is visible and
+      // fixable; a wrong guess authorises a customer's card twice.
+      //
+      // Wrapped in a CTE deliberately: `query()` on a bare UPDATE returns
+      // [rows, rowCount], so `claimed.length` would read the wrong thing.
+      const claimed: Array<{ id: string }> = await bookingRepo.query(
+        `WITH claim AS (
+           UPDATE bookings
+              SET "holdPlacedAt" = NOW()
+            WHERE id = $1
+              AND "providerId" = $2
+              AND status = $3
+              AND "stripePaymentIntentId" IS NULL
+              AND "holdPlacedAt" IS NULL
+            RETURNING id
+         )
+         SELECT id FROM claim`,
+        [bookingId, providerEntity.id, BookingStatus.CONFIRMED]
+      );
+      if (claimed.length === 0) {
+        res.status(409).json({
+          success: false,
+          message: 'A payment hold for this booking is already being placed',
+        });
+        return;
+      }
+
       // Create PaymentIntent with manual capture = escrow hold
       // The interesting design decision: we don't charge yet — capture_method:'manual'
       // authorises the funds (freezes them on the card) without moving money.
@@ -685,29 +727,74 @@ export class BookingController {
       const stripe = getStripeInstance();
       const platformCurrency = await getPlatformCurrency();
       const fees = calculateFees(Number(booking.totalAmount));
+      // The amount authorised, captured here so the write below can prove the booking
+      // still costs what Stripe was asked for.
+      const authorisedAmount = Number(booking.totalAmount);
+
       let paymentIntent: any;
       try {
-        paymentIntent = await stripe.paymentIntents.create({
-          // Every price in this product is quoted in BRL (the UI renders R$, and quote
-          // requests store BRL budgets). This previously said 'usd', so a R$148 booking
-          // authorised $148 — roughly a 5x overcharge on the live escrow path.
-          amount: toStripeMinorUnits(Number(booking.totalAmount), platformCurrency),
-          currency: platformCurrency.toLowerCase(),
-          customer: customer.stripeCustomerId,
-          payment_method: customer.stripePaymentMethodId,
-          capture_method: 'manual',
-          confirm: true,
-          automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
-          metadata: { bookingId, customerId: customer.id, providerId: providerEntity.id },
-          description: `Hold for booking ${bookingId}`,
-        });
+        paymentIntent = await stripe.paymentIntents.create(
+          {
+            // Every price in this product is quoted in BRL (the UI renders R$, and quote
+            // requests store BRL budgets). This previously said 'usd', so a R$148 booking
+            // authorised $148 — roughly a 5x overcharge on the live escrow path.
+            amount: toStripeMinorUnits(authorisedAmount, platformCurrency),
+            currency: platformCurrency.toLowerCase(),
+            customer: customer.stripeCustomerId,
+            payment_method: customer.stripePaymentMethodId,
+            capture_method: 'manual',
+            confirm: true,
+            automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
+            metadata: { bookingId, customerId: customer.id, providerId: providerEntity.id },
+            description: `Hold for booking ${bookingId}`,
+          },
+          // Covers a retry that reaches Stripe twice — a proxy or client resend — within
+          // Stripe's idempotency window: the original intent comes back instead of a
+          // second authorisation. Versioned so a deliberate future re-hold can be a new
+          // operation rather than a silent replay.
+          { idempotencyKey: `booking:${bookingId}:hold:v1` }
+        );
       } catch (stripeErr: any) {
-        // Hold failed — cancel the booking and notify both parties
+        // Only a refusal of the card, or Stripe rejecting the request as malformed,
+        // proves no hold exists. Anything else — a dropped connection, an API error, a
+        // type nobody anticipated — leaves open whether the customer's money is held,
+        // and cancelling on those would strand a live authorisation against a cancelled
+        // booking. Stating what is definitive rather than what is uncertain keeps an
+        // unrecognised error from ending a booking by default.
+        const definitive =
+          stripeErr?.type === 'StripeCardError' || stripeErr?.type === 'StripeInvalidRequestError';
+
+        if (!definitive) {
+          // The claim stays. This booking cannot be started again without someone
+          // looking at it, which is the deliberate cost of never guessing about a hold
+          // that may exist.
+          logger.error('Indeterminate Stripe hold — booking needs reconciliation', {
+            bookingId,
+            paymentIntentKey: `booking:${bookingId}:hold:v1`,
+            type: stripeErr?.type,
+            message: stripeErr?.message,
+          });
+          res.status(503).json({
+            success: false,
+            message: 'Could not confirm the payment hold. Support has been notified.',
+          });
+          return;
+        }
+
+        // Hold definitively refused — release the claim, cancel the booking, notify both
         booking.status = BookingStatus.CANCELLED;
         booking.cancelledAt = new Date();
         booking.cancellationReason =
           'Payment hold failed: ' + (stripeErr.message || 'insufficient funds');
-        await bookingRepo.save(booking);
+        await bookingRepo.query(
+          `UPDATE bookings
+              SET status = $2,
+                  "cancelledAt" = NOW(),
+                  "cancellationReason" = $3,
+                  "holdPlacedAt" = NULL
+            WHERE id = $1`,
+          [bookingId, BookingStatus.CANCELLED, booking.cancellationReason]
+        );
 
         notificationService
           .createNotification(customer.id, {
@@ -743,13 +830,73 @@ export class BookingController {
         return;
       }
 
-      booking.status = BookingStatus.IN_PROGRESS;
-      booking.startedAt = new Date();
-      booking.stripePaymentIntentId = paymentIntent.id;
-      booking.holdPlacedAt = new Date();
-      await bookingRepo.save(booking);
+      // Only now does the booking become `in_progress`, in the same statement that
+      // records the intent id, so the state meaning "work started and funds held"
+      // never exists without the hold behind it.
+      //
+      // The amount is a condition, not just a value. A `confirmed` booking can still be
+      // edited, and changing its duration recalculates `totalAmount`, so an edit landing
+      // while Stripe was answering would leave a hold for the old price against a
+      // booking that now costs something else — and capture would take the wrong amount.
+      // The row is only written if it still costs what was actually authorised.
+      const startWrite: Array<{ id: string }> = await bookingRepo.query(
+        `WITH start AS (
+           UPDATE bookings
+              SET status = $2,
+                  "startedAt" = NOW(),
+                  "stripePaymentIntentId" = $3
+            WHERE id = $1
+              AND status = $4
+              AND "stripePaymentIntentId" IS NULL
+              AND "totalAmount" = $5
+            RETURNING id
+         )
+         SELECT id FROM start`,
+        [
+          bookingId,
+          BookingStatus.IN_PROGRESS,
+          paymentIntent.id,
+          BookingStatus.CONFIRMED,
+          authorisedAmount,
+        ]
+      );
 
-      res.json({ success: true, message: 'Service started, payment held', data: { booking } });
+      if (startWrite.length === 0) {
+        // The booking changed underneath this hold. Nothing references the
+        // authorisation, so it is released rather than left against the customer's card
+        // for the week Stripe would otherwise keep it — and the caller is told the
+        // truth rather than "service started".
+        try {
+          await stripe.paymentIntents.cancel(paymentIntent.id);
+        } catch (cancelErr) {
+          logger.error('Could not release an unreferenced hold — needs reconciliation', {
+            bookingId,
+            paymentIntentId: paymentIntent.id,
+            error: cancelErr,
+          });
+        }
+        await bookingRepo.query(`UPDATE bookings SET "holdPlacedAt" = NULL WHERE id = $1`, [
+          bookingId,
+        ]);
+
+        logger.error('Booking changed while its hold was being placed — hold released', {
+          bookingId,
+          paymentIntentId: paymentIntent.id,
+          authorisedAmount,
+        });
+        res.status(409).json({
+          success: false,
+          message: 'This booking changed while the payment hold was being placed. Please retry.',
+        });
+        return;
+      }
+
+      const started = await bookingRepo.findOne({ where: { id: bookingId } });
+      res.json({
+        success: true,
+        message: 'Service started, payment held',
+        data: { booking: started ?? booking },
+      });
     } catch (error) {
       logger.error('Error in startBooking:', error);
       res.status(500).json({ success: false, message: getStripeErrorMessage(error) });
