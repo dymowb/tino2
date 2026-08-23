@@ -155,13 +155,37 @@ describe('escrow hold placement', () => {
     expect(after.stripePaymentIntentId).toBe('pi_test_hold');
   });
 
-  it('sends a stable per-booking idempotency key so a resend cannot double-charge', async () => {
+  it('keys the hold on the claim so the SDK cannot resend it into a second charge', async () => {
     const { providerAccount, booking } = await startable('hold-idem');
 
     await start(booking.id, providerAccount.token).expect(200);
 
     const options = stripeMock().paymentIntents.create.mock.calls.at(-1)?.[1];
-    expect(options?.idempotencyKey).toBe(`booking:${booking.id}:hold:v1`);
+    expect(options?.idempotencyKey).toMatch(new RegExp(`^booking:${booking.id}:hold:.+`));
+  });
+
+  it('gives a retry a fresh key after releasing a hold, instead of colliding', async () => {
+    const { providerAccount, booking } = await startable('hold-retry-key');
+
+    // First attempt: the price changes underneath it, so its hold is released and the
+    // caller is told to retry.
+    stripeMock().paymentIntents.create.mockImplementationOnce(async () => {
+      await AppDataSource.query(`UPDATE bookings SET "totalAmount" = 400 WHERE id = $1`, [
+        booking.id,
+      ]);
+      return { id: 'pi_test_first', status: 'requires_capture' };
+    });
+    await start(booking.id, providerAccount.token).expect(409);
+
+    // The retry the message invites. A key fixed per booking would make it impossible:
+    // Stripe rejects a repeated key whose parameters changed — and the amount has —
+    // and would replay the just-cancelled intent if they had not.
+    await start(booking.id, providerAccount.token).expect(200);
+
+    const [first, second] = stripeMock().paymentIntents.create.mock.calls;
+    expect(second[1].idempotencyKey).not.toBe(first[1].idempotencyKey);
+    // Priced from the booking as it now stands, not as it was.
+    expect(second[0].amount).toBe(40000);
   });
 
   it('cannot be marked complete while a claim exists but no hold backs it', async () => {
@@ -259,6 +283,28 @@ describe('escrow hold placement', () => {
     // customer's card, and the claim is freed so a retry can price it correctly.
     expect(stripeMock().paymentIntents.cancel).toHaveBeenCalledWith('pi_test_hold');
     expect(after.holdPlacedAt).toBeNull();
+  });
+
+  it('keeps the claim when the hold it needs to release cannot be released', async () => {
+    const { providerAccount, booking } = await startable('hold-release-fails');
+
+    stripeMock().paymentIntents.create.mockImplementationOnce(async () => {
+      await AppDataSource.query(`UPDATE bookings SET "totalAmount" = 400 WHERE id = $1`, [
+        booking.id,
+      ]);
+      return { id: 'pi_test_stuck', status: 'requires_capture' };
+    });
+    stripeMock().paymentIntents.cancel.mockRejectedValueOnce(new Error('Stripe unavailable'));
+
+    await start(booking.id, providerAccount.token).expect(503);
+
+    // Freeing the claim here would invite a retry that authorises the card again while
+    // this authorisation may still be standing — the original defect, re-entered
+    // through the recovery path.
+    expect((await reload(booking.id)).holdPlacedAt).not.toBeNull();
+
+    await start(booking.id, providerAccount.token).expect(409);
+    expect(stripeMock().paymentIntents.create).toHaveBeenCalledTimes(1);
   });
 
   it('still refuses to start a booking that is not startable at all', async () => {

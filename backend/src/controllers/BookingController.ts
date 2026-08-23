@@ -697,7 +697,10 @@ export class BookingController {
       //
       // Wrapped in a CTE deliberately: `query()` on a bare UPDATE returns
       // [rows, rowCount], so `claimed.length` would read the wrong thing.
-      const claimed: Array<{ id: string }> = await bookingRepo.query(
+      // Returned as text, not as a timestamp: `holdPlacedAt` is `timestamp without time
+      // zone`, and a Date handed back to the driver is re-serialised against the node
+      // process's clock rather than the database's.
+      const claimed: Array<{ claim_stamp: string }> = await bookingRepo.query(
         `WITH claim AS (
            UPDATE bookings
               SET "holdPlacedAt" = NOW()
@@ -706,9 +709,9 @@ export class BookingController {
               AND status = $3
               AND "stripePaymentIntentId" IS NULL
               AND "holdPlacedAt" IS NULL
-            RETURNING id
+            RETURNING "holdPlacedAt"::text AS claim_stamp
          )
-         SELECT id FROM claim`,
+         SELECT claim_stamp FROM claim`,
         [bookingId, providerEntity.id, BookingStatus.CONFIRMED]
       );
       if (claimed.length === 0) {
@@ -718,6 +721,7 @@ export class BookingController {
         });
         return;
       }
+      const claimStamp = claimed[0].claim_stamp;
 
       // Create PaymentIntent with manual capture = escrow hold
       // The interesting design decision: we don't charge yet — capture_method:'manual'
@@ -748,11 +752,17 @@ export class BookingController {
             metadata: { bookingId, customerId: customer.id, providerId: providerEntity.id },
             description: `Hold for booking ${bookingId}`,
           },
-          // Covers a retry that reaches Stripe twice — a proxy or client resend — within
-          // Stripe's idempotency window: the original intent comes back instead of a
-          // second authorisation. Versioned so a deliberate future re-hold can be a new
-          // operation rather than a silent replay.
-          { idempotencyKey: `booking:${bookingId}:hold:v1` }
+          // Keyed on the claim, not on the booking. Cross-request duplicates are already
+          // impossible — the claim admits one caller — so all this needs to cover is the
+          // SDK retrying a single call internally, which one attempt's key does exactly.
+          //
+          // A key fixed per booking was actively wrong here. When the write below
+          // releases a hold and invites a retry, that retry is a genuinely different
+          // request: Stripe rejects a repeated key carrying changed parameters, and
+          // accepts one carrying identical parameters by replaying the intent it just
+          // cancelled — which would be recorded as a hold that holds nothing. A fresh
+          // claim means a fresh key, so the retry is simply a new request.
+          { idempotencyKey: `booking:${bookingId}:hold:${claimStamp}` }
         );
       } catch (stripeErr: any) {
         // Only a refusal of the card, or Stripe rejecting the request as malformed,
@@ -866,8 +876,10 @@ export class BookingController {
         // authorisation, so it is released rather than left against the customer's card
         // for the week Stripe would otherwise keep it — and the caller is told the
         // truth rather than "service started".
+        let releasedAtStripe = false;
         try {
           await stripe.paymentIntents.cancel(paymentIntent.id);
+          releasedAtStripe = true;
         } catch (cancelErr) {
           logger.error('Could not release an unreferenced hold — needs reconciliation', {
             bookingId,
@@ -875,6 +887,23 @@ export class BookingController {
             error: cancelErr,
           });
         }
+
+        if (!releasedAtStripe) {
+          // The claim stays. Freeing it here would invite a retry that authorises the
+          // card again while this authorisation may still be standing — the original
+          // double-hold defect, re-entered through the recovery path. Whether the money
+          // is released is not something this request found out, so it does not act as
+          // though it did.
+          res.status(503).json({
+            success: false,
+            message: 'Could not release the payment hold. Support has been notified.',
+          });
+          return;
+        }
+
+        // Released, so the booking is safely startable again — and the retry will take a
+        // fresh claim, and therefore a fresh idempotency key, rather than colliding with
+        // this attempt's.
         await bookingRepo.query(`UPDATE bookings SET "holdPlacedAt" = NULL WHERE id = $1`, [
           bookingId,
         ]);
