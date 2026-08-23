@@ -6,6 +6,7 @@ import { Provider } from '@/models/Provider';
 import { Booking, BookingStatus } from '@/models/Booking';
 import { User } from '@/models/User';
 import { getStripeInstance } from '@/config/stripe';
+import logger from '@/config/logger';
 
 /**
  * Placing the escrow hold was read-check-call-save: confirm the booking is
@@ -230,6 +231,29 @@ describe('escrow hold placement', () => {
     // And it stays stuck — no second attempt may quietly authorise the card again.
     await start(booking.id, providerAccount.token).expect(409);
     expect(stripeMock().paymentIntents.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('alerts with the key the request actually used, not a guess at it', async () => {
+    const { providerAccount, booking } = await startable('hold-alert-key');
+
+    const connectionError = Object.assign(new Error('network went away'), {
+      type: 'StripeConnectionError',
+    });
+    stripeMock().paymentIntents.create.mockRejectedValueOnce(connectionError);
+
+    await start(booking.id, providerAccount.token).expect(503);
+
+    // This log is the only record that a hold may exist, and the booking is
+    // deliberately stuck until someone acts on it. A key that does not match the one
+    // sent leads whoever reconciles to find nothing and conclude nothing was created —
+    // which is the failure this whole path exists to avoid.
+    const sentKey = stripeMock().paymentIntents.create.mock.calls.at(-1)?.[1]?.idempotencyKey;
+    const alert = (logger.error as jest.Mock).mock.calls.find(
+      ([message]) => typeof message === 'string' && message.includes('needs reconciliation')
+    );
+    expect(alert).toBeDefined();
+    expect(alert?.[1].idempotencyKey).toBe(sentKey);
+    expect(alert?.[1].searchIntentsBy).toEqual({ 'metadata.bookingId': booking.id });
   });
 
   it('treats an unrecognised Stripe failure as unknown rather than cancelling', async () => {

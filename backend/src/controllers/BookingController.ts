@@ -784,9 +784,14 @@ export class BookingController {
           // The claim stays. This booking cannot be started again without someone
           // looking at it, which is the deliberate cost of never guessing about a hold
           // that may exist.
+          // This is the only record that a hold may exist, so it carries what is needed
+          // to find one: the key the request actually used, and the metadata every
+          // intent from this handler is tagged with. A wrong key here is worse than no
+          // alert — it invites the conclusion that nothing was created.
           logger.error('Indeterminate Stripe hold — booking needs reconciliation', {
             bookingId,
-            paymentIntentKey: `booking:${bookingId}:hold:v1`,
+            idempotencyKey: `booking:${bookingId}:hold:${claimStamp}`,
+            searchIntentsBy: { 'metadata.bookingId': bookingId },
             type: stripeErr?.type,
             message: stripeErr?.message,
           });
