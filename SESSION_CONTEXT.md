@@ -3,7 +3,7 @@
 > Lean by design (per CLAUDE.md): current status + roadmap + resume point only.
 > Detailed completed-work notes live in `Tests/history/HISTORICAL_CONTEXT.md` and git history.
 
-## Current Status (2026-08-23) — Codex follow-up audit (`2026-08-16`), HN1 done, HN2 in review
+## Current Status (2026-08-25) — Codex follow-up audit (`2026-08-16`), HN1 + HN2 merged
 
 Source: `docs/code-audits/2026-08-16-follow-up-code-analysis.md` (Codex, audited `3414f19`).
 12 new findings (3 high). Each spot-checked against source before acting; two were wrong as
@@ -25,7 +25,7 @@ entry point and orphaned copy all removed.
 > that reason. Recording payments from the booking lifecycle is the follow-up, and it is a
 > feature rather than a fix.
 
-**In review — #34, HN2, the escrow hold.** Scoped deliberately (see below) to: an atomic
+**Merged — #34 `9efb4da`, HN2, the escrow hold.** Scoped deliberately (see below) to: an atomic
 `holdPlacedAt` claim taken **before** the Stripe call, a per-booking idempotency key, and a
 final write conditioned on `status`, a null intent id, **and the amount actually authorised**.
 
@@ -57,14 +57,42 @@ while a manual-capture authorisation lives ~7 days, which I got wrong twice.
 Both were rebutted with evidence and the reviewer accepted. The date complaint in the audit's
 LN1 is likewise noise: its environment clock was a day behind, not the report.
 
+### In review — HN3 + MN4 + MN6, the three fail-open defaults
+
+Branch `fix/audit-hn3-mn4-mn6`. One theme: each was a default that answered "I could not
+verify" with "everything is fine".
+
+- **HN3 — DB TLS.** All three data sources now build `ssl` through `config/databaseSsl.ts`.
+  TLS follows the connection string (`sslmode=disable` → off, so **prod is byte-for-byte
+  unchanged** — both prod URLs carry it), and whenever TLS *is* used the peer is verified.
+  CA via `DATABASE_SSL_CA`/`DATABASE_SSL_CA_FILE`; a configured-but-unreadable CA throws
+  rather than falling back to the system store. `DATABASE_SSL_ALLOW_UNAUTHORIZED=true` is a
+  dev-only escape hatch that **throws at import in production**. Deliberately stricter than
+  libpq: `sslmode=require` verifies here.
+- **MN4 — readiness freshness.** `stale: boolean` became
+  `freshness: 'current' | 'stale' | 'unknown'`, and a failed reload or snapshot rebuild
+  reports `unknown`, never `current`. A booking that no longer exists is `stale`. `stale` is
+  kept as `freshness !== 'current'` so an older client degrades to the warning, not to false
+  confidence. New EN/PT/ES copy `readiness.freshness_unknown`.
+- **MN6 — `actionUrl`.** New `frontend/src/utils/internalPath.ts`; both `NotificationCenter`
+  (which assigned it to `window.location.href` — now `navigate()`) and `NotificationBadge`
+  accept only a single-leading-slash same-origin path. Rejects absolute URLs, `//host`,
+  `/\host`, any scheme, control characters. The bell falls back to `/notifications`.
+
+Tests: backend 206/206 (11 new SSL unit + 4 new freshness integration), frontend 7/7 (3 new),
+lint 142 warnings (baseline 146), both builds green. Verified live against dev `:3002` on the
+real app DB: freshness `stale` → forced `unknown` → back to `stale`, drawer copy correct in EN
+and PT; every one of the demo customer's 233 notification URLs temporarily rewritten to
+`https://evil.example/phish` — the centre stayed on `/notifications`, the bell fell back —
+then restored from a backup (0 rows left tampered, readiness flag back to `false`).
+
 ### Still open from the follow-up audit
 
-**HN3** DB TLS `rejectUnauthorized: false` — literally true but *not* a live High: prod
-`DATABASE_URL` is `localhost` with `sslmode=disable`, so TLS never engages. Fix as a safe
-default before the DB ever moves off-box. **MN2** email case-sensitivity, **MN3** Spanish
-(missing `admin`/`memory` namespaces *and* `api.ts` maps every non-`en` locale to `pt`),
-**MN4** readiness staleness fails open, **MN5** no AI cost limiter, **MN6** unvalidated
-`actionUrl` → `window.location.href`. All confirmed in source; none started.
+**MN2** email case-sensitivity (needs a collision check + an `ALTER` on the shared dev/prod
+DB — pair it with the pending `LockedUntilTimestamptz` window), **MN3** Spanish (missing
+`admin`/`memory` namespaces *and* `api.ts` maps every non-`en` locale to `pt`), **MN5** no AI
+cost limiter (wants a decision on budgets and whether a completed run may be re-run at all).
+All confirmed in source; none started.
 
 ### Traps this round added
 

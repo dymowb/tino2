@@ -275,6 +275,7 @@
     "empty": "Nenhuma verificação foi feita para esta reserva ainda.",
     "error": "Não foi possível concluir a verificação. Tente novamente.",
     "stale": "Esta reserva mudou depois da verificação.",
+    "freshness_unknown": "Não foi possível reverificar a reserva, então este resumo pode estar desatualizado.",
     "partial": "Parte desta revisão ficou indisponível ({{sections}}), então pode estar incompleta.",
     "agreed_scope": "Trabalho combinado",
     "no_scope": "Não foi possível estabelecer o trabalho combinado a partir dos registros.",

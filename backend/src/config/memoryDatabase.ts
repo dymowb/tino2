@@ -5,6 +5,7 @@ import { ProceduralRule } from '@/models/memory/ProceduralRule';
 import { MemoryRetrievalLog } from '@/models/memory/MemoryRetrievalLog';
 import { MemoryWriteLog } from '@/models/memory/MemoryWriteLog';
 import logger from '@/config/logger';
+import { buildDatabaseSsl } from '@/config/databaseSsl';
 
 const MEMORY_ENTITIES = [
   SemanticMemory,
@@ -21,7 +22,7 @@ export const MemoryDataSource = new DataSource({
   logging: process.env.NODE_ENV === 'development',
   entities: MEMORY_ENTITIES,
   migrations: [__dirname + '/../migrations/memory/*.js'],
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: buildDatabaseSsl(process.env.MEMORY_DATABASE_URL),
   extra: {
     max: 5,
     min: 1,

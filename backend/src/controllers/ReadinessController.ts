@@ -24,6 +24,7 @@ import {
 import {
   READINESS_SUBJECT_TYPE,
   READINESS_WORKFLOW_TYPE,
+  ReadinessFreshness,
   ReadinessPlan,
 } from '@/agents/workflows/booking-readiness/types';
 
@@ -64,7 +65,8 @@ export class ReadinessController {
 
       const response: ApiResponse = {
         success: true,
-        data: { runId, status, plan, stale: false },
+        // Just generated from the current snapshot, so freshness is not in doubt.
+        data: { runId, status, plan, freshness: 'current', stale: false },
       };
       res.status(201).json(response);
     } catch (error) {
@@ -136,6 +138,11 @@ export class ReadinessController {
   /**
    * Recomputes the fingerprint on read so a plan whose booking has since changed
    * is reported as stale rather than silently presented as current.
+   *
+   * Failing to compute it is reported as `unknown`, never as `current`: a database
+   * or snapshot failure says nothing about whether the booking changed, and
+   * treating "I could not check" as "nothing changed" is what let a dependency
+   * outage present outdated scope and payment advice as if it were fresh.
    */
   private async present(
     run: AgentWorkflowRun,
@@ -144,28 +151,39 @@ export class ReadinessController {
     runId: string;
     status: WorkflowRunStatus;
     plan: ReadinessPlan | null;
+    freshness: ReadinessFreshness;
     stale: boolean;
   }> {
     const plan = (run.output as ReadinessPlan | null) ?? null;
-    let stale = false;
-
-    if (plan && run.sourceFingerprint) {
-      try {
-        const { booking } = { booking: await this.loadBooking(run.subjectId) };
-        if (booking) {
-          stale = snapshotFingerprint(await buildSnapshot(booking)) !== run.sourceFingerprint;
-        }
-      } catch (error) {
-        logger.warn('Could not evaluate readiness staleness', { runId: run.id, error });
-      }
-    }
+    const freshness = plan ? await this.evaluateFreshness(run) : 'current';
 
     return {
       runId: run.id,
       status: run.status,
       plan: plan ? applyRoleFilter(plan, role) : null,
-      stale,
+      freshness,
+      // Retained for clients written against the two-state field. Anything not
+      // positively verified as current stays truthy here, so an older client
+      // degrades to the warning rather than to false confidence.
+      stale: freshness !== 'current',
     };
+  }
+
+  private async evaluateFreshness(run: AgentWorkflowRun): Promise<ReadinessFreshness> {
+    // A run stored without a fingerprint cannot be compared against anything.
+    if (!run.sourceFingerprint) return 'unknown';
+
+    try {
+      const booking = await this.loadBooking(run.subjectId);
+      // The booking behind the plan is gone, so the plan describes nothing current.
+      if (!booking) return 'stale';
+
+      const fingerprint = snapshotFingerprint(await buildSnapshot(booking));
+      return fingerprint === run.sourceFingerprint ? 'current' : 'stale';
+    } catch (error) {
+      logger.warn('Could not evaluate readiness freshness', { runId: run.id, error });
+      return 'unknown';
+    }
   }
 
   private async loadBooking(bookingId: string) {

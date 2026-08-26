@@ -80,7 +80,9 @@ export const ReadinessDrawer: React.FC<Props> = ({ bookingId, open, onClose }) =
   });
 
   const plan = data?.plan ?? null;
-  const stale = data?.stale ?? false;
+  // Older responses carry only `stale`; a truthy one there means "not current",
+  // which is the safe reading when the server did not say which.
+  const freshness = data?.freshness ?? (data?.stale ? 'stale' : 'current');
   const running = runMutation.isPending;
 
   return (
@@ -145,10 +147,10 @@ export const ReadinessDrawer: React.FC<Props> = ({ bookingId, open, onClose }) =
 
         {plan && (
           <Stack spacing={2.5}>
-            {stale && (
+            {freshness !== 'current' && (
               <Alert
                 severity="warning"
-                data-testid="readiness-stale"
+                data-testid={freshness === 'unknown' ? 'readiness-unknown' : 'readiness-stale'}
                 action={
                   <Button
                     size="small"
@@ -161,7 +163,7 @@ export const ReadinessDrawer: React.FC<Props> = ({ bookingId, open, onClose }) =
                   </Button>
                 }
               >
-                {t("readiness.stale")}
+                {t(freshness === 'unknown' ? "readiness.freshness_unknown" : "readiness.stale")}
               </Alert>
             )}
 

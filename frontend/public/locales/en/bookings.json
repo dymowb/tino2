@@ -267,6 +267,7 @@
     "empty": "No readiness check has been run for this booking yet.",
     "error": "The readiness check could not be completed. Please try again.",
     "stale": "This booking changed after the check was run.",
+    "freshness_unknown": "The booking could not be re-checked, so this plan may be out of date.",
     "partial": "Part of this review was unavailable ({{sections}}), so it may be incomplete.",
     "agreed_scope": "Agreed work",
     "no_scope": "No agreed work could be established from the records.",

@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import * as dotenv from 'dotenv';
+import { buildDatabaseSsl } from './databaseSsl';
 
 dotenv.config();
 
@@ -11,5 +12,5 @@ export default new DataSource({
   logging: false,
   entities: ['src/models/*.ts'],
   migrations: ['src/migrations/*.ts'],
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: buildDatabaseSsl(process.env.DATABASE_URL),
 });

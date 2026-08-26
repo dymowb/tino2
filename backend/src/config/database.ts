@@ -1,4 +1,5 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
+import { buildDatabaseSsl } from './databaseSsl';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -11,7 +12,7 @@ const options: DataSourceOptions = {
   // Memory/pgvector migrations have their own DataSource. Do not recurse into
   // migrations/memory here or the app database will incorrectly require pgvector.
   migrations: [isProduction ? 'dist/migrations/*.js' : 'src/migrations/*.ts'],
-  ssl: isProduction ? { rejectUnauthorized: false } : false,
+  ssl: buildDatabaseSsl(process.env.DATABASE_URL, isProduction),
   poolSize: 20,
   extra: {
     connectionTimeoutMillis: 10000,

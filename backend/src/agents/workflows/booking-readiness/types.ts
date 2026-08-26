@@ -32,6 +32,16 @@ export interface ReadinessFinding {
 
 export type ReadinessLevel = 'ready' | 'needs_attention' | 'blocked' | 'incomplete';
 
+/**
+ * How a stored plan relates to the booking as it stands now.
+ *
+ * `unknown` exists so that failing to *check* freshness is never reported as
+ * `current`: if the booking cannot be reloaded or its snapshot cannot be rebuilt,
+ * the plan may describe scope, schedule or payment terms that have since changed,
+ * and the reader has to be told that rather than reassured.
+ */
+export type ReadinessFreshness = 'current' | 'stale' | 'unknown';
+
 export interface ReadinessVerification {
   /** How many findings the model produced that validation removed. */
   droppedCount: number;
