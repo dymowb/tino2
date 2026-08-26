@@ -85,6 +85,22 @@ const readCa = (rootCertPath?: string): string | undefined => {
   }
 };
 
+/**
+ * The name of a query parameter as its *consumers* see it. `URLSearchParams` and
+ * pg-connection-string both percent-decode keys, so `%73slmode` is `sslmode` to
+ * both. Comparing raw text here instead would let an encoded key pass the strip
+ * while still reaching pg — two parsers disagreeing about one setting, which is
+ * the whole failure this module exists to prevent.
+ */
+const decodeParamName = (raw: string): string => {
+  try {
+    return decodeURIComponent(raw.replace(/\+/g, ' ')).toLowerCase();
+  } catch {
+    // Malformed escape: not decodable, so it cannot be one of ours either.
+    return raw.toLowerCase();
+  }
+};
+
 const searchParamsOf = (url: string): URLSearchParams => {
   try {
     return new URL(url).searchParams;
@@ -101,6 +117,8 @@ const sslModeOf = (url: string): string | undefined =>
  * Called before the URL is stripped, so nothing is discarded unnoticed.
  */
 const assertNoUnsupportedSslParams = (url: string): void => {
+  // `URLSearchParams` has already decoded these keys; `stripSslParams` decodes its
+  // own the same way, so both agree on what counts as `sslmode`.
   for (const key of searchParamsOf(url).keys()) {
     const name = key.toLowerCase();
     if (name.startsWith('ssl') && !CONSUMED_SSL_PARAMS.has(name)) {
@@ -114,11 +132,13 @@ const assertNoUnsupportedSslParams = (url: string): void => {
 };
 
 /**
- * Removes every `ssl*` query parameter, so pg's connection-string parser has no
- * reason to synthesise an `ssl` config that would overwrite ours.
+ * Removes the `ssl*` query parameters this module consumes, so pg's
+ * connection-string parser has no reason to synthesise an `ssl` config that would
+ * overwrite ours.
  *
- * The text before the query string is preserved byte for byte rather than
- * rebuilt through `URL`, so no credential is re-encoded on the way through.
+ * Each pair that survives is copied through verbatim, and everything before the
+ * query string is preserved byte for byte rather than rebuilt through `URL`, so no
+ * credential is re-encoded on the way past. Only the *comparison* is decoded.
  */
 const stripSslParams = (url: string): string => {
   const separator = url.indexOf('?');
@@ -130,8 +150,7 @@ const stripSslParams = (url: string): string => {
     .split('&')
     .filter((pair) => {
       if (pair === '') return false;
-      const name = pair.split('=')[0].toLowerCase();
-      return !CONSUMED_SSL_PARAMS.has(name);
+      return !CONSUMED_SSL_PARAMS.has(decodeParamName(pair.split('=')[0]));
     });
 
   return kept.length > 0 ? `${base}?${kept.join('&')}` : base;

@@ -213,6 +213,31 @@ describe('buildDatabaseConnection through pg', () => {
     expect(buildDatabaseConnection(raw, false).url).toBe(raw);
   });
 
+  it('strips an ssl parameter whose key is percent-encoded', () => {
+    process.env.DATABASE_SSL_CA = 'MY-PRIVATE-CA';
+
+    // pg-connection-string decodes query keys, so `%73slmode` is `sslmode` to pg.
+    // Comparing raw text when stripping would let this one through to override the
+    // options object while this module still read it as a mode it had handled.
+    expect(
+      effectiveSsl('postgresql://u:p@db.example.com:5432/app?%73slmode=require', false)
+    ).toEqual({ rejectUnauthorized: true, ca: 'MY-PRIVATE-CA' });
+
+    expect(
+      buildDatabaseConnection('postgresql://u:p@db.example.com:5432/app?%73slmode=require', false)
+        .url
+    ).toBe('postgresql://u:p@db.example.com:5432/app');
+  });
+
+  it('rejects an unsupported ssl parameter whose key is percent-encoded', () => {
+    expect(() =>
+      buildDatabaseConnection(
+        'postgresql://h/db?sslmode=require&%73slcert=/etc/pg/client.crt',
+        false
+      )
+    ).toThrow(/client-certificate/);
+  });
+
   it('does not let sslmode=no-verify reach pg as an unencrypted connection', () => {
     expect(
       effectiveSsl('postgresql://u:p@db.example.com:5432/app?sslmode=no-verify', false)

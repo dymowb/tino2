@@ -103,7 +103,14 @@ being silently dropped. `sslrootcert` is honoured as a CA source, since strippin
 otherwise discard it. `config/memory.data-source.ts` (the TypeORM CLI one) was the last
 PostgreSQL data source outside the policy and is now inside it.
 
-Tests: backend 216/216 (19 SSL + 4 new freshness integration), frontend 7/7 (3 new),
+**Round 4 — Codex again, on the seam between two parsers *inside* the new module.**
+`assertNoUnsupportedSslParams` and `sslModeOf` read keys through `URLSearchParams`, which
+percent-decodes them, while `stripSslParams` compared raw query text. `?%73slmode=require` is
+therefore `sslmode` to this module **and to pg**, but was not stripped — so pg overrode the
+options object and discarded the configured CA, the exact override round 2 existed to stop.
+Stripping now compares the decoded name (`+` → space, malformed escapes fall back to raw).
+
+Tests: backend 218/218 (21 SSL + 4 new freshness integration), frontend 7/7 (3 new),
 lint 142 warnings (baseline 146), both builds green. Verified live against dev `:3002` on the
 real app DB: freshness `stale` → forced `unknown` → back to `stale`, drawer copy correct in EN
 and PT; every one of the demo customer's 233 notification URLs temporarily rewritten to
@@ -120,6 +127,9 @@ All confirmed in source; none started.
 
 ### Traps this round added
 
+- **Two parsers in one module will disagree.** `URLSearchParams` decodes query keys and so
+  does pg; comparing raw text anywhere in the same flow reopens the gap. Decide once what a
+  parameter *name* is, and route every comparison through it.
 - **Narrowing what you accept is a downgrade unless the rejected case fails loudly.**
   Replacing a permissive parser with an allowlist turned two real inputs (`sslmode=no-verify`,
   and any typo) from "TLS" into "plaintext", because the unrecognised branch returned `false`.
