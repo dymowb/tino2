@@ -135,6 +135,25 @@ describe('buildDatabaseSsl', () => {
     ).toThrow(/sslkey/);
   });
 
+  it('treats a CA named by the URL as a request for TLS, with no sslmode present', () => {
+    const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'ca-')), 'root.pem');
+    fs.writeFileSync(file, 'url-ca');
+
+    // pg enables TLS for any `ssl*` parameter. Reading only `sslmode` here would
+    // answer "no TLS" and then strip the CA on the way out — a plaintext connection
+    // for a URL that asked to verify one.
+    expect(buildDatabaseSsl(`postgresql://h/db?sslrootcert=${file}`, false)).toEqual({
+      rejectUnauthorized: true,
+      ca: 'url-ca',
+    });
+  });
+
+  it('lets sslmode=disable outrank a CA named alongside it', () => {
+    expect(
+      buildDatabaseSsl('postgresql://h/db?sslmode=disable&sslrootcert=/nonexistent.pem', false)
+    ).toBe(false);
+  });
+
   it('accepts the CA named by the URL when no env CA is set', () => {
     const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'ca-')), 'root.pem');
     fs.writeFileSync(file, 'url-ca');
@@ -211,6 +230,15 @@ describe('buildDatabaseConnection through pg', () => {
   it('leaves a connection string without ssl parameters untouched', () => {
     const raw = 'postgresql://u:p@localhost:5432/app';
     expect(buildDatabaseConnection(raw, false).url).toBe(raw);
+  });
+
+  it('does not hand pg a plaintext connection for a URL that named a CA', () => {
+    const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'ca-')), 'root.pem');
+    fs.writeFileSync(file, 'url-ca');
+
+    expect(
+      effectiveSsl(`postgresql://u:p@db.example.com:5432/app?sslrootcert=${file}`, false)
+    ).toEqual({ rejectUnauthorized: true, ca: 'url-ca' });
   });
 
   it('strips an ssl parameter whose key is percent-encoded', () => {

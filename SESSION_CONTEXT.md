@@ -110,7 +110,13 @@ therefore `sslmode` to this module **and to pg**, but was not stripped — so pg
 options object and discarded the configured CA, the exact override round 2 existed to stop.
 Stripping now compares the decoded name (`+` → space, malformed escapes fall back to raw).
 
-Tests: backend 218/218 (21 SSL + 4 new freshness integration), frontend 7/7 (3 new),
+**Round 5 — Codex, same seam once more.** A URL carrying `sslrootcert` and **no** `sslmode`
+returned `ssl: false` in development, and the strip then removed the CA: pg would have
+connected with verified TLS, we connected in plaintext. The "whether TLS" decision read only
+`sslmode`, while pg's own rule is *any* `ssl*` parameter. Fixed to match pg's rule, with
+`sslmode=disable` still outranking everything.
+
+Tests: backend 221/221 (24 SSL + 4 new freshness integration), frontend 7/7 (3 new),
 lint 142 warnings (baseline 146), both builds green. Verified live against dev `:3002` on the
 real app DB: freshness `stale` → forced `unknown` → back to `stale`, drawer copy correct in EN
 and PT; every one of the demo customer's 233 notification URLs temporarily rewritten to
@@ -127,6 +133,13 @@ All confirmed in source; none started.
 
 ### Traps this round added
 
+- **Five rounds on one file, each fix creating the next defect — the HN2 shape again.** All
+  five were the same root cause: *the connection string is parsed twice, by us and by pg, and
+  every rule we do not replicate exactly is a divergence.* Replicating a library's parsing
+  rules by hand is an unbounded game. The version that ends it is to stop passing a URL to
+  TypeORM at all — parse it once, hand over explicit `host`/`port`/`username`/`password`/
+  `database` plus `ssl`, and leave no second parser to disagree with. **Not done: it changes
+  how every data source connects and wants a deliberate window.**
 - **Two parsers in one module will disagree.** `URLSearchParams` decodes query keys and so
   does pg; comparing raw text anywhere in the same flow reopens the gap. Decide once what a
   parameter *name* is, and route every comparison through it.

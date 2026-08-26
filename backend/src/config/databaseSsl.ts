@@ -29,9 +29,10 @@ import * as fs from 'fs';
  * means the stricter one silently loses.
  *
  * So the URL is returned with the `ssl*` parameters this module understands removed.
- * The connection string still decides *whether* TLS is used — that decision is read
- * here first — but the options object is then the single authority on *how*. An
- * `ssl*` parameter that could not be honoured is an error, never a silent drop.
+ * The connection string still decides *whether* TLS is used — every `ssl*` parameter
+ * it carries is read here first, the same ones pg would have read — but the options
+ * object is then the single authority on *how*. An `ssl*` parameter that could not be
+ * honoured is an error, never a silent drop.
  */
 export interface DatabaseSslOptions {
   rejectUnauthorized: boolean;
@@ -182,11 +183,17 @@ export const buildDatabaseSsl = (
 
   assertNoUnsupportedSslParams(rawUrl);
   const mode = sslModeOf(rawUrl);
+  const rootCert = searchParamsOf(rawUrl).get('sslrootcert') ?? undefined;
 
-  // `sslmode=disable` is an explicit "no TLS"; without a mode, production keeps
-  // its historical default of connecting over TLS.
+  // `sslmode=disable` is an explicit "no TLS", and it outranks anything else.
   if (mode === 'disable') return false;
-  if (!mode && !isProduction) return false;
+
+  // Any `ssl*` parameter asks for TLS, not just `sslmode` — that is pg's own rule
+  // (`if (config.sslcert || config.sslkey || config.sslrootcert || config.sslmode)`).
+  // Reading only `sslmode` here would turn a URL that names a CA and nothing else
+  // into a plaintext connection, while the strip removed the CA on the way past.
+  const requestedByUrl = Boolean(mode) || Boolean(rootCert);
+  if (!requestedByUrl && !isProduction) return false;
 
   const unverified =
     mode === UNVERIFIED_MODE || process.env.DATABASE_SSL_ALLOW_UNAUTHORIZED === 'true';
@@ -214,6 +221,6 @@ export const buildDatabaseSsl = (
 
   // Note this is stricter than libpq: `sslmode=require` skips verification there,
   // while here every TLS mode verifies. Opting out is the escape hatch above.
-  const ca = readCa(searchParamsOf(rawUrl).get('sslrootcert') ?? undefined);
+  const ca = readCa(rootCert);
   return ca ? { rejectUnauthorized: true, ca } : { rejectUnauthorized: true };
 };
