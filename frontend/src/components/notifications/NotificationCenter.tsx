@@ -189,9 +189,9 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
   };
 
   const handleNotificationClick = async (notification: Notification) => {
-    // Mark as read if not already read. Await it so the PATCH completes before the
-    // full-page navigation below — otherwise the reload aborts the in-flight
-    // request and the notification stays unread.
+    // Mark as read if not already read, and await it so the two settle in order.
+    // (This used to guard against the full-page navigation below aborting the
+    // in-flight PATCH; the navigation is now client-side and cannot.)
     if (!notification.isRead) {
       try { await markAsReadMutation.mutateAsync([notification.id]); } catch { /* navigate anyway */ }
     }

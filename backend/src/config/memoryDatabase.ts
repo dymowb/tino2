@@ -5,7 +5,7 @@ import { ProceduralRule } from '@/models/memory/ProceduralRule';
 import { MemoryRetrievalLog } from '@/models/memory/MemoryRetrievalLog';
 import { MemoryWriteLog } from '@/models/memory/MemoryWriteLog';
 import logger from '@/config/logger';
-import { buildDatabaseSsl } from '@/config/databaseSsl';
+import { buildDatabaseConnection } from '@/config/databaseSsl';
 
 const MEMORY_ENTITIES = [
   SemanticMemory,
@@ -15,14 +15,16 @@ const MEMORY_ENTITIES = [
   MemoryWriteLog,
 ];
 
+const connection = buildDatabaseConnection(process.env.MEMORY_DATABASE_URL);
+
 export const MemoryDataSource = new DataSource({
   type: 'postgres',
-  url: process.env.MEMORY_DATABASE_URL,
+  url: connection.url,
   synchronize: false,
   logging: process.env.NODE_ENV === 'development',
   entities: MEMORY_ENTITIES,
   migrations: [__dirname + '/../migrations/memory/*.js'],
-  ssl: buildDatabaseSsl(process.env.MEMORY_DATABASE_URL),
+  ssl: connection.ssl,
   extra: {
     max: 5,
     min: 1,

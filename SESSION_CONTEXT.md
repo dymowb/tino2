@@ -79,7 +79,31 @@ verify" with "everything is fine".
   accept only a single-leading-slash same-origin path. Rejects absolute URLs, `//host`,
   `/\host`, any scheme, control characters. The bell falls back to `/notifications`.
 
-Tests: backend 206/206 (11 new SSL unit + 4 new freshness integration), frontend 7/7 (3 new),
+**Round 2 — Codex blocked HN3, correctly, and the fix was dead code as written.** TypeORM's
+`PostgresDriver.createPool` hands pg **both** `connectionString` and `ssl`, and pg's
+`ConnectionParameters` does `Object.assign({}, config, parse(connectionString))` — the parsed
+URL wins. `pg-connection-string` sets `config.ssl` as soon as the URL carries any `ssl*`
+parameter, so `sslmode=require` **replaced** our options object: the configured CA was
+discarded and verification became pg's setting, not ours. `buildDatabaseSsl` is now
+`buildDatabaseConnection`, returning `{ url, ssl }` with every `ssl*` parameter stripped from
+the URL, so the options object is the single authority. Five new tests assert on what pg
+*actually* ends up with, through pg's own `ConnectionParameters`.
+
+Production was never affected (both URLs are `sslmode=disable` → `false` either way), which is
+exactly why nine unit tests, a green build and a live dev-server check all passed over it.
+
+**Round 3 — the new `pr-precheck` agent caught a fail-open the round-2 fix introduced.**
+`sslmode=no-verify` is a **real** node-postgres mode, and `sslmode=required` is a plausible
+typo; neither was in the allowlist, so both returned `ssl: false` — and because round 2 now
+strips `sslmode` from the URL, pg's parser could no longer rescue them. On `main` those URLs
+connected over TLS; after round 2 they would have connected in **plaintext**. Now: `no-verify`
+maps onto the escape hatch (refused in production), an unrecognised mode **throws**, and an
+`ssl*` parameter the options object cannot express (`sslcert`/`sslkey`) throws rather than
+being silently dropped. `sslrootcert` is honoured as a CA source, since stripping it would
+otherwise discard it. `config/memory.data-source.ts` (the TypeORM CLI one) was the last
+PostgreSQL data source outside the policy and is now inside it.
+
+Tests: backend 216/216 (19 SSL + 4 new freshness integration), frontend 7/7 (3 new),
 lint 142 warnings (baseline 146), both builds green. Verified live against dev `:3002` on the
 real app DB: freshness `stale` → forced `unknown` → back to `stale`, drawer copy correct in EN
 and PT; every one of the demo customer's 233 notification URLs temporarily rewritten to
@@ -96,6 +120,15 @@ All confirmed in source; none started.
 
 ### Traps this round added
 
+- **Narrowing what you accept is a downgrade unless the rejected case fails loudly.**
+  Replacing a permissive parser with an allowlist turned two real inputs (`sslmode=no-verify`,
+  and any typo) from "TLS" into "plaintext", because the unrecognised branch returned `false`.
+  An allowlist needs a `throw` on the else-branch, not a default.
+- **A config object is not a decision until you check what consumes it.** pg merges the
+  parsed connection string **over** the explicit config, so any `ssl*` parameter in
+  `DATABASE_URL` silently overrides the `ssl` object TypeORM was given. Unit-testing the
+  builder proved only what it *returns*. Assert through the consumer (`pg/lib/connection-parameters`)
+  whenever two inputs can express the same setting.
 - `bookings.holdPlacedAt`/`startedAt` are `timestamp without time zone` — the `lockedUntil`
   bug's column type. A JS `Date` through the driver uses the **node** clock while `NOW()` uses
   the **database's** (7h apart locally). Stamp and compare server-side, or don't compare.
