@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import { toInternalPath } from '../../utils/internalPath';
 import { getNotificationText, type NotificationI18n } from '../../utils/notificationText';
 import {
   Box,
@@ -88,6 +90,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 }) => {
   const { user } = useAuth();
   const { t } = useTranslation('notifications');
+  const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const queryClient = useQueryClient();
@@ -186,16 +189,19 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
   };
 
   const handleNotificationClick = async (notification: Notification) => {
-    // Mark as read if not already read. Await it so the PATCH completes before the
-    // full-page navigation below — otherwise the reload aborts the in-flight
-    // request and the notification stays unread.
+    // Mark as read if not already read, and await it so the two settle in order.
+    // (This used to guard against the full-page navigation below aborting the
+    // in-flight PATCH; the navigation is now client-side and cannot.)
     if (!notification.isRead) {
       try { await markAsReadMutation.mutateAsync([notification.id]); } catch { /* navigate anyway */ }
     }
 
-    // Handle action URL navigation
-    if (notification.actionUrl) {
-      window.location.href = notification.actionUrl;
+    // `actionUrl` is free text on the model, so it is validated as a same-origin
+    // path before it can steer navigation, and routed rather than assigned to
+    // `window.location.href`. A rejected value simply stays on this page.
+    const target = toInternalPath(notification.actionUrl);
+    if (target) {
+      navigate(target);
     }
 
     if (onClose) onClose();

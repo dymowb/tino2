@@ -3,7 +3,7 @@
 > Lean by design (per CLAUDE.md): current status + roadmap + resume point only.
 > Detailed completed-work notes live in `Tests/history/HISTORICAL_CONTEXT.md` and git history.
 
-## Current Status (2026-08-23) — Codex follow-up audit (`2026-08-16`), HN1 done, HN2 in review
+## Current Status (2026-08-25) — Codex follow-up audit (`2026-08-16`), HN1 + HN2 merged
 
 Source: `docs/code-audits/2026-08-16-follow-up-code-analysis.md` (Codex, audited `3414f19`).
 12 new findings (3 high). Each spot-checked against source before acting; two were wrong as
@@ -25,7 +25,7 @@ entry point and orphaned copy all removed.
 > that reason. Recording payments from the booking lifecycle is the follow-up, and it is a
 > feature rather than a fix.
 
-**In review — #34, HN2, the escrow hold.** Scoped deliberately (see below) to: an atomic
+**Merged — #34 `9efb4da`, HN2, the escrow hold.** Scoped deliberately (see below) to: an atomic
 `holdPlacedAt` claim taken **before** the Stripe call, a per-booking idempotency key, and a
 final write conditioned on `status`, a null intent id, **and the amount actually authorised**.
 
@@ -57,17 +57,96 @@ while a manual-capture authorisation lives ~7 days, which I got wrong twice.
 Both were rebutted with evidence and the reviewer accepted. The date complaint in the audit's
 LN1 is likewise noise: its environment clock was a day behind, not the report.
 
+### In review — HN3 + MN4 + MN6, the three fail-open defaults
+
+Branch `fix/audit-hn3-mn4-mn6`. One theme: each was a default that answered "I could not
+verify" with "everything is fine".
+
+- **HN3 — DB TLS.** The connection string is parsed **once, by pg's own parser**
+  (`config/databaseConnection.ts`), and handed to TypeORM as explicit
+  `host`/`port`/`username`/`password`/`database` + `ssl`. **No `connectionString` reaches
+  pg**, so nothing can re-parse it and overwrite the policy. TLS still follows what the URL
+  said (`sslmode=disable` → off, so **prod is unchanged** — both prod URLs carry it), but the
+  question is answered from pg's parsed output, never from a second reading of the text.
+  Whenever TLS is used the peer is verified; CA from `DATABASE_SSL_CA`/`_CA_FILE` or the
+  URL's `sslrootcert`; `no-verify` and `DATABASE_SSL_ALLOW_UNAUTHORIZED` are dev-only and
+  **throw in production**; an unrecognised `sslmode` or a `sslcert`/`sslkey` this config
+  cannot honour throws rather than dropping TLS. Remaining libpq parameters reach the driver
+  through an **allowlist**, because TypeORM merges `extra` *last*: a forwarded
+  `?connectionString=…` would otherwise outrank the resolved host and TLS policy and be
+  re-parsed by pg. All four data sources use it, including the memory TypeORM CLI one.
+- **MN4 — readiness freshness.** `stale: boolean` became
+  `freshness: 'current' | 'stale' | 'unknown'`, and a failed reload or snapshot rebuild
+  reports `unknown`, never `current`. A booking that no longer exists is `stale`. `stale` is
+  kept as `freshness !== 'current'` so an older client degrades to the warning, not to false
+  confidence. New EN/PT/ES copy `readiness.freshness_unknown`. **The create endpoint evaluates
+  freshness too** rather than claiming `current` because the plan is new: the fingerprint is
+  taken *before* a ~25s agent run, so a booking edited during generation is already stale on
+  arrival. Nothing after the run may fail the request: if the stored run cannot be read back,
+  the response carries the coordinator's own plan with `freshness: 'unknown'` rather than a
+  500 that invites a retry paying for a second Opus run.
+- **MN6 — `actionUrl`.** New `frontend/src/utils/internalPath.ts`; both `NotificationCenter`
+  (which assigned it to `window.location.href` — now `navigate()`) and `NotificationBadge`
+  accept only a single-leading-slash same-origin path. Rejects absolute URLs, `//host`,
+  `/\host`, any scheme, control characters. The bell falls back to `/notifications`.
+
+### HN3 took five blocking reviews, and four of them were one mistake
+
+The first four attempts all kept handing TypeORM the URL *and* an `ssl` object. pg merges the
+parsed connection string **over** the explicit config
+(`Object.assign({}, config, parse(connectionString))`), so the URL always won; the repair —
+sanitising the URL first — meant re-deriving pg's parsing rules by hand, and each round found
+another rule that had been derived wrong:
+
+| Round | Found by | The divergence |
+|---|---|---|
+| 1 | Codex | pg's parsed URL overrides the explicit `ssl` object entirely |
+| 2 | `pr-precheck` | an allowlist with no `throw` on the else-branch: `no-verify` (a **real** mode) and any typo fell through to *plaintext*, where `main` had TLS |
+| 3 | Codex | pg percent-decodes query keys; the strip compared raw text (`%73slmode`) |
+| 4 | Codex | pg treats *any* `ssl*` parameter as a TLS request, not `sslmode` alone |
+| 5 | Codex | pg keeps the **last** duplicate parameter; `URLSearchParams.get` returns the first |
+
+Round 2 also fixed `sslcert`/`sslkey` being silently dropped and brought
+`config/memory.data-source.ts` inside the policy. Production was never affected by any of it
+(both URLs are `sslmode=disable`), which is exactly why unit tests, green builds and live
+dev-server checks passed over every one of these.
+
+The sixth version stopped patching and removed the second parser instead. Nothing to keep in
+sync, so the whole table above is unreachable by construction rather than by vigilance.
+
+Tests: backend 224/224 (24 connection + 7 freshness integration), frontend 7/7 (3 new),
+lint 142 warnings (baseline 146), both builds green. Verified live on dev `:3002`: app DB and
+memory/pgvector both connect with explicit fields, real queries served through each.
+
 ### Still open from the follow-up audit
 
-**HN3** DB TLS `rejectUnauthorized: false` — literally true but *not* a live High: prod
-`DATABASE_URL` is `localhost` with `sslmode=disable`, so TLS never engages. Fix as a safe
-default before the DB ever moves off-box. **MN2** email case-sensitivity, **MN3** Spanish
-(missing `admin`/`memory` namespaces *and* `api.ts` maps every non-`en` locale to `pt`),
-**MN4** readiness staleness fails open, **MN5** no AI cost limiter, **MN6** unvalidated
-`actionUrl` → `window.location.href`. All confirmed in source; none started.
+**MN2** email case-sensitivity (needs a collision check + an `ALTER` on the shared dev/prod
+DB — pair it with the pending `LockedUntilTimestamptz` window), **MN3** Spanish (missing
+`admin`/`memory` namespaces *and* `api.ts` maps every non-`en` locale to `pt`), **MN5** no AI
+cost limiter (wants a decision on budgets and whether a completed run may be re-run at all).
+All confirmed in source; none started.
 
 ### Traps this round added
 
+- **Never let two parsers read the same input.** Five blocking reviews on one file, four of
+  them the same mistake: we re-derived node-postgres' URL rules by hand and were wrong about
+  percent-encoding, duplicate precedence, and which parameters imply TLS. Re-implementing a
+  library's parsing is unbounded work with no signal when you are done. Borrow the library's
+  own parser and pass its output on — then there is no second reading to disagree with.
+- **Forwarding "the rest" of a config is an override channel.** TypeORM applies `extra` after
+  its own fields, so anything passed through blindly can replace the host, credentials or TLS
+  that were just resolved. Allowlist what gets forwarded; a blocklist only covers the aliases
+  you thought of.
+- **After expensive work succeeds, nothing may fail the request.** A transient read after a
+  ~25s agent run threw a 500 for work that was already persisted, and the client's retry would
+  have paid for a second run. Post-success steps degrade the response; they do not fail it.
+- **"I just made it" is not a freshness check.** `createRun` asserted `freshness: 'current'`
+  because the plan was newly generated — but the fingerprint is taken before the agents run,
+  so an edit during those ~25s leaves the plan stale the moment it is returned. Any endpoint
+  that reports a verified property must run the verification, even the one that produced it.
+- **An allowlist needs a `throw` on the else-branch, not a default.** Narrowing what you
+  accept turns every unrecognised-but-valid input into whatever the fallback is; ours was
+  "no TLS", which downgraded working encrypted connections.
 - `bookings.holdPlacedAt`/`startedAt` are `timestamp without time zone` — the `lockedUntil`
   bug's column type. A JS `Date` through the driver uses the **node** clock while `NOW()` uses
   the **database's** (7h apart locally). Stamp and compare server-side, or don't compare.

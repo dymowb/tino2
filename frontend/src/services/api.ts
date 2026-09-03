@@ -128,11 +128,18 @@ export interface ReadinessPlan {
   unavailableSections: string[];
 }
 
+/**
+ * `unknown` means freshness could not be evaluated — never that the plan is
+ * current. Treat it as unsafe to rely on.
+ */
+export type ReadinessFreshness = 'current' | 'stale' | 'unknown';
+
 export interface ReadinessRunResponse {
   runId: string;
   status: string;
   plan: ReadinessPlan | null;
-  /** True when the booking changed after the plan was generated. */
+  freshness: ReadinessFreshness;
+  /** Legacy two-state view of `freshness`: true for both stale and unknown. */
   stale: boolean;
 }
 
