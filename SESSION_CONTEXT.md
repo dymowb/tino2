@@ -62,13 +62,17 @@ LN1 is likewise noise: its environment clock was a day behind, not the report.
 Branch `fix/audit-hn3-mn4-mn6`. One theme: each was a default that answered "I could not
 verify" with "everything is fine".
 
-- **HN3 — DB TLS.** All three data sources now build `ssl` through `config/databaseSsl.ts`.
-  TLS follows the connection string (`sslmode=disable` → off, so **prod is byte-for-byte
-  unchanged** — both prod URLs carry it), and whenever TLS *is* used the peer is verified.
-  CA via `DATABASE_SSL_CA`/`DATABASE_SSL_CA_FILE`; a configured-but-unreadable CA throws
-  rather than falling back to the system store. `DATABASE_SSL_ALLOW_UNAUTHORIZED=true` is a
-  dev-only escape hatch that **throws at import in production**. Deliberately stricter than
-  libpq: `sslmode=require` verifies here.
+- **HN3 — DB TLS.** The connection string is parsed **once, by pg's own parser**
+  (`config/databaseConnection.ts`), and handed to TypeORM as explicit
+  `host`/`port`/`username`/`password`/`database` + `ssl`. **No `connectionString` reaches
+  pg**, so nothing can re-parse it and overwrite the policy. TLS still follows what the URL
+  said (`sslmode=disable` → off, so **prod is unchanged** — both prod URLs carry it), but the
+  question is answered from pg's parsed output, never from a second reading of the text.
+  Whenever TLS is used the peer is verified; CA from `DATABASE_SSL_CA`/`_CA_FILE` or the
+  URL's `sslrootcert`; `no-verify` and `DATABASE_SSL_ALLOW_UNAUTHORIZED` are dev-only and
+  **throw in production**; an unrecognised `sslmode` or a `sslcert`/`sslkey` this config
+  cannot honour throws rather than dropping TLS. All four data sources use it, including the
+  memory TypeORM CLI one.
 - **MN4 — readiness freshness.** `stale: boolean` became
   `freshness: 'current' | 'stale' | 'unknown'`, and a failed reload or snapshot rebuild
   reports `unknown`, never `current`. A booking that no longer exists is `stale`. `stale` is
@@ -79,49 +83,33 @@ verify" with "everything is fine".
   accept only a single-leading-slash same-origin path. Rejects absolute URLs, `//host`,
   `/\host`, any scheme, control characters. The bell falls back to `/notifications`.
 
-**Round 2 — Codex blocked HN3, correctly, and the fix was dead code as written.** TypeORM's
-`PostgresDriver.createPool` hands pg **both** `connectionString` and `ssl`, and pg's
-`ConnectionParameters` does `Object.assign({}, config, parse(connectionString))` — the parsed
-URL wins. `pg-connection-string` sets `config.ssl` as soon as the URL carries any `ssl*`
-parameter, so `sslmode=require` **replaced** our options object: the configured CA was
-discarded and verification became pg's setting, not ours. `buildDatabaseSsl` is now
-`buildDatabaseConnection`, returning `{ url, ssl }` with every `ssl*` parameter stripped from
-the URL, so the options object is the single authority. Five new tests assert on what pg
-*actually* ends up with, through pg's own `ConnectionParameters`.
+### HN3 took five blocking reviews, and four of them were one mistake
 
-Production was never affected (both URLs are `sslmode=disable` → `false` either way), which is
-exactly why nine unit tests, a green build and a live dev-server check all passed over it.
+The first four attempts all kept handing TypeORM the URL *and* an `ssl` object. pg merges the
+parsed connection string **over** the explicit config
+(`Object.assign({}, config, parse(connectionString))`), so the URL always won; the repair —
+sanitising the URL first — meant re-deriving pg's parsing rules by hand, and each round found
+another rule that had been derived wrong:
 
-**Round 3 — the new `pr-precheck` agent caught a fail-open the round-2 fix introduced.**
-`sslmode=no-verify` is a **real** node-postgres mode, and `sslmode=required` is a plausible
-typo; neither was in the allowlist, so both returned `ssl: false` — and because round 2 now
-strips `sslmode` from the URL, pg's parser could no longer rescue them. On `main` those URLs
-connected over TLS; after round 2 they would have connected in **plaintext**. Now: `no-verify`
-maps onto the escape hatch (refused in production), an unrecognised mode **throws**, and an
-`ssl*` parameter the options object cannot express (`sslcert`/`sslkey`) throws rather than
-being silently dropped. `sslrootcert` is honoured as a CA source, since stripping it would
-otherwise discard it. `config/memory.data-source.ts` (the TypeORM CLI one) was the last
-PostgreSQL data source outside the policy and is now inside it.
+| Round | Found by | The divergence |
+|---|---|---|
+| 1 | Codex | pg's parsed URL overrides the explicit `ssl` object entirely |
+| 2 | `pr-precheck` | an allowlist with no `throw` on the else-branch: `no-verify` (a **real** mode) and any typo fell through to *plaintext*, where `main` had TLS |
+| 3 | Codex | pg percent-decodes query keys; the strip compared raw text (`%73slmode`) |
+| 4 | Codex | pg treats *any* `ssl*` parameter as a TLS request, not `sslmode` alone |
+| 5 | Codex | pg keeps the **last** duplicate parameter; `URLSearchParams.get` returns the first |
 
-**Round 4 — Codex again, on the seam between two parsers *inside* the new module.**
-`assertNoUnsupportedSslParams` and `sslModeOf` read keys through `URLSearchParams`, which
-percent-decodes them, while `stripSslParams` compared raw query text. `?%73slmode=require` is
-therefore `sslmode` to this module **and to pg**, but was not stripped — so pg overrode the
-options object and discarded the configured CA, the exact override round 2 existed to stop.
-Stripping now compares the decoded name (`+` → space, malformed escapes fall back to raw).
+Round 2 also fixed `sslcert`/`sslkey` being silently dropped and brought
+`config/memory.data-source.ts` inside the policy. Production was never affected by any of it
+(both URLs are `sslmode=disable`), which is exactly why unit tests, green builds and live
+dev-server checks passed over every one of these.
 
-**Round 5 — Codex, same seam once more.** A URL carrying `sslrootcert` and **no** `sslmode`
-returned `ssl: false` in development, and the strip then removed the CA: pg would have
-connected with verified TLS, we connected in plaintext. The "whether TLS" decision read only
-`sslmode`, while pg's own rule is *any* `ssl*` parameter. Fixed to match pg's rule, with
-`sslmode=disable` still outranking everything.
+The sixth version stopped patching and removed the second parser instead. Nothing to keep in
+sync, so the whole table above is unreachable by construction rather than by vigilance.
 
-Tests: backend 221/221 (24 SSL + 4 new freshness integration), frontend 7/7 (3 new),
-lint 142 warnings (baseline 146), both builds green. Verified live against dev `:3002` on the
-real app DB: freshness `stale` → forced `unknown` → back to `stale`, drawer copy correct in EN
-and PT; every one of the demo customer's 233 notification URLs temporarily rewritten to
-`https://evil.example/phish` — the centre stayed on `/notifications`, the bell fell back —
-then restored from a backup (0 rows left tampered, readiness flag back to `false`).
+Tests: backend 219/219 (22 connection + 4 freshness integration), frontend 7/7 (3 new),
+lint 142 warnings (baseline 146), both builds green. Verified live on dev `:3002`: app DB and
+memory/pgvector both connect with explicit fields, real queries served through each.
 
 ### Still open from the follow-up audit
 
@@ -133,25 +121,14 @@ All confirmed in source; none started.
 
 ### Traps this round added
 
-- **Five rounds on one file, each fix creating the next defect — the HN2 shape again.** All
-  five were the same root cause: *the connection string is parsed twice, by us and by pg, and
-  every rule we do not replicate exactly is a divergence.* Replicating a library's parsing
-  rules by hand is an unbounded game. The version that ends it is to stop passing a URL to
-  TypeORM at all — parse it once, hand over explicit `host`/`port`/`username`/`password`/
-  `database` plus `ssl`, and leave no second parser to disagree with. **Not done: it changes
-  how every data source connects and wants a deliberate window.**
-- **Two parsers in one module will disagree.** `URLSearchParams` decodes query keys and so
-  does pg; comparing raw text anywhere in the same flow reopens the gap. Decide once what a
-  parameter *name* is, and route every comparison through it.
-- **Narrowing what you accept is a downgrade unless the rejected case fails loudly.**
-  Replacing a permissive parser with an allowlist turned two real inputs (`sslmode=no-verify`,
-  and any typo) from "TLS" into "plaintext", because the unrecognised branch returned `false`.
-  An allowlist needs a `throw` on the else-branch, not a default.
-- **A config object is not a decision until you check what consumes it.** pg merges the
-  parsed connection string **over** the explicit config, so any `ssl*` parameter in
-  `DATABASE_URL` silently overrides the `ssl` object TypeORM was given. Unit-testing the
-  builder proved only what it *returns*. Assert through the consumer (`pg/lib/connection-parameters`)
-  whenever two inputs can express the same setting.
+- **Never let two parsers read the same input.** Five blocking reviews on one file, four of
+  them the same mistake: we re-derived node-postgres' URL rules by hand and were wrong about
+  percent-encoding, duplicate precedence, and which parameters imply TLS. Re-implementing a
+  library's parsing is unbounded work with no signal when you are done. Borrow the library's
+  own parser and pass its output on — then there is no second reading to disagree with.
+- **An allowlist needs a `throw` on the else-branch, not a default.** Narrowing what you
+  accept turns every unrecognised-but-valid input into whatever the fallback is; ours was
+  "no TLS", which downgraded working encrypted connections.
 - `bookings.holdPlacedAt`/`startedAt` are `timestamp without time zone` — the `lockedUntil`
   bug's column type. A JS `Date` through the driver uses the **node** clock while `NOW()` uses
   the **database's** (7h apart locally). Stamp and compare server-side, or don't compare.

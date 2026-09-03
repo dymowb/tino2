@@ -6,7 +6,7 @@ import { EpisodicMemory } from '../models/memory/EpisodicMemory';
 import { ProceduralRule } from '../models/memory/ProceduralRule';
 import { MemoryRetrievalLog } from '../models/memory/MemoryRetrievalLog';
 import { MemoryWriteLog } from '../models/memory/MemoryWriteLog';
-import { buildDatabaseConnection } from './databaseSsl';
+import { buildDatabaseConnection } from './databaseConnection';
 
 dotenv.config();
 
@@ -17,8 +17,13 @@ const connection = buildDatabaseConnection(process.env.MEMORY_DATABASE_URL);
 
 export default new DataSource({
   type: 'postgres',
-  url: connection.url,
+  host: connection.host,
+  port: connection.port,
+  username: connection.username,
+  password: connection.password,
+  database: connection.database,
   ssl: connection.ssl,
+  extra: connection.extra,
   synchronize: false,
   logging: false,
   entities: [SemanticMemory, EpisodicMemory, ProceduralRule, MemoryRetrievalLog, MemoryWriteLog],

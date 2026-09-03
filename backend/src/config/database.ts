@@ -1,15 +1,19 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
-import { buildDatabaseConnection } from './databaseSsl';
+import { buildDatabaseConnection } from './databaseConnection';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-// One authority on TLS: the URL is stripped of its own `ssl*` parameters so pg
-// cannot re-derive an `ssl` config that overwrites the one below.
+// The connection string is parsed once, here, and handed over as explicit fields.
+// No `connectionString` reaches pg, so nothing can re-parse it and overwrite `ssl`.
 const connection = buildDatabaseConnection(process.env.DATABASE_URL, isProduction);
 
 const options: DataSourceOptions = {
   type: 'postgres',
-  url: connection.url,
+  host: connection.host,
+  port: connection.port,
+  username: connection.username,
+  password: connection.password,
+  database: connection.database,
   synchronize: false,
   logging: !isProduction && process.env.NODE_ENV !== 'test',
   entities: [__dirname + '/../models/' + (isProduction ? '*.js' : '*.ts')],
@@ -19,6 +23,7 @@ const options: DataSourceOptions = {
   ssl: connection.ssl,
   poolSize: 20,
   extra: {
+    ...connection.extra,
     connectionTimeoutMillis: 10000,
     idleTimeoutMillis: 30000,
     max: 20,
