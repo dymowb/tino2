@@ -63,10 +63,18 @@ export class ReadinessController {
 
       const { runId, plan, status } = await runBookingReadiness(booking, userId, role);
 
+      // The snapshot is fingerprinted *before* a multi-second agent run, so the
+      // booking can change while the plan is being built. Claiming `current` here
+      // because the plan is newly made would report a fingerprint nobody checked —
+      // so the freshly stored run goes through the same evaluation as a read.
+      const stored = await workflowRepository.findById(runId);
       const response: ApiResponse = {
         success: true,
-        // Just generated from the current snapshot, so freshness is not in doubt.
-        data: { runId, status, plan, freshness: 'current', stale: false },
+        data: stored
+          ? await this.present(stored, role)
+          : // Written a moment ago and already unreadable: freshness is unverifiable,
+            // which is exactly what `unknown` is for.
+            { runId, status, plan, freshness: 'unknown' as ReadinessFreshness, stale: true },
       };
       res.status(201).json(response);
     } catch (error) {

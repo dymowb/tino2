@@ -77,7 +77,10 @@ verify" with "everything is fine".
   `freshness: 'current' | 'stale' | 'unknown'`, and a failed reload or snapshot rebuild
   reports `unknown`, never `current`. A booking that no longer exists is `stale`. `stale` is
   kept as `freshness !== 'current'` so an older client degrades to the warning, not to false
-  confidence. New EN/PT/ES copy `readiness.freshness_unknown`.
+  confidence. New EN/PT/ES copy `readiness.freshness_unknown`. **The create endpoint evaluates
+  freshness too** rather than claiming `current` because the plan is new: the fingerprint is
+  taken *before* a ~25s agent run, so a booking edited during generation is already stale on
+  arrival.
 - **MN6 — `actionUrl`.** New `frontend/src/utils/internalPath.ts`; both `NotificationCenter`
   (which assigned it to `window.location.href` — now `navigate()`) and `NotificationBadge`
   accept only a single-leading-slash same-origin path. Rejects absolute URLs, `//host`,
@@ -107,7 +110,7 @@ dev-server checks passed over every one of these.
 The sixth version stopped patching and removed the second parser instead. Nothing to keep in
 sync, so the whole table above is unreachable by construction rather than by vigilance.
 
-Tests: backend 219/219 (22 connection + 4 freshness integration), frontend 7/7 (3 new),
+Tests: backend 221/221 (22 connection + 6 freshness integration), frontend 7/7 (3 new),
 lint 142 warnings (baseline 146), both builds green. Verified live on dev `:3002`: app DB and
 memory/pgvector both connect with explicit fields, real queries served through each.
 
@@ -126,6 +129,10 @@ All confirmed in source; none started.
   percent-encoding, duplicate precedence, and which parameters imply TLS. Re-implementing a
   library's parsing is unbounded work with no signal when you are done. Borrow the library's
   own parser and pass its output on — then there is no second reading to disagree with.
+- **"I just made it" is not a freshness check.** `createRun` asserted `freshness: 'current'`
+  because the plan was newly generated — but the fingerprint is taken before the agents run,
+  so an edit during those ~25s leaves the plan stale the moment it is returned. Any endpoint
+  that reports a verified property must run the verification, even the one that produced it.
 - **An allowlist needs a `throw` on the else-branch, not a default.** Narrowing what you
   accept turns every unrecognised-but-valid input into whatever the fallback is; ours was
   "no TLS", which downgraded working encrypted connections.

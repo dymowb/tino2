@@ -6,6 +6,7 @@ import { User, UserType } from '@/models/User';
 import { AgentWorkflowRun, WorkflowRunStatus } from '@/models/AgentWorkflowRun';
 import { workflowRepository } from '@/agents/workflows/shared/WorkflowRepository';
 import * as snapshotService from '@/agents/workflows/booking-readiness/snapshot.service';
+import * as coordinator from '@/agents/workflows/booking-readiness/coordinator';
 import {
   READINESS_SCHEMA_VERSION,
   READINESS_SUBJECT_TYPE,
@@ -91,6 +92,54 @@ describe('readiness freshness', () => {
     await readinessController.getLatest(req, res);
     expect(json).toHaveBeenCalledTimes(1);
     return json.mock.calls[0][0].data;
+  };
+
+  const createRun = async (): Promise<{
+    status: number;
+    data: { freshness: string; stale: boolean };
+  }> => {
+    const req = {
+      params: { bookingId: booking.id },
+      user: { userId: customer.id },
+      headers: {},
+    } as unknown as AuthenticatedRequest;
+
+    const json = jest.fn();
+    let status = 200;
+    const res = {
+      json,
+      status: jest.fn((code: number) => {
+        status = code;
+        return { json };
+      }),
+    } as never;
+
+    await readinessController.createRun(req, res);
+    expect(json).toHaveBeenCalledTimes(1);
+    return { status, data: json.mock.calls[0][0].data };
+  };
+
+  /**
+   * Stands in for the real workflow: it stores a completed run fingerprinted from
+   * the booking as it was when the run began, which is what the coordinator does
+   * before spending ~25s in the agents.
+   */
+  const stubWorkflow = (options: { changeBookingDuringRun: boolean }): void => {
+    jest.spyOn(coordinator, 'runBookingReadiness').mockImplementation(async () => {
+      const run = await storeCurrentRun();
+
+      if (options.changeBookingDuringRun) {
+        await AppDataSource.getRepository(Booking).update(booking.id, {
+          scheduledDate: new Date(Date.now() + 9 * 86_400_000),
+        });
+      }
+
+      return {
+        runId: run.id,
+        plan: (await workflowRepository.findById(run.id))!.output as ReadinessPlan,
+        status: WorkflowRunStatus.COMPLETED,
+      };
+    });
   };
 
   // setup.ts truncates every table in a global beforeEach, so fixtures are
@@ -194,6 +243,27 @@ describe('readiness freshness', () => {
     // be answered with `current` — that is the fail-open this test exists for.
     expect(data.freshness).toBe('unknown');
     expect(data.stale).toBe(true);
+  });
+
+  it('does not call a freshly generated plan current without checking', async () => {
+    // The fingerprint is taken before the agents run. A booking edited while the
+    // plan was being built leaves it already out of date on arrival, and saying
+    // "just generated, so current" would report a fingerprint nobody compared.
+    stubWorkflow({ changeBookingDuringRun: true });
+
+    const { status, data } = await createRun();
+    expect(status).toBe(201);
+    expect(data.freshness).toBe('stale');
+    expect(data.stale).toBe(true);
+  });
+
+  it('reports current from the create endpoint when nothing changed during the run', async () => {
+    stubWorkflow({ changeBookingDuringRun: false });
+
+    const { status, data } = await createRun();
+    expect(status).toBe(201);
+    expect(data.freshness).toBe('current');
+    expect(data.stale).toBe(false);
   });
 
   it('reports unknown when the booking cannot be reloaded', async () => {
