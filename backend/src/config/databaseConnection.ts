@@ -55,6 +55,30 @@ const TLS_MODES = new Set(['allow', 'prefer', 'require', 'verify-ca', 'verify-fu
  */
 const UNVERIFIED_MODE = 'no-verify';
 
+/**
+ * Parameters that are safe to hand the driver as-is.
+ *
+ * This is an allowlist rather than a blocklist because TypeORM merges `extra`
+ * **last** (`Object.assign({}, { connectionString, host, ssl, … }, options.extra)`),
+ * so anything forwarded here outranks the fields resolved above. A URL carrying
+ * `?connectionString=postgres://elsewhere/db?sslmode=no-verify` would otherwise
+ * reach pg through `extra`, get re-parsed, and replace both the host and the TLS
+ * policy — the very invariant this module exists to hold.
+ */
+const FORWARDED_PARAMS = new Set([
+  'application_name',
+  'fallback_application_name',
+  'client_encoding',
+  'options',
+  'connect_timeout',
+  'keepalives',
+  'keepalives_idle',
+  'statement_timeout',
+  'query_timeout',
+  'idle_in_transaction_session_timeout',
+  'lock_timeout',
+]);
+
 /** Keys this module consumes, so they are never forwarded to the driver twice. */
 const CONSUMED_KEYS = new Set([
   'host',
@@ -191,6 +215,18 @@ export const buildDatabaseConnection = (
   const extra: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(parsed)) {
     if (CONSUMED_KEYS.has(key) || value === undefined || value === null) continue;
+
+    // Unknown parameters are refused rather than passed through or quietly dropped:
+    // passing one on can override the connection this module just resolved, and
+    // dropping one silently is how a configured setting disappears unnoticed.
+    if (!FORWARDED_PARAMS.has(key)) {
+      throw new Error(
+        `The database connection string sets "${key}", which this configuration does not ` +
+          'support. Remove it, or add it to the forwarded-parameter allowlist in ' +
+          'config/databaseConnection.ts if the driver should receive it.'
+      );
+    }
+
     extra[key] = value;
   }
 

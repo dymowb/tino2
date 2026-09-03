@@ -71,8 +71,10 @@ verify" with "everything is fine".
   Whenever TLS is used the peer is verified; CA from `DATABASE_SSL_CA`/`_CA_FILE` or the
   URL's `sslrootcert`; `no-verify` and `DATABASE_SSL_ALLOW_UNAUTHORIZED` are dev-only and
   **throw in production**; an unrecognised `sslmode` or a `sslcert`/`sslkey` this config
-  cannot honour throws rather than dropping TLS. All four data sources use it, including the
-  memory TypeORM CLI one.
+  cannot honour throws rather than dropping TLS. Remaining libpq parameters reach the driver
+  through an **allowlist**, because TypeORM merges `extra` *last*: a forwarded
+  `?connectionString=…` would otherwise outrank the resolved host and TLS policy and be
+  re-parsed by pg. All four data sources use it, including the memory TypeORM CLI one.
 - **MN4 — readiness freshness.** `stale: boolean` became
   `freshness: 'current' | 'stale' | 'unknown'`, and a failed reload or snapshot rebuild
   reports `unknown`, never `current`. A booking that no longer exists is `stale`. `stale` is
@@ -110,7 +112,7 @@ dev-server checks passed over every one of these.
 The sixth version stopped patching and removed the second parser instead. Nothing to keep in
 sync, so the whole table above is unreachable by construction rather than by vigilance.
 
-Tests: backend 221/221 (22 connection + 6 freshness integration), frontend 7/7 (3 new),
+Tests: backend 223/223 (24 connection + 6 freshness integration), frontend 7/7 (3 new),
 lint 142 warnings (baseline 146), both builds green. Verified live on dev `:3002`: app DB and
 memory/pgvector both connect with explicit fields, real queries served through each.
 
@@ -129,6 +131,10 @@ All confirmed in source; none started.
   percent-encoding, duplicate precedence, and which parameters imply TLS. Re-implementing a
   library's parsing is unbounded work with no signal when you are done. Borrow the library's
   own parser and pass its output on — then there is no second reading to disagree with.
+- **Forwarding "the rest" of a config is an override channel.** TypeORM applies `extra` after
+  its own fields, so anything passed through blindly can replace the host, credentials or TLS
+  that were just resolved. Allowlist what gets forwarded; a blocklist only covers the aliases
+  you thought of.
 - **"I just made it" is not a freshness check.** `createRun` asserted `freshness: 'current'`
   because the plan was newly generated — but the fingerprint is taken before the agents run,
   so an edit during those ~25s leaves the plan stale the moment it is returned. Any endpoint

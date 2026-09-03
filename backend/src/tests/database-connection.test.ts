@@ -71,6 +71,27 @@ describe('buildDatabaseConnection', () => {
       expect(connection.extra).toEqual({ application_name: 'tino' });
     });
 
+    it('refuses a parameter that would override the resolved connection', () => {
+      // TypeORM merges `extra` last, so a forwarded `connectionString` outranks the
+      // host, credentials and TLS policy resolved above — pg re-parses it and
+      // connects somewhere else, unverified.
+      expect(() =>
+        buildDatabaseConnection(
+          'postgresql://trusted/db?connectionString=postgresql://other/db%3Fsslmode=no-verify',
+          false
+        )
+      ).toThrow(/does not support/);
+    });
+
+    it('refuses an unrecognised parameter rather than dropping it', () => {
+      expect(() =>
+        buildDatabaseConnection(
+          'postgresql://u:p@localhost:5432/app?target_session_attrs=any',
+          false
+        )
+      ).toThrow(/does not support/);
+    });
+
     it('returns nothing to connect to when no URL is configured', () => {
       expect(buildDatabaseConnection(undefined, true)).toEqual({ ssl: false, extra: {} });
     });
