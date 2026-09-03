@@ -82,7 +82,9 @@ verify" with "everything is fine".
   confidence. New EN/PT/ES copy `readiness.freshness_unknown`. **The create endpoint evaluates
   freshness too** rather than claiming `current` because the plan is new: the fingerprint is
   taken *before* a ~25s agent run, so a booking edited during generation is already stale on
-  arrival.
+  arrival. Nothing after the run may fail the request: if the stored run cannot be read back,
+  the response carries the coordinator's own plan with `freshness: 'unknown'` rather than a
+  500 that invites a retry paying for a second Opus run.
 - **MN6 — `actionUrl`.** New `frontend/src/utils/internalPath.ts`; both `NotificationCenter`
   (which assigned it to `window.location.href` — now `navigate()`) and `NotificationBadge`
   accept only a single-leading-slash same-origin path. Rejects absolute URLs, `//host`,
@@ -112,7 +114,7 @@ dev-server checks passed over every one of these.
 The sixth version stopped patching and removed the second parser instead. Nothing to keep in
 sync, so the whole table above is unreachable by construction rather than by vigilance.
 
-Tests: backend 223/223 (24 connection + 6 freshness integration), frontend 7/7 (3 new),
+Tests: backend 224/224 (24 connection + 7 freshness integration), frontend 7/7 (3 new),
 lint 142 warnings (baseline 146), both builds green. Verified live on dev `:3002`: app DB and
 memory/pgvector both connect with explicit fields, real queries served through each.
 
@@ -135,6 +137,9 @@ All confirmed in source; none started.
   its own fields, so anything passed through blindly can replace the host, credentials or TLS
   that were just resolved. Allowlist what gets forwarded; a blocklist only covers the aliases
   you thought of.
+- **After expensive work succeeds, nothing may fail the request.** A transient read after a
+  ~25s agent run threw a 500 for work that was already persisted, and the client's retry would
+  have paid for a second run. Post-success steps degrade the response; they do not fail it.
 - **"I just made it" is not a freshness check.** `createRun` asserted `freshness: 'current'`
   because the plan was newly generated — but the fingerprint is taken before the agents run,
   so an edit during those ~25s leaves the plan stale the moment it is returned. Any endpoint

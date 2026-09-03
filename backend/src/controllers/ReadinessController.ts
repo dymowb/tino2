@@ -11,6 +11,7 @@ import {
 } from '@/agents/workflows/shared/WorkflowRepository';
 import {
   applyRoleFilter,
+  ReadinessRunResult,
   runBookingReadiness,
 } from '@/agents/workflows/booking-readiness/coordinator';
 import {
@@ -61,26 +62,53 @@ export class ReadinessController {
       const { booking, role } = await authorizeBooking(req.params.bookingId, userId);
       assertEligible(booking);
 
-      const { runId, plan, status } = await runBookingReadiness(booking, userId, role);
+      const result = await runBookingReadiness(booking, userId, role);
 
       // The snapshot is fingerprinted *before* a multi-second agent run, so the
       // booking can change while the plan is being built. Claiming `current` here
       // because the plan is newly made would report a fingerprint nobody checked —
       // so the freshly stored run goes through the same evaluation as a read.
-      const stored = await workflowRepository.findById(runId);
-      const response: ApiResponse = {
-        success: true,
-        data: stored
-          ? await this.present(stored, role)
-          : // Written a moment ago and already unreadable: freshness is unverifiable,
-            // which is exactly what `unknown` is for.
-            { runId, status, plan, freshness: 'unknown' as ReadinessFreshness, stale: true },
-      };
+      //
+      // The work is already done and persisted by this point, so nothing after it may
+      // fail the request: a 500 here would invite a retry that pays for another Opus
+      // run to rebuild a plan that already exists. An unverifiable freshness is
+      // reported as `unknown`, which is what the field is for.
+      const response: ApiResponse = { success: true, data: await this.presentFresh(result, role) };
       res.status(201).json(response);
     } catch (error) {
       this.handleError(req, res, error, 'create readiness run');
     }
   };
+
+  /**
+   * Reads back a run that has just been persisted, degrading to `unknown` freshness
+   * rather than failing the request it completed.
+   */
+  private async presentFresh(result: ReadinessRunResult, role: ReadinessRole) {
+    try {
+      const stored = await workflowRepository.findById(result.runId);
+      if (stored) return await this.present(stored, role);
+      logger.warn('Readiness run could not be read back after completing', {
+        runId: result.runId,
+      });
+    } catch (error) {
+      logger.warn('Readiness run could not be read back after completing', {
+        runId: result.runId,
+        error,
+      });
+    }
+
+    // The coordinator's own return value, already role-filtered. Its freshness is
+    // the one thing that could not be established, so it is reported as `unknown`
+    // rather than the request being failed over work that succeeded.
+    return {
+      runId: result.runId,
+      status: result.status,
+      plan: result.plan,
+      freshness: 'unknown' as ReadinessFreshness,
+      stale: true,
+    };
+  }
 
   /** GET /bookings/:bookingId/readiness-runs/latest */
   getLatest = async (req: AuthenticatedRequest, res: Response): Promise<void> => {

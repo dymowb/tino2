@@ -55,7 +55,7 @@ describe('readiness freshness', () => {
   });
 
   /** Stores a completed run whose fingerprint matches the booking as it is now. */
-  const storeCurrentRun = async (): Promise<AgentWorkflowRun> => {
+  const storeCurrentRun = async (): Promise<{ run: AgentWorkflowRun; plan: ReadinessPlan }> => {
     const fingerprint = snapshotService.snapshotFingerprint(
       await snapshotService.buildSnapshot(booking)
     );
@@ -66,13 +66,14 @@ describe('readiness freshness', () => {
       initiatedBy: customer.id,
       schemaVersion: READINESS_SCHEMA_VERSION,
     });
+    const stored = plan(fingerprint);
     await workflowRepository.complete(run.id, {
       status: WorkflowRunStatus.COMPLETED,
       sourceFingerprint: fingerprint,
-      output: plan(fingerprint),
+      output: stored,
       stageOutcomes: [],
     });
-    return run;
+    return { run, plan: stored };
   };
 
   const getLatest = async (): Promise<{
@@ -96,7 +97,7 @@ describe('readiness freshness', () => {
 
   const createRun = async (): Promise<{
     status: number;
-    data: { freshness: string; stale: boolean };
+    data: { freshness: string; stale: boolean; plan: ReadinessPlan | null };
   }> => {
     const req = {
       params: { bookingId: booking.id },
@@ -126,7 +127,7 @@ describe('readiness freshness', () => {
    */
   const stubWorkflow = (options: { changeBookingDuringRun: boolean }): void => {
     jest.spyOn(coordinator, 'runBookingReadiness').mockImplementation(async () => {
-      const run = await storeCurrentRun();
+      const { run, plan: stored } = await storeCurrentRun();
 
       if (options.changeBookingDuringRun) {
         await AppDataSource.getRepository(Booking).update(booking.id, {
@@ -134,11 +135,7 @@ describe('readiness freshness', () => {
         });
       }
 
-      return {
-        runId: run.id,
-        plan: (await workflowRepository.findById(run.id))!.output as ReadinessPlan,
-        status: WorkflowRunStatus.COMPLETED,
-      };
+      return { runId: run.id, plan: stored, status: WorkflowRunStatus.COMPLETED };
     });
   };
 
@@ -264,6 +261,22 @@ describe('readiness freshness', () => {
     expect(status).toBe(201);
     expect(data.freshness).toBe('current');
     expect(data.stale).toBe(false);
+  });
+
+  it('does not fail a completed run when it cannot be read back', async () => {
+    stubWorkflow({ changeBookingDuringRun: false });
+    // Fails only the read-back; the run itself was already stored by the stub.
+    jest
+      .spyOn(workflowRepository, 'findById')
+      .mockRejectedValue(new Error('db read failed after the run completed'));
+
+    // The expensive part already succeeded and is persisted. Failing the request
+    // here would invite a retry that pays for a second agent run.
+    const { status, data } = await createRun();
+    expect(status).toBe(201);
+    expect(data.freshness).toBe('unknown');
+    expect(data.stale).toBe(true);
+    expect(data.plan).not.toBeNull();
   });
 
   it('reports unknown when the booking cannot be reloaded', async () => {
