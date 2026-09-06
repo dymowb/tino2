@@ -3,7 +3,7 @@
 > Lean by design (per CLAUDE.md): current status + roadmap + resume point only.
 > Detailed completed-work notes live in `Tests/history/HISTORICAL_CONTEXT.md` and git history.
 
-## Current Status (2026-08-25) — Codex follow-up audit (`2026-08-16`), HN1 + HN2 merged
+## Current Status (2026-09-05) — Codex follow-up audit (`2026-08-16`), HN1–HN3 + MN4/MN6 merged
 
 Source: `docs/code-audits/2026-08-16-follow-up-code-analysis.md` (Codex, audited `3414f19`).
 12 new findings (3 high). Each spot-checked against source before acting; two were wrong as
@@ -57,9 +57,9 @@ while a manual-capture authorisation lives ~7 days, which I got wrong twice.
 Both were rebutted with evidence and the reviewer accepted. The date complaint in the audit's
 LN1 is likewise noise: its environment clock was a day behind, not the report.
 
-### In review — HN3 + MN4 + MN6, the three fail-open defaults
+### Merged — #35 `e901aa3`, HN3 + MN4 + MN6, the three fail-open defaults
 
-Branch `fix/audit-hn3-mn4-mn6`. One theme: each was a default that answered "I could not
+One theme: each was a default that answered "I could not
 verify" with "everything is fine".
 
 - **HN3 — DB TLS.** The connection string is parsed **once, by pg's own parser**
@@ -118,15 +118,98 @@ Tests: backend 224/224 (24 connection + 7 freshness integration), frontend 7/7 (
 lint 142 warnings (baseline 146), both builds green. Verified live on dev `:3002`: app DB and
 memory/pgvector both connect with explicit fields, real queries served through each.
 
+### In review — MN5, the AI cost budget
+
+Branch `fix/audit-mn5-ai-cost-budget`. Readiness POST had `authenticate` and nothing else: the
+only ceiling was the general limiter (100 requests / 15 min, counted across *all* API traffic),
+which bounds request volume, not cost. One authenticated account could spend on ~25s multi-agent
+Opus runs all day, and a completed plan could be regenerated forever for an unchanged booking.
+
+Three decisions taken with the user, then built:
+
+- **A completed run is reused, not repeated.** `POST` fingerprints the booking first and returns
+  the existing plan (`200`, `reused: true`) when nothing changed; any edit changes the
+  fingerprint and unlocks a new run on its own, so there is no cooldown to wait out. Only
+  `completed` runs with the current `schemaVersion` qualify — a degraded run must stay
+  retryable, and an old output contract must not be served after a release.
+- **10 runs / 24h per account, 200 / 24h platform-wide**, both env-overridable
+  (`AGENT_BUDGET_*`). Every row created in the window counts whatever it became: a failed run
+  still called the models. Reused plans never reach the claim, so they cost nothing.
+- **The platform ceiling refuses and alerts** (`429` + `Retry-After`, `logger.error` with
+  `alert: 'agent_budget_exhausted'`). Reads stay open, so existing plans are still viewable.
+
+The budget is claimed **before any model call**, in one transaction holding a per-workflow-type
+advisory lock. A rolling-window count cannot be enforced by a unique index, and without
+serialization two requests for *different* bookings both read "9 used" and both proceed. The
+lock is held for the milliseconds of counting and inserting, never across the run. A cheap
+in-memory limiter (`rateLimiters.agentRun`, 20 / 15 min per user) sits in front so hammering the
+endpoint cannot queue on that lock — deliberately well above the daily budget, so a user out of
+budget gets the message that says so rather than a generic rate-limit error.
+
+The budget also lives in the generic `WorkflowRepository`, not in readiness, because Quote
+Decision Council will want the same ceiling.
+
+Tests: backend 243/243 (19 new), frontend 11/11 (4 new), lint 142 (baseline), both builds green.
+Verified live on dev `:3002`: a real Opus run, then a second click served from cache with the
+agents never invoked (EN + PT); with the cap set to 1, a 429 with the right `Retry-After` and
+localized copy in both the toast and the inline alert, zero rows written, zero model calls.
+Production `:3000` untouched throughout.
+
+**Still open, and reported separately:** the axios response interceptor toasts only `data.error`,
+so every localized `t(req, …)` controller `message` — the ~93 strings from the WS3 i18n sweep —
+is replaced by raw English axios text. One line to fix, but it changes error toasts app-wide, so
+it was kept out of this PR.
+
 ### Still open from the follow-up audit
 
 **MN2** email case-sensitivity (needs a collision check + an `ALTER` on the shared dev/prod
-DB — pair it with the pending `LockedUntilTimestamptz` window), **MN3** Spanish (missing
-`admin`/`memory` namespaces *and* `api.ts` maps every non-`en` locale to `pt`), **MN5** no AI
-cost limiter (wants a decision on budgets and whether a completed run may be re-run at all).
-All confirmed in source; none started.
+DB — pair it with the pending `LockedUntilTimestamptz` window), **MN3** Spanish. Both confirmed
+in source; neither started.
 
-### Traps this round added
+**MN3 is bigger than the audit says.** It is not only the two missing namespaces
+(`admin` 177 keys, `memory` 29): Spanish is also short ~200 keys *inside* files it already has
+(`assistant` -38, `common` -26, `messages` -17, `profile` -15, `quotes` -11, `auth` -9,
+`reviews` -8, `providers` -7, `bookings` -1). And `backend/src/i18n/locales/` holds only
+`en.json` and `pt.json`, so there is **no Spanish server catalog at all** — forwarding `es`
+from `api.ts` has nothing to forward to until one exists. ~450 strings, not a patch.
+
+### Traps MN5 added
+
+- **The database writes `createdAt`, not TypeORM — and a JS `Date` parameter writes a different
+  zone.** `InsertQueryBuilder` emits a literal `DEFAULT` for a `@CreateDateColumn` it was given
+  no value for, so `agent_workflow_runs.createdAt` (`timestamp without time zone`) comes from the
+  DDL's `DEFAULT now()`, in the **database session's** zone. Any JavaScript `Date` bound as a
+  parameter — which is what `repository.update({ createdAt })` and a `:cutoff` placeholder both
+  send — is rendered in the **node process'** zone instead. Seven hours apart locally. This means
+  the *pre-existing* `reclaimExpiredLease` enforced a 15-minute lease as 7h15m — the `lockedUntil`
+  bug again, in the file that had just been reviewed. Every age and window comparison is now made
+  by the database against `COLUMN_NOW = now()::timestamp`, the same rendering the column's writer
+  uses, so it is correct under any session zone.
+- **Three rounds of *reasoning* about that column were wrong; the probe settled it in one.**
+  First guess: `save()` writes UTC digits (wrong — it writes nothing). Second: `timezone('UTC',
+  now())` makes the comparison zone-independent (wrong — it only works because this DB is UTC,
+  and it would be *worse* than what it replaced on a non-UTC session). Both were caught by
+  checking `InsertQueryBuilder` and a live database rather than by thinking harder. When a
+  column's semantics are in question, insert a row and read the stored text.
+- **Reading such a column back into JS re-skews it.** node-postgres parses a zoneless timestamp
+  in the node process' zone, so a row written moments ago reads back as one written hours from
+  now. The first `Retry-After` was 111600s instead of ≤86400 for exactly this reason. Compute
+  the interval in SQL; do not subtract the parsed `Date` from `Date.now()`.
+- **A fixture written with `update({ createdAt })` tests the wrong clock.** Backdate rows in SQL
+  (`now()::timestamp - interval …`) or the test ages them by the offset rather than by the
+  amount it names.
+- **A boundary test only discriminates on the side the local skew runs.** Node is *behind* the
+  database here, so a JS-`Date` cutoff makes every window **longer** — under which a 23h-in-24h
+  row and a 14min-in-15min lease both still pass against the bug. Only the tests on the far edge
+  (25h past a 24h window, 16min past a 15min lease) actually fail. The pre-check caught two of
+  mine claiming to guard something they could not; each was verified by reverting the fix and
+  re-running, which is the only way to know a test bites.
+- **A `catch`-free budget still fails open through `NaN`.** `COUNT(*)` arrives as a string and
+  `Number(undefined)` is `NaN`; every comparison against `NaN` is false, so an unreadable count
+  is not a smaller budget, it is no budget. Same for a mistyped `AGENT_BUDGET_*` env — which now
+  throws at boot rather than parsing to `NaN`.
+
+### Traps the HN3/MN4/MN6 round added
 
 - **Never let two parsers read the same input.** Five blocking reviews on one file, four of
   them the same mistake: we re-derived node-postgres' URL rules by hand and were wrong about

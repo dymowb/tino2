@@ -113,5 +113,8 @@
   "provider.deactivated": "Provider profile deactivated successfully",
   "provider.deactivate_failed": "Failed to deactivate provider profile",
   "provider.dashboard_stats_failed": "Failed to fetch dashboard statistics",
-  "provider.catalog_failed": "Failed to load service catalog"
+  "provider.catalog_failed": "Failed to load service catalog",
+  "readiness.budget_exhausted_user": "You have used all of your AI readiness runs for now. Existing plans are still available; you can generate a new one once your daily limit resets.",
+  "readiness.budget_exhausted_platform": "AI readiness runs are temporarily unavailable while the platform limit resets. Existing plans are still available.",
+  "readiness.rate_limited": "Too many AI readiness requests in a short time. Please wait a moment and try again."
 }

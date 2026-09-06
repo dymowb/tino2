@@ -8,6 +8,7 @@ import { AgentWorkflowRun, WorkflowRunStatus } from '@/models/AgentWorkflowRun';
 import {
   workflowRepository,
   WorkflowAlreadyRunningError,
+  WorkflowBudgetExceededError,
 } from '@/agents/workflows/shared/WorkflowRepository';
 import {
   applyRoleFilter,
@@ -23,6 +24,7 @@ import {
   snapshotFingerprint,
 } from '@/agents/workflows/booking-readiness/snapshot.service';
 import {
+  READINESS_SCHEMA_VERSION,
   READINESS_SUBJECT_TYPE,
   READINESS_WORKFLOW_TYPE,
   ReadinessFreshness,
@@ -62,7 +64,30 @@ export class ReadinessController {
       const { booking, role } = await authorizeBooking(req.params.bookingId, userId);
       assertEligible(booking);
 
-      const result = await runBookingReadiness(booking, userId, role);
+      // Fingerprint first. A run is only worth paying for when the booking has
+      // actually changed since the last one, so an unchanged booking is served
+      // its existing plan instead of a second ~25s Opus run that would produce
+      // the same answer. Any edit changes the fingerprint and unlocks a new run
+      // on its own — there is no cooldown to wait out.
+      const snapshot = await buildSnapshot(booking);
+      const fingerprint = snapshotFingerprint(snapshot);
+
+      const reusable = await workflowRepository.findReusable(
+        READINESS_WORKFLOW_TYPE,
+        READINESS_SUBJECT_TYPE,
+        booking.id,
+        fingerprint,
+        READINESS_SCHEMA_VERSION
+      );
+      if (reusable) {
+        res.status(200).json({
+          success: true,
+          data: { ...(await this.present(reusable, role)), reused: true },
+        });
+        return;
+      }
+
+      const result = await runBookingReadiness(booking, userId, role, snapshot);
 
       // The snapshot is fingerprinted *before* a multi-second agent run, so the
       // booking can change while the plan is being built. Claiming `current` here
@@ -73,7 +98,10 @@ export class ReadinessController {
       // fail the request: a 500 here would invite a retry that pays for another Opus
       // run to rebuild a plan that already exists. An unverifiable freshness is
       // reported as `unknown`, which is what the field is for.
-      const response: ApiResponse = { success: true, data: await this.presentFresh(result, role) };
+      const response: ApiResponse = {
+        success: true,
+        data: { ...(await this.presentFresh(result, role)), reused: false },
+      };
       res.status(201).json(response);
     } catch (error) {
       this.handleError(req, res, error, 'create readiness run');
@@ -240,6 +268,43 @@ export class ReadinessController {
     if (error instanceof WorkflowAlreadyRunningError) {
       // 409 rather than queueing: a second Opus run for the same booking is pure waste.
       res.status(409).json({ success: false, message: error.message });
+      return;
+    }
+    if (error instanceof WorkflowBudgetExceededError) {
+      if (error.scope === 'global') {
+        // The platform ceiling is an operational condition, not a user error:
+        // every account is affected and somebody has to decide whether to raise
+        // it. It is logged at error level so it reaches alerting.
+        logger.error('Agent run budget exhausted platform-wide', {
+          workflowType: READINESS_WORKFLOW_TYPE,
+          retryAfterSeconds: error.retryAfterSeconds,
+          alert: 'agent_budget_exhausted',
+        });
+      } else {
+        logger.warn('Agent run budget exhausted for user', {
+          workflowType: READINESS_WORKFLOW_TYPE,
+          retryAfterSeconds: error.retryAfterSeconds,
+        });
+      }
+
+      const message = t(
+        req,
+        error.scope === 'global'
+          ? 'readiness.budget_exhausted_platform'
+          : 'readiness.budget_exhausted_user'
+      );
+
+      res.setHeader('Retry-After', String(error.retryAfterSeconds));
+      res.status(429).json({
+        success: false,
+        message,
+        // Also as `error`, which is the field the client's response interceptor
+        // reads when it raises a toast. Without it the interceptor falls back to
+        // axios' own "Request failed with status code 429" — English, in a
+        // Portuguese session, next to the localized text this endpoint returned.
+        error: message,
+        retryAfterSeconds: error.retryAfterSeconds,
+      });
       return;
     }
     logger.error(`Failed to ${action}`, { error });
