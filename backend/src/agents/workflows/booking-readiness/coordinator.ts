@@ -1,8 +1,9 @@
+import config from '@/config/environment';
 import logger from '@/config/logger';
 import { Booking } from '@/models/Booking';
 import { WorkflowRunStatus } from '@/models/AgentWorkflowRun';
 import { WorkflowRunner, WorkflowStage } from '../shared/WorkflowRunner';
-import { workflowRepository } from '../shared/WorkflowRepository';
+import { WorkflowBudget, workflowRepository } from '../shared/WorkflowRepository';
 import { runScopeAgent } from './agents/scope.agent';
 import { buildSnapshot, snapshotFingerprint } from './snapshot.service';
 import {
@@ -24,6 +25,21 @@ import {
 const SCOPE_TIMEOUT_MS = 90_000;
 const VERIFY_TIMEOUT_MS = 45_000;
 
+/**
+ * What one account, and the platform, may spend on readiness runs.
+ *
+ * Every run is a multi-agent reasoning-profile (Opus) call taking ~25s. The
+ * global API limiter is 100 requests per 15 minutes across all traffic, which is
+ * a ceiling on request volume, not on cost: one authenticated account could
+ * spend against it all day. These are the cost ceilings.
+ */
+export const READINESS_BUDGET: WorkflowBudget = {
+  perUserMaxRuns: config.agentBudget.perUserMaxRuns,
+  perUserWindowMs: config.agentBudget.perUserWindowMs,
+  globalMaxRuns: config.agentBudget.globalMaxRuns,
+  globalWindowMs: config.agentBudget.globalWindowMs,
+};
+
 export interface ReadinessRunResult {
   runId: string;
   plan: ReadinessPlan;
@@ -40,17 +56,24 @@ export interface ReadinessRunResult {
 export async function runBookingReadiness(
   booking: Booking,
   initiatedBy: string,
-  role: 'customer' | 'provider'
+  role: 'customer' | 'provider',
+  // The caller has usually already built the snapshot in order to look for a
+  // reusable run. Reusing it here keeps the fingerprint the plan is stored under
+  // identical to the one that was searched for, so a run cannot be written under
+  // a fingerprint nobody checked against.
+  prebuiltSnapshot?: ReadinessSnapshot
 ): Promise<ReadinessRunResult> {
-  const snapshot = await buildSnapshot(booking);
+  const snapshot = prebuiltSnapshot ?? (await buildSnapshot(booking));
   const sourceFingerprint = snapshotFingerprint(snapshot);
 
+  // Claimed before any model is called, and released by `complete`/`fail`.
   const run = await workflowRepository.createRunning({
     workflowType: READINESS_WORKFLOW_TYPE,
     subjectType: READINESS_SUBJECT_TYPE,
     subjectId: booking.id,
     initiatedBy,
     schemaVersion: READINESS_SCHEMA_VERSION,
+    budget: READINESS_BUDGET,
   });
 
   try {

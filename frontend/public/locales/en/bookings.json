@@ -312,6 +312,7 @@
       "provider": "Provider profile",
       "availability": "Availability",
       "message": "Message"
-    }
+    },
+    "reused": "This booking hasn't changed since the last check, so your existing plan is shown. Edit the booking to generate a new one."
   }
 }
