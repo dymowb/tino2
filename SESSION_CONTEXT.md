@@ -410,12 +410,30 @@ any), H3's requirements traceability matrix (documentation exercise, not code).
 - ~~**Migration `1781400000000-LockedUntilTimestamptz` is NOT applied.**~~ **It is applied.**
   Verified 2026-09-06: `users.lockedUntil` is `timestamp with time zone` in the shared DB and the
   migration is recorded in `migrations`. This entry was stale; one fewer item for the window.
-- **Migration `1781500000000-CanonicalizeUserEmail` is not yet applied** (MN2). It renames and
+- ✅ **Migration `1781500000000-CanonicalizeUserEmail` APPLIED to the shared dev/prod DB**
+  (2026-09-07 12:2x PDT). Backup at `~/tino2-backups/users-before-mn2-20260907-122008.sql`
+  (1461 rows). Result exactly as dry-run: 1461 rows preserved, index built, **4** test-artifact
+  rows renamed + deactivated (`suspensionReason='duplicate_email'`), 0 collisions left, 0
+  non-canonical addresses, demo accounts untouched and active. newtino.com stayed healthy
+  throughout — old code and the new index coexist, as predicted, because no row needed
+  lowercasing. Verified enforcement live: an insert of `CUSTOMER@Demo.COM` is now refused with
+  `duplicate key value violates unique constraint "UQ_users_email_lower"`. **MN2 is closed in
+  production, not just in the repo.**
+- ~~**Migration `1781500000000-CanonicalizeUserEmail` is not yet applied** (MN2).~~ It renames and
   deactivates 4 duplicate rows and creates a unique index. Dry-run against a copy of the real
   table succeeded. `migrationsRun` is false and nothing calls `runMigrations` outside tests, so
   starting a dev server does **not** apply it — it happens only when run deliberately.
-- **Deploying `main` logs every user out once** — untyped legacy JWTs are now rejected (H7).
-  Intended, but time it deliberately, and pair it with the migration above.
+- **⚠️ STILL PENDING: production is 40 commits behind `main`.** Last deployed 2026-06-16; the
+  entire audit remediation (HN1–HN3, H1–H7, M1–M10, MN2–MN6, BR-1) is unshipped. Deploying logs
+  every user out once (H7 rejects untyped legacy JWTs) — intended, but it is a three-month
+  release, so it wants a low-traffic window of its own rather than being bundled with anything.
+  **Pre-flight already done and passing (2026-09-07):** the production build boots in
+  `production` mode with `.env.production` against clones of both prod databases — both connect,
+  zero errors; mixed-case login, an authenticated read, `/config` and `/providers` all 200; the
+  retired `POST /payments/intent` correctly 404s. `.env.production` carries `sslmode=disable` on
+  both URLs (so HN3 leaves prod TLS unchanged) and all four `AI_*_MODEL_CHAIN` vars.
+  `AGENT_BUDGET_*` and `PLATFORM_CURRENCY` are absent but have code defaults. Use
+  `pm2 delete && pm2 start` (deploy.sh), never `pm2 restart` — the saved env would win.
 - **Repository ruleset (owner-only):** enable "dismiss stale reviews on push" and "require
   approval of the most recent push". #30 enforces this in the workflow; the ruleset is the
   layer a future workflow edit cannot weaken.
