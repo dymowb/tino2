@@ -178,6 +178,14 @@
     "success": "Booking rescheduled successfully",
     "error": "Failed to reschedule booking"
   },
+  "dispute": {
+    "title": "Open a Dispute",
+    "description": "Describe the reason for the dispute. An administrator will review it and contact both parties.",
+    "reason_label": "Reason for the dispute",
+    "submit": "Submit Dispute",
+    "cancel": "Cancel",
+    "success": "Dispute opened — an administrator has been notified"
+  },
   "status_messages": {
     "pending": "Your booking request is pending confirmation",
     "confirmed": "Your booking has been confirmed",

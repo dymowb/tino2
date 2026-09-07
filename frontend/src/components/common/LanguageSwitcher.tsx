@@ -12,18 +12,12 @@ import {
   Language as LanguageIcon,
   Check as CheckIcon,
 } from '@mui/icons-material';
+import { LOCALES } from '../../i18n/manifest';
 
-interface Language {
-  code: string;
-  name: string;
-  flag: string;
-}
-
-const languages: Language[] = [
-  { code: 'en', name: 'English', flag: '🇺🇸' },
-  { code: 'es', name: 'Español', flag: '🇪🇸' },
-  { code: 'pt', name: 'Português (BR)', flag: '🇧🇷' },
-];
+// The menu is built from the manifest rather than its own list, so a locale can
+// never be offered here without the translation files to back it — which is how
+// Spanish came to be selectable while a third of its strings did not exist.
+const languages = LOCALES;
 
 const LanguageSwitcher: React.FC = () => {
   const { i18n, t } = useTranslation('common');

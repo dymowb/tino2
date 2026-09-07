@@ -70,6 +70,35 @@ export const userValidation = {
     body('password').isLength({ min: 1 }).withMessage('Password is required'),
   ],
 
+  /**
+   * The address-only chain, for the two recovery endpoints.
+   *
+   * They had no validation at all, which made them disagree with registration
+   * about what an address *is*: `normalizeEmail()` folds `First.Last+tag@Gmail.com`
+   * to `firstlast@gmail.com` on the way in, so a recovery request for the address
+   * the user actually typed looked up a row that does not exist. Both endpoints
+   * answer "if this address is registered, we've sent a mail" either way, so the
+   * failure is completely silent — the user is told to check an inbox nothing was
+   * ever sent to.
+   *
+   * See `utils/email.ts`: the application's own canonicalisation deliberately
+   * does *not* strip dots or `+tags`, because some providers deliver those to
+   * different people. That is a narrower rule than `normalizeEmail()`'s, and the
+   * two want reconciling — but not by removing `normalizeEmail()` here, which
+   * would strand every account already stored in its folded form.
+   */
+  emailOnly: [
+    body('email')
+      .isEmail()
+      .withMessage('Valid email is required')
+      .normalizeEmail()
+      // Same ceiling as `register`. The column is varchar(255); without this the
+      // two chains disagree about what an address is in one more dimension,
+      // which is the drift this change exists to remove.
+      .isLength({ max: 255 })
+      .withMessage('Email must be less than 255 characters'),
+  ],
+
   updateProfile: [
     body('firstName')
       .optional()

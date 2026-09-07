@@ -2,11 +2,17 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import HttpBackend from 'i18next-http-backend';
+import {
+  DEFAULT_NAMESPACE,
+  FALLBACK_LOCALE,
+  LOCALE_CODES,
+  NAMESPACES,
+} from './i18n/manifest';
 
 // Default new visitors to Portuguese — the detector reads localStorage first,
 // so this is overridden by any explicit language switch the user makes.
 if (typeof window !== 'undefined' && !window.localStorage.getItem('i18nextLng')) {
-  window.localStorage.setItem('i18nextLng', 'pt');
+  window.localStorage.setItem('i18nextLng', FALLBACK_LOCALE);
 }
 
 i18n
@@ -14,25 +20,14 @@ i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    supportedLngs: ['pt', 'en', 'es'],
-    fallbackLng: 'pt',
-    defaultNS: 'common',
-    ns: [
-      'common',
-      'auth',
-      'providers',
-      'bookings',
-      'quotes',
-      'messages',
-      'payments',
-      'reviews',
-      'profile',
-      'notifications',
-      'dashboard',
-      'assistant',
-      'admin',
-      'memory',
-    ],
+    // Locales and namespaces come from the manifest, which is the single place
+    // that decides what this app translates. A visitor whose stored language is
+    // no longer supported — someone who chose Spanish before it was retired —
+    // falls through to `fallbackLng` rather than seeing untranslated keys.
+    supportedLngs: LOCALE_CODES,
+    fallbackLng: FALLBACK_LOCALE,
+    defaultNS: DEFAULT_NAMESPACE,
+    ns: [...NAMESPACES],
     backend: {
       loadPath: '/locales/{{lng}}/{{ns}}.json',
     },
