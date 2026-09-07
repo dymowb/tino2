@@ -33,6 +33,23 @@ export class CanonicalizeUserEmail1781500000000 implements MigrationInterface {
   name = 'CanonicalizeUserEmail1781500000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // Taken before anything is read, and held for the whole migration.
+    //
+    // Everything below is a check-then-act against the table: which rows collide,
+    // and which replacement addresses are free. Without the lock a registration
+    // landing between the check and `CREATE UNIQUE INDEX` can introduce a new
+    // collision or claim a replacement this run already verified, and the only
+    // symptom is the index build failing — aborting the deployment for a reason
+    // that has already vanished by the time anyone looks.
+    //
+    // `SHARE ROW EXCLUSIVE` conflicts with the `ROW EXCLUSIVE` that INSERT and
+    // UPDATE take, so it blocks writers, while leaving plain `SELECT` (which
+    // takes `ACCESS SHARE`) free — reads keep working throughout. The index build
+    // at the end would take a blocking lock anyway; this just starts it early
+    // enough to cover the reads the decisions are based on. On a table of this
+    // size the whole migration is milliseconds.
+    await queryRunner.query(`LOCK TABLE "users" IN SHARE ROW EXCLUSIVE MODE`);
+
     // Collisions must go before canonicalising, because canonicalising is what
     // turns two distinct strings into the same one.
     //
@@ -182,6 +199,10 @@ export class CanonicalizeUserEmail1781500000000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    // Same reasoning as `up()`: this drops the uniqueness guarantee and then
+    // rewrites addresses, and a registration in between could take one of the
+    // addresses being restored.
+    await queryRunner.query(`LOCK TABLE "users" IN SHARE ROW EXCLUSIVE MODE`);
     await queryRunner.query(`DROP INDEX IF EXISTS "UQ_users_email_lower"`);
 
     // Restore exactly the rows this migration wrote, and nothing else.

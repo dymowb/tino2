@@ -1,3 +1,4 @@
+import { QueryRunner } from 'typeorm';
 import { AppDataSource } from '@/config/database';
 import { User, UserType } from '@/models/User';
 import { CanonicalizeUserEmail1781500000000 } from '@/migrations/1781500000000-CanonicalizeUserEmail';
@@ -27,23 +28,32 @@ describe('CanonicalizeUserEmail collision handling', () => {
 
   /** The index the migration creates is already in place from the normal
    * migration run, so it has to come off before colliding rows can be planted. */
-  const runMigration = async () => {
+  /**
+   * Runs a migration the way TypeORM's runner does: inside a transaction.
+   *
+   * These helpers used to call `up()`/`down()` on a bare query runner, so every
+   * statement autocommitted — which is not how migrations execute
+   * (`transaction: 'all'` is the default), and meant the all-or-nothing property
+   * these tests lean on was never actually exercised. `LOCK TABLE` is only legal
+   * in a transaction block, so the difference finally surfaced.
+   */
+  const inTransaction = async (run: (runner: QueryRunner) => Promise<void>) => {
     const runner = AppDataSource.createQueryRunner();
+    await runner.connect();
+    await runner.startTransaction();
     try {
-      await migration.up(runner);
+      await run(runner);
+      await runner.commitTransaction();
+    } catch (error) {
+      await runner.rollbackTransaction();
+      throw error;
     } finally {
       await runner.release();
     }
   };
 
-  const revertMigration = async () => {
-    const runner = AppDataSource.createQueryRunner();
-    try {
-      await migration.down(runner);
-    } finally {
-      await runner.release();
-    }
-  };
+  const runMigration = () => inTransaction((runner) => migration.up(runner));
+  const revertMigration = () => inTransaction((runner) => migration.down(runner));
 
   beforeAll(async () => {
     if (!AppDataSource.isInitialized) await AppDataSource.initialize();
@@ -239,6 +249,80 @@ describe('CanonicalizeUserEmail collision handling', () => {
     await revertMigration();
     expect((await repo().findOneByOrFail({ id: loser.id })).email).toBe('taken@example.com');
     expect((await repo().findOneByOrFail({ id: squatter.id })).email).toBe(squatted);
+  });
+
+  it('takes the table lock before it reads anything', async () => {
+    // Asserted on the statement order, not on the outcome.
+    //
+    // The obvious black-box version — hold the migration open and watch a
+    // concurrent INSERT block — passes with the lock removed entirely, because
+    // CREATE UNIQUE INDEX takes a blocking lock of its own at the very end. That
+    // is the wrong end: every decision this migration makes was already taken by
+    // then. What matters is that nothing is *read* before writers are shut out,
+    // and only the ordering shows that.
+    const keeper = await makeUser({ email: 'ordered@example.com' });
+    await makeUser({ email: 'Ordered@Example.com' });
+    await AppDataSource.query(
+      `UPDATE users SET "createdAt" = now() - interval '1 day' WHERE id = $1`,
+      [keeper.id]
+    );
+
+    const statements: string[] = [];
+    await inTransaction(async (runner) => {
+      const real = runner.query.bind(runner);
+      jest.spyOn(runner, 'query').mockImplementation((sql: string, params?: unknown[]) => {
+        statements.push(sql);
+        return real(sql, params as undefined);
+      });
+      await migration.up(runner);
+    });
+
+    expect(statements[0]).toMatch(/LOCK TABLE "users" IN SHARE ROW EXCLUSIVE MODE/);
+    // And nothing that inspects the table sneaks in ahead of it.
+    const firstRead = statements.findIndex((sql) => /SELECT|UPDATE|CREATE/i.test(sql));
+    expect(firstRead).toBeGreaterThan(0);
+
+    jest.restoreAllMocks();
+  });
+
+  it('blocks concurrent registrations while it runs', async () => {
+    // The end-to-end property, which the ordering test above does not cover: a
+    // registration attempted while the migration is in flight waits rather than
+    // landing. (This one would also pass on the index build's own lock — it is
+    // here for the behaviour, not as the guard for the lock statement.)
+    const keeper = await makeUser({ email: 'locked@example.com' });
+    await makeUser({ email: 'Locked@Example.com' });
+    await AppDataSource.query(
+      `UPDATE users SET "createdAt" = now() - interval '1 day' WHERE id = $1`,
+      [keeper.id]
+    );
+
+    const migrating = AppDataSource.createQueryRunner();
+    const writer = AppDataSource.createQueryRunner();
+
+    try {
+      await migrating.connect();
+      await writer.connect();
+      await migrating.startTransaction();
+      await migration.up(migrating);
+
+      // Bounded, so a failure is a failed assertion rather than a hung suite.
+      await writer.query(`SET statement_timeout = '500ms'`);
+      await expect(
+        writer.query(
+          `INSERT INTO users (email, password, "firstName", "lastName", "userType")
+           VALUES ('sneaked@example.com', 'hashed', 'Sneak', 'Test', 'customer')`
+        )
+      ).rejects.toThrow(/timeout|canceling statement/i);
+
+      await migrating.commitTransaction();
+    } finally {
+      await writer.query(`SET statement_timeout = 0`).catch(() => undefined);
+      await migrating.release();
+      await writer.release();
+    }
+
+    expect(await repo().countBy({ email: 'sneaked@example.com' })).toBe(0);
   });
 
   it('canonicalises addresses that do not collide', async () => {

@@ -279,6 +279,20 @@ from `api.ts` has nothing to forward to until one exists. ~450 strings, not a pa
   reverse-engineering an index-violation message, and the test suite already planted exactly that
   address shape to prove it is ordinary. The rename now verifies each candidate is free and
   widens until it is. Grade findings in run-once code by blast radius, not by likelihood.
+- **A migration's check-then-act needs the lock taken before the *check*.** Collision discovery
+  and replacement-address selection both read the table; a registration landing between those
+  reads and `CREATE UNIQUE INDEX` invalidates them, and the only symptom is the index build
+  failing after the cause has committed and vanished. `LOCK TABLE users IN SHARE ROW EXCLUSIVE
+  MODE` is now the first statement — it blocks writers (`ROW EXCLUSIVE`) while leaving plain
+  `SELECT` (`ACCESS SHARE`) alone, so reads keep serving.
+- **The obvious test for that lock passes without it.** Holding the migration open and watching a
+  concurrent INSERT block proves nothing: `CREATE UNIQUE INDEX` takes a blocking lock of its own
+  at the very end, which is precisely the wrong end. Only asserting the *statement order* —
+  that the LOCK precedes any read — fails when the lock is removed **or merely moved later**.
+- **The migration test helpers were not running migrations the way TypeORM does.** They called
+  `up()`/`down()` on a bare query runner, so every statement autocommitted, while the real runner
+  uses `transaction: 'all'`. The all-or-nothing property those tests leaned on was never actually
+  exercised. Surfaced only because `LOCK TABLE` is illegal outside a transaction block.
 - **Keying a rollback on a pattern matches rows you never wrote.** `down()` matched the address
   suffix alone, which would have rewritten `bob+dup-deadbeef@example.com` — an ordinary
   plus-tagged address — and reactivated it, after `down()` had already dropped the unique index.
