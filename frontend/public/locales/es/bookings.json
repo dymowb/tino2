@@ -309,6 +309,7 @@
       "provider": "Perfil del profesional",
       "availability": "Disponibilidad",
       "message": "Mensaje"
-    }
+    },
+    "reused": "Esta reserva no ha cambiado desde la última verificación, por lo que se muestra el plan existente. Edita la reserva para generar uno nuevo."
   }
 }

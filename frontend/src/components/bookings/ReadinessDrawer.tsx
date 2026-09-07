@@ -55,6 +55,18 @@ const READINESS_ICON = {
 } as const;
 
 /**
+ * The server's own explanation when a run was refused for cost, or null for any
+ * other failure. The message is localized server-side and names which ceiling
+ * was hit, which the client cannot work out for itself.
+ */
+export function budgetRefusal(error: unknown): string | null {
+  const response = (error as { response?: { status?: number; data?: { message?: string } } })
+    ?.response;
+  if (response?.status !== 429) return null;
+  return response.data?.message ?? null;
+}
+
+/**
  * Advisory panel. Everything here is read-only by design: the Copilot explains
  * and asks, it never changes a booking. Platform facts, AI findings, and the
  * verification summary are visually distinct so a reader can tell which is which.
@@ -78,6 +90,11 @@ export const ReadinessDrawer: React.FC<Props> = ({ bookingId, open, onClose }) =
       queryClient.setQueryData(["readiness", bookingId], result);
     },
   });
+
+  // Running a plan costs a multi-model call, so the server refuses past a daily
+  // budget and says so in its own message. Showing the generic failure text
+  // instead would tell the user to retry the one thing that cannot succeed yet.
+  const budgetMessage = budgetRefusal(runMutation.error);
 
   const plan = data?.plan ?? null;
   // Older responses carry only `stale`; a truthy one there means "not current",
@@ -140,8 +157,18 @@ export const ReadinessDrawer: React.FC<Props> = ({ bookingId, open, onClose }) =
         )}
 
         {runMutation.isError && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {t("readiness.error")}
+          <Alert
+            severity={budgetMessage ? "warning" : "error"}
+            data-testid={budgetMessage ? "readiness-budget" : "readiness-error"}
+            sx={{ mb: 2 }}
+          >
+            {budgetMessage ?? t("readiness.error")}
+          </Alert>
+        )}
+
+        {runMutation.data?.reused && !runMutation.isError && (
+          <Alert severity="info" data-testid="readiness-reused" sx={{ mb: 2 }}>
+            {t("readiness.reused")}
           </Alert>
         )}
 

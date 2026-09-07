@@ -64,10 +64,36 @@ interface Config {
   anthropic?: {
     apiKey: string;
   };
+  agentBudget: {
+    perUserMaxRuns: number;
+    perUserWindowMs: number;
+    globalMaxRuns: number;
+    globalWindowMs: number;
+  };
   logging: {
     level: string;
     file: string;
   };
+}
+
+/**
+ * Reads a positive-integer setting, throwing rather than falling back when the
+ * value is present but unusable.
+ *
+ * These bound how much money one account can spend on agent runs. `parseInt`
+ * answers a typo with `NaN`, and every comparison against `NaN` is false — so a
+ * mistyped budget would not be a smaller budget, it would be no budget at all,
+ * silently. A boot failure is the visible version of the same mistake.
+ */
+function positiveInt(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (raw === undefined || raw === '') return fallback;
+
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error(`${name} must be a positive integer, received "${raw}"`);
+  }
+  return parsed;
 }
 
 const config: Config = {
@@ -131,6 +157,12 @@ const config: Config = {
   },
   anthropic: {
     apiKey: process.env.ANTHROPIC_API_KEY || '',
+  },
+  agentBudget: {
+    perUserMaxRuns: positiveInt('AGENT_BUDGET_PER_USER_MAX_RUNS', 10),
+    perUserWindowMs: positiveInt('AGENT_BUDGET_PER_USER_WINDOW_MS', 24 * 60 * 60 * 1000),
+    globalMaxRuns: positiveInt('AGENT_BUDGET_GLOBAL_MAX_RUNS', 200),
+    globalWindowMs: positiveInt('AGENT_BUDGET_GLOBAL_WINDOW_MS', 24 * 60 * 60 * 1000),
   },
   logging: {
     level: process.env.LOG_LEVEL || 'info',

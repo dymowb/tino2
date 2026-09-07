@@ -141,6 +141,12 @@ export interface ReadinessRunResponse {
   freshness: ReadinessFreshness;
   /** Legacy two-state view of `freshness`: true for both stale and unknown. */
   stale: boolean;
+  /**
+   * True when the server served an existing plan instead of paying for a new
+   * run, because the booking has not changed since that plan was built. Absent
+   * on reads and on responses from a server predating the cost budget.
+   */
+  reused?: boolean;
 }
 
 export interface Provider {
