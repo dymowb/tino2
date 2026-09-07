@@ -11,6 +11,8 @@ router.get('/verify-email', authController.verifyEmail.bind(authController));
 router.post(
   '/resend-verification',
   rateLimiters.auth,
+  userValidation.emailOnly,
+  handleValidationErrors,
   authController.resendVerification.bind(authController)
 );
 
@@ -55,6 +57,8 @@ router.put(
 router.post(
   '/forgot-password',
   rateLimiters.auth,
+  userValidation.emailOnly,
+  handleValidationErrors,
   authController.forgotPassword.bind(authController)
 );
 

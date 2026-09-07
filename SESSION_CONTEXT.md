@@ -160,11 +160,85 @@ so every localized `t(req, …)` controller `message` — the ~93 strings from t
 is replaced by raw English axios text. One line to fix, but it changes error toasts app-wide, so
 it was kept out of this PR.
 
+### In review — MN2 (email identity) + MN3 (Spanish retired, i18n given a source of truth)
+
+Branch `fix/audit-mn2-email-identity`.
+
+**MN2 was two defects, and the audit only named one.** Lookups did compare addresses
+case-sensitively — but more seriously, **there was no uniqueness on `users.email` at all.**
+`InitialSchema` creates the table *with* `UNIQUE ("email")` and then drops that very constraint
+50 lines later **inside the same `up()`** (`1777158117672-InitialSchema.ts:149`). Not a rollback,
+not a later migration — so no database has ever had it, fresh or otherwise. Registration's guard is
+a read-then-insert with nothing behind it, and the shared DB already held **four pairs of
+byte-identical duplicate addresses written 0.2 ms apart** by concurrent requests. The race was
+not hypothetical.
+
+Fix: `canonicalizeEmail()` (trim + lowercase, nothing more — stripping dots or `+tags` would
+merge addresses some providers deliver to different people) at all six boundaries, plus migration
+`1781500000000-CanonicalizeUserEmail` creating a unique index on **`lower(email)`**. The
+expression index, not a plain one, so a future code path that forgets to canonicalise is rejected
+by the database rather than quietly creating a second account.
+
+Collision policy, decided with the user: keep the oldest account (the ordering leads with
+`lastLogin`, but **nothing in this codebase ever writes that column** — 0 of 1461 rows — so
+`createdAt ASC` decides), rename the others to
+`<local>+dup-<id8>@<domain>`, deactivate them, and record the original address in
+`suspensionComment` — **appended**, never substituted, so operator notes survive — and tagged
+`[CanonicalizeUserEmail1781500000000]`, which is what `down()` matches on. Keying the rollback on
+the address suffix alone would have rewritten `bob+dup-deadbeef@example.com`, a perfectly ordinary
+plus-tagged address, and switched that account on. The suffix itself records
+whether *this* migration did the deactivating — `+dup-` if the row was active, `+dupx-` if it was
+already inactive — so `down()` restores every row it renamed (keyed on the suffix, not on a
+suspension marker a fraud-suspended row never receives) while reactivating only what it actually
+switched off. Rows edited since are left alone.
+
+**Dry-run against a copy of the real 1,461-row table**: 4 renamed + deactivated, 0 lowercased
+(no mixed-case addresses exist), index builds, nothing deleted, demo accounts intact.
+
+**MN3: Spanish retired rather than finished.** It was ~450 strings short, not the two namespaces
+the audit described. Files moved to `frontend/i18n-archive/es/` — kept, not deleted — and
+`RETIRED_LOCALES` in the manifest carries the four steps to bring it back.
+
+Also folded in: the two recovery routes (`forgot-password`, `resend-verification`) had **no**
+validation at all while register/login run `normalizeEmail()`, so a Gmail-style
+`First.Last+tag@…` recovered against an address that was never stored — and both endpoints answer
+"if this address is registered…" either way, so the failure was silent. Same chain applied to
+both. (`normalizeEmail()` strips dots and `+tags`, which `canonicalizeEmail` deliberately does
+not; reconciling the two is a follow-up, and **not** by removing `normalizeEmail`, which would
+strand every account already stored in its folded form.) Dead `BasicUserService` — 186 lines, a
+case-sensitive twin of `UserService` with zero callers — deleted rather than repaired.
+
+**Registration's race now answers properly too.** With the index in place the loser of a genuine
+race gets a `23505`, which `createUser` previously rethrew verbatim — an untranslated Postgres
+message naming the index. Mapped to the same "already exists" error an ordinary duplicate gets.
+
+### The i18n source of truth, which did not exist
+
+There were four partial answers to "what does this app translate", and nothing reconciling them:
+`i18n.ts`'s `supportedLngs`/`ns`, `LanguageSwitcher`'s own hardcoded menu, the files actually on
+disk, and `types/i18next.d.ts` — which typed its resources from `src/locales/`, **a directory
+that has never existed**, silenced by `skipLibCheck: true`. That declaration was inert, and also
+listed 11 of 14 namespaces.
+
+Now `frontend/src/i18n/manifest.ts` is the authority (locales, namespaces, reference locale,
+retired locales) and everything reads from it. **`i18next.d.ts` is still inert**, and now says so:
+its paths are fixed, but on i18next 25 `CustomTypeOptions` comes from `i18next`, not
+`react-i18next`. Repointing it switches key checking on and surfaces 22 real errors (dynamic
+template-literal keys, cross-namespace `t('ns:key')` calls, a `TFunction` passed as
+`(k: string) => string`). Worth doing; its own piece of work. Two tests hold it to the files:
+`manifest.test.ts` (frontend, 35 cases) fails on any missing or extra key, a missing namespace,
+an undeclared directory under `public/locales/`, or a namespace absent from the typed resources;
+`i18n-catalogs.test.ts` (backend) does the same for the flat server catalogs and additionally
+checks that interpolation placeholders match across locales. Both suites already run in CI, so
+adding them *is* the gate.
+
+**It found a live bug on its first run:** the dispute dialog renders `bookings:dispute.*`, EN had
+no such block, and `fallbackLng` is `pt` — so English users saw that dialog in Portuguese.
+Fixed, verified in both locales.
+
 ### Still open from the follow-up audit
 
-**MN2** email case-sensitivity (needs a collision check + an `ALTER` on the shared dev/prod
-DB — pair it with the pending `LockedUntilTimestamptz` window), **MN3** Spanish. Both confirmed
-in source; neither started.
+Nothing. MN1–MN7 and HN1–HN3 are all closed or deliberately declined.
 
 **MN3 is bigger than the audit says.** It is not only the two missing namespaces
 (`admin` 177 keys, `memory` 29): Spanish is also short ~200 keys *inside* files it already has
@@ -172,6 +246,60 @@ in source; neither started.
 `reviews` -8, `providers` -7, `bookings` -1). And `backend/src/i18n/locales/` holds only
 `en.json` and `pt.json`, so there is **no Spanish server catalog at all** — forwarding `es`
 from `api.ts` has nothing to forward to until one exists. ~450 strings, not a patch.
+
+### Traps MN2/MN3 added
+
+- **A recorded migration is not an applied migration.** `InitialSchema` is listed in the
+  `migrations` table, yet none of the UNIQUE constraints it declares exist in the shared database
+  — it was baselined against a table created in an earlier `synchronize: true` era, so its
+  `CREATE TABLE` never ran. Every uniqueness guarantee in that file is absent in production.
+  Check `pg_constraint`/`pg_indexes`, never the migration source, when the question is what the
+  database actually enforces.
+- **`@Column({ unique: true })` enforces nothing** with `synchronize: false`. It is a statement
+  of intent to the schema generator, and the schema generator is switched off.
+- **A test that drops a schema invariant must restore it, or it disarms other suites silently.**
+  The collision-migration suite drops the unique index to plant colliding rows; without an
+  `afterAll` that recreates it, a later suite's "the database rejects this" test simply passes.
+  Worse, the damage outlives the run: the next full run started with the index already missing.
+  Assert the invariant exists as its own test, so a genuine regression fails loudly instead of
+  making the enforcement tests vacuous.
+- **An `E''` string eats the backslashes before the regex engine sees them.** `E'\\[tag\\]'`
+  reaches the regex as `[tag]` — a character *class* — so a `regexp_replace` meant to strip a
+  tagged line stripped one character and left a stray `[` on the row. Use a plain literal
+  (`standard_conforming_strings` is on) unless you actually want an escape, as `E'\\n'` does.
+- **A backstop narrower than the rule it backs is not a backstop.** The unique index was on
+  `lower(email)` while `canonicalizeEmail` trims *and* lowercases, so the database enforced half
+  the invariant. The migration's own collision partition already said `lower(btrim(email))` — two
+  expressions for one concept, in one file, disagreeing.
+- **"Confirmed but improbable" is not advisory in a migration.** The generated replacement
+  address `<local>+dup-<8hex>@<domain>` was not checked against existing rows. My own pre-check
+  raised it and graded it advisory on probability (~2⁻³², or someone genuinely holding that
+  address); CI's Codex reviewer graded it **blocking** and was right. A migration runs once,
+  unattended, in a chosen window — the cost of being wrong is an aborted deploy and an operator
+  reverse-engineering an index-violation message, and the test suite already planted exactly that
+  address shape to prove it is ordinary. The rename now verifies each candidate is free and
+  widens until it is. Grade findings in run-once code by blast radius, not by likelihood.
+- **A migration's check-then-act needs the lock taken before the *check*.** Collision discovery
+  and replacement-address selection both read the table; a registration landing between those
+  reads and `CREATE UNIQUE INDEX` invalidates them, and the only symptom is the index build
+  failing after the cause has committed and vanished. `LOCK TABLE users IN SHARE ROW EXCLUSIVE
+  MODE` is now the first statement — it blocks writers (`ROW EXCLUSIVE`) while leaving plain
+  `SELECT` (`ACCESS SHARE`) alone, so reads keep serving.
+- **The obvious test for that lock passes without it.** Holding the migration open and watching a
+  concurrent INSERT block proves nothing: `CREATE UNIQUE INDEX` takes a blocking lock of its own
+  at the very end, which is precisely the wrong end. Only asserting the *statement order* —
+  that the LOCK precedes any read — fails when the lock is removed **or merely moved later**.
+- **The migration test helpers were not running migrations the way TypeORM does.** They called
+  `up()`/`down()` on a bare query runner, so every statement autocommitted, while the real runner
+  uses `transaction: 'all'`. The all-or-nothing property those tests leaned on was never actually
+  exercised. Surfaced only because `LOCK TABLE` is illegal outside a transaction block.
+- **Keying a rollback on a pattern matches rows you never wrote.** `down()` matched the address
+  suffix alone, which would have rewritten `bob+dup-deadbeef@example.com` — an ordinary
+  plus-tagged address — and reactivated it, after `down()` had already dropped the unique index.
+  Key on a tag the migration itself wrote.
+- **`docker exec` without `-i` silently discards heredoc stdin.** The SQL never runs, psql exits
+  0, and the follow-up query reports the *unchanged* state — which reads exactly like "the
+  migration did nothing wrong".
 
 ### Traps MN5 added
 
@@ -279,9 +407,13 @@ any), H3's requirements traceability matrix (documentation exercise, not code).
 
 ### ⚠️ Outstanding — needs a deliberate window
 
-- **Migration `1781400000000-LockedUntilTimestamptz` is NOT applied to the shared dev/prod DB.**
-  It is an `ALTER COLUMN TYPE`, not additive, so it was left for a chosen moment. Safe when run
-  (0 non-null `lockedUntil` rows; session TZ is UTC so Postgres skips the table rewrite).
+- ~~**Migration `1781400000000-LockedUntilTimestamptz` is NOT applied.**~~ **It is applied.**
+  Verified 2026-09-06: `users.lockedUntil` is `timestamp with time zone` in the shared DB and the
+  migration is recorded in `migrations`. This entry was stale; one fewer item for the window.
+- **Migration `1781500000000-CanonicalizeUserEmail` is not yet applied** (MN2). It renames and
+  deactivates 4 duplicate rows and creates a unique index. Dry-run against a copy of the real
+  table succeeded. `migrationsRun` is false and nothing calls `runMigrations` outside tests, so
+  starting a dev server does **not** apply it — it happens only when run deliberately.
 - **Deploying `main` logs every user out once** — untyped legacy JWTs are now rejected (H7).
   Intended, but time it deliberately, and pair it with the migration above.
 - **Repository ruleset (owner-only):** enable "dismiss stale reviews on push" and "require
