@@ -209,6 +209,38 @@ describe('CanonicalizeUserEmail collision handling', () => {
     });
   });
 
+  it('does not fail when its generated replacement is already taken', async () => {
+    // The replacement is a perfectly ordinary address, so a real account can
+    // already hold it. Assuming it free and finding out at CREATE UNIQUE INDEX
+    // aborts the whole migration, in the deploy window, for a reason the
+    // operator then has to reverse-engineer from an index-violation message.
+    const keeper = await makeUser({ email: 'taken@example.com' });
+    const loser = await makeUser({ email: 'Taken@Example.com' });
+    await AppDataSource.query(
+      `UPDATE users SET "createdAt" = now() - interval '1 day' WHERE id = $1`,
+      [keeper.id]
+    );
+
+    // Occupy precisely the address the migration would otherwise generate.
+    const squatted = `taken+dup-${loser.id.slice(0, 8)}@example.com`;
+    const squatter = await makeUser({ email: squatted });
+
+    await runMigration();
+
+    const renamed = await repo().findOneByOrFail({ id: loser.id });
+    expect(renamed.email).not.toBe(squatted);
+    expect(renamed.email).toMatch(/^taken\+dup-[0-9a-f]{8,}@example\.com$/);
+
+    // The squatter keeps its address untouched, and the index built.
+    expect((await repo().findOneByOrFail({ id: squatter.id })).email).toBe(squatted);
+    expect((await repo().findOneByOrFail({ id: keeper.id })).email).toBe('taken@example.com');
+
+    // And the widened address still round-trips through down().
+    await revertMigration();
+    expect((await repo().findOneByOrFail({ id: loser.id })).email).toBe('taken@example.com');
+    expect((await repo().findOneByOrFail({ id: squatter.id })).email).toBe(squatted);
+  });
+
   it('canonicalises addresses that do not collide', async () => {
     const user = await makeUser({ email: '  Plain.User@Example.COM  ' });
 

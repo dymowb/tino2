@@ -271,6 +271,14 @@ from `api.ts` has nothing to forward to until one exists. ~450 strings, not a pa
   `lower(email)` while `canonicalizeEmail` trims *and* lowercases, so the database enforced half
   the invariant. The migration's own collision partition already said `lower(btrim(email))` — two
   expressions for one concept, in one file, disagreeing.
+- **"Confirmed but improbable" is not advisory in a migration.** The generated replacement
+  address `<local>+dup-<8hex>@<domain>` was not checked against existing rows. My own pre-check
+  raised it and graded it advisory on probability (~2⁻³², or someone genuinely holding that
+  address); CI's Codex reviewer graded it **blocking** and was right. A migration runs once,
+  unattended, in a chosen window — the cost of being wrong is an aborted deploy and an operator
+  reverse-engineering an index-violation message, and the test suite already planted exactly that
+  address shape to prove it is ordinary. The rename now verifies each candidate is free and
+  widens until it is. Grade findings in run-once code by blast radius, not by likelihood.
 - **Keying a rollback on a pattern matches rows you never wrote.** `down()` matched the address
   suffix alone, which would have rewritten `bob+dup-deadbeef@example.com` — an ordinary
   plus-tagged address — and reactivated it, after `down()` had already dropped the unique index.
