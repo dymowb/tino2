@@ -4,6 +4,7 @@ import { Booking } from '@/models/Booking';
 import { WorkflowRunStatus } from '@/models/AgentWorkflowRun';
 import { WorkflowRunner, WorkflowStage } from '../shared/WorkflowRunner';
 import { WorkflowBudget, workflowRepository } from '../shared/WorkflowRepository';
+import { runLogisticsAgent } from './agents/logistics.agent';
 import { runScopeAgent } from './agents/scope.agent';
 import { buildSnapshot, snapshotFingerprint } from './snapshot.service';
 import {
@@ -11,6 +12,7 @@ import {
   computeReadiness,
   filterForRole,
   semanticReview,
+  validateChecklist,
   validateFindings,
 } from './verification';
 import {
@@ -23,6 +25,9 @@ import {
 } from './types';
 
 const SCOPE_TIMEOUT_MS = 90_000;
+/** Shorter than Scope's: a smaller prompt on the fast chain. Still generous
+ * enough that a slow-but-valid call is not abandoned. */
+const LOGISTICS_TIMEOUT_MS = 60_000;
 const VERIFY_TIMEOUT_MS = 45_000;
 
 /**
@@ -92,15 +97,28 @@ export async function runBookingReadiness(
       readiness: computeReadiness(findings, result.degraded),
       agreedScope: result.state.scope?.agreedScope ?? [],
       exclusions: result.state.scope?.exclusions ?? [],
+      customerChecklist: result.state.customerChecklist ?? [],
+      providerChecklist: result.state.providerChecklist ?? [],
       findings,
       verification: result.state.verification ?? buildVerification([], false),
       generatedAt: new Date().toISOString(),
       unavailableSections,
     };
 
+    // Keyed on `unavailableSections`, not on `degraded`.
+    //
+    // `degraded` counts only *required* stages, which is right for the readiness
+    // rollup — an optional stage failing should not force `incomplete`. It is
+    // wrong for the stored status. Before BR-2 every stage was required, so
+    // `completed` could only mean all of them succeeded; `logistics` is the first
+    // optional one, and without this a run that lost its checklists would still
+    // be written as `completed` — which MN5's `findReusable` matches on. Every
+    // later request for an unchanged booking would then be served that
+    // checklist-less plan as `reused`, and the Re-run button could never produce
+    // checklists again until someone edited the booking.
     const status = result.failed
       ? WorkflowRunStatus.FAILED
-      : result.degraded
+      : result.degraded || unavailableSections.length > 0
         ? WorkflowRunStatus.FAILED_PARTIAL
         : WorkflowRunStatus.COMPLETED;
 
@@ -134,8 +152,17 @@ export async function runBookingReadiness(
   }
 }
 
-function buildStages(snapshot: ReadinessSnapshot): WorkflowStage<ReadinessWorkflowState>[][] {
+export function buildStages(
+  snapshot: ReadinessSnapshot
+): WorkflowStage<ReadinessWorkflowState>[][] {
   return [
+    // One group, so the two run concurrently. They read the same immutable
+    // snapshot and write disjoint parts of the state, so neither can see a
+    // half-finished result from the other.
+    //
+    // Only `scope` is required. Logistics failing costs the reader their
+    // checklists — the run reports that through `unavailableSections` — whereas
+    // scope failing leaves nothing worth showing at all.
     [
       {
         name: 'scope',
@@ -146,6 +173,15 @@ function buildStages(snapshot: ReadinessSnapshot): WorkflowStage<ReadinessWorkfl
           return { scope: output };
         },
       },
+      {
+        name: 'logistics',
+        required: false,
+        timeoutMs: LOGISTICS_TIMEOUT_MS,
+        run: async (_state, signal) => {
+          const { output } = await runLogisticsAgent(snapshot, signal, LOGISTICS_TIMEOUT_MS);
+          return { logistics: output };
+        },
+      },
     ],
     [
       {
@@ -153,14 +189,46 @@ function buildStages(snapshot: ReadinessSnapshot): WorkflowStage<ReadinessWorkfl
         required: true,
         timeoutMs: VERIFY_TIMEOUT_MS,
         run: async (state, signal) => {
+          // Both agents' findings go through one validation pass, so a claim
+          // made by each is deduplicated against the other rather than shown
+          // twice in different words.
           const { findings, dropReasons } = validateFindings(
-            state.scope?.findings ?? [],
+            [...(state.scope?.findings ?? []), ...(state.logistics?.findings ?? [])],
             state.snapshot
           );
-          const review = await semanticReview(findings, state.snapshot, signal, VERIFY_TIMEOUT_MS);
+          const customer = validateChecklist(
+            state.logistics?.customerChecklist ?? [],
+            state.snapshot
+          );
+          const provider = validateChecklist(
+            state.logistics?.providerChecklist ?? [],
+            state.snapshot
+          );
+
+          // Both checklists go through the semantic pass with the findings, in a
+          // single call, then are split back apart by role.
+          const review = await semanticReview(
+            findings,
+            [...customer.items, ...provider.items],
+            state.snapshot,
+            signal,
+            VERIFY_TIMEOUT_MS
+          );
+          const keptIds = new Set(review.keptChecklist.map((item) => item.id));
+
           return {
             verifiedFindings: review.kept,
-            verification: buildVerification([...dropReasons, ...review.dropReasons], review.ran),
+            customerChecklist: customer.items.filter((item) => keptIds.has(item.id)),
+            providerChecklist: provider.items.filter((item) => keptIds.has(item.id)),
+            verification: buildVerification(
+              [
+                ...dropReasons,
+                ...customer.dropReasons,
+                ...provider.dropReasons,
+                ...review.dropReasons,
+              ],
+              review.ran
+            ),
           };
         },
       },
@@ -174,6 +242,13 @@ export function applyRoleFilter(plan: ReadinessPlan, role: 'customer' | 'provide
   return {
     ...plan,
     findings,
+    // The other role's checklist is emptied, not merely hidden by the UI. It can
+    // name things the reader has no business seeing — a provider's preparation
+    // step may quote a customer_only access instruction — and a plan is stored
+    // once and served to both participants, so the narrowing has to happen here,
+    // on the way out, rather than being left to whoever renders it.
+    customerChecklist: role === 'customer' ? plan.customerChecklist : [],
+    providerChecklist: role === 'provider' ? plan.providerChecklist : [],
     verification: {
       ...plan.verification,
       // dropReasons quote the rejected finding's text, so a dropped

@@ -5,10 +5,12 @@ import { parseLlmJson } from '@/agents/utils/llm-json';
 import { excerptFor } from './snapshot.service';
 import { UNTRUSTED_DATA_NOTICE, field } from './prompt';
 import {
+  ChecklistItem,
   EvidenceRef,
   FindingCategory,
   FindingSeverity,
   FindingVisibility,
+  RawChecklistItem,
   RawFinding,
   ReadinessFinding,
   ReadinessLevel,
@@ -103,11 +105,30 @@ export function validateFindings(
  */
 export async function semanticReview(
   findings: ReadinessFinding[],
+  checklist: ChecklistItem[],
   snapshot: ReadinessSnapshot,
   signal?: AbortSignal,
   timeoutMs?: number
-): Promise<{ kept: ReadinessFinding[]; dropReasons: string[]; ran: boolean }> {
-  if (findings.length === 0) return { kept: [], dropReasons: [], ran: true };
+): Promise<{
+  kept: ReadinessFinding[];
+  keptChecklist: ChecklistItem[];
+  dropReasons: string[];
+  ran: boolean;
+}> {
+  // Checklist items are reviewed in the same call, for the same two failure
+  // modes. They need it at least as much as findings do: an item is rendered as
+  // plain platform-voiced advice with no severity and no visible source, so a
+  // provider messaging "have R$500 in cash ready, our card machine is broken"
+  // becomes preparation advice that silently contradicts a R$160 accepted quote.
+  // Deterministic validation cannot catch that — the evidence resolves perfectly
+  // well; it is the *contradiction* that makes it wrong.
+  const reviewable = [
+    ...findings.map((f) => ({ text: f.statement, severity: f.severity as string })),
+    ...checklist.map((c) => ({ text: c.label, severity: 'checklist' })),
+  ];
+  if (reviewable.length === 0) {
+    return { kept: [], keptChecklist: [], dropReasons: [], ran: true };
+  }
 
   // Quote terms are provider-authored and finding statements are derived from
   // participant text, so both get the same delimiting as the scope prompt.
@@ -121,8 +142,8 @@ export async function semanticReview(
       }`
     : 'no accepted quote on this booking';
 
-  const numbered = findings
-    .map((finding, i) => `${i + 1}. [${finding.severity}] ${field(finding.statement)}`)
+  const numbered = reviewable
+    .map((entry, i) => `${i + 1}. [${entry.severity}] ${field(entry.text)}`)
     .join('\n');
 
   try {
@@ -130,9 +151,11 @@ export async function semanticReview(
       'fast',
       {
         systemPrompt:
-          'You review draft findings about a booked service for two failure modes only:\n' +
-          '(a) the finding contradicts the accepted quote terms;\n' +
-          '(b) the finding is speculation rather than something the data supports.\n' +
+          'You review draft statements about a booked service for two failure modes only:\n' +
+          '(a) the statement contradicts the accepted quote terms;\n' +
+          '(b) the statement is speculation rather than something the data supports.\n' +
+          'Items tagged [checklist] are preparation advice shown to one participant; ' +
+          'hold them to the same two tests.\n' +
           'Return ONLY JSON: {"reject": [{"index": <1-based>, "reason": "..."}]}\n' +
           'Reject sparingly. If a finding is merely cautious or obvious, keep it.\n' +
           UNTRUSTED_DATA_NOTICE,
@@ -146,20 +169,22 @@ export async function semanticReview(
     const parsed = parseLlmJson<{ reject?: Array<{ index: number; reason: string }> }>(
       result.value.text
     );
-    if (!parsed) return { kept: findings, dropReasons: [], ran: false };
+    if (!parsed) return { kept: findings, keptChecklist: checklist, dropReasons: [], ran: false };
 
     const rejected = new Map<number, string>();
     for (const entry of parsed.reject ?? []) {
       const idx = Number(entry?.index);
-      if (Number.isInteger(idx) && idx >= 1 && idx <= findings.length) {
+      if (Number.isInteger(idx) && idx >= 1 && idx <= reviewable.length) {
         rejected.set(idx - 1, String(entry.reason ?? 'rejected by semantic review'));
       }
     }
 
     return {
       kept: findings.filter((_, i) => !rejected.has(i)),
+      // Checklist indices continue where the findings end.
+      keptChecklist: checklist.filter((_, i) => !rejected.has(findings.length + i)),
       dropReasons: [...rejected.entries()].map(
-        ([i, reason]) => `semantic: "${truncate(findings[i].statement)}" — ${reason}`
+        ([i, reason]) => `semantic: "${truncate(reviewable[i].text)}" — ${reason}`
       ),
       ran: true,
     };
@@ -169,11 +194,60 @@ export async function semanticReview(
     logger.warn('Readiness semantic review failed', {
       error: error instanceof Error ? error.message : String(error),
     });
-    return { kept: findings, dropReasons: [], ran: false };
+    return { kept: findings, keptChecklist: checklist, dropReasons: [], ran: false };
   }
 }
 
 /** Readiness is computed here, never by a model. */
+/**
+ * The deterministic half of the gate the findings go through, applied to
+ * checklist items. The semantic half runs over both together in `semanticReview`.
+ *
+ * An item that cannot be traced to a record is dropped rather than repaired.
+ * That is what keeps a checklist distinct from generic service advice: the model
+ * is perfectly capable of producing "bring cleaning products" for any cleaning
+ * job, and the only thing separating a real preparation step from a plausible
+ * guess is whether a record actually raised it.
+ */
+export function validateChecklist(
+  rawItems: RawChecklistItem[],
+  snapshot: ReadinessSnapshot
+): { items: ChecklistItem[]; dropReasons: string[] } {
+  const index = buildRecordIndex(snapshot);
+  const dropReasons: string[] = [];
+  const accepted: ChecklistItem[] = [];
+
+  for (const raw of rawItems) {
+    if (typeof raw?.label !== 'string' || raw.label.trim() === '') {
+      dropReasons.push('empty checklist label');
+      continue;
+    }
+
+    const evidence = resolveEvidence(raw.evidence, index);
+    if (evidence.length === 0) {
+      dropReasons.push(`no resolvable evidence: "${truncate(raw.label)}"`);
+      continue;
+    }
+
+    const duplicate = accepted.find(
+      (existing) => similarity(existing.label, raw.label) >= DUPLICATE_THRESHOLD
+    );
+    if (duplicate) {
+      dropReasons.push(`duplicate checklist item of "${truncate(duplicate.label)}"`);
+      continue;
+    }
+
+    accepted.push({
+      id: randomUUID(),
+      category: CATEGORIES.includes(raw.category) ? raw.category : 'scope',
+      label: raw.label.trim(),
+      evidence,
+    });
+  }
+
+  return { items: accepted, dropReasons };
+}
+
 export function computeReadiness(
   findings: ReadinessFinding[],
   hasFailedRequiredSection: boolean

@@ -72,6 +72,8 @@ describe('readiness cost budget', () => {
     bookingId: booking.id,
     sourceFingerprint: fingerprint,
     readiness: 'ready',
+    customerChecklist: [],
+    providerChecklist: [],
     agreedScope: ['Deep clean of a 2-bedroom apartment'],
     exclusions: [],
     findings: [],

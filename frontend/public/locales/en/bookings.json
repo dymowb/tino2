@@ -283,8 +283,8 @@
     "findings": "Worth checking ({{count}})",
     "no_findings": "Nothing needs attention.",
     "evidence": "Based on",
-    "verification": "{{dropped}} unsupported finding(s) removed",
-    "verification_hint": "Findings whose evidence could not be traced back to a record are dropped rather than shown.",
+    "verification": "{{dropped}} unsupported item(s) removed",
+    "verification_hint": "Findings and checklist items whose evidence could not be traced back to a record are dropped rather than shown.",
     "unreviewed": "not semantically reviewed",
     "generated_at": "Generated {{time}}",
     "prepare": "Prepare",
@@ -321,6 +321,8 @@
       "availability": "Availability",
       "message": "Message"
     },
-    "reused": "This booking hasn't changed since the last check, so your existing plan is shown. Edit the booking to generate a new one."
+    "reused": "This booking hasn't changed since the last check, so your existing plan is shown. Edit the booking to generate a new one.",
+    "checklist": "Before the appointment",
+    "checklist_hint": "Prepared from what is actually in your booking and messages — not general advice. Nothing here is tracked; it is a reminder, not a task list."
   }
 }

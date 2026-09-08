@@ -283,8 +283,8 @@
     "findings": "Vale conferir ({{count}})",
     "no_findings": "Nada precisa de atenção.",
     "evidence": "Baseado em",
-    "verification": "{{dropped}} constatação(ões) sem base removida(s)",
-    "verification_hint": "Constatações cuja evidência não pôde ser rastreada até um registro são descartadas em vez de exibidas.",
+    "verification": "{{dropped}} item(ns) sem base removido(s)",
+    "verification_hint": "Constatações e itens da lista cuja evidência não pôde ser rastreada até um registro são descartados em vez de exibidos.",
     "unreviewed": "sem revisão semântica",
     "generated_at": "Gerado em {{time}}",
     "prepare": "Preparar",
@@ -321,6 +321,8 @@
       "availability": "Disponibilidade",
       "message": "Mensagem"
     },
-    "reused": "Esta reserva não mudou desde a última verificação, então o plano existente é exibido. Edite a reserva para gerar um novo."
+    "reused": "Esta reserva não mudou desde a última verificação, então o plano existente é exibido. Edite a reserva para gerar um novo.",
+    "checklist": "Antes do atendimento",
+    "checklist_hint": "Preparado a partir do que consta na sua reserva e nas mensagens — não é conselho genérico. Nada aqui é registrado; é um lembrete, não uma lista de tarefas."
   }
 }

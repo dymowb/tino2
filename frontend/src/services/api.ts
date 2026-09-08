@@ -126,6 +126,19 @@ export interface ReadinessPlan {
   };
   generatedAt: string;
   unavailableSections: string[];
+  /**
+   * Role-scoped preparation, narrowed server-side: the other participant's list
+   * arrives empty, not hidden. Absent on plans generated before BR-2.
+   */
+  customerChecklist?: ReadinessChecklistItem[];
+  providerChecklist?: ReadinessChecklistItem[];
+}
+
+export interface ReadinessChecklistItem {
+  id: string;
+  category: string;
+  label: string;
+  evidence: Array<{ source: string; recordId: string; field: string; excerpt?: string }>;
 }
 
 /**
