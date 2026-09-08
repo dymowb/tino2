@@ -53,6 +53,27 @@ amount; re-run produced "160 BRL". Pre-existing since BR-1 — checklists just m
 Tests: backend 289/289 (16 new), frontend 46/46, lint 142 (baseline), both builds green. Verified
 live in EN and PT, customer and provider.
 
+### The CI reviewer's catch: adding work to a gate without resizing it
+
+Putting checklist items through `semanticReview` roughly doubled its input while its response
+budget stayed at the 600 tokens sized for findings alone — and the reviewer's reply is a list of
+indices, so its size scales with what it is given. Overflow it and the reply truncates, fails to
+parse, and the `!parsed` branch keeps **everything**, marks the stage successful, and the run is
+stored `completed` — so MN5 then serves that unreviewed advice for every later request. The
+familiar shape: *"I could not check"* → *"everything is fine"* → **cached forever**.
+
+Three fixes, because the failure had three parts: the input is capped at 40 statements with the
+excess **dropped rather than passed through unreviewed** (fail-closed, since the whole point of
+the gate is to keep participant text from becoming platform-voiced advice); the response budget
+is sized for that cap; and a run whose semantic pass did not run is stored `FAILED_PARTIAL`, so
+it is shown with the existing "unreviewed" marker but never becomes permanent.
+
+**And the obvious test for the cap did not test it.** Asserting the returned list is ≤40 passes
+even when the prompt grows without limit, because a separate guard caps the output. The test now
+mocks the gateway and counts the numbered statements that actually reach the model. The raised
+token budget has no test of its own — it is defence in depth behind the statement cap, and
+nothing short of a genuinely truncating model would exercise it.
+
 ### The BR-2 bug worth remembering: an optional stage broke MN5's reuse
 
 `WorkflowRunner.degraded` counts only **required** stages — right for the readiness rollup, since

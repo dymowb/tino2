@@ -116,9 +116,19 @@ export async function runBookingReadiness(
     // later request for an unchanged booking would then be served that
     // checklist-less plan as `reused`, and the Re-run button could never produce
     // checklists again until someone edited the booking.
+    // A plan whose semantic pass did not run is not `completed` either.
+    //
+    // That pass is the only thing standing between participant-derived text and
+    // platform-voiced advice — it is what would reject "have R$500 in cash ready"
+    // against a R$160 accepted quote. When it fails, the deterministic layer has
+    // still done its work, so the plan is worth showing with the "unreviewed"
+    // marker the UI already renders. What it must not do is become permanent:
+    // stored as `completed` it would match MN5's `findReusable`, and every later
+    // request for an unchanged booking would be answered with that same
+    // unreviewed advice instead of retrying the review.
     const status = result.failed
       ? WorkflowRunStatus.FAILED
-      : result.degraded || unavailableSections.length > 0
+      : result.degraded || unavailableSections.length > 0 || !plan.verification.semanticReviewRan
         ? WorkflowRunStatus.FAILED_PARTIAL
         : WorkflowRunStatus.COMPLETED;
 

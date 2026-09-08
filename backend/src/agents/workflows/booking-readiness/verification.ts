@@ -33,6 +33,26 @@ const VISIBILITIES: FindingVisibility[] = ['shared', 'customer_only', 'provider_
 const DUPLICATE_THRESHOLD = 0.85;
 
 /**
+ * Ceiling on how many statements one semantic review may cover.
+ *
+ * The reviewer's whole job is to reject; its reply is a list of indices, so the
+ * budget has to scale with the number of things it might reject. BR-2 roughly
+ * doubled the input by adding checklist items — Logistics may emit up to its own
+ * 4000-token budget of them — against a response budget sized for findings
+ * alone. Anything beyond this cap is dropped rather than passed through
+ * unreviewed: this gate exists to keep participant-derived text from becoming
+ * platform-voiced advice, and letting the overflow through would invert it.
+ */
+const MAX_REVIEWABLE = 40;
+
+/**
+ * Response budget for the reject list. Sized for `MAX_REVIEWABLE` entries with
+ * room for a short reason each — truncation here is not a smaller answer, it is
+ * an unparseable one, which fails open unless caught.
+ */
+const REVIEW_MAX_TOKENS = 2000;
+
+/**
  * Deterministic validation.
  *
  * Everything here is a lookup or a rule, so it is unit-testable without mocking a
@@ -122,13 +142,25 @@ export async function semanticReview(
   // becomes preparation advice that silently contradicts a R$160 accepted quote.
   // Deterministic validation cannot catch that — the evidence resolves perfectly
   // well; it is the *contradiction* that makes it wrong.
-  const reviewable = [
+  const all = [
     ...findings.map((f) => ({ text: f.statement, severity: f.severity as string })),
     ...checklist.map((c) => ({ text: c.label, severity: 'checklist' })),
   ];
-  if (reviewable.length === 0) {
+  if (all.length === 0) {
     return { kept: [], keptChecklist: [], dropReasons: [], ran: true };
   }
+
+  // Overflow is dropped, not waved through. Findings come first, so the items
+  // that lose out are checklist entries — advisory, and safer absent than
+  // unreviewed.
+  const reviewable = all.slice(0, MAX_REVIEWABLE);
+  const overflowReasons = all
+    .slice(MAX_REVIEWABLE)
+    .map(
+      (entry) => `dropped unreviewed (over ${MAX_REVIEWABLE} statements): "${truncate(entry.text)}"`
+    );
+  const withinCap = <T>(items: T[], offset: number): T[] =>
+    items.filter((_, i) => offset + i < MAX_REVIEWABLE);
 
   // Quote terms are provider-authored and finding statements are derived from
   // participant text, so both get the same delimiting as the scope prompt.
@@ -160,7 +192,7 @@ export async function semanticReview(
           'Reject sparingly. If a finding is merely cautious or obvious, keep it.\n' +
           UNTRUSTED_DATA_NOTICE,
         userMessage: `ACCEPTED TERMS: ${terms}\n\nFINDINGS:\n${numbered}`,
-        maxTokens: 600,
+        maxTokens: REVIEW_MAX_TOKENS,
         signal,
       },
       { timeoutMs }
@@ -169,7 +201,22 @@ export async function semanticReview(
     const parsed = parseLlmJson<{ reject?: Array<{ index: number; reason: string }> }>(
       result.value.text
     );
-    if (!parsed) return { kept: findings, keptChecklist: checklist, dropReasons: [], ran: false };
+    // Truncated output is indistinguishable from "nothing to reject" once it
+    // fails to parse, so it is reported the same way: the pass did not run.
+    if (!parsed) {
+      logger.warn('Readiness semantic review produced no usable JSON', {
+        model: result.model,
+        finishReason: result.value.finishReason,
+        truncated: result.value.finishReason === 'max_tokens',
+        statements: reviewable.length,
+      });
+      return {
+        kept: findings,
+        keptChecklist: withinCap(checklist, findings.length),
+        dropReasons: overflowReasons,
+        ran: false,
+      };
+    }
 
     const rejected = new Map<number, string>();
     for (const entry of parsed.reject ?? []) {
@@ -182,10 +229,15 @@ export async function semanticReview(
     return {
       kept: findings.filter((_, i) => !rejected.has(i)),
       // Checklist indices continue where the findings end.
-      keptChecklist: checklist.filter((_, i) => !rejected.has(findings.length + i)),
-      dropReasons: [...rejected.entries()].map(
-        ([i, reason]) => `semantic: "${truncate(reviewable[i].text)}" — ${reason}`
+      keptChecklist: withinCap(checklist, findings.length).filter(
+        (_, i) => !rejected.has(findings.length + i)
       ),
+      dropReasons: [
+        ...overflowReasons,
+        ...[...rejected.entries()].map(
+          ([i, reason]) => `semantic: "${truncate(reviewable[i].text)}" — ${reason}`
+        ),
+      ],
       ran: true,
     };
   } catch (error) {
@@ -194,7 +246,12 @@ export async function semanticReview(
     logger.warn('Readiness semantic review failed', {
       error: error instanceof Error ? error.message : String(error),
     });
-    return { kept: findings, keptChecklist: checklist, dropReasons: [], ran: false };
+    return {
+      kept: findings,
+      keptChecklist: withinCap(checklist, findings.length),
+      dropReasons: overflowReasons,
+      ran: false,
+    };
   }
 }
 

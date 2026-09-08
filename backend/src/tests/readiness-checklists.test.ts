@@ -1,10 +1,12 @@
 import {
+  semanticReview,
   validateChecklist,
   validateFindings,
 } from '@/agents/workflows/booking-readiness/verification';
 import { applyRoleFilter, buildStages } from '@/agents/workflows/booking-readiness/coordinator';
 import { renderSnapshotForPrompt } from '@/agents/workflows/booking-readiness/prompt';
 import { snapshotFingerprint } from '@/agents/workflows/booking-readiness/snapshot.service';
+import { aiGateway } from '@/agents/services/ai-gateway.service';
 import {
   ChecklistItem,
   RawChecklistItem,
@@ -148,6 +150,54 @@ describe('amounts carry their currency into the prompt', () => {
     snapshot.currency = 'USD';
 
     expect(renderSnapshotForPrompt(snapshot)).toContain('USD');
+  });
+});
+
+describe('the semantic gate does not fail open under load', () => {
+  const item = (n: number): ChecklistItem => ({
+    id: `id-${n}`,
+    category: 'access',
+    label: `Preparation step number ${n}`,
+    evidence: [{ source: 'booking', recordId: BOOKING_ID, field: 'description' }],
+  });
+
+  it('never sends the reviewer more statements than its response budget covers', async () => {
+    // The reviewer answers with a list of indices, so its response budget scales
+    // with how many statements it is given. BR-2 roughly doubled that input by
+    // adding checklist items. Overflow the budget and the reply truncates,
+    // fails to parse, and every statement is kept unreviewed — the gate inverts.
+    //
+    // Asserted on what actually reaches the model, because capping only the
+    // *returned* list would still let the prompt grow without limit.
+    const sent: string[] = [];
+    jest.spyOn(aiGateway, 'generate').mockImplementation(async (_profile, request) => {
+      sent.push(request.userMessage);
+      return {
+        model: 'test',
+        value: { text: '{"reject":[]}', finishReason: 'stop', usage: undefined },
+      } as never;
+    });
+
+    const many = Array.from({ length: 60 }, (_, i) => item(i));
+    const review = await semanticReview([], many, cleanSnapshot(), undefined, 50);
+
+    const numbered = (sent[0].match(/^\d+\. \[/gm) ?? []).length;
+    expect(numbered).toBeLessThanOrEqual(40);
+
+    // And the excess is dropped rather than returned unreviewed.
+    expect(review.keptChecklist.length).toBeLessThanOrEqual(40);
+    expect(review.dropReasons.some((r) => /dropped unreviewed/.test(r))).toBe(true);
+
+    jest.restoreAllMocks();
+  });
+
+  it('reports that it did not run rather than silently keeping everything', async () => {
+    // No AI gateway is configured in tests, so the call throws — which is the
+    // real failure mode. `ran: false` is what marks the plan unreviewed and, in
+    // the coordinator, stops it being stored as reusable.
+    const review = await semanticReview([], [item(1)], cleanSnapshot(), undefined, 50);
+
+    expect(review.ran).toBe(false);
   });
 });
 

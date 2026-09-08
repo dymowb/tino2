@@ -276,4 +276,42 @@ describe('a readiness run that lost an optional stage', () => {
       );
     });
   });
+
+  it('stores a plan whose semantic pass did not run as failed_partial, not reusable', async () => {
+    // That pass is the only thing standing between participant-derived text and
+    // platform-voiced advice. When it fails the deterministic layer has still
+    // done its work, so the plan is worth showing with the "unreviewed" marker
+    // the UI already renders — but it must not become permanent. Stored as
+    // `completed` it would match MN5's reuse, and every later request for an
+    // unchanged booking would be answered with the same unreviewed advice
+    // instead of the review being retried.
+    jest.spyOn(logisticsAgent, 'runLogisticsAgent').mockResolvedValue({
+      output: { customerChecklist: [], providerChecklist: [], findings: [] },
+      inputTokens: 0,
+      outputTokens: 0,
+    });
+    jest.spyOn(verification, 'semanticReview').mockResolvedValue({
+      kept: [],
+      keptChecklist: [],
+      dropReasons: [],
+      ran: false,
+    });
+
+    const { plan } = await runBookingReadiness(booking, customer.id, 'customer');
+    const run = await storedRun();
+
+    expect(plan.verification.semanticReviewRan).toBe(false);
+    expect(run.output).not.toBeNull();
+    expect(run.status).toBe(WorkflowRunStatus.FAILED_PARTIAL);
+
+    await expect(
+      workflowRepository.findReusable(
+        READINESS_WORKFLOW_TYPE,
+        READINESS_SUBJECT_TYPE,
+        booking.id,
+        run.sourceFingerprint ?? '',
+        READINESS_SCHEMA_VERSION
+      )
+    ).resolves.toBeNull();
+  });
 });
