@@ -10,6 +10,7 @@ import { aiGateway } from '@/agents/services/ai-gateway.service';
 import {
   ChecklistItem,
   RawChecklistItem,
+  ReadinessFinding,
   ReadinessPlan,
 } from '@/agents/workflows/booking-readiness/types';
 import {
@@ -186,6 +187,33 @@ describe('the semantic gate does not fail open under load', () => {
 
     // And the excess is dropped rather than returned unreviewed.
     expect(review.keptChecklist.length).toBeLessThanOrEqual(40);
+    expect(review.dropReasons.some((r) => /dropped unreviewed/.test(r))).toBe(true);
+
+    jest.restoreAllMocks();
+  });
+
+  it('drops findings past the cap too, not just checklist items', async () => {
+    // Findings are ordered first, so with more than the cap of them the overflow
+    // is findings — and returning those unreviewed is the same fail-open reached
+    // from the other end. Covers all three return paths via the mocked reply.
+    const finding = (n: number): ReadinessFinding => ({
+      id: `f-${n}`,
+      category: 'scope',
+      severity: 'attention',
+      visibility: 'shared',
+      statement: `Concern number ${n} about the agreed work`,
+      evidence: [{ source: 'booking', recordId: BOOKING_ID, field: 'description' }],
+    });
+
+    jest.spyOn(aiGateway, 'generate').mockResolvedValue({
+      model: 'test',
+      value: { text: '{"reject":[]}', finishReason: 'stop', usage: undefined },
+    } as never);
+
+    const many = Array.from({ length: 55 }, (_, i) => finding(i));
+    const review = await semanticReview(many, [], cleanSnapshot(), undefined, 50);
+
+    expect(review.kept.length).toBeLessThanOrEqual(40);
     expect(review.dropReasons.some((r) => /dropped unreviewed/.test(r))).toBe(true);
 
     jest.restoreAllMocks();

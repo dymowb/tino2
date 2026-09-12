@@ -68,6 +68,11 @@ the gate is to keep participant text from becoming platform-voiced advice); the 
 is sized for that cap; and a run whose semantic pass did not run is stored `FAILED_PARTIAL`, so
 it is shown with the existing "unreviewed" marker but never becomes permanent.
 
+The first fix capped only one end. Findings are ordered before checklist items, so with more
+than 40 *findings* the overflow is findings — and returning those unreviewed is the identical
+fail-open reached from the other side. Capping the input without capping **every** return path
+(success, unparseable, and thrown) left the hole open. CI caught that too.
+
 **And the obvious test for the cap did not test it.** Asserting the returned list is ≤40 passes
 even when the prompt grows without limit, because a separate guard caps the output. The test now
 mocks the gateway and counts the numbered statements that actually reach the model. The raised

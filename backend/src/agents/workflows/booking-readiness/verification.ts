@@ -211,7 +211,7 @@ export async function semanticReview(
         statements: reviewable.length,
       });
       return {
-        kept: findings,
+        kept: withinCap(findings, 0),
         keptChecklist: withinCap(checklist, findings.length),
         dropReasons: overflowReasons,
         ran: false,
@@ -227,7 +227,11 @@ export async function semanticReview(
     }
 
     return {
-      kept: findings.filter((_, i) => !rejected.has(i)),
+      // Capped on the way out as well as on the way in. Findings are ordered
+      // first, so with more than `MAX_REVIEWABLE` of them the overflow is
+      // findings rather than checklist items — and returning those unreviewed is
+      // the same fail-open, just reached from the other end.
+      kept: withinCap(findings, 0).filter((_, i) => !rejected.has(i)),
       // Checklist indices continue where the findings end.
       keptChecklist: withinCap(checklist, findings.length).filter(
         (_, i) => !rejected.has(findings.length + i)
@@ -247,7 +251,7 @@ export async function semanticReview(
       error: error instanceof Error ? error.message : String(error),
     });
     return {
-      kept: findings,
+      kept: withinCap(findings, 0),
       keptChecklist: withinCap(checklist, findings.length),
       dropReasons: overflowReasons,
       ran: false,
