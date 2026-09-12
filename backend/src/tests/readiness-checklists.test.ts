@@ -219,13 +219,35 @@ describe('the semantic gate does not fail open under load', () => {
     jest.restoreAllMocks();
   });
 
-  it('reports that it did not run rather than silently keeping everything', async () => {
-    // No AI gateway is configured in tests, so the call throws — which is the
-    // real failure mode. `ran: false` is what marks the plan unreviewed and, in
-    // the coordinator, stops it being stored as reusable.
+  it('withholds every checklist item when the pass could not run', async () => {
+    // No AI gateway is configured in tests, so the call throws — the real failure
+    // mode. Findings survive unreviewed because they arrive labelled (severity,
+    // category, evidence) and the drawer marks the plan unreviewed. A checklist
+    // item is a bare imperative in the platform's voice, so it is withheld: the
+    // pass that just failed is the only thing that would have rejected
+    // "have R$500 in cash ready" against a R$160 accepted quote.
+    //
+    // Storing the run `failed_partial` only stops it being *reused*; it does
+    // nothing for the reader holding this response.
+    const review = await semanticReview([], [item(1), item(2)], cleanSnapshot(), undefined, 50);
+
+    expect(review.ran).toBe(false);
+    expect(review.keptChecklist).toEqual([]);
+    expect(review.dropReasons.some((r) => /withheld unreviewed/.test(r))).toBe(true);
+  });
+
+  it('withholds them on a malformed reply too, not only on a thrown error', async () => {
+    jest.spyOn(aiGateway, 'generate').mockResolvedValue({
+      model: 'test',
+      value: { text: '{"reject": [', finishReason: 'max_tokens', usage: undefined },
+    } as never);
+
     const review = await semanticReview([], [item(1)], cleanSnapshot(), undefined, 50);
 
     expect(review.ran).toBe(false);
+    expect(review.keptChecklist).toEqual([]);
+
+    jest.restoreAllMocks();
   });
 });
 

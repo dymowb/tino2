@@ -68,6 +68,19 @@ the gate is to keep participant text from becoming platform-voiced advice); the 
 is sized for that cap; and a run whose semantic pass did not run is stored `FAILED_PARTIAL`, so
 it is shown with the existing "unreviewed" marker but never becomes permanent.
 
+It took three CI rounds to close, each a different face of the same hole. Capping the *input*
+left both failure paths returning the capped items anyway. Capping the *findings* return fixed one
+end while the checklist end stayed open. And marking the run `failed_partial` — which I argued was
+sufficient — only stops the plan being **reused**; it does nothing for the reader holding the
+current response.
+
+The distinction that finally settled it: **findings and checklist items are not equally safe to
+show unreviewed.** A finding arrives labelled — severity, category, evidence, framed as "worth
+checking" — and the drawer marks the whole plan unreviewed. A checklist item is a bare imperative
+in the platform's voice ("Have R$500 in cash ready for the technician"), indistinguishable from
+advice the platform stands behind. So findings survive a failed semantic pass; checklists are
+withheld entirely, and the section simply does not render.
+
 The first fix capped only one end. Findings are ordered before checklist items, so with more
 than 40 *findings* the overflow is findings — and returning those unreviewed is the identical
 fail-open reached from the other side. Capping the input without capping **every** return path

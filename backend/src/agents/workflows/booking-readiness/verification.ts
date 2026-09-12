@@ -212,8 +212,8 @@ export async function semanticReview(
       });
       return {
         kept: withinCap(findings, 0),
-        keptChecklist: withinCap(checklist, findings.length),
-        dropReasons: overflowReasons,
+        keptChecklist: [],
+        dropReasons: [...overflowReasons, ...unreviewedChecklistReasons(checklist)],
         ran: false,
       };
     }
@@ -252,11 +252,34 @@ export async function semanticReview(
     });
     return {
       kept: withinCap(findings, 0),
-      keptChecklist: withinCap(checklist, findings.length),
-      dropReasons: overflowReasons,
+      keptChecklist: [],
+      dropReasons: [...overflowReasons, ...unreviewedChecklistReasons(checklist)],
       ran: false,
     };
   }
+}
+
+/**
+ * Why no checklist survives a failed semantic pass.
+ *
+ * Findings and checklist items are not equally safe to show unreviewed. A finding
+ * arrives labelled — a severity, a category, its evidence, and the framing
+ * "worth checking" — and the drawer additionally marks the whole plan unreviewed
+ * when this pass did not run. A checklist item is a bare imperative in the
+ * platform's voice: "Have R$500 in cash ready for the technician". That sentence
+ * is indistinguishable from advice the platform stands behind, and the only thing
+ * that would have rejected it as contradicting a R$160 accepted quote is the pass
+ * that just failed.
+ *
+ * Marking the run `failed_partial` stops it being *reused*, which is a different
+ * and lesser protection: it does nothing for the reader holding this response.
+ * So the section is withheld rather than shown unvetted — the drawer hides it
+ * when empty, and the run is retried rather than cached.
+ */
+function unreviewedChecklistReasons(checklist: ChecklistItem[]): string[] {
+  return checklist.map(
+    (item) => `withheld unreviewed (semantic pass unavailable): "${truncate(item.label)}"`
+  );
 }
 
 /** Readiness is computed here, never by a model. */
