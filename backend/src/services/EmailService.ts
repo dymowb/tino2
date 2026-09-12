@@ -1,5 +1,9 @@
 import sgMail from '@sendgrid/mail';
 import nodemailer from 'nodemailer';
+// nodemailer 10 ships its own types and exports `Transporter` as a named type
+// rather than a member of a `nodemailer` namespace, so `nodemailer.Transporter`
+// no longer resolves.
+import type { Transporter } from 'nodemailer';
 import config from '../config/environment';
 import logger from '../config/logger';
 
@@ -101,7 +105,7 @@ export interface EmailTemplate {
 }
 
 export class EmailService {
-  private transporter: nodemailer.Transporter | null = null;
+  private transporter: Transporter | null = null;
   private fromEmail: string;
   private useSendGrid: boolean;
   private ready: Promise<void>;
