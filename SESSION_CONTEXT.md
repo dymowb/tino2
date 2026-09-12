@@ -3,6 +3,119 @@
 > Lean by design (per CLAUDE.md): current status + roadmap + resume point only.
 > Detailed completed-work notes live in `Tests/history/HISTORICAL_CONTEXT.md` and git history.
 
+## Current Status (2026-09-08) — BR-2 delivered (Logistics + role-scoped checklists)
+
+Branch `feat/br2-logistics-checklists`. Roadmap milestone 3, phase **BR-2**
+(`docs/07-Agentic-Product-Roadmap.md` §3.10). Two decisions taken with the user before building.
+
+**Checklists are advisory, not tickable.** Nothing records whether an item was done. That keeps
+the Copilot's invariant — agents advise; booking/messaging/quote/payment services stay the only
+authorities that mutate business state — and avoids a genuinely hard problem: item identity
+across re-runs, since every run regenerates the list from scratch.
+
+**Logistics runs on the `fast` chain, Scope stays on `reasoning`.** Measured on a live run:
+scope 26.0s (Opus), logistics 8.9s (Haiku→Sonnet), verification 4.2s, total 30.2s. Because the
+two share one runner group they execute concurrently, so Logistics added **no latency** and a
+fraction of the cost — the run is still ≈ max(scope, logistics) + verification.
+
+**What shipped:** `ChecklistItem` (the roadmap referenced it but never defined it), the Logistics
+agent, parallel execution, `validateChecklist` applying the same *deterministic* gate as findings
+(evidence must resolve, invented ids rejected, duplicates collapsed, ids assigned by app code),
+role narrowing in `applyRoleFilter`, drawer UI, EN/PT copy.
+
+Checklist items also go through the **semantic** pass, in the same call as the findings. They need
+it at least as much: an item renders as plain platform-voiced advice with no severity chip, so a
+provider messaging *"have R$500 in cash ready, our card machine is broken"* would otherwise become
+preparation advice quietly contradicting a R$160 accepted quote — deterministic validation cannot
+catch that, because the evidence resolves perfectly well and it is the *contradiction* that makes
+it wrong. Each item also shows its evidence source, so a message-derived item is visibly one
+participant's words rather than a platform fact.
+
+**Both agents' findings go through one validation pass**, so a concern raised by each is
+deduplicated rather than shown twice in different words. Logistics is `required: false`: losing
+it costs the reader their checklists (reported through `unavailableSections`) rather than the
+whole plan.
+
+`READINESS_SCHEMA_VERSION` → 2, which by MN5's reuse rule retires every BR-1 plan. Intended: a v1
+plan has no checklists and would render the new section empty.
+
+**Exit criterion verified on real data.** One stored run holds 3 customer + 3 provider items; the
+customer's response carries 3 and **0**, the provider's **0** and 3. The narrowing is server-side
+— the drawer never learns who is reading, and simply concatenates the two lists because exactly
+one is ever populated.
+
+**A real defect live verification caught:** the prompt rendered `totalAmount: 320` with no
+currency, so the model picked a symbol — the first run produced **"£160"** for a R$ 320 booking.
+Wrong in a way a Brazilian customer notices immediately, and it quietly discredits the rest of
+the plan. The snapshot now carries the platform currency and the prompt states it beside every
+amount; re-run produced "160 BRL". Pre-existing since BR-1 — checklists just made it visible.
+
+Tests: backend 289/289 (16 new), frontend 46/46, lint 142 (baseline), both builds green. Verified
+live in EN and PT, customer and provider.
+
+### The CI reviewer's catch: adding work to a gate without resizing it
+
+Putting checklist items through `semanticReview` roughly doubled its input while its response
+budget stayed at the 600 tokens sized for findings alone — and the reviewer's reply is a list of
+indices, so its size scales with what it is given. Overflow it and the reply truncates, fails to
+parse, and the `!parsed` branch keeps **everything**, marks the stage successful, and the run is
+stored `completed` — so MN5 then serves that unreviewed advice for every later request. The
+familiar shape: *"I could not check"* → *"everything is fine"* → **cached forever**.
+
+Three fixes, because the failure had three parts: the input is capped at 40 statements with the
+excess **dropped rather than passed through unreviewed** (fail-closed, since the whole point of
+the gate is to keep participant text from becoming platform-voiced advice); the response budget
+is sized for that cap; and a run whose semantic pass did not run is stored `FAILED_PARTIAL`, so
+it is shown with the existing "unreviewed" marker but never becomes permanent.
+
+It took three CI rounds to close, each a different face of the same hole. Capping the *input*
+left both failure paths returning the capped items anyway. Capping the *findings* return fixed one
+end while the checklist end stayed open. And marking the run `failed_partial` — which I argued was
+sufficient — only stops the plan being **reused**; it does nothing for the reader holding the
+current response.
+
+The distinction that finally settled it: **findings and checklist items are not equally safe to
+show unreviewed.** A finding arrives labelled — severity, category, evidence, framed as "worth
+checking" — and the drawer marks the whole plan unreviewed. A checklist item is a bare imperative
+in the platform's voice ("Have R$500 in cash ready for the technician"), indistinguishable from
+advice the platform stands behind. So findings survive a failed semantic pass; checklists are
+withheld entirely, and the section simply does not render.
+
+The first fix capped only one end. Findings are ordered before checklist items, so with more
+than 40 *findings* the overflow is findings — and returning those unreviewed is the identical
+fail-open reached from the other side. Capping the input without capping **every** return path
+(success, unparseable, and thrown) left the hole open. CI caught that too.
+
+**And the obvious test for the cap did not test it.** Asserting the returned list is ≤40 passes
+even when the prompt grows without limit, because a separate guard caps the output. The test now
+mocks the gateway and counts the numbered statements that actually reach the model. The raised
+token budget has no test of its own — it is defence in depth behind the statement cap, and
+nothing short of a genuinely truncating model would exercise it.
+
+### The BR-2 bug worth remembering: an optional stage broke MN5's reuse
+
+`WorkflowRunner.degraded` counts only **required** stages — right for the readiness rollup, since
+an optional failure should not force `incomplete`. Keying the *stored run status* off it was not.
+`logistics` is the first optional stage this workflow has had, so before BR-2 `completed` could
+only mean every stage succeeded. A run that lost its checklists was written `COMPLETED`, which is
+exactly what MN5's `findReusable` matches on — so every later request for an unchanged booking
+was served that checklist-less plan as `reused`, with the drawer showing *"sections unavailable"*
+and *"nothing changed, edit the booking"* at once, and Re-run unable to recover. Status is now
+keyed on `unavailableSections`.
+
+**Three of my tests passed against three different bugs this round.** The "parallel execution"
+pair built their own `WorkflowRunner`, so making the coordinator sequential left 16/16 green —
+and that gap is what let the status bug through. The role-scoping tests all worked on a
+hand-built plan, so swapping the two lists *in the coordinator* would have leaked a provider's
+preparation steps to the customer with the suite still green. And the dedupe test called
+`validateFindings` directly, so dropping the logistics half of the merge was invisible. All three
+are now bound to `buildStages` or to a real `runBookingReadiness`, and each was mutation-verified.
+The lesson is narrow and repeatable: **a test that constructs its own version of the wiring tests
+the library, not the feature.**
+
+**Not in BR-2** (deliberately): Risk and Communication agents, message drafts, SSE progress —
+those are BR-3. Cost caps and rate limits, nominally BR-4, already landed with MN5.
+
 ## Current Status (2026-09-05) — Codex follow-up audit (`2026-08-16`), HN1–HN3 + MN4/MN6 merged
 
 Source: `docs/code-audits/2026-08-16-follow-up-code-analysis.md` (Codex, audited `3414f19`).

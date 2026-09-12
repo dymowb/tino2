@@ -97,6 +97,11 @@ export const ReadinessDrawer: React.FC<Props> = ({ bookingId, open, onClose }) =
   const budgetMessage = budgetRefusal(runMutation.error);
 
   const plan = data?.plan ?? null;
+  // Concatenated rather than picked by role, because the server has already
+  // emptied the list belonging to the other participant — so exactly one of
+  // these is ever populated, and the drawer never has to know who is reading.
+  // Both are optional: a plan generated before BR-2 simply has no checklist.
+  const checklist = [...(plan?.customerChecklist ?? []), ...(plan?.providerChecklist ?? [])];
   // Older responses carry only `stale`; a truthy one there means "not current",
   // which is the safe reading when the server did not say which.
   const freshness = data?.freshness ?? (data?.stale ? 'stale' : 'current');
@@ -225,6 +230,31 @@ export const ReadinessDrawer: React.FC<Props> = ({ bookingId, open, onClose }) =
                     <Typography component="li" variant="body2" key={i}>
                       {item}
                     </Typography>
+                  ))}
+                </Stack>
+              </Section>
+            )}
+
+            {checklist.length > 0 && (
+              <Section title={t("readiness.checklist")}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  {t("readiness.checklist_hint")}
+                </Typography>
+                <Stack component="ul" sx={{ pl: 2.5, m: 0 }} spacing={1}>
+                  {checklist.map((item) => (
+                    <Box component="li" key={item.id}>
+                      <Typography variant="body2">{item.label}</Typography>
+                      {/* Where it came from, in the reader's own language. An item
+                          derived from a chat message is advice one participant
+                          typed, not a platform fact, and it reads identically to
+                          one derived from the accepted quote unless we say so. */}
+                      <Typography variant="caption" color="text.secondary">
+                        {item.evidence
+                          .map((ref) => t(`readiness.source.${ref.source}`))
+                          .filter((label, i, all) => all.indexOf(label) === i)
+                          .join(" · ")}
+                      </Typography>
+                    </Box>
                   ))}
                 </Stack>
               </Section>

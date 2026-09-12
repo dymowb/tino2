@@ -9,6 +9,7 @@ import { Message } from '@/models/Message';
 import { scrubPii } from '@/services/memory/PiiScrubber';
 import { fingerprint } from '../shared/SourceFingerprint';
 import { ReadinessSnapshot, SnapshotMessage } from './types';
+import { getPlatformCurrency } from '@/services/PlatformSettingsService';
 
 /** Bookings where preparation is still meaningful. `pending` is excluded — nothing
  * is actually agreed until the quote is accepted and the hold is placed. */
@@ -112,6 +113,7 @@ export async function buildSnapshot(booking: Booking): Promise<ReadinessSnapshot
   const conflictingBookingCount = await countAdjacentBookings(booking);
 
   return {
+    currency: await getPlatformCurrency(),
     booking: {
       id: booking.id,
       status: booking.status,
@@ -280,6 +282,12 @@ async function countAdjacentBookings(booking: Booking): Promise<number> {
  */
 export function snapshotFingerprint(snapshot: ReadinessSnapshot): string {
   return fingerprint({
+    // The amounts above are bare numbers; this is what makes them mean anything,
+    // and it is a prompt input like any other. An admin switching the platform
+    // currency would otherwise leave every stored plan fingerprinting identically
+    // — reported `current`, and served by `findReusable` as `reused` — while its
+    // agent reasoning is still anchored on the old currency.
+    currency: snapshot.currency,
     booking: {
       status: snapshot.booking.status,
       serviceType: snapshot.booking.serviceType,
