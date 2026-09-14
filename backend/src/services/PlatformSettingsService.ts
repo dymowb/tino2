@@ -74,7 +74,7 @@ async function load(): Promise<{ currency: string; locale: string }> {
     const storedLocale = byKey.get(LOCALE_KEY)?.trim();
     if (storedLocale) {
       // An invalid tag makes Intl.NumberFormat throw. That throw would land inside
-      // createPaymentIntent *after* the Stripe intent and payment row exist, so the
+      // the escrow hold *after* the Stripe intent exists, so the
       // request would fail while the payment persisted — and the retry would then be
       // refused as a duplicate. Validate before it can get anywhere near that.
       if (isUsableLocale(storedLocale)) {

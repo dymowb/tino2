@@ -138,6 +138,8 @@ describe('role visibility', () => {
     // own private findings, so reusing one would fail for the wrong reason.
     const secret = 'CUSTOMER_ONLY_TEXT_THAT_MUST_NEVER_REACH_THE_PROVIDER';
     const plan: ReadinessPlan = {
+      customerChecklist: [],
+      providerChecklist: [],
       bookingId: BOOKING_ID,
       sourceFingerprint: 'fp',
       readiness: 'needs_attention',
@@ -291,8 +293,15 @@ describe('prompt rendering and the injection boundary', () => {
     );
     expect(source).toContain('field(t.item)');
     expect(source).toContain('field(t.description)');
-    expect(source).toContain('field(finding.statement)');
+    // The reviewable list now carries checklist labels as well as finding
+    // statements, so this matches the shared rendering rather than the old
+    // finding-specific expression — both are participant-derived text.
+    expect(source).toContain('field(entry.text)');
     expect(source).toContain('UNTRUSTED_DATA_NOTICE');
+
+    // Nothing participant-authored may reach that prompt undelimited.
+    const numbered = source.slice(source.indexOf('const numbered'));
+    expect(numbered.slice(0, 200)).not.toMatch(/\$\{entry\.text\}/);
   });
 
   it('reports a placed escrow hold even while paymentStatus is still pending', () => {

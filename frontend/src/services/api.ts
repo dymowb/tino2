@@ -126,14 +126,40 @@ export interface ReadinessPlan {
   };
   generatedAt: string;
   unavailableSections: string[];
+  /**
+   * Role-scoped preparation, narrowed server-side: the other participant's list
+   * arrives empty, not hidden. Absent on plans generated before BR-2.
+   */
+  customerChecklist?: ReadinessChecklistItem[];
+  providerChecklist?: ReadinessChecklistItem[];
 }
+
+export interface ReadinessChecklistItem {
+  id: string;
+  category: string;
+  label: string;
+  evidence: Array<{ source: string; recordId: string; field: string; excerpt?: string }>;
+}
+
+/**
+ * `unknown` means freshness could not be evaluated — never that the plan is
+ * current. Treat it as unsafe to rely on.
+ */
+export type ReadinessFreshness = 'current' | 'stale' | 'unknown';
 
 export interface ReadinessRunResponse {
   runId: string;
   status: string;
   plan: ReadinessPlan | null;
-  /** True when the booking changed after the plan was generated. */
+  freshness: ReadinessFreshness;
+  /** Legacy two-state view of `freshness`: true for both stale and unknown. */
   stale: boolean;
+  /**
+   * True when the server served an existing plan instead of paying for a new
+   * run, because the booking has not changed since that plan was built. Absent
+   * on reads and on responses from a server predating the cost budget.
+   */
+  reused?: boolean;
 }
 
 export interface Provider {
@@ -1416,31 +1442,6 @@ class ApiService {
 
   // Amount and currency are derived from the booking server-side; the client does
   // not get to choose what it is charged.
-  async createPaymentIntent(paymentData: {
-    bookingId: string;
-    description?: string;
-    metadata?: Record<string, any>;
-  }): Promise<any> {
-    const response = await this.api.post<ApiResponse<any>>(
-      "/payments/intent",
-      paymentData,
-    );
-    return response.data.data!;
-  }
-
-  async confirmPayment(
-    paymentId: string,
-    paymentMethodId?: string,
-  ): Promise<any> {
-    const response = await this.api.post<ApiResponse<any>>(
-      `/payments/${paymentId}/confirm`,
-      {
-        paymentMethodId,
-      },
-    );
-    return response.data.data!;
-  }
-
   async refundPayment(
     paymentId: string,
     refundData: {

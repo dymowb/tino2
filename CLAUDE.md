@@ -168,6 +168,30 @@ Supports multiple payment methods:
 - Do not consider a feature done until the happy path AND the key error paths have been verified
 - Make sure the database is populated with seed data before running UX tests
 
+## Pre-PR Review Protocol
+
+Every PR is reviewed by the *other* agent through the `cross-agent-review` check, which fails
+the build on a blocking finding. Before pushing a branch, run the pre-check locally:
+
+```bash
+git diff main...HEAD > "$SCRATCHPAD/cross-review.diff"   # same input the CI reviewer gets
+```
+
+then spawn the **`pr-precheck`** agent (`.claude/agents/pr-precheck.md`) with the diff path,
+a summary of what the change claims to do, and an explicit list of what was deliberately left
+out of scope. Fix every blocking-class finding before pushing; advisory findings are usually
+noise, because the CI reviewer's own prompt refuses to block on style or design preference.
+
+- The reviewer the pre-check imitates is not a guess: its prompt is committed at
+  `.github/review/codex-review.md` and its output schema next to it. **If either changes,
+  update the agent definition to match.**
+- Spawn it as a *fresh* agent, never as a fork of the implementing session. A fork inherits
+  the author's reasoning and ratifies its blind spots — which is exactly how HN2 cost seven
+  review rounds.
+- A newly added or edited agent definition is **not picked up mid-session**; the registry
+  loads at startup. Until the next session, run it as `general-purpose` and tell it to read
+  and follow `.claude/agents/pr-precheck.md` first.
+
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.
 NEVER create files unless they're absolutely necessary for achieving your goal.

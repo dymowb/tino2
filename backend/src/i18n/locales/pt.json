@@ -113,5 +113,8 @@
   "provider.deactivated": "Perfil de prestador desativado com sucesso",
   "provider.deactivate_failed": "Falha ao desativar perfil de prestador",
   "provider.dashboard_stats_failed": "Falha ao buscar estatísticas do painel",
-  "provider.catalog_failed": "Falha ao carregar o catálogo de serviços"
+  "provider.catalog_failed": "Falha ao carregar o catálogo de serviços",
+  "readiness.budget_exhausted_user": "Você já usou todas as suas análises de prontidão por IA por enquanto. Os planos existentes continuam disponíveis; você poderá gerar uma nova quando seu limite diário for renovado.",
+  "readiness.budget_exhausted_platform": "As análises de prontidão por IA estão temporariamente indisponíveis enquanto o limite da plataforma é reiniciado. Os planos existentes continuam disponíveis.",
+  "readiness.rate_limited": "Muitas solicitações de análise de prontidão em pouco tempo. Aguarde um momento e tente novamente."
 }

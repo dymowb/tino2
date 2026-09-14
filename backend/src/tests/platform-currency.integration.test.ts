@@ -70,7 +70,7 @@ describe('platform currency configuration', () => {
   it('ignores a locale Intl cannot use', async () => {
     await setSetting('platform_locale', 'not a locale');
 
-    // An invalid tag makes Intl.NumberFormat throw. In createPaymentIntent that
+    // An invalid tag makes Intl.NumberFormat throw. In the escrow hold path that
     // throw lands after the Stripe intent and payment row already exist, so the
     // request fails while the payment persists and the retry is refused as a
     // duplicate. It must never get that far.

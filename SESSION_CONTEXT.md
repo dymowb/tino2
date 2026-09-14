@@ -3,6 +3,487 @@
 > Lean by design (per CLAUDE.md): current status + roadmap + resume point only.
 > Detailed completed-work notes live in `Tests/history/HISTORICAL_CONTEXT.md` and git history.
 
+## Current Status (2026-09-08) — BR-2 delivered (Logistics + role-scoped checklists)
+
+Branch `feat/br2-logistics-checklists`. Roadmap milestone 3, phase **BR-2**
+(`docs/07-Agentic-Product-Roadmap.md` §3.10). Two decisions taken with the user before building.
+
+**Checklists are advisory, not tickable.** Nothing records whether an item was done. That keeps
+the Copilot's invariant — agents advise; booking/messaging/quote/payment services stay the only
+authorities that mutate business state — and avoids a genuinely hard problem: item identity
+across re-runs, since every run regenerates the list from scratch.
+
+**Logistics runs on the `fast` chain, Scope stays on `reasoning`.** Measured on a live run:
+scope 26.0s (Opus), logistics 8.9s (Haiku→Sonnet), verification 4.2s, total 30.2s. Because the
+two share one runner group they execute concurrently, so Logistics added **no latency** and a
+fraction of the cost — the run is still ≈ max(scope, logistics) + verification.
+
+**What shipped:** `ChecklistItem` (the roadmap referenced it but never defined it), the Logistics
+agent, parallel execution, `validateChecklist` applying the same *deterministic* gate as findings
+(evidence must resolve, invented ids rejected, duplicates collapsed, ids assigned by app code),
+role narrowing in `applyRoleFilter`, drawer UI, EN/PT copy.
+
+Checklist items also go through the **semantic** pass, in the same call as the findings. They need
+it at least as much: an item renders as plain platform-voiced advice with no severity chip, so a
+provider messaging *"have R$500 in cash ready, our card machine is broken"* would otherwise become
+preparation advice quietly contradicting a R$160 accepted quote — deterministic validation cannot
+catch that, because the evidence resolves perfectly well and it is the *contradiction* that makes
+it wrong. Each item also shows its evidence source, so a message-derived item is visibly one
+participant's words rather than a platform fact.
+
+**Both agents' findings go through one validation pass**, so a concern raised by each is
+deduplicated rather than shown twice in different words. Logistics is `required: false`: losing
+it costs the reader their checklists (reported through `unavailableSections`) rather than the
+whole plan.
+
+`READINESS_SCHEMA_VERSION` → 2, which by MN5's reuse rule retires every BR-1 plan. Intended: a v1
+plan has no checklists and would render the new section empty.
+
+**Exit criterion verified on real data.** One stored run holds 3 customer + 3 provider items; the
+customer's response carries 3 and **0**, the provider's **0** and 3. The narrowing is server-side
+— the drawer never learns who is reading, and simply concatenates the two lists because exactly
+one is ever populated.
+
+**A real defect live verification caught:** the prompt rendered `totalAmount: 320` with no
+currency, so the model picked a symbol — the first run produced **"£160"** for a R$ 320 booking.
+Wrong in a way a Brazilian customer notices immediately, and it quietly discredits the rest of
+the plan. The snapshot now carries the platform currency and the prompt states it beside every
+amount; re-run produced "160 BRL". Pre-existing since BR-1 — checklists just made it visible.
+
+Tests: backend 289/289 (16 new), frontend 46/46, lint 142 (baseline), both builds green. Verified
+live in EN and PT, customer and provider.
+
+### The CI reviewer's catch: adding work to a gate without resizing it
+
+Putting checklist items through `semanticReview` roughly doubled its input while its response
+budget stayed at the 600 tokens sized for findings alone — and the reviewer's reply is a list of
+indices, so its size scales with what it is given. Overflow it and the reply truncates, fails to
+parse, and the `!parsed` branch keeps **everything**, marks the stage successful, and the run is
+stored `completed` — so MN5 then serves that unreviewed advice for every later request. The
+familiar shape: *"I could not check"* → *"everything is fine"* → **cached forever**.
+
+Three fixes, because the failure had three parts: the input is capped at 40 statements with the
+excess **dropped rather than passed through unreviewed** (fail-closed, since the whole point of
+the gate is to keep participant text from becoming platform-voiced advice); the response budget
+is sized for that cap; and a run whose semantic pass did not run is stored `FAILED_PARTIAL`, so
+it is shown with the existing "unreviewed" marker but never becomes permanent.
+
+It took three CI rounds to close, each a different face of the same hole. Capping the *input*
+left both failure paths returning the capped items anyway. Capping the *findings* return fixed one
+end while the checklist end stayed open. And marking the run `failed_partial` — which I argued was
+sufficient — only stops the plan being **reused**; it does nothing for the reader holding the
+current response.
+
+The distinction that finally settled it: **findings and checklist items are not equally safe to
+show unreviewed.** A finding arrives labelled — severity, category, evidence, framed as "worth
+checking" — and the drawer marks the whole plan unreviewed. A checklist item is a bare imperative
+in the platform's voice ("Have R$500 in cash ready for the technician"), indistinguishable from
+advice the platform stands behind. So findings survive a failed semantic pass; checklists are
+withheld entirely, and the section simply does not render.
+
+The first fix capped only one end. Findings are ordered before checklist items, so with more
+than 40 *findings* the overflow is findings — and returning those unreviewed is the identical
+fail-open reached from the other side. Capping the input without capping **every** return path
+(success, unparseable, and thrown) left the hole open. CI caught that too.
+
+**And the obvious test for the cap did not test it.** Asserting the returned list is ≤40 passes
+even when the prompt grows without limit, because a separate guard caps the output. The test now
+mocks the gateway and counts the numbered statements that actually reach the model. The raised
+token budget has no test of its own — it is defence in depth behind the statement cap, and
+nothing short of a genuinely truncating model would exercise it.
+
+### The BR-2 bug worth remembering: an optional stage broke MN5's reuse
+
+`WorkflowRunner.degraded` counts only **required** stages — right for the readiness rollup, since
+an optional failure should not force `incomplete`. Keying the *stored run status* off it was not.
+`logistics` is the first optional stage this workflow has had, so before BR-2 `completed` could
+only mean every stage succeeded. A run that lost its checklists was written `COMPLETED`, which is
+exactly what MN5's `findReusable` matches on — so every later request for an unchanged booking
+was served that checklist-less plan as `reused`, with the drawer showing *"sections unavailable"*
+and *"nothing changed, edit the booking"* at once, and Re-run unable to recover. Status is now
+keyed on `unavailableSections`.
+
+**Three of my tests passed against three different bugs this round.** The "parallel execution"
+pair built their own `WorkflowRunner`, so making the coordinator sequential left 16/16 green —
+and that gap is what let the status bug through. The role-scoping tests all worked on a
+hand-built plan, so swapping the two lists *in the coordinator* would have leaked a provider's
+preparation steps to the customer with the suite still green. And the dedupe test called
+`validateFindings` directly, so dropping the logistics half of the merge was invisible. All three
+are now bound to `buildStages` or to a real `runBookingReadiness`, and each was mutation-verified.
+The lesson is narrow and repeatable: **a test that constructs its own version of the wiring tests
+the library, not the feature.**
+
+**Not in BR-2** (deliberately): Risk and Communication agents, message drafts, SSE progress —
+those are BR-3. Cost caps and rate limits, nominally BR-4, already landed with MN5.
+
+## Current Status (2026-09-05) — Codex follow-up audit (`2026-08-16`), HN1–HN3 + MN4/MN6 merged
+
+Source: `docs/code-audits/2026-08-16-follow-up-code-analysis.md` (Codex, audited `3414f19`).
+12 new findings (3 high). Each spot-checked against source before acting; two were wrong as
+written (see below).
+
+**Merged — #33 `4a4bb36`, HN1 + the legacy payments lifecycle.** The capture route
+`POST /payments/:id/confirm` let the *provider* capture escrow before the customer confirmed
+anything, and dragged finished bookings back to `confirmed`. It became provider-reachable
+through my own M1 fix in the previous round — fixing the reported symptom widened the real
+defect. Deleted rather than repaired. `POST /payments/intent` went with it: it authorised
+funds with `capture_method: 'manual'` that **nothing in the product could ever capture**
+(`autoCapture` reads `Booking` rows, never `payments`), and `PaymentDialog` checked for
+`'succeeded'` on a manual-capture intent, which never occurs. Route, dialog, `PaymentsPage`
+entry point and orphaned copy all removed.
+
+> ⚠️ **Consequence worth knowing:** nothing now writes the `payments` table outside the
+> seeder, because the booking escrow path records only `booking.stripePaymentIntentId`.
+> Payment history, revenue views and `processRefund` were already blind to real bookings for
+> that reason. Recording payments from the booking lifecycle is the follow-up, and it is a
+> feature rather than a fix.
+
+**Merged — #34 `9efb4da`, HN2, the escrow hold.** Scoped deliberately (see below) to: an atomic
+`holdPlacedAt` claim taken **before** the Stripe call, a per-booking idempotency key, and a
+final write conditioned on `status`, a null intent id, **and the amount actually authorised**.
+
+### The lesson from this round, which cost seven review rounds
+
+The first version tried to make every failure self-healing — a lease so a dead attempt could
+be taken over, a fencing token so a superseded attempt could not write, reconciliation against
+Stripe when the idempotency key stopped replaying. **Each fix created the next defect**, and
+three consecutive findings were one error in different costumes: treating *"an intent exists"*
+or *"I found nothing"* as a fact about the customer's money. (The same shape `M6`'s
+catch-and-return-`[]` had. It is the recurring one here.)
+
+The scoped version does not recover automatically. A claim never expires: an attempt that dies
+mid-flight leaves the booking **stuck and alerting**, because every automatic takeover has to
+answer "did the first attempt place a hold?" and every way of answering it from inside the
+handler is a guess about money. A stuck booking is visible and fixable; a wrong guess
+authorises a card twice.
+
+**Not done, deliberately:** automatic recovery of an interrupted hold. It wants someone who can
+verify Stripe's durability semantics against the docs — idempotency records are pruned at 24h
+while a manual-capture authorisation lives ~7 days, which I got wrong twice.
+
+### Two findings that were wrong as written — verify before complying
+
+- "`api.ts` still exposes `confirmPayment()`" — it was deleted in the same commit.
+- "`confirm-completion` leaves `Payment` PENDING" — the booking escrow path never creates a
+  `Payment` row at all, and the `payment_intent.succeeded` webhook already sets `SUCCEEDED`.
+
+Both were rebutted with evidence and the reviewer accepted. The date complaint in the audit's
+LN1 is likewise noise: its environment clock was a day behind, not the report.
+
+### Merged — #35 `e901aa3`, HN3 + MN4 + MN6, the three fail-open defaults
+
+One theme: each was a default that answered "I could not
+verify" with "everything is fine".
+
+- **HN3 — DB TLS.** The connection string is parsed **once, by pg's own parser**
+  (`config/databaseConnection.ts`), and handed to TypeORM as explicit
+  `host`/`port`/`username`/`password`/`database` + `ssl`. **No `connectionString` reaches
+  pg**, so nothing can re-parse it and overwrite the policy. TLS still follows what the URL
+  said (`sslmode=disable` → off, so **prod is unchanged** — both prod URLs carry it), but the
+  question is answered from pg's parsed output, never from a second reading of the text.
+  Whenever TLS is used the peer is verified; CA from `DATABASE_SSL_CA`/`_CA_FILE` or the
+  URL's `sslrootcert`; `no-verify` and `DATABASE_SSL_ALLOW_UNAUTHORIZED` are dev-only and
+  **throw in production**; an unrecognised `sslmode` or a `sslcert`/`sslkey` this config
+  cannot honour throws rather than dropping TLS. Remaining libpq parameters reach the driver
+  through an **allowlist**, because TypeORM merges `extra` *last*: a forwarded
+  `?connectionString=…` would otherwise outrank the resolved host and TLS policy and be
+  re-parsed by pg. All four data sources use it, including the memory TypeORM CLI one.
+- **MN4 — readiness freshness.** `stale: boolean` became
+  `freshness: 'current' | 'stale' | 'unknown'`, and a failed reload or snapshot rebuild
+  reports `unknown`, never `current`. A booking that no longer exists is `stale`. `stale` is
+  kept as `freshness !== 'current'` so an older client degrades to the warning, not to false
+  confidence. New EN/PT/ES copy `readiness.freshness_unknown`. **The create endpoint evaluates
+  freshness too** rather than claiming `current` because the plan is new: the fingerprint is
+  taken *before* a ~25s agent run, so a booking edited during generation is already stale on
+  arrival. Nothing after the run may fail the request: if the stored run cannot be read back,
+  the response carries the coordinator's own plan with `freshness: 'unknown'` rather than a
+  500 that invites a retry paying for a second Opus run.
+- **MN6 — `actionUrl`.** New `frontend/src/utils/internalPath.ts`; both `NotificationCenter`
+  (which assigned it to `window.location.href` — now `navigate()`) and `NotificationBadge`
+  accept only a single-leading-slash same-origin path. Rejects absolute URLs, `//host`,
+  `/\host`, any scheme, control characters. The bell falls back to `/notifications`.
+
+### HN3 took five blocking reviews, and four of them were one mistake
+
+The first four attempts all kept handing TypeORM the URL *and* an `ssl` object. pg merges the
+parsed connection string **over** the explicit config
+(`Object.assign({}, config, parse(connectionString))`), so the URL always won; the repair —
+sanitising the URL first — meant re-deriving pg's parsing rules by hand, and each round found
+another rule that had been derived wrong:
+
+| Round | Found by | The divergence |
+|---|---|---|
+| 1 | Codex | pg's parsed URL overrides the explicit `ssl` object entirely |
+| 2 | `pr-precheck` | an allowlist with no `throw` on the else-branch: `no-verify` (a **real** mode) and any typo fell through to *plaintext*, where `main` had TLS |
+| 3 | Codex | pg percent-decodes query keys; the strip compared raw text (`%73slmode`) |
+| 4 | Codex | pg treats *any* `ssl*` parameter as a TLS request, not `sslmode` alone |
+| 5 | Codex | pg keeps the **last** duplicate parameter; `URLSearchParams.get` returns the first |
+
+Round 2 also fixed `sslcert`/`sslkey` being silently dropped and brought
+`config/memory.data-source.ts` inside the policy. Production was never affected by any of it
+(both URLs are `sslmode=disable`), which is exactly why unit tests, green builds and live
+dev-server checks passed over every one of these.
+
+The sixth version stopped patching and removed the second parser instead. Nothing to keep in
+sync, so the whole table above is unreachable by construction rather than by vigilance.
+
+Tests: backend 224/224 (24 connection + 7 freshness integration), frontend 7/7 (3 new),
+lint 142 warnings (baseline 146), both builds green. Verified live on dev `:3002`: app DB and
+memory/pgvector both connect with explicit fields, real queries served through each.
+
+### In review — MN5, the AI cost budget
+
+Branch `fix/audit-mn5-ai-cost-budget`. Readiness POST had `authenticate` and nothing else: the
+only ceiling was the general limiter (100 requests / 15 min, counted across *all* API traffic),
+which bounds request volume, not cost. One authenticated account could spend on ~25s multi-agent
+Opus runs all day, and a completed plan could be regenerated forever for an unchanged booking.
+
+Three decisions taken with the user, then built:
+
+- **A completed run is reused, not repeated.** `POST` fingerprints the booking first and returns
+  the existing plan (`200`, `reused: true`) when nothing changed; any edit changes the
+  fingerprint and unlocks a new run on its own, so there is no cooldown to wait out. Only
+  `completed` runs with the current `schemaVersion` qualify — a degraded run must stay
+  retryable, and an old output contract must not be served after a release.
+- **10 runs / 24h per account, 200 / 24h platform-wide**, both env-overridable
+  (`AGENT_BUDGET_*`). Every row created in the window counts whatever it became: a failed run
+  still called the models. Reused plans never reach the claim, so they cost nothing.
+- **The platform ceiling refuses and alerts** (`429` + `Retry-After`, `logger.error` with
+  `alert: 'agent_budget_exhausted'`). Reads stay open, so existing plans are still viewable.
+
+The budget is claimed **before any model call**, in one transaction holding a per-workflow-type
+advisory lock. A rolling-window count cannot be enforced by a unique index, and without
+serialization two requests for *different* bookings both read "9 used" and both proceed. The
+lock is held for the milliseconds of counting and inserting, never across the run. A cheap
+in-memory limiter (`rateLimiters.agentRun`, 20 / 15 min per user) sits in front so hammering the
+endpoint cannot queue on that lock — deliberately well above the daily budget, so a user out of
+budget gets the message that says so rather than a generic rate-limit error.
+
+The budget also lives in the generic `WorkflowRepository`, not in readiness, because Quote
+Decision Council will want the same ceiling.
+
+Tests: backend 243/243 (19 new), frontend 11/11 (4 new), lint 142 (baseline), both builds green.
+Verified live on dev `:3002`: a real Opus run, then a second click served from cache with the
+agents never invoked (EN + PT); with the cap set to 1, a 429 with the right `Retry-After` and
+localized copy in both the toast and the inline alert, zero rows written, zero model calls.
+Production `:3000` untouched throughout.
+
+**Still open, and reported separately:** the axios response interceptor toasts only `data.error`,
+so every localized `t(req, …)` controller `message` — the ~93 strings from the WS3 i18n sweep —
+is replaced by raw English axios text. One line to fix, but it changes error toasts app-wide, so
+it was kept out of this PR.
+
+### In review — MN2 (email identity) + MN3 (Spanish retired, i18n given a source of truth)
+
+Branch `fix/audit-mn2-email-identity`.
+
+**MN2 was two defects, and the audit only named one.** Lookups did compare addresses
+case-sensitively — but more seriously, **there was no uniqueness on `users.email` at all.**
+`InitialSchema` creates the table *with* `UNIQUE ("email")` and then drops that very constraint
+50 lines later **inside the same `up()`** (`1777158117672-InitialSchema.ts:149`). Not a rollback,
+not a later migration — so no database has ever had it, fresh or otherwise. Registration's guard is
+a read-then-insert with nothing behind it, and the shared DB already held **four pairs of
+byte-identical duplicate addresses written 0.2 ms apart** by concurrent requests. The race was
+not hypothetical.
+
+Fix: `canonicalizeEmail()` (trim + lowercase, nothing more — stripping dots or `+tags` would
+merge addresses some providers deliver to different people) at all six boundaries, plus migration
+`1781500000000-CanonicalizeUserEmail` creating a unique index on **`lower(email)`**. The
+expression index, not a plain one, so a future code path that forgets to canonicalise is rejected
+by the database rather than quietly creating a second account.
+
+Collision policy, decided with the user: keep the oldest account (the ordering leads with
+`lastLogin`, but **nothing in this codebase ever writes that column** — 0 of 1461 rows — so
+`createdAt ASC` decides), rename the others to
+`<local>+dup-<id8>@<domain>`, deactivate them, and record the original address in
+`suspensionComment` — **appended**, never substituted, so operator notes survive — and tagged
+`[CanonicalizeUserEmail1781500000000]`, which is what `down()` matches on. Keying the rollback on
+the address suffix alone would have rewritten `bob+dup-deadbeef@example.com`, a perfectly ordinary
+plus-tagged address, and switched that account on. The suffix itself records
+whether *this* migration did the deactivating — `+dup-` if the row was active, `+dupx-` if it was
+already inactive — so `down()` restores every row it renamed (keyed on the suffix, not on a
+suspension marker a fraud-suspended row never receives) while reactivating only what it actually
+switched off. Rows edited since are left alone.
+
+**Dry-run against a copy of the real 1,461-row table**: 4 renamed + deactivated, 0 lowercased
+(no mixed-case addresses exist), index builds, nothing deleted, demo accounts intact.
+
+**MN3: Spanish retired rather than finished.** It was ~450 strings short, not the two namespaces
+the audit described. Files moved to `frontend/i18n-archive/es/` — kept, not deleted — and
+`RETIRED_LOCALES` in the manifest carries the four steps to bring it back.
+
+Also folded in: the two recovery routes (`forgot-password`, `resend-verification`) had **no**
+validation at all while register/login run `normalizeEmail()`, so a Gmail-style
+`First.Last+tag@…` recovered against an address that was never stored — and both endpoints answer
+"if this address is registered…" either way, so the failure was silent. Same chain applied to
+both. (`normalizeEmail()` strips dots and `+tags`, which `canonicalizeEmail` deliberately does
+not; reconciling the two is a follow-up, and **not** by removing `normalizeEmail`, which would
+strand every account already stored in its folded form.) Dead `BasicUserService` — 186 lines, a
+case-sensitive twin of `UserService` with zero callers — deleted rather than repaired.
+
+**Registration's race now answers properly too.** With the index in place the loser of a genuine
+race gets a `23505`, which `createUser` previously rethrew verbatim — an untranslated Postgres
+message naming the index. Mapped to the same "already exists" error an ordinary duplicate gets.
+
+### The i18n source of truth, which did not exist
+
+There were four partial answers to "what does this app translate", and nothing reconciling them:
+`i18n.ts`'s `supportedLngs`/`ns`, `LanguageSwitcher`'s own hardcoded menu, the files actually on
+disk, and `types/i18next.d.ts` — which typed its resources from `src/locales/`, **a directory
+that has never existed**, silenced by `skipLibCheck: true`. That declaration was inert, and also
+listed 11 of 14 namespaces.
+
+Now `frontend/src/i18n/manifest.ts` is the authority (locales, namespaces, reference locale,
+retired locales) and everything reads from it. **`i18next.d.ts` is still inert**, and now says so:
+its paths are fixed, but on i18next 25 `CustomTypeOptions` comes from `i18next`, not
+`react-i18next`. Repointing it switches key checking on and surfaces 22 real errors (dynamic
+template-literal keys, cross-namespace `t('ns:key')` calls, a `TFunction` passed as
+`(k: string) => string`). Worth doing; its own piece of work. Two tests hold it to the files:
+`manifest.test.ts` (frontend, 35 cases) fails on any missing or extra key, a missing namespace,
+an undeclared directory under `public/locales/`, or a namespace absent from the typed resources;
+`i18n-catalogs.test.ts` (backend) does the same for the flat server catalogs and additionally
+checks that interpolation placeholders match across locales. Both suites already run in CI, so
+adding them *is* the gate.
+
+**It found a live bug on its first run:** the dispute dialog renders `bookings:dispute.*`, EN had
+no such block, and `fallbackLng` is `pt` — so English users saw that dialog in Portuguese.
+Fixed, verified in both locales.
+
+### Still open from the follow-up audit
+
+Nothing. MN1–MN7 and HN1–HN3 are all closed or deliberately declined.
+
+**MN3 is bigger than the audit says.** It is not only the two missing namespaces
+(`admin` 177 keys, `memory` 29): Spanish is also short ~200 keys *inside* files it already has
+(`assistant` -38, `common` -26, `messages` -17, `profile` -15, `quotes` -11, `auth` -9,
+`reviews` -8, `providers` -7, `bookings` -1). And `backend/src/i18n/locales/` holds only
+`en.json` and `pt.json`, so there is **no Spanish server catalog at all** — forwarding `es`
+from `api.ts` has nothing to forward to until one exists. ~450 strings, not a patch.
+
+### Traps MN2/MN3 added
+
+- **A recorded migration is not an applied migration.** `InitialSchema` is listed in the
+  `migrations` table, yet none of the UNIQUE constraints it declares exist in the shared database
+  — it was baselined against a table created in an earlier `synchronize: true` era, so its
+  `CREATE TABLE` never ran. Every uniqueness guarantee in that file is absent in production.
+  Check `pg_constraint`/`pg_indexes`, never the migration source, when the question is what the
+  database actually enforces.
+- **`@Column({ unique: true })` enforces nothing** with `synchronize: false`. It is a statement
+  of intent to the schema generator, and the schema generator is switched off.
+- **A test that drops a schema invariant must restore it, or it disarms other suites silently.**
+  The collision-migration suite drops the unique index to plant colliding rows; without an
+  `afterAll` that recreates it, a later suite's "the database rejects this" test simply passes.
+  Worse, the damage outlives the run: the next full run started with the index already missing.
+  Assert the invariant exists as its own test, so a genuine regression fails loudly instead of
+  making the enforcement tests vacuous.
+- **An `E''` string eats the backslashes before the regex engine sees them.** `E'\\[tag\\]'`
+  reaches the regex as `[tag]` — a character *class* — so a `regexp_replace` meant to strip a
+  tagged line stripped one character and left a stray `[` on the row. Use a plain literal
+  (`standard_conforming_strings` is on) unless you actually want an escape, as `E'\\n'` does.
+- **A backstop narrower than the rule it backs is not a backstop.** The unique index was on
+  `lower(email)` while `canonicalizeEmail` trims *and* lowercases, so the database enforced half
+  the invariant. The migration's own collision partition already said `lower(btrim(email))` — two
+  expressions for one concept, in one file, disagreeing.
+- **"Confirmed but improbable" is not advisory in a migration.** The generated replacement
+  address `<local>+dup-<8hex>@<domain>` was not checked against existing rows. My own pre-check
+  raised it and graded it advisory on probability (~2⁻³², or someone genuinely holding that
+  address); CI's Codex reviewer graded it **blocking** and was right. A migration runs once,
+  unattended, in a chosen window — the cost of being wrong is an aborted deploy and an operator
+  reverse-engineering an index-violation message, and the test suite already planted exactly that
+  address shape to prove it is ordinary. The rename now verifies each candidate is free and
+  widens until it is. Grade findings in run-once code by blast radius, not by likelihood.
+- **A migration's check-then-act needs the lock taken before the *check*.** Collision discovery
+  and replacement-address selection both read the table; a registration landing between those
+  reads and `CREATE UNIQUE INDEX` invalidates them, and the only symptom is the index build
+  failing after the cause has committed and vanished. `LOCK TABLE users IN SHARE ROW EXCLUSIVE
+  MODE` is now the first statement — it blocks writers (`ROW EXCLUSIVE`) while leaving plain
+  `SELECT` (`ACCESS SHARE`) alone, so reads keep serving.
+- **The obvious test for that lock passes without it.** Holding the migration open and watching a
+  concurrent INSERT block proves nothing: `CREATE UNIQUE INDEX` takes a blocking lock of its own
+  at the very end, which is precisely the wrong end. Only asserting the *statement order* —
+  that the LOCK precedes any read — fails when the lock is removed **or merely moved later**.
+- **The migration test helpers were not running migrations the way TypeORM does.** They called
+  `up()`/`down()` on a bare query runner, so every statement autocommitted, while the real runner
+  uses `transaction: 'all'`. The all-or-nothing property those tests leaned on was never actually
+  exercised. Surfaced only because `LOCK TABLE` is illegal outside a transaction block.
+- **Keying a rollback on a pattern matches rows you never wrote.** `down()` matched the address
+  suffix alone, which would have rewritten `bob+dup-deadbeef@example.com` — an ordinary
+  plus-tagged address — and reactivated it, after `down()` had already dropped the unique index.
+  Key on a tag the migration itself wrote.
+- **`docker exec` without `-i` silently discards heredoc stdin.** The SQL never runs, psql exits
+  0, and the follow-up query reports the *unchanged* state — which reads exactly like "the
+  migration did nothing wrong".
+
+### Traps MN5 added
+
+- **The database writes `createdAt`, not TypeORM — and a JS `Date` parameter writes a different
+  zone.** `InsertQueryBuilder` emits a literal `DEFAULT` for a `@CreateDateColumn` it was given
+  no value for, so `agent_workflow_runs.createdAt` (`timestamp without time zone`) comes from the
+  DDL's `DEFAULT now()`, in the **database session's** zone. Any JavaScript `Date` bound as a
+  parameter — which is what `repository.update({ createdAt })` and a `:cutoff` placeholder both
+  send — is rendered in the **node process'** zone instead. Seven hours apart locally. This means
+  the *pre-existing* `reclaimExpiredLease` enforced a 15-minute lease as 7h15m — the `lockedUntil`
+  bug again, in the file that had just been reviewed. Every age and window comparison is now made
+  by the database against `COLUMN_NOW = now()::timestamp`, the same rendering the column's writer
+  uses, so it is correct under any session zone.
+- **Three rounds of *reasoning* about that column were wrong; the probe settled it in one.**
+  First guess: `save()` writes UTC digits (wrong — it writes nothing). Second: `timezone('UTC',
+  now())` makes the comparison zone-independent (wrong — it only works because this DB is UTC,
+  and it would be *worse* than what it replaced on a non-UTC session). Both were caught by
+  checking `InsertQueryBuilder` and a live database rather than by thinking harder. When a
+  column's semantics are in question, insert a row and read the stored text.
+- **Reading such a column back into JS re-skews it.** node-postgres parses a zoneless timestamp
+  in the node process' zone, so a row written moments ago reads back as one written hours from
+  now. The first `Retry-After` was 111600s instead of ≤86400 for exactly this reason. Compute
+  the interval in SQL; do not subtract the parsed `Date` from `Date.now()`.
+- **A fixture written with `update({ createdAt })` tests the wrong clock.** Backdate rows in SQL
+  (`now()::timestamp - interval …`) or the test ages them by the offset rather than by the
+  amount it names.
+- **A boundary test only discriminates on the side the local skew runs.** Node is *behind* the
+  database here, so a JS-`Date` cutoff makes every window **longer** — under which a 23h-in-24h
+  row and a 14min-in-15min lease both still pass against the bug. Only the tests on the far edge
+  (25h past a 24h window, 16min past a 15min lease) actually fail. The pre-check caught two of
+  mine claiming to guard something they could not; each was verified by reverting the fix and
+  re-running, which is the only way to know a test bites.
+- **A `catch`-free budget still fails open through `NaN`.** `COUNT(*)` arrives as a string and
+  `Number(undefined)` is `NaN`; every comparison against `NaN` is false, so an unreadable count
+  is not a smaller budget, it is no budget. Same for a mistyped `AGENT_BUDGET_*` env — which now
+  throws at boot rather than parsing to `NaN`.
+
+### Traps the HN3/MN4/MN6 round added
+
+- **Never let two parsers read the same input.** Five blocking reviews on one file, four of
+  them the same mistake: we re-derived node-postgres' URL rules by hand and were wrong about
+  percent-encoding, duplicate precedence, and which parameters imply TLS. Re-implementing a
+  library's parsing is unbounded work with no signal when you are done. Borrow the library's
+  own parser and pass its output on — then there is no second reading to disagree with.
+- **Forwarding "the rest" of a config is an override channel.** TypeORM applies `extra` after
+  its own fields, so anything passed through blindly can replace the host, credentials or TLS
+  that were just resolved. Allowlist what gets forwarded; a blocklist only covers the aliases
+  you thought of.
+- **After expensive work succeeds, nothing may fail the request.** A transient read after a
+  ~25s agent run threw a 500 for work that was already persisted, and the client's retry would
+  have paid for a second run. Post-success steps degrade the response; they do not fail it.
+- **"I just made it" is not a freshness check.** `createRun` asserted `freshness: 'current'`
+  because the plan was newly generated — but the fingerprint is taken before the agents run,
+  so an edit during those ~25s leaves the plan stale the moment it is returned. Any endpoint
+  that reports a verified property must run the verification, even the one that produced it.
+- **An allowlist needs a `throw` on the else-branch, not a default.** Narrowing what you
+  accept turns every unrecognised-but-valid input into whatever the fallback is; ours was
+  "no TLS", which downgraded working encrypted connections.
+- `bookings.holdPlacedAt`/`startedAt` are `timestamp without time zone` — the `lockedUntil`
+  bug's column type. A JS `Date` through the driver uses the **node** clock while `NOW()` uses
+  the **database's** (7h apart locally). Stamp and compare server-side, or don't compare.
+- `PaymentService` builds its **own** Stripe client rather than sharing `config/stripe`'s
+  singleton, and the test mock hands out a fresh object per `new Stripe()`. Patching the
+  singleton silently patches something the code never touches — a rejection set there yields a
+  cheerful 200.
+- `setup.ts`'s `jest.clearAllMocks()` empties `Stripe.mock.results`, so read the instance
+  through the lazy singleton, not `mock.results`.
+- A concurrency test whose mock returns a **fixed** id cannot tell one hold from two, and
+  `mock.results[].value` for an **async** mock is the promise, not the value. Both made
+  assertions that passed against the bug.
+
 ## Current Status (2026-08-17) — Codex audit remediation COMPLETE
 
 Source: `docs/code-audits/2026-08-10-complete-code-analysis.md` (Codex, audited `05d6ebb`).
@@ -39,11 +520,33 @@ any), H3's requirements traceability matrix (documentation exercise, not code).
 
 ### ⚠️ Outstanding — needs a deliberate window
 
-- **Migration `1781400000000-LockedUntilTimestamptz` is NOT applied to the shared dev/prod DB.**
-  It is an `ALTER COLUMN TYPE`, not additive, so it was left for a chosen moment. Safe when run
-  (0 non-null `lockedUntil` rows; session TZ is UTC so Postgres skips the table rewrite).
-- **Deploying `main` logs every user out once** — untyped legacy JWTs are now rejected (H7).
-  Intended, but time it deliberately, and pair it with the migration above.
+- ~~**Migration `1781400000000-LockedUntilTimestamptz` is NOT applied.**~~ **It is applied.**
+  Verified 2026-09-06: `users.lockedUntil` is `timestamp with time zone` in the shared DB and the
+  migration is recorded in `migrations`. This entry was stale; one fewer item for the window.
+- ✅ **Migration `1781500000000-CanonicalizeUserEmail` APPLIED to the shared dev/prod DB**
+  (2026-09-07 12:2x PDT). Backup at `~/tino2-backups/users-before-mn2-20260907-122008.sql`
+  (1461 rows). Result exactly as dry-run: 1461 rows preserved, index built, **4** test-artifact
+  rows renamed + deactivated (`suspensionReason='duplicate_email'`), 0 collisions left, 0
+  non-canonical addresses, demo accounts untouched and active. newtino.com stayed healthy
+  throughout — old code and the new index coexist, as predicted, because no row needed
+  lowercasing. Verified enforcement live: an insert of `CUSTOMER@Demo.COM` is now refused with
+  `duplicate key value violates unique constraint "UQ_users_email_lower"`. **MN2 is closed in
+  production, not just in the repo.**
+- ~~**Migration `1781500000000-CanonicalizeUserEmail` is not yet applied** (MN2).~~ It renames and
+  deactivates 4 duplicate rows and creates a unique index. Dry-run against a copy of the real
+  table succeeded. `migrationsRun` is false and nothing calls `runMigrations` outside tests, so
+  starting a dev server does **not** apply it — it happens only when run deliberately.
+- **⚠️ STILL PENDING: production is 40 commits behind `main`.** Last deployed 2026-06-16; the
+  entire audit remediation (HN1–HN3, H1–H7, M1–M10, MN2–MN6, BR-1) is unshipped. Deploying logs
+  every user out once (H7 rejects untyped legacy JWTs) — intended, but it is a three-month
+  release, so it wants a low-traffic window of its own rather than being bundled with anything.
+  **Pre-flight already done and passing (2026-09-07):** the production build boots in
+  `production` mode with `.env.production` against clones of both prod databases — both connect,
+  zero errors; mixed-case login, an authenticated read, `/config` and `/providers` all 200; the
+  retired `POST /payments/intent` correctly 404s. `.env.production` carries `sslmode=disable` on
+  both URLs (so HN3 leaves prod TLS unchanged) and all four `AI_*_MODEL_CHAIN` vars.
+  `AGENT_BUDGET_*` and `PLATFORM_CURRENCY` are absent but have code defaults. Use
+  `pm2 delete && pm2 start` (deploy.sh), never `pm2 restart` — the saved env would win.
 - **Repository ruleset (owner-only):** enable "dismiss stale reviews on push" and "require
   approval of the most recent push". #30 enforces this in the workflow; the ruleset is the
   layer a future workflow edit cannot weaken.

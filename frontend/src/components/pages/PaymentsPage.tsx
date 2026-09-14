@@ -26,7 +26,6 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  Fab,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -37,12 +36,10 @@ import {
   Download as DownloadIcon,
   MoreVert as MoreVertIcon,
   AccountBalance as EscrowIcon,
-  Add as AddIcon,
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import apiService from '../../services/api';
 import { format } from 'date-fns';
-import PaymentDialog from '../payments/PaymentDialog';
 import RefundDialog from '../payments/RefundDialog';
 import { formatMoney } from '../../utils/money';
 
@@ -85,7 +82,6 @@ const PaymentsPage: React.FC = () => {
   const [currentTab, setCurrentTab] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('status') || '');
-  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
@@ -503,17 +499,6 @@ const PaymentsPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Floating Action Button for new payments (customers only) */}
-      {!isProvider && (
-        <Fab
-          color="primary"
-          sx={{ position: 'fixed', bottom: 24, right: 24 }}
-          onClick={() => setPaymentDialogOpen(true)}
-        >
-          <AddIcon />
-        </Fab>
-      )}
-
       {/* Context Menu */}
       <Menu
         anchorEl={menuAnchorEl}
@@ -537,16 +522,6 @@ const PaymentsPage: React.FC = () => {
             </MenuItem>
           )}
       </Menu>
-
-      {/* Payment Dialog */}
-      <PaymentDialog
-        open={paymentDialogOpen}
-        onClose={() => setPaymentDialogOpen(false)}
-        onPaymentSuccess={() => {
-          setPaymentDialogOpen(false);
-          refetch();
-        }}
-      />
 
       {/* Refund Dialog */}
       {selectedPayment && (

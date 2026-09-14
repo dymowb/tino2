@@ -23,6 +23,7 @@ import {
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { toInternalPath } from '../../utils/internalPath';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { apiService } from '../../services/api';
@@ -236,11 +237,9 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
               key={notification.id}
               onClick={() => {
                 if (!notification.isRead) markReadMutation.mutate([notification.id]);
-                if (notification.actionUrl) {
-                  navigate(notification.actionUrl);
-                } else {
-                  navigate('/notifications');
-                }
+                // Stored action URLs are untrusted text; anything that is not a
+                // same-origin path falls back to the notifications page.
+                navigate(toInternalPath(notification.actionUrl) ?? '/notifications');
                 handleClose();
               }}
               sx={{

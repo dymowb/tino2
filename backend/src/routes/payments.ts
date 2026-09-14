@@ -40,12 +40,6 @@ router.post('/setup-intent', rateLimiters.general, PaymentController.createSetup
 // POST /api/payments/save-method - Persist confirmed payment method ID
 router.post('/save-method', rateLimiters.general, PaymentController.savePaymentMethod);
 
-// POST /api/payments/intent - Create payment intent (FR-057, FR-058, FR-059)
-router.post('/intent', PaymentController.createPaymentIntent);
-
-// POST /api/payments/:id/confirm - Confirm payment (capture escrow funds)
-router.post('/:id/confirm', PaymentController.confirmPayment);
-
 // POST /api/payments/:id/refund - Process refund (FR-063)
 router.post('/:id/refund', PaymentController.refundPayment);
 

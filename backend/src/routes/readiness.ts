@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { param } from 'express-validator';
 import { authenticate } from '@/middleware/auth';
+import { rateLimiters } from '@/middleware/security';
 import { handleValidationErrors } from '@/middleware/validation';
 import readinessController from '@/controllers/ReadinessController';
 
@@ -13,9 +14,12 @@ import readinessController from '@/controllers/ReadinessController';
  */
 const router = Router();
 
+// Creation is the only expensive verb here. Reads stay on the general limiter so
+// viewing an existing plan is never rationed alongside generating one.
 router.post(
   '/bookings/:bookingId/readiness-runs',
   authenticate,
+  rateLimiters.agentRun,
   [param('bookingId').isUUID().withMessage('Valid booking ID required')],
   handleValidationErrors,
   readinessController.createRun

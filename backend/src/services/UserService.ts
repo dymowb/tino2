@@ -8,6 +8,14 @@ import { redisClient } from '@/config/redis';
 import logger from '@/config/logger';
 import { JwtPayload } from '@/types';
 import emailService from '@/services/EmailService';
+import { canonicalizeEmail } from '@/utils/email';
+
+/** Postgres `unique_violation`. */
+const UNIQUE_VIOLATION = '23505';
+
+function isUniqueViolation(error: unknown): boolean {
+  return (error as { code?: string } | null)?.code === UNIQUE_VIOLATION;
+}
 
 /**
  * Thrown when an account is temporarily locked after repeated failed sign-ins.
@@ -37,8 +45,12 @@ export class UserService {
     userType: UserType;
   }): Promise<BasicUser> {
     try {
+      // Canonicalised once, then used for both the check and the stored row, so
+      // the address that is checked is the address that gets written.
+      const email = canonicalizeEmail(userData.email);
+
       const existingUser = await this.userRepository.findOne({
-        where: { email: userData.email },
+        where: { email },
       });
 
       if (existingUser) {
@@ -49,6 +61,7 @@ export class UserService {
 
       const user = this.userRepository.create({
         ...userData,
+        email,
         password: hashedPassword,
       });
 
@@ -72,6 +85,14 @@ export class UserService {
 
       return savedUser;
     } catch (error) {
+      // The check above is a read-then-insert, so two concurrent registrations
+      // for one address can both pass it; the unique index on `lower(email)` is
+      // what actually stops the second. Translated here so the loser of that
+      // race is told the same thing as someone who simply registered twice,
+      // rather than being shown a raw Postgres message naming the index.
+      if (isUniqueViolation(error)) {
+        throw new Error('User with this email already exists');
+      }
       logger.error('Error creating user:', error);
       throw error;
     }
@@ -186,7 +207,7 @@ export class UserService {
   }> {
     try {
       const user = await this.userRepository.findOne({
-        where: { email },
+        where: { email: canonicalizeEmail(email) },
         select: [
           'id',
           'email',
@@ -339,7 +360,7 @@ export class UserService {
   async getUserByEmail(email: string): Promise<BasicUser | null> {
     try {
       const user = await this.userRepository.findOne({
-        where: { email, isActive: true },
+        where: { email: canonicalizeEmail(email), isActive: true },
       });
 
       return user;
@@ -537,7 +558,9 @@ export class UserService {
   }
 
   async resendVerification(email: string): Promise<void> {
-    const user = await this.userRepository.findOne({ where: { email } });
+    const user = await this.userRepository.findOne({
+      where: { email: canonicalizeEmail(email) },
+    });
 
     if (!user) {
       // Don't reveal whether the email exists
@@ -566,7 +589,9 @@ export class UserService {
   }
 
   async requestPasswordReset(email: string): Promise<void> {
-    const user = await this.userRepository.findOne({ where: { email } });
+    const user = await this.userRepository.findOne({
+      where: { email: canonicalizeEmail(email) },
+    });
     // Always succeed silently — don't reveal whether email exists
     if (!user) return;
 

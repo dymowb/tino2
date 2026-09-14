@@ -42,7 +42,7 @@ export function renderSnapshotForPrompt(snapshot: ReadinessSnapshot): string {
       `description: ${field(snapshot.booking.description)}`,
       `scheduledDate: ${snapshot.booking.scheduledDate}`,
       `estimatedDuration: ${snapshot.booking.estimatedDuration} minutes`,
-      `totalAmount: ${snapshot.booking.totalAmount}`,
+      `totalAmount: ${snapshot.booking.totalAmount} ${snapshot.currency}`,
       `specialInstructions: ${field(snapshot.booking.specialInstructions)}`,
       // City/state only — the street line is withheld on purpose (see types.ts).
       `location: ${snapshot.booking.location.city}, ${snapshot.booking.location.state}` +
@@ -56,7 +56,7 @@ export function renderSnapshotForPrompt(snapshot: ReadinessSnapshot): string {
       [
         '## ACCEPTED QUOTE (source: "quote") — authoritative on price, duration and terms',
         `recordId: ${snapshot.quote.id}`,
-        `estimatedPrice: ${snapshot.quote.estimatedPrice}`,
+        `estimatedPrice: ${snapshot.quote.estimatedPrice} ${snapshot.currency}`,
         // Minutes, like Booking.estimatedDuration — the quote value is copied
         // verbatim into the booking. Labelling it "hours" invents a contradiction
         // on every booking, which is exactly what happened before this comment.

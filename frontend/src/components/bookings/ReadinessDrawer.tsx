@@ -55,6 +55,18 @@ const READINESS_ICON = {
 } as const;
 
 /**
+ * The server's own explanation when a run was refused for cost, or null for any
+ * other failure. The message is localized server-side and names which ceiling
+ * was hit, which the client cannot work out for itself.
+ */
+export function budgetRefusal(error: unknown): string | null {
+  const response = (error as { response?: { status?: number; data?: { message?: string } } })
+    ?.response;
+  if (response?.status !== 429) return null;
+  return response.data?.message ?? null;
+}
+
+/**
  * Advisory panel. Everything here is read-only by design: the Copilot explains
  * and asks, it never changes a booking. Platform facts, AI findings, and the
  * verification summary are visually distinct so a reader can tell which is which.
@@ -79,8 +91,20 @@ export const ReadinessDrawer: React.FC<Props> = ({ bookingId, open, onClose }) =
     },
   });
 
+  // Running a plan costs a multi-model call, so the server refuses past a daily
+  // budget and says so in its own message. Showing the generic failure text
+  // instead would tell the user to retry the one thing that cannot succeed yet.
+  const budgetMessage = budgetRefusal(runMutation.error);
+
   const plan = data?.plan ?? null;
-  const stale = data?.stale ?? false;
+  // Concatenated rather than picked by role, because the server has already
+  // emptied the list belonging to the other participant — so exactly one of
+  // these is ever populated, and the drawer never has to know who is reading.
+  // Both are optional: a plan generated before BR-2 simply has no checklist.
+  const checklist = [...(plan?.customerChecklist ?? []), ...(plan?.providerChecklist ?? [])];
+  // Older responses carry only `stale`; a truthy one there means "not current",
+  // which is the safe reading when the server did not say which.
+  const freshness = data?.freshness ?? (data?.stale ? 'stale' : 'current');
   const running = runMutation.isPending;
 
   return (
@@ -138,17 +162,27 @@ export const ReadinessDrawer: React.FC<Props> = ({ bookingId, open, onClose }) =
         )}
 
         {runMutation.isError && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {t("readiness.error")}
+          <Alert
+            severity={budgetMessage ? "warning" : "error"}
+            data-testid={budgetMessage ? "readiness-budget" : "readiness-error"}
+            sx={{ mb: 2 }}
+          >
+            {budgetMessage ?? t("readiness.error")}
+          </Alert>
+        )}
+
+        {runMutation.data?.reused && !runMutation.isError && (
+          <Alert severity="info" data-testid="readiness-reused" sx={{ mb: 2 }}>
+            {t("readiness.reused")}
           </Alert>
         )}
 
         {plan && (
           <Stack spacing={2.5}>
-            {stale && (
+            {freshness !== 'current' && (
               <Alert
                 severity="warning"
-                data-testid="readiness-stale"
+                data-testid={freshness === 'unknown' ? 'readiness-unknown' : 'readiness-stale'}
                 action={
                   <Button
                     size="small"
@@ -161,7 +195,7 @@ export const ReadinessDrawer: React.FC<Props> = ({ bookingId, open, onClose }) =
                   </Button>
                 }
               >
-                {t("readiness.stale")}
+                {t(freshness === 'unknown' ? "readiness.freshness_unknown" : "readiness.stale")}
               </Alert>
             )}
 
@@ -196,6 +230,31 @@ export const ReadinessDrawer: React.FC<Props> = ({ bookingId, open, onClose }) =
                     <Typography component="li" variant="body2" key={i}>
                       {item}
                     </Typography>
+                  ))}
+                </Stack>
+              </Section>
+            )}
+
+            {checklist.length > 0 && (
+              <Section title={t("readiness.checklist")}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  {t("readiness.checklist_hint")}
+                </Typography>
+                <Stack component="ul" sx={{ pl: 2.5, m: 0 }} spacing={1}>
+                  {checklist.map((item) => (
+                    <Box component="li" key={item.id}>
+                      <Typography variant="body2">{item.label}</Typography>
+                      {/* Where it came from, in the reader's own language. An item
+                          derived from a chat message is advice one participant
+                          typed, not a platform fact, and it reads identically to
+                          one derived from the accepted quote unless we say so. */}
+                      <Typography variant="caption" color="text.secondary">
+                        {item.evidence
+                          .map((ref) => t(`readiness.source.${ref.source}`))
+                          .filter((label, i, all) => all.indexOf(label) === i)
+                          .join(" · ")}
+                      </Typography>
+                    </Box>
                   ))}
                 </Stack>
               </Section>

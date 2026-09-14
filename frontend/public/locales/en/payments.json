@@ -9,7 +9,6 @@
   "export": "Export",
   "loading_payments": "Loading payments...",
   "no_payments_found": "No payments found",
-
   "stats": {
     "total_payments": "Total Payments",
     "successful": "Successful",
@@ -17,7 +16,6 @@
     "platform_fees": "Platform Fees",
     "total_collected": "Total collected"
   },
-
   "table": {
     "payment_id": "Payment ID",
     "service": "Service",
@@ -29,7 +27,6 @@
     "actions": "Actions",
     "fee": "Fee"
   },
-
   "status": {
     "pending": "Pending",
     "processing": "Processing",
@@ -38,13 +35,11 @@
     "cancelled": "Cancelled",
     "refunded": "Refunded"
   },
-
   "escrow_status": {
     "held": "Held",
     "released": "Released",
     "disputed": "Disputed"
   },
-
   "payment_method": {
     "card": "Card",
     "bank": "Bank Transfer",
@@ -52,56 +47,12 @@
     "apple_pay": "Apple Pay",
     "google_pay": "Google Pay"
   },
-
   "actions": {
     "view_details": "View Details",
     "download_receipt": "Download Receipt",
     "initiate_refund": "Initiate Refund",
     "dispute": "Dispute Payment"
   },
-
-  "new_payment": {
-    "title": "Process Payment",
-    "steps": {
-      "select_booking": "Select Booking",
-      "payment_details": "Payment Details",
-      "confirmation": "Confirmation"
-    },
-    "select_booking_title": "Select a Booking to Pay",
-    "select_booking_subtitle": "Choose a confirmed booking that requires payment",
-    "no_bookings_available": "No confirmed bookings available for payment. Make sure you have bookings that are confirmed by the provider.",
-    "payment_information": "Payment Information",
-    "secure_payment": "Secure Payment with Escrow Protection",
-    "escrow_info": "Your payment will be securely held in escrow until the service is completed. The provider will only receive payment after you confirm satisfaction.",
-    "booking_summary": "Booking Summary",
-    "service": "Service:",
-    "provider": "Provider:",
-    "date": "Date:",
-    "total_amount": "Total Amount:",
-    "card_details": "Card Details",
-    "payment_info_secure": "Your payment information is encrypted and secure",
-    "amount": "Amount",
-    "payment_method": "Payment Method",
-    "add_payment_method": "Add Payment Method",
-    "card_number": "Card Number",
-    "expiry_date": "Expiry Date",
-    "cvv": "CVV",
-    "cardholder_name": "Cardholder Name",
-    "billing_address": "Billing Address",
-    "save_card": "Save card for future use",
-    "submit": "Process Payment",
-    "pay_amount": "Pay ${{amount}}",
-    "processing": "Processing...",
-    "cancel": "Cancel",
-    "back": "Back",
-    "success": "Payment successful! Funds are held in escrow until service completion.",
-    "error": "Payment failed",
-    "intent_error": "Failed to create payment intent",
-    "payment_for_service": "Payment for {{service}}",
-    "card_element_not_found": "Card element not found",
-    "unexpected_error": "An unexpected error occurred"
-  },
-
   "refund": {
     "title": "Process Refund",
     "request_title": "Request Refund",
@@ -144,7 +95,6 @@
     "request_success": "Refund request submitted",
     "request_error": "Failed to submit refund request"
   },
-
   "filters": {
     "all_status": "All Status",
     "search_placeholder": "Search payments..."

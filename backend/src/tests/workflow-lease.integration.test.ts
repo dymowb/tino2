@@ -30,6 +30,27 @@ describe('workflow in-flight lease', () => {
     if (AppDataSource.isInitialized) await AppDataSource.destroy();
   });
 
+  it('holds the slot for a run that is still inside its lease', async () => {
+    // Fourteen minutes into a fifteen-minute lease: the slot is still taken.
+    //
+    // This pins the lease's lower edge, not the timestamp basis. A JS-`Date`
+    // cutoff skews the comparison by the node/database offset in whichever
+    // direction that offset runs, and where node is *behind* the database it
+    // makes the lease longer — under which a fourteen-minute-old run is held
+    // either way. The reclaim tests below are the ones that discriminate.
+    const first = await workflowRepository.createRunning(input);
+    await AppDataSource.query(
+      `UPDATE agent_workflow_runs
+          SET "createdAt" = now()::timestamp - interval '14 minutes'
+        WHERE id = $1`,
+      [first.id]
+    );
+
+    await expect(workflowRepository.createRunning(input)).rejects.toBeInstanceOf(
+      WorkflowAlreadyRunningError
+    );
+  });
+
   it('rejects a second run while the first is genuinely in flight', async () => {
     await workflowRepository.createRunning(input);
     await expect(workflowRepository.createRunning(input)).rejects.toBeInstanceOf(
@@ -37,14 +58,42 @@ describe('workflow in-flight lease', () => {
     );
   });
 
+  it('reclaims the slot one minute past the lease', async () => {
+    // Sixteen minutes against a fifteen-minute lease. The hour-old case below
+    // survives a skew of up to seven hours; this one has a single minute of
+    // margin, so any comparison not made in the column's own terms fails it.
+    const abandoned = await workflowRepository.createRunning(input);
+    await AppDataSource.query(
+      `UPDATE agent_workflow_runs
+          SET "createdAt" = now()::timestamp - interval '16 minutes'
+        WHERE id = $1`,
+      [abandoned.id]
+    );
+
+    const fresh = await workflowRepository.createRunning(input);
+
+    expect(fresh.id).not.toBe(abandoned.id);
+    expect(
+      (await AppDataSource.getRepository(AgentWorkflowRun).findOneBy({ id: abandoned.id }))?.status
+    ).toBe(WorkflowRunStatus.FAILED);
+  });
+
   it('reclaims the slot when a run died without completing', async () => {
     // Simulates a process killed between the insert and the completion: the row
     // stays `running` and nothing will ever transition it. Without a lease the
     // partial unique index would 409 this booking forever.
     const abandoned = await workflowRepository.createRunning(input);
-    await AppDataSource.getRepository(AgentWorkflowRun).update(abandoned.id, {
-      createdAt: new Date(Date.now() - 60 * 60 * 1000),
-    });
+    // Backdated in SQL. `createdAt` is `timestamp without time zone` written by
+    // the DDL's `DEFAULT now()`, while a JavaScript `Date` passed as a parameter
+    // — which is what `repository.update()` sends — is rendered in the node
+    // process' zone instead. A fixture written that second way ages the row by
+    // the offset between the two rather than by the hour this test intends.
+    await AppDataSource.query(
+      `UPDATE agent_workflow_runs
+          SET "createdAt" = now()::timestamp - interval '60 minutes'
+        WHERE id = $1`,
+      [abandoned.id]
+    );
 
     const fresh = await workflowRepository.createRunning(input);
 

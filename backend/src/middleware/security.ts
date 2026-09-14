@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import cors from 'cors';
 import config from '@/config/environment';
 import logger from '@/config/logger';
+import { t } from '@/i18n';
+import { AuthenticatedRequest } from '@/types';
 
 // Called at request time (not module load), so dotenv.config() in server.ts is always ready.
 // ES module imports are hoisted above dotenv.config(), so top-level env reads return undefined.
@@ -136,6 +138,35 @@ export const rateLimiters = {
     },
     keyGenerator: (req: Request) => {
       return req.user?.userId || req.ip || 'unknown';
+    },
+  }),
+
+  /**
+   * Guards the cheap in-memory door in front of the expensive one.
+   *
+   * Agent-run creation is protected by a database cost budget, but that budget is
+   * enforced inside a transaction holding an advisory lock. A client hammering the
+   * endpoint would therefore queue on that lock and slow the claim down for
+   * everybody, so requests are thinned out here first. The ceiling is deliberately
+   * well above the daily cost budget: a user who has simply run out of budget must
+   * receive the message that says so, not a generic rate-limit error.
+   */
+  agentRun: rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req: Request) => {
+      return `agent-run:${req.user?.userId || req.ip || 'unknown'}`;
+    },
+    // A `handler` rather than the static `message` every other limiter here uses:
+    // this one guards a screen that renders the server's text, and a fixed
+    // English string would surface untranslated in a Portuguese session. Both
+    // `message` and `error` carry it — the drawer reads the first, the client's
+    // response interceptor toasts the second.
+    handler: (req: Request, res: Response) => {
+      const text = t(req as AuthenticatedRequest, 'readiness.rate_limited');
+      res.status(429).json({ success: false, message: text, error: text });
     },
   }),
 
