@@ -22,6 +22,7 @@ import { startAutoCaptureJob } from '@/jobs/autoCapture.job';
 import { startReflectionJob } from '@/jobs/reflection.job';
 import { startQuoteExpiryJob } from '@/jobs/quoteExpiry.job';
 import { startBookingReminderJob } from '@/jobs/bookingReminder.job';
+import { startRefundReconciliationJob } from '@/jobs/refundReconciliation.job';
 import { validateConfig } from '@/config/environment';
 import { loadAiConfiguration } from '@/services/AiConfigurationService';
 
@@ -50,6 +51,7 @@ async function bootstrap(): Promise<void> {
     startReflectionJob();
     startQuoteExpiryJob();
     startBookingReminderJob();
+    startRefundReconciliationJob();
 
     const gracefulShutdown = async (): Promise<void> => {
       logger.info('Received shutdown signal. Gracefully shutting down...');

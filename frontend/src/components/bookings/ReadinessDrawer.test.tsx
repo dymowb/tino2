@@ -55,7 +55,6 @@ const runFor = (bookingId: string): ReadinessRunResponse => ({
     unavailableSections: [],
   },
 });
-
 function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((r) => {
@@ -234,4 +233,3 @@ describe("a drawer call that finishes after the user moved on", () => {
     expect(api.draftReadinessMessage).toHaveBeenCalledTimes(1);
   });
 });
-

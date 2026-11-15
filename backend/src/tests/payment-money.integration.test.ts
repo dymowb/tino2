@@ -7,6 +7,8 @@ import { Provider } from '@/models/Provider';
 import { Booking, BookingStatus } from '@/models/Booking';
 import { User } from '@/models/User';
 import { Payment, PaymentMethod, PaymentStatus } from '@/models/Payment';
+import { RefundOperation, RefundOperationStatus } from '@/models/RefundOperation';
+import PaymentService from '@/services/PaymentService';
 
 /**
  * What actually reaches Stripe.
@@ -19,10 +21,19 @@ import { Payment, PaymentMethod, PaymentStatus } from '@/models/Payment';
 describe('payment money handling', () => {
   const server = new App().app;
   const password = 'TestPassword123!';
+  const paymentServiceInternals = PaymentService as unknown as {
+    getStripe(): { refunds: { create: jest.Mock } };
+    finalizeRefund(operationId: string, refund: Stripe.Refund): Promise<Payment>;
+  };
 
   /** The shared mock instance every `new Stripe()` returns (see tests/setup.ts). */
   function stripeMock() {
     return (Stripe as unknown as jest.Mock).mock.results.at(-1)?.value;
+  }
+
+  /** PaymentService owns a lazy Stripe client distinct from the booking controller's. */
+  function refundStripeMock() {
+    return paymentServiceInternals.getStripe();
   }
 
   async function account(email: string, userType: 'customer' | 'provider') {
@@ -172,9 +183,28 @@ describe('payment money handling', () => {
 
     await request(server)
       .post(`/api/v1/payments/${payment.id}/refund`)
+      .set('Idempotency-Key', '00000000-0000-4000-8000-000000000401')
       .set('Authorization', `Bearer ${providerAccount.token}`)
       .send({ amount: 300, reason: 'requested_by_customer' })
       .expect(400);
+  });
+
+  it('requires the client operation identity before reserving a refund', async () => {
+    const customer = await account('money-key-customer@example.com', 'customer');
+    const providerAccount = await account('money-key-provider@example.com', 'provider');
+    const provider = await providerProfile(providerAccount.user.id);
+    const booking = await confirmedBooking(customer.user.id, provider.id, 100);
+    const payment = await succeededPayment(booking.id, customer.user.id, provider.id, 100);
+
+    await request(server)
+      .post(`/api/v1/payments/${payment.id}/refund`)
+      .set('Authorization', `Bearer ${providerAccount.token}`)
+      .send({ amount: 50, reason: 'customer request' })
+      .expect(400);
+
+    expect(
+      await AppDataSource.getRepository(RefundOperation).countBy({ paymentId: payment.id })
+    ).toBe(0);
   });
 
   it('does not lose a refund when two partial refunds race', async () => {
@@ -186,20 +216,21 @@ describe('payment money handling', () => {
 
     const payment = await succeededPayment(booking.id, customer.user.id, provider.id, 275);
 
-    // The shared Stripe mock reports a fixed 10000 minor units (R$100) per refund,
-    // which is exactly the amount requested below — so no override is needed. (An
-    // override here would be unreliable: PaymentService caches its own Stripe
-    // instance, which is not necessarily the most recently constructed one.)
+    refundStripeMock()
+      .refunds.create.mockResolvedValueOnce({ id: 're_race_1', amount: 10000, status: 'succeeded' })
+      .mockResolvedValueOnce({ id: 're_race_2', amount: 10000, status: 'succeeded' });
 
     // Two R$100 refunds issued concurrently against a R$275 payment. Without a row
     // lock both read refundAmount=0 and each writes 100, losing one of them.
     const [first, second] = await Promise.all([
       request(server)
         .post(`/api/v1/payments/${payment.id}/refund`)
+        .set('Idempotency-Key', '00000000-0000-4000-8000-000000000501')
         .set('Authorization', `Bearer ${providerAccount.token}`)
         .send({ amount: 100, reason: 'requested_by_customer' }),
       request(server)
         .post(`/api/v1/payments/${payment.id}/refund`)
+        .set('Idempotency-Key', '00000000-0000-4000-8000-000000000502')
         .set('Authorization', `Bearer ${providerAccount.token}`)
         .send({ amount: 100, reason: 'requested_by_customer' }),
     ]);
@@ -212,5 +243,256 @@ describe('payment money handling', () => {
     // Both refunds must be reflected: 200, not 100.
     expect(Number(settled.refundAmount)).toBe(200);
     expect(settled.status).toBe(PaymentStatus.PARTIALLY_REFUNDED);
+  });
+
+  it('replays an indeterminate refund with the same Stripe key and applies it once', async () => {
+    const customer = await account('money6-customer@example.com', 'customer');
+    const providerAccount = await account('money6-provider@example.com', 'provider');
+    const provider = await providerProfile(providerAccount.user.id);
+    const booking = await confirmedBooking(customer.user.id, provider.id, 275);
+    const payment = await succeededPayment(booking.id, customer.user.id, provider.id, 275);
+    const key = '00000000-0000-4000-8000-000000000701';
+    const connectionError = Object.assign(new Error('connection dropped after send'), {
+      type: 'StripeConnectionError',
+    });
+    refundStripeMock()
+      .refunds.create.mockRejectedValueOnce(connectionError)
+      .mockResolvedValueOnce({ id: 're_replayed', amount: 10000, status: 'succeeded' });
+
+    await request(server)
+      .post(`/api/v1/payments/${payment.id}/refund`)
+      .set('Idempotency-Key', key)
+      .set('Authorization', `Bearer ${providerAccount.token}`)
+      .send({ amount: 100, reason: 'customer request' })
+      .expect(503);
+
+    const unresolved = await AppDataSource.getRepository(RefundOperation).findOneByOrFail({
+      idempotencyKey: key,
+    });
+    expect(unresolved.status).toBe(RefundOperationStatus.INDETERMINATE);
+    expect(Number(unresolved.amount)).toBe(100);
+
+    expect(await PaymentService.reconcileRefundOperations(0)).toBe(1);
+
+    const calls = refundStripeMock().refunds.create.mock.calls.slice(-2);
+    expect(calls[0][1].idempotencyKey).toBe(calls[1][1].idempotencyKey);
+    expect(calls[1][1].idempotencyKey).toBe(`refund:${unresolved.id}`);
+    const settled = await AppDataSource.getRepository(Payment).findOneByOrFail({ id: payment.id });
+    expect(Number(settled.refundAmount)).toBe(100);
+  });
+
+  it('retains expired reservations without contacting Stripe from either retry path', async () => {
+    const customer = await account('money-expired-customer@example.com', 'customer');
+    const providerAccount = await account('money-expired-provider@example.com', 'provider');
+    const provider = await providerProfile(providerAccount.user.id);
+    const booking = await confirmedBooking(customer.user.id, provider.id, 275);
+    const payment = await succeededPayment(booking.id, customer.user.id, provider.id, 275);
+    const key = '00000000-0000-4000-8000-000000000708';
+    const repo = AppDataSource.getRepository(RefundOperation);
+    const operation = await repo.save(
+      repo.create({
+        paymentId: payment.id,
+        requestedBy: providerAccount.user.id,
+        idempotencyKey: key,
+        amount: 200,
+        currency: 'BRL',
+        status: RefundOperationStatus.INDETERMINATE,
+        createdAt: new Date(Date.now() - 23 * 60 * 60_000),
+        lastAttemptAt: new Date(),
+      })
+    );
+    const callsBefore = refundStripeMock().refunds.create.mock.calls.length;
+    await request(server)
+      .post(`/api/v1/payments/${payment.id}/refund`)
+      .set('Idempotency-Key', key)
+      .set('Authorization', `Bearer ${providerAccount.token}`)
+      .send({ amount: 200 })
+      .expect(503);
+    expect(await PaymentService.reconcileRefundOperations(0)).toBe(0);
+    await request(server)
+      .post(`/api/v1/payments/${payment.id}/refund`)
+      .set('Idempotency-Key', '00000000-0000-4000-8000-000000000709')
+      .set('Authorization', `Bearer ${providerAccount.token}`)
+      .send({ amount: 100 })
+      .expect(400);
+    expect(refundStripeMock().refunds.create.mock.calls.length).toBe(callsBefore);
+    const retained = await repo.findOneByOrFail({ id: operation.id });
+    expect(retained.status).toBe(RefundOperationStatus.INDETERMINATE);
+    expect(retained.errorMessage).toContain('manual reconciliation');
+    expect(retained.attemptCount).toBe(0);
+  });
+
+  it('releases a reservation after Stripe rejects the credentials', async () => {
+    const customer = await account('money-auth-error-customer@example.com', 'customer');
+    const providerAccount = await account('money-auth-error-provider@example.com', 'provider');
+    const provider = await providerProfile(providerAccount.user.id);
+    const booking = await confirmedBooking(customer.user.id, provider.id, 275);
+    const payment = await succeededPayment(booking.id, customer.user.id, provider.id, 275);
+    const failedKey = '00000000-0000-4000-8000-000000000710';
+    refundStripeMock()
+      .refunds.create.mockRejectedValueOnce(
+        Object.assign(new Error('invalid API key'), { type: 'StripeAuthenticationError' })
+      )
+      .mockResolvedValueOnce({ id: 're_after_auth_error', amount: 10000, status: 'succeeded' });
+
+    await request(server)
+      .post(`/api/v1/payments/${payment.id}/refund`)
+      .set('Idempotency-Key', failedKey)
+      .set('Authorization', `Bearer ${providerAccount.token}`)
+      .send({ amount: 100, reason: 'customer request' })
+      .expect(500);
+
+    const failed = await AppDataSource.getRepository(RefundOperation).findOneByOrFail({
+      idempotencyKey: failedKey,
+    });
+    expect(failed.status).toBe(RefundOperationStatus.FAILED);
+
+    await request(server)
+      .post(`/api/v1/payments/${payment.id}/refund`)
+      .set('Idempotency-Key', '00000000-0000-4000-8000-000000000711')
+      .set('Authorization', `Bearer ${providerAccount.token}`)
+      .send({ amount: 100, reason: 'customer request' })
+      .expect(200);
+  });
+
+  it('collapses concurrent retries of one operation into one applied refund', async () => {
+    const customer = await account('money-concurrent-key-customer@example.com', 'customer');
+    const providerAccount = await account('money-concurrent-key-provider@example.com', 'provider');
+    const provider = await providerProfile(providerAccount.user.id);
+    const booking = await confirmedBooking(customer.user.id, provider.id, 275);
+    const payment = await succeededPayment(booking.id, customer.user.id, provider.id, 275);
+    const key = '00000000-0000-4000-8000-000000000706';
+    let calls = 0;
+    let release!: () => void;
+    const bothSubmitted = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    refundStripeMock().refunds.create.mockImplementation(async () => {
+      calls += 1;
+      if (calls === 2) release();
+      await bothSubmitted;
+      return { id: 're_concurrent_replay', amount: 10000, status: 'succeeded' };
+    });
+
+    const responses = await Promise.all([
+      request(server)
+        .post(`/api/v1/payments/${payment.id}/refund`)
+        .set('Idempotency-Key', key)
+        .set('Authorization', `Bearer ${providerAccount.token}`)
+        .send({ amount: 100, reason: 'customer request' }),
+      request(server)
+        .post(`/api/v1/payments/${payment.id}/refund`)
+        .set('Idempotency-Key', key)
+        .set('Authorization', `Bearer ${providerAccount.token}`)
+        .send({ amount: 100, reason: 'customer request' }),
+    ]);
+
+    expect(responses.map((response) => response.status)).toEqual([200, 200]);
+    const operation = await AppDataSource.getRepository(RefundOperation).findOneByOrFail({
+      idempotencyKey: key,
+    });
+    expect(operation.attemptCount).toBe(2);
+    expect(operation.status).toBe(RefundOperationStatus.SUCCEEDED);
+    const stripeCalls = refundStripeMock().refunds.create.mock.calls.slice(-2);
+    expect(stripeCalls[0][1].idempotencyKey).toBe(stripeCalls[1][1].idempotencyKey);
+    const settled = await AppDataSource.getRepository(Payment).findOneByOrFail({ id: payment.id });
+    expect(Number(settled.refundAmount)).toBe(100);
+  });
+
+  it('recovers a Stripe success after local finalization fails without double-refunding', async () => {
+    const customer = await account('money7-customer@example.com', 'customer');
+    const providerAccount = await account('money7-provider@example.com', 'provider');
+    const provider = await providerProfile(providerAccount.user.id);
+    const booking = await confirmedBooking(customer.user.id, provider.id, 275);
+    const payment = await succeededPayment(booking.id, customer.user.id, provider.id, 275);
+    const key = '00000000-0000-4000-8000-000000000702';
+    refundStripeMock().refunds.create.mockResolvedValue({
+      id: 're_commit_recovery',
+      amount: 10000,
+      status: 'succeeded',
+    });
+    const originalFinalize = paymentServiceInternals.finalizeRefund.bind(PaymentService);
+    const finalize = jest
+      .spyOn(paymentServiceInternals, 'finalizeRefund')
+      .mockRejectedValueOnce(new Error('database commit failed'))
+      .mockImplementation(originalFinalize);
+
+    await request(server)
+      .post(`/api/v1/payments/${payment.id}/refund`)
+      .set('Idempotency-Key', key)
+      .set('Authorization', `Bearer ${providerAccount.token}`)
+      .send({ amount: 100, reason: 'customer request' })
+      .expect(503);
+    await request(server)
+      .post(`/api/v1/payments/${payment.id}/refund`)
+      .set('Idempotency-Key', key)
+      .set('Authorization', `Bearer ${providerAccount.token}`)
+      .send({ amount: 100, reason: 'customer request' })
+      .expect(200);
+    finalize.mockRestore();
+
+    const calls = refundStripeMock().refunds.create.mock.calls.slice(-2);
+    expect(calls[0][1].idempotencyKey).toBe(calls[1][1].idempotencyKey);
+    const settled = await AppDataSource.getRepository(Payment).findOneByOrFail({ id: payment.id });
+    expect(Number(settled.refundAmount)).toBe(100);
+    const operation = await AppDataSource.getRepository(RefundOperation).findOneByOrFail({
+      idempotencyKey: key,
+    });
+    expect(operation.status).toBe(RefundOperationStatus.SUCCEEDED);
+    expect(operation.attemptCount).toBe(2);
+  });
+
+  it('reserves indeterminate amounts against distinct refund requests', async () => {
+    const customer = await account('money8-customer@example.com', 'customer');
+    const providerAccount = await account('money8-provider@example.com', 'provider');
+    const provider = await providerProfile(providerAccount.user.id);
+    const booking = await confirmedBooking(customer.user.id, provider.id, 150);
+    const payment = await succeededPayment(booking.id, customer.user.id, provider.id, 150);
+    const callsBefore = refundStripeMock().refunds.create.mock.calls.length;
+    refundStripeMock().refunds.create.mockRejectedValueOnce(
+      Object.assign(new Error('timeout'), { type: 'StripeConnectionError' })
+    );
+
+    await request(server)
+      .post(`/api/v1/payments/${payment.id}/refund`)
+      .set('Idempotency-Key', '00000000-0000-4000-8000-000000000703')
+      .set('Authorization', `Bearer ${providerAccount.token}`)
+      .send({ amount: 100, reason: 'first request' })
+      .expect(503);
+    await request(server)
+      .post(`/api/v1/payments/${payment.id}/refund`)
+      .set('Idempotency-Key', '00000000-0000-4000-8000-000000000704')
+      .set('Authorization', `Bearer ${providerAccount.token}`)
+      .send({ amount: 100, reason: 'second request' })
+      .expect(400);
+
+    expect(refundStripeMock().refunds.create.mock.calls).toHaveLength(callsBefore + 1);
+  });
+
+  it('rejects reuse of an idempotency key with changed refund inputs', async () => {
+    const customer = await account('money9-customer@example.com', 'customer');
+    const providerAccount = await account('money9-provider@example.com', 'provider');
+    const provider = await providerProfile(providerAccount.user.id);
+    const booking = await confirmedBooking(customer.user.id, provider.id, 275);
+    const payment = await succeededPayment(booking.id, customer.user.id, provider.id, 275);
+    const key = '00000000-0000-4000-8000-000000000705';
+    refundStripeMock().refunds.create.mockResolvedValueOnce({
+      id: 're_idempotency_collision',
+      amount: 10000,
+      status: 'succeeded',
+    });
+
+    await request(server)
+      .post(`/api/v1/payments/${payment.id}/refund`)
+      .set('Idempotency-Key', key)
+      .set('Authorization', `Bearer ${providerAccount.token}`)
+      .send({ amount: 100, reason: 'first request' })
+      .expect(200);
+    await request(server)
+      .post(`/api/v1/payments/${payment.id}/refund`)
+      .set('Idempotency-Key', key)
+      .set('Authorization', `Bearer ${providerAccount.token}`)
+      .send({ amount: 50, reason: 'changed request' })
+      .expect(409);
   });
 });

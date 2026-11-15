@@ -1,12 +1,16 @@
 import { Request, Response } from 'express';
 import { AppDataSource } from '@/config/database';
 import { Payment } from '@/models/Payment';
-import { Booking } from '@/models/Booking';
 import { User } from '@/models/User';
 import { Provider } from '@/models/Provider';
 import logger from '@/config/logger';
 import { AuthenticatedRequest } from '@/types';
-import PaymentService, { PaymentAccessError, PaymentStateError } from '@/services/PaymentService';
+import PaymentService, {
+  PaymentAccessError,
+  PaymentStateError,
+  RefundIdempotencyConflictError,
+  RefundIndeterminateError,
+} from '@/services/PaymentService';
 import { getStripeInstance, getStripeErrorMessage } from '@/config/stripe';
 import { t } from '@/i18n';
 
@@ -187,6 +191,14 @@ class PaymentController {
     try {
       const { id } = req.params;
       const { amount, reason } = req.body;
+      const idempotencyKey = req.get('Idempotency-Key');
+      if (!idempotencyKey || idempotencyKey.length > 255) {
+        res.status(400).json({
+          success: false,
+          error: 'A valid Idempotency-Key header is required',
+        });
+        return;
+      }
 
       // Process refund using service
       const payment = await PaymentService.processRefund({
@@ -195,6 +207,7 @@ class PaymentController {
         reason,
         requestedBy: req.user.userId,
         requestedByUserType: req.user.userType,
+        idempotencyKey,
       });
 
       res.json({
@@ -222,6 +235,10 @@ class PaymentController {
         // 'only refund' as a 403 first, making this 400 branch unreachable; typing
         // them removes the substring guessing entirely.
         res.status(400).json({ success: false, error: errMsg });
+      } else if (error instanceof RefundIdempotencyConflictError) {
+        res.status(409).json({ success: false, error: errMsg });
+      } else if (error instanceof RefundIndeterminateError) {
+        res.status(503).json({ success: false, error: errMsg });
       } else {
         res.status(500).json({
           success: false,
