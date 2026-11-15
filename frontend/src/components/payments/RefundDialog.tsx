@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Dialog,
@@ -66,11 +66,16 @@ const RefundDialog: React.FC<Props> = ({
   const [refundAmount, setRefundAmount] = useState<number>(Number(payment.amount) || 0);
   const [refundReason, setRefundReason] = useState('');
   const [refundApplicationFee, setRefundApplicationFee] = useState(false);
+  const operationRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
   const refundMutation = useMutation({
-    mutationFn: ({ paymentId, refundData }: { paymentId: string; refundData: any }) =>
-      apiService.refundPayment(paymentId, refundData),
+    mutationFn: ({ paymentId, refundData, idempotencyKey }: {
+      paymentId: string;
+      refundData: any;
+      idempotencyKey: string;
+    }) => apiService.refundPayment(paymentId, idempotencyKey, refundData),
     onSuccess: () => {
+      operationRef.current = null;
       toast.success(t('refund.success'));
       onRefundSuccess();
       onClose();
@@ -118,7 +123,18 @@ const RefundDialog: React.FC<Props> = ({
       reverseTransfer: true, // Reverse the transfer to provider if applicable
     };
 
-    refundMutation.mutate({ paymentId: payment.id, refundData });
+    // A retry of the same immutable request must reuse its key. Editing the amount
+    // or reason creates a genuinely new operation and therefore a new key.
+    const fingerprint = JSON.stringify({ paymentId: payment.id, ...refundData });
+    if (!operationRef.current || operationRef.current.fingerprint !== fingerprint) {
+      operationRef.current = { fingerprint, key: crypto.randomUUID() };
+    }
+
+    refundMutation.mutate({
+      paymentId: payment.id,
+      refundData,
+      idempotencyKey: operationRef.current.key,
+    });
   };
 
   const formatAmount = (amount: number, currency = payment.currency) =>

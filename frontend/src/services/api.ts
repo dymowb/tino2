@@ -1444,6 +1444,7 @@ class ApiService {
   // not get to choose what it is charged.
   async refundPayment(
     paymentId: string,
+    idempotencyKey: string,
     refundData: {
       amount?: number;
       reason?: string;
@@ -1454,6 +1455,7 @@ class ApiService {
     const response = await this.api.post<ApiResponse<any>>(
       `/payments/${paymentId}/refund`,
       refundData,
+      { headers: { "Idempotency-Key": idempotencyKey } },
     );
     return response.data.data!;
   }

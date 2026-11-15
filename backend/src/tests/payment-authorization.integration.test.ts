@@ -132,6 +132,7 @@ describe('payment authorization', () => {
 
       const response = await request(server)
         .post(`/api/v1/payments/${payment.id}/refund`)
+        .set('Idempotency-Key', '00000000-0000-4000-8000-000000000601')
         .set('Authorization', `Bearer ${outsider.token}`)
         .send({ reason: 'requested_by_customer' })
         .expect(404);
@@ -156,6 +157,7 @@ describe('payment authorization', () => {
 
       await request(server)
         .post(`/api/v1/payments/${payment.id}/refund`)
+        .set('Idempotency-Key', '00000000-0000-4000-8000-000000000602')
         .set('Authorization', `Bearer ${otherProviderAccount.token}`)
         .send({ reason: 'requested_by_customer' })
         .expect(404);
@@ -174,6 +176,7 @@ describe('payment authorization', () => {
 
       await request(server)
         .post(`/api/v1/payments/${payment.id}/refund`)
+        .set('Idempotency-Key', '00000000-0000-4000-8000-000000000603')
         .set('Authorization', `Bearer ${owner.token}`)
         .send({ reason: 'requested_by_customer' })
         .expect(403);
@@ -192,6 +195,7 @@ describe('payment authorization', () => {
 
       await request(server)
         .post(`/api/v1/payments/${payment.id}/refund`)
+        .set('Idempotency-Key', '00000000-0000-4000-8000-000000000604')
         .set('Authorization', `Bearer ${providerAccount.token}`)
         .send({ reason: 'requested_by_customer' })
         .expect(200);
@@ -213,6 +217,7 @@ describe('payment authorization', () => {
 
       await request(server)
         .post(`/api/v1/payments/${payment.id}/refund`)
+        .set('Idempotency-Key', '00000000-0000-4000-8000-000000000605')
         .set('Authorization', `Bearer ${admin.token}`)
         .send({ reason: 'requested_by_customer' })
         .expect(200);
@@ -231,6 +236,7 @@ describe('payment authorization', () => {
 
       await request(server)
         .post(`/api/v1/payments/${payment.id}/refund`)
+        .set('Idempotency-Key', '00000000-0000-4000-8000-000000000606')
         .send({ reason: 'requested_by_customer' })
         .expect(401);
     });

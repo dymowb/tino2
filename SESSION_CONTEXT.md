@@ -3,6 +3,40 @@
 > Lean by design (per CLAUDE.md): current status + roadmap + resume point only.
 > Detailed completed-work notes live in `Tests/history/HISTORICAL_CONTEXT.md` and git history.
 
+## Current Status (2026-09-13) — MN1 durable refund operations in progress
+
+Working on `fix/audit-mn1-refund-idempotency`, independently of BR-3. Architecture locked:
+persist one immutable refund operation per required client idempotency key before Stripe,
+reserve in-flight amounts under the payment row lock, call Stripe outside the transaction,
+then finalize the operation and payment atomically. Indeterminate Stripe outcomes retain their
+reservation and reuse the same Stripe key on retry; definitive failures release it.
+
+Checkpoint: `RefundOperation` entity + migration added; refund service now claims/reserves,
+calls Stripe with `refund:<operation UUID>`, and finalizes payment + ledger atomically. The HTTP
+endpoint requires `Idempotency-Key`; `RefundDialog` retains one key across identical retries and
+rotates it only when the refund inputs change. Compilation and failure-mode tests are next.
+
+Checkpoint 2: targeted tests cover missing keys, concurrent distinct refunds, indeterminate
+Stripe retry, concurrent same-key replay, local finalization failure after Stripe success,
+unresolved reservation accounting, and changed-input key conflicts. Payment and operation locks
+use one order (payment then operation), and failure updates cannot downgrade a succeeded row.
+Backend typecheck and frontend production build pass; full backend verification remains.
+
+Complete locally: a minute-scheduled, bounded reconciler retries operations stale for two minutes
+with the same Stripe key, closing the browser-reload/process-crash recovery gap. Final verification:
+backend 33 suites / 307 tests, backend typecheck, changed-file lint (no new warnings/errors),
+frontend 5 files / 46 tests, and frontend production build all pass. Not committed or deployed.
+
+Resume review (2026-09-14): found that indefinite retries outlive Stripe's 24-hour
+idempotency retention guarantee. Both request and cron retries now stop at 23 hours
+from operation creation, retain the unresolved reservation, and record a manual
+reconciliation error. The recovery queue orders by last update to prevent old failed
+batches starving newer operations. Added integration coverage for both retry paths,
+recent attempts not extending the window, and expired reservations blocking overspend.
+Verification: 20 payment integration tests pass; money suite rerun after queue ordering
+change passes (10 tests). Backend typecheck and diff whitespace checks pass; changed-file
+lint has zero errors and one existing `any` warning. Changes remain uncommitted/undeployed.
+
 ## Current Status (2026-09-08) — BR-2 delivered (Logistics + role-scoped checklists)
 
 Branch `feat/br2-logistics-checklists`. Roadmap milestone 3, phase **BR-2**

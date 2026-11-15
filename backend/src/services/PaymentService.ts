@@ -1,12 +1,12 @@
-import { Repository } from 'typeorm';
+import { In, LessThan, Repository } from 'typeorm';
 import { AppDataSource } from '@/config/database';
 import Stripe from 'stripe';
 import { Payment, PaymentStatus } from '@/models/Payment';
 import { Booking, BookingStatus } from '@/models/Booking';
 import { User } from '@/models/User';
 import { Provider } from '@/models/Provider';
+import { RefundOperation, RefundOperationStatus } from '@/models/RefundOperation';
 import logger from '@/config/logger';
-import { NotificationType } from '@/models/Notification';
 import {
   formatMajorUnits,
   fromStripeMinorUnits,
@@ -21,6 +21,7 @@ export interface RefundData {
   reason?: string;
   requestedBy: string;
   requestedByUserType?: string;
+  idempotencyKey: string;
 }
 
 /**
@@ -52,6 +53,20 @@ export class PaymentStateError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'PaymentStateError';
+  }
+}
+
+export class RefundIdempotencyConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RefundIdempotencyConflictError';
+  }
+}
+
+export class RefundIndeterminateError extends Error {
+  constructor(message = 'Could not confirm the refund. Retry with the same idempotency key.') {
+    super(message);
+    this.name = 'RefundIndeterminateError';
   }
 }
 
@@ -132,135 +147,313 @@ class PaymentService {
   }
 
   /**
-   * Confirm and capture payment (release from escrow)
+   * Reserve a refund durably before contacting Stripe. The payment row lock makes
+   * the refundable balance plus every unresolved reservation one serial decision.
+   */
+  private async claimRefund(data: RefundData): Promise<{
+    operation: RefundOperation;
+    payment?: Payment;
+  }> {
+    return AppDataSource.transaction(async (manager) => {
+      const payment = await manager.findOne(Payment, {
+        where: { id: data.paymentId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!payment) throw new Error('Payment not found');
+
+      const role = await this.resolvePaymentRole(payment, {
+        userId: data.requestedBy,
+        userType: data.requestedByUserType,
+      });
+      if (role === null) throw new PaymentAccessError('Payment not found');
+      if (role !== 'admin' && role !== 'provider') {
+        throw new PaymentAccessError('Unauthorized to refund this payment');
+      }
+
+      const currency = payment.currency || (await getPlatformCurrency());
+      if (data.amount !== undefined && !Number.isFinite(data.amount)) {
+        throw new PaymentStateError('Refund amount must be a finite number');
+      }
+      const normalizedAmount =
+        data.amount === undefined ? undefined : roundMajorUnits(data.amount, currency);
+      if (data.amount !== undefined && normalizedAmount !== data.amount) {
+        throw new PaymentStateError(`Refund amount has too many decimals for ${currency}`);
+      }
+
+      const existing = await manager.findOne(RefundOperation, {
+        where: { idempotencyKey: data.idempotencyKey },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (existing) {
+        const sameRequest =
+          existing.paymentId === data.paymentId &&
+          existing.requestedBy === data.requestedBy &&
+          existing.fullRefund === (data.amount === undefined) &&
+          (normalizedAmount === undefined || Number(existing.amount) === normalizedAmount) &&
+          (existing.reason ?? '') === (data.reason ?? '');
+        if (!sameRequest) {
+          throw new RefundIdempotencyConflictError(
+            'Idempotency key has already been used for a different refund request'
+          );
+        }
+        if (existing.status === RefundOperationStatus.FAILED) {
+          throw new PaymentStateError(
+            existing.errorMessage || 'This refund attempt failed; submit a new request'
+          );
+        }
+        return {
+          operation: existing,
+          payment: existing.status === RefundOperationStatus.SUCCEEDED ? payment : undefined,
+        };
+      }
+
+      if (payment.status === PaymentStatus.REFUNDED) {
+        throw new PaymentStateError('Payment already refunded');
+      }
+      if (
+        payment.status !== PaymentStatus.SUCCEEDED &&
+        payment.status !== PaymentStatus.PARTIALLY_REFUNDED
+      ) {
+        throw new PaymentStateError('Can only refund succeeded payments');
+      }
+
+      const capturedAmount = Number(payment.amount);
+      const alreadyRefunded = Number(payment.refundAmount ?? 0);
+      const unresolved = await manager.find(RefundOperation, {
+        where: {
+          paymentId: payment.id,
+          status: In([RefundOperationStatus.PENDING, RefundOperationStatus.INDETERMINATE]),
+        },
+      });
+      const reservedAmount = unresolved.reduce((sum, item) => sum + Number(item.amount), 0);
+      const available = roundMajorUnits(
+        capturedAmount - alreadyRefunded - reservedAmount,
+        currency
+      );
+      const requestedAmount = normalizedAmount === undefined ? available : normalizedAmount;
+
+      if (!Number.isFinite(requestedAmount) || requestedAmount <= 0) {
+        throw new PaymentStateError('Refund amount must be greater than 0');
+      }
+      if (requestedAmount > available) {
+        throw new PaymentStateError(
+          `Refund amount exceeds the refundable balance of ${formatMajorUnits(available, currency, await getPlatformLocale())}`
+        );
+      }
+
+      const operation = manager.create(RefundOperation, {
+        idempotencyKey: data.idempotencyKey,
+        paymentId: payment.id,
+        requestedBy: data.requestedBy,
+        amount: requestedAmount,
+        fullRefund: data.amount === undefined,
+        currency,
+        reason: data.reason ?? null,
+        status: RefundOperationStatus.PENDING,
+      });
+      return { operation: await manager.save(operation) };
+    });
+  }
+
+  private async recordRefundFailure(
+    operationId: string,
+    status: RefundOperationStatus.FAILED | RefundOperationStatus.INDETERMINATE,
+    error: unknown
+  ): Promise<void> {
+    const message = error instanceof Error ? error.message : 'Unknown Stripe error';
+    // A concurrent retry may already have finalized Stripe's replay. Never let a
+    // slower failing request downgrade that terminal success back to indeterminate.
+    await AppDataSource.getRepository(RefundOperation).update(
+      {
+        id: operationId,
+        status: In([RefundOperationStatus.PENDING, RefundOperationStatus.INDETERMINATE]),
+      },
+      { status, errorMessage: message }
+    );
+  }
+
+  private async finalizeRefund(operationId: string, stripeRefund: Stripe.Refund): Promise<Payment> {
+    return AppDataSource.transaction(async (manager) => {
+      const operationIdentity = await manager.findOneOrFail(RefundOperation, {
+        where: { id: operationId },
+      });
+      const payment = await manager.findOneOrFail(Payment, {
+        where: { id: operationIdentity.paymentId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      // Keep the same lock order as claimRefund (payment, then operation). The
+      // reverse order deadlocks when a retry claims while another request finalizes.
+      const operation = await manager.findOneOrFail(RefundOperation, {
+        where: { id: operationId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      // A concurrent retry can receive Stripe's replayed response. Only the first
+      // finalizer is allowed to add the operation amount to the payment total.
+      if (operation.status === RefundOperationStatus.SUCCEEDED) return payment;
+
+      const refundedNow = fromStripeMinorUnits(stripeRefund.amount, operation.currency);
+      if (refundedNow !== Number(operation.amount)) {
+        throw new RefundIndeterminateError(
+          'Stripe returned a refund amount that differs from the reserved amount'
+        );
+      }
+
+      const capturedAmount = Number(payment.amount);
+      const totalRefunded = roundMajorUnits(
+        Number(payment.refundAmount ?? 0) + refundedNow,
+        operation.currency
+      );
+      if (totalRefunded > capturedAmount) {
+        throw new RefundIndeterminateError('Refund would exceed the captured payment amount');
+      }
+
+      payment.status =
+        totalRefunded < capturedAmount ? PaymentStatus.PARTIALLY_REFUNDED : PaymentStatus.REFUNDED;
+      payment.refundedAt = new Date();
+      payment.refundAmount = totalRefunded;
+      payment.stripeRefundId = stripeRefund.id;
+      payment.metadata = { ...payment.metadata, refund_reason: operation.reason ?? undefined };
+      await manager.save(Payment, payment);
+
+      operation.status = RefundOperationStatus.SUCCEEDED;
+      operation.stripeRefundId = stripeRefund.id;
+      operation.completedAt = new Date();
+      operation.errorMessage = null;
+      await manager.save(RefundOperation, operation);
+
+      if (payment.status === PaymentStatus.REFUNDED) {
+        await manager.update(Booking, payment.bookingId, { status: BookingStatus.CANCELLED });
+      }
+      return payment;
+    });
+  }
+
+  /**
+   * Replay-safe external portion shared by the request path and reconciler.
+   */
+  private async executeRefundOperation(operation: RefundOperation): Promise<Payment> {
+    // Stripe may prune replay keys after 24 hours. Use the durable creation time
+    // (not lastAttemptAt, which retries reset), with an hour of safety margin.
+    // An unresolved old operation must retain its reservation for manual review.
+    if (Date.now() - operation.createdAt.getTime() >= 23 * 60 * 60_000) {
+      const error = new RefundIndeterminateError(
+        'Refund retry window expired; manual reconciliation with Stripe is required'
+      );
+      await this.recordRefundFailure(operation.id, RefundOperationStatus.INDETERMINATE, error);
+      throw error;
+    }
+    await AppDataSource.getRepository(RefundOperation).increment(
+      { id: operation.id },
+      'attemptCount',
+      1
+    );
+    await AppDataSource.getRepository(RefundOperation).update(operation.id, {
+      lastAttemptAt: new Date(),
+    });
+
+    let refund: Stripe.Refund;
+    try {
+      refund = await this.getStripe().refunds.create(
+        {
+          payment_intent: (
+            await AppDataSource.getRepository(Payment).findOneByOrFail({ id: operation.paymentId })
+          ).stripePaymentIntentId,
+          amount: toStripeMinorUnits(Number(operation.amount), operation.currency),
+          reason: 'requested_by_customer',
+          metadata: {
+            paymentId: operation.paymentId,
+            requestedBy: operation.requestedBy,
+            refundOperationId: operation.id,
+            reason: operation.reason ?? '',
+          },
+        },
+        { idempotencyKey: `refund:${operation.id}` }
+      );
+    } catch (stripeError: unknown) {
+      const stripeDetails = stripeError as { type?: string; message?: string };
+      const definitive = stripeDetails.type === 'StripeInvalidRequestError';
+      await this.recordRefundFailure(
+        operation.id,
+        definitive ? RefundOperationStatus.FAILED : RefundOperationStatus.INDETERMINATE,
+        stripeError
+      );
+      if (!definitive) {
+        logger.error('Indeterminate Stripe refund — operation needs reconciliation', {
+          paymentId: operation.paymentId,
+          refundOperationId: operation.id,
+          idempotencyKey: `refund:${operation.id}`,
+          type: stripeDetails.type,
+          message: stripeDetails.message,
+        });
+        throw new RefundIndeterminateError();
+      }
+      throw stripeError;
+    }
+
+    try {
+      const payment = await this.finalizeRefund(operation.id, refund);
+      logger.info(`Payment refunded: ${operation.paymentId}, refund ID: ${refund.id}`);
+      return payment;
+    } catch (finalizeError) {
+      await this.recordRefundFailure(
+        operation.id,
+        RefundOperationStatus.INDETERMINATE,
+        finalizeError
+      );
+      throw new RefundIndeterminateError();
+    }
+  }
+
+  /**
+   * Execute a refund through a durable operation record. Stripe is deliberately
+   * outside the database transaction: a commit failure can be retried with the
+   * same Stripe key and will replay, rather than issue another refund.
    */
   public async processRefund(data: RefundData): Promise<Payment> {
     this.initRepositories();
 
     try {
-      // The whole read-validate-refund-write sequence runs inside one transaction
-      // holding a row lock on the payment. Two refunds arriving together would
-      // otherwise both read the same `refundAmount`, both succeed at Stripe, and each
-      // write `alreadyRefunded + theirOwnRefund` — the second overwriting the first,
-      // so the database under-reports what Stripe actually returned.
-      //
-      // This does hold the lock for the duration of a network call to Stripe. That is
-      // the deliberate trade: refunds are rare and low-volume, and serialising them is
-      // far cheaper than reconciling a corrupted refund total after the fact.
-      return await AppDataSource.transaction(async (manager) => {
-        // No `relations` here: they compile to LEFT JOINs, and Postgres rejects
-        // FOR UPDATE against the nullable side of an outer join. Nothing below this
-        // point reads the joined entities — only payment.bookingId — so the lock
-        // costs nothing.
-        const payment = await manager.findOne(Payment, {
-          where: { id: data.paymentId },
-          lock: { mode: 'pessimistic_write' },
-        });
-
-        if (!payment) {
-          throw new Error('Payment not found');
-        }
-
-        // Authorization (FR-063). Refunds move real money, so this is resolved before any
-        // Stripe call and before leaking payment state through error messages.
-        //
-        // Policy: the assigned provider may refund their own customer (self-harming, so
-        // safe), and an admin may refund as dispute resolution. The paying customer may
-        // NOT refund themselves — their route to money back is POST /bookings/:id/dispute,
-        // which an admin adjudicates. Without this, a captured payment could be reversed
-        // unilaterally after the service was delivered.
-        const role = await this.resolvePaymentRole(payment, {
-          userId: data.requestedBy,
-          userType: data.requestedByUserType,
-        });
-
-        if (role === null) {
-          // Outsider: do not confirm the payment exists.
-          throw new PaymentAccessError('Payment not found');
-        }
-
-        if (role !== 'admin' && role !== 'provider') {
-          throw new PaymentAccessError('Unauthorized to refund this payment');
-        }
-
-        if (payment.status === PaymentStatus.REFUNDED) {
-          throw new PaymentStateError('Payment already refunded');
-        }
-
-        // A partially refunded payment still has a refundable balance, so it stays
-        // eligible; the amount bound below is what stops it being over-refunded.
-        if (
-          payment.status !== PaymentStatus.SUCCEEDED &&
-          payment.status !== PaymentStatus.PARTIALLY_REFUNDED
-        ) {
-          throw new PaymentStateError('Can only refund succeeded payments');
-        }
-
-        // `data.amount` is major units, matching how every other amount in the app is
-        // expressed. Bound it by what is actually left to refund so a partial refund
-        // cannot be stacked past the captured total.
-        // A stored payment already records the currency it was created in; only fall
-        // back for rows written before the column was populated.
-        const currency = payment.currency || (await getPlatformCurrency());
-        const capturedAmount = Number(payment.amount);
-        const alreadyRefunded = Number(payment.refundAmount ?? 0);
-        const remainingRefundable = roundMajorUnits(capturedAmount - alreadyRefunded, currency);
-
-        if (data.amount !== undefined) {
-          if (!Number.isFinite(data.amount) || data.amount <= 0) {
-            throw new PaymentStateError('Refund amount must be greater than 0');
-          }
-          if (data.amount > remainingRefundable) {
-            throw new PaymentStateError(
-              `Refund amount exceeds the refundable balance of ${formatMajorUnits(remainingRefundable, currency, await getPlatformLocale())}`
-            );
-          }
-        }
-
-        const requestedMinorUnits =
-          data.amount !== undefined ? toStripeMinorUnits(data.amount, currency) : undefined;
-
-        const refund = await this.getStripe().refunds.create({
-          payment_intent: payment.stripePaymentIntentId,
-          amount: requestedMinorUnits,
-          reason: (data.reason as any) || 'requested_by_customer',
-          metadata: {
-            paymentId: data.paymentId,
-            requestedBy: data.requestedBy,
-          },
-        });
-
-        // Update payment record
-        const refundedNow = fromStripeMinorUnits(refund.amount, currency);
-        const totalRefunded = roundMajorUnits(alreadyRefunded + refundedNow, currency);
-        payment.status =
-          totalRefunded < capturedAmount
-            ? PaymentStatus.PARTIALLY_REFUNDED
-            : PaymentStatus.REFUNDED;
-        payment.refundedAt = new Date();
-        payment.refundAmount = totalRefunded;
-        payment.stripeRefundId = refund.id;
-        payment.metadata = {
-          ...payment.metadata,
-          refund_reason: data.reason,
-        };
-
-        await manager.save(Payment, payment);
-
-        // Update booking status if fully refunded
-        if (payment.status === PaymentStatus.REFUNDED) {
-          await manager.update(Booking, payment.bookingId, {
-            status: BookingStatus.CANCELLED,
-          });
-        }
-
-        logger.info(`Payment refunded: ${data.paymentId}, refund ID: ${refund.id}`);
-        return payment;
-      });
+      const claimed = await this.claimRefund(data);
+      if (claimed.payment) return claimed.payment;
+      return await this.executeRefundOperation(claimed.operation);
     } catch (error) {
       logger.error('Error processing refund:', error);
       throw error;
     }
+  }
+
+  /** Retry stale unresolved operations. A bounded batch prevents a Stripe outage
+   * from turning recovery into an unbounded job. Concurrent workers are safe:
+   * Stripe and finalization are both idempotent for one operation id.
+   */
+  public async reconcileRefundOperations(staleAfterMs = 2 * 60_000, limit = 20): Promise<number> {
+    const cutoff = new Date(Date.now() - staleAfterMs);
+    const operations = await AppDataSource.getRepository(RefundOperation).find({
+      where: {
+        status: In([RefundOperationStatus.PENDING, RefundOperationStatus.INDETERMINATE]),
+        updatedAt: LessThan(cutoff),
+      },
+      // Rotate attempted rows behind untouched rows, including operations that
+      // require manual reconciliation, so a full failed batch cannot starve recovery.
+      order: { updatedAt: 'ASC', createdAt: 'ASC' },
+      take: limit,
+    });
+
+    let reconciled = 0;
+    for (const operation of operations) {
+      try {
+        await this.executeRefundOperation(operation);
+        reconciled += 1;
+      } catch (error) {
+        logger.error('Refund reconciliation attempt failed', {
+          refundOperationId: operation.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+    return reconciled;
   }
 
   /**
