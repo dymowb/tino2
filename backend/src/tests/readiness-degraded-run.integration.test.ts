@@ -482,6 +482,38 @@ describe('a readiness run that lost an optional stage', () => {
       expect(claim).not.toHaveBeenCalled();
     });
 
+    it('refuses to draft from a plan the booking has changed since', async () => {
+      // The finding describes the booking as it was; paired with today's records
+      // it makes a misleading draft, and a paid one.
+      const run = await storeRunWith([sharedFinding]);
+      const stored = run.output as { findings: Array<{ id: string }> };
+      await AppDataSource.getRepository(Booking).update(booking.id, {
+        scheduledDate: new Date(Date.now() + 9 * 86_400_000),
+      });
+      const generate = jest.spyOn(aiGateway, 'generate');
+      const claim = jest.spyOn(draftBudget, 'claim');
+
+      const { status } = await call(run.id, stored.findings[0].id, customer);
+
+      expect(status).toBe(409);
+      expect(generate).not.toHaveBeenCalled();
+      expect(claim).not.toHaveBeenCalled();
+    });
+
+    it('refuses to draft from a plan whose freshness cannot be checked', async () => {
+      const run = await storeRunWith([sharedFinding]);
+      const stored = run.output as { findings: Array<{ id: string }> };
+      await AppDataSource.getRepository(AgentWorkflowRun).update(run.id, {
+        sourceFingerprint: null,
+      });
+      const generate = jest.spyOn(aiGateway, 'generate');
+
+      const { status } = await call(run.id, stored.findings[0].id, customer);
+
+      expect(status).toBe(409);
+      expect(generate).not.toHaveBeenCalled();
+    });
+
     it('does not charge the budget when the snapshot cannot be built', async () => {
       // A database failure there is no model call; it must not cost a draft.
       const run = await storeRunWith([sharedFinding]);

@@ -196,5 +196,17 @@ describe("a drawer call that finishes after the user moved on", () => {
       runs.B.resolve(runFor("B"));
     });
   });
+
+  it("offers no draft from a plan that is no longer current", async () => {
+    api.getLatestReadinessRun.mockImplementation(async (id: string) => ({
+      ...runFor(id),
+      freshness: "stale",
+      stale: true,
+    }));
+    setup(client);
+
+    await screen.findByText("Access is unclear for A");
+    expect(screen.queryByTestId("readiness-draft")).toBeNull();
+  });
 });
 

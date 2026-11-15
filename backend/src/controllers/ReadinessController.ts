@@ -251,6 +251,20 @@ export class ReadinessController {
       // cost the user a draft they never got.
       const snapshot = await buildSnapshot(booking);
 
+      // A finding describes the booking as it was when the plan was built. If the
+      // booking has changed since, the draft would pair that finding with the
+      // current records — asking about a gap already closed, or a price already
+      // renegotiated — and bill a model call for it. A missing fingerprint is
+      // treated the same way: "could not check" is not "unchanged".
+      if (!run.sourceFingerprint || snapshotFingerprint(snapshot) !== run.sourceFingerprint) {
+        res.status(409).json({
+          success: false,
+          message: t(req, 'readiness.draft_stale'),
+          error: t(req, 'readiness.draft_stale'),
+        });
+        return;
+      }
+
       // Charged here, after every check above has had its chance to refuse, so
       // only a request that is about to spend a model call counts.
       const refusal = draftBudget.claim(userId);

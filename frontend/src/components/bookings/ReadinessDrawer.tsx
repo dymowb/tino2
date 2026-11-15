@@ -68,6 +68,19 @@ const READINESS_ICON = {
  */
 type DraftRequest = { bookingId: string; runId: string; findingId: string };
 
+/**
+ * The server's explanation when a draft was refused for a reason the user can
+ * act on — out of budget (429) or a plan that went stale (409) — rather than
+ * a failure worth retrying.
+ */
+export function draftRefusal(error: unknown): string | null {
+  const response = (
+    error as { response?: { status?: number; data?: { message?: string } } }
+  )?.response;
+  if (response?.status !== 429 && response?.status !== 409) return null;
+  return response.data?.message ?? null;
+}
+
 export function budgetRefusal(error: unknown): string | null {
   const response = (
     error as { response?: { status?: number; data?: { message?: string } } }
@@ -268,7 +281,7 @@ export const ReadinessDrawer: React.FC<Props> = ({
             data-testid="readiness-draft-error"
             sx={{ mb: 2 }}
           >
-            {budgetRefusal(draftMutation.error) ?? t("readiness.draft_failed")}
+            {draftRefusal(draftMutation.error) ?? t("readiness.draft_failed")}
           </Alert>
         )}
 
@@ -406,7 +419,13 @@ export const ReadinessDrawer: React.FC<Props> = ({
                         isDark={isDark}
                         t={t}
                         onDraft={
-                          data?.runId && bookingId && onDraftReady
+                          // Only from a current plan: a stale finding paired
+                          // with today's booking makes a misleading draft, and
+                          // the server refuses it anyway.
+                          data?.runId &&
+                          bookingId &&
+                          onDraftReady &&
+                          freshness === "current"
                             ? () =>
                                 draftMutation.mutate({
                                   bookingId,
