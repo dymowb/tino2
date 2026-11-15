@@ -1,0 +1,13 @@
+{
+  "$comment": "Exceptions to the high/critical dependency audit, enforced by .github/scripts/audit-gate.mjs. Each entry covers one advisory, on one package, reached only through the listed direct dependencies, and expires on reviewBy (at most 183 days ahead). Remove an entry once the dependency is fixed; the gate fails while a stale one remains.",
+  "entries": [
+    {
+      "project": "backend",
+      "advisory": "GHSA-qr28-fpjm-wq7f",
+      "package": "decode-uri-component",
+      "via": ["@googlemaps/google-maps-services-js"],
+      "reason": "DoS in decodeURIComponent of attacker-controlled input. Reached only through query-string@7, which the Maps client imports solely for stringify (dist/serialize.js); decode is never called, and none of our code imports query-string. The patched 0.5.1 is ESM-only and the Maps client 3.4.2 pins query-string <8, so no CommonJS fix exists. Re-check for a client release that lifts the pin.",
+      "reviewBy": "2027-02-15"
+    }
+  ]
+}
