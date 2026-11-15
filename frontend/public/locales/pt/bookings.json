@@ -323,6 +323,9 @@
     },
     "reused": "Esta reserva não mudou desde a última verificação, então o plano existente é exibido. Edite a reserva para gerar um novo.",
     "checklist": "Antes do atendimento",
-    "checklist_hint": "Preparado a partir do que consta na sua reserva e nas mensagens — não é conselho genérico. Nada aqui é registrado; é um lembrete, não uma lista de tarefas."
+    "checklist_hint": "Preparado a partir do que consta na sua reserva e nas mensagens — não é conselho genérico. Nada aqui é registrado; é um lembrete, não uma lista de tarefas.",
+    "draft_message": "Escrever mensagem",
+    "drafting": "Escrevendo…",
+    "draft_failed": "Não foi possível escrever um rascunho agora. Você ainda pode escrever a mensagem você mesmo."
   }
 }

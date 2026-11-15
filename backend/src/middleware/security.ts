@@ -170,6 +170,32 @@ export const rateLimiters = {
     },
   }),
 
+  /**
+   * Message drafting: its own bucket, separate from `agentRun`.
+   *
+   * Both are model calls, but sharing one budget means a user who drafts twenty
+   * messages cannot then generate a plan — two unrelated features rationing each
+   * other. Drafts are also much cheaper (one short call on the fast chain against
+   * a multi-agent reasoning run), so they earn a larger allowance.
+   *
+   * This bounds bursts only. The daily cost ceiling, per account and
+   * platform-wide, is `draftBudget`, charged in the controller right before the
+   * model call — a limiter here would also count requests that never reach it.
+   */
+  agentDraft: rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 40,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req: Request) => {
+      return `agent-draft:${req.user?.userId || req.ip || 'unknown'}`;
+    },
+    handler: (req: Request, res: Response) => {
+      const text = t(req as AuthenticatedRequest, 'readiness.rate_limited');
+      res.status(429).json({ success: false, message: text, error: text });
+    },
+  }),
+
   // Higher limit for admin-role sensitive operations (suspend, verify, resolve)
   adminStrict: rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes

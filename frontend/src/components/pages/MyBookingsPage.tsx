@@ -60,8 +60,9 @@ import RequestCard from "../bookings/RequestCard";
 import ReadinessDrawer from "../bookings/ReadinessDrawer";
 import QuoteRequestDialog from "../quotes/QuoteRequestDialog";
 import { quoteHighlights } from "../../utils/quoteComparison";
-import { formatMoney } from '../../utils/money';
-import { resetButtonSx } from '../../theme/theme';
+import { formatMoney } from "../../utils/money";
+import { resetButtonSx } from "../../theme/theme";
+import { stashMessageDraft } from "../../utils/messageDraft";
 
 const STATUS_BORDER: Record<string, string> = {
   pending: tokens.color.gold,
@@ -354,6 +355,41 @@ const MyBookingsPage: React.FC = () => {
       toast.error(err.response?.data?.message || "Action failed");
     } finally {
       setActionLoading((p) => ({ ...p, [id]: false }));
+    }
+  };
+
+  /**
+   * Takes a drafted message to the real composer.
+   *
+   * Reuses the same create-or-find the "Message" button on a booking card uses,
+   * for the same reason: a booking that has never been messaged has no
+   * conversation yet, and `/messages?bookingId=` on its own selects nothing —
+   * the draft would be stranded on an empty page. Knowing who the other party
+   * is belongs here, where the booking already is, rather than in the drawer.
+   */
+  const openConversationWithDraft = async (bookingId: string, body: string) => {
+    const booking = bookings.find((b: Booking) => b.id === bookingId);
+    const otherUserId = isProvider
+      ? booking?.customer?.id
+      : booking?.provider?.userId;
+
+    // Stashed before navigating either way: the composer claims it by booking,
+    // so it is waiting whichever route the user lands on.
+    stashMessageDraft(bookingId, body);
+
+    if (!otherUserId) {
+      navigate("/messages");
+      return;
+    }
+    try {
+      const conv = await apiService.createConversation({
+        participantIds: [otherUserId],
+        metadata: { bookingId, serviceType: booking?.serviceType },
+      });
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      navigate(`/messages?conversationId=${conv.id}`);
+    } catch {
+      navigate(`/messages?with=${otherUserId}&bookingId=${bookingId}`);
     }
   };
 
@@ -698,30 +734,31 @@ const MyBookingsPage: React.FC = () => {
               alignItems: "center",
             }}
           >
-            {readinessEnabled && READINESS_ELIGIBLE_STATUSES.includes(booking.status) && (
-              <Tooltip title={t("bookings:readiness.prepare_tooltip")}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<AutoAwesome fontSize="small" />}
-                  onClick={() => setReadinessBookingId(booking.id)}
-                  data-testid="readiness-open"
-                  data-booking-id={booking.id}
-                  sx={{
-                    borderColor: tokens.color.gold,
-                    color: tokens.color.gold,
-                    borderRadius: tokens.radius.full,
-                    px: 2.5,
-                    "&:hover": {
+            {readinessEnabled &&
+              READINESS_ELIGIBLE_STATUSES.includes(booking.status) && (
+                <Tooltip title={t("bookings:readiness.prepare_tooltip")}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<AutoAwesome fontSize="small" />}
+                    onClick={() => setReadinessBookingId(booking.id)}
+                    data-testid="readiness-open"
+                    data-booking-id={booking.id}
+                    sx={{
                       borderColor: tokens.color.gold,
-                      bgcolor: alpha(tokens.color.gold, 0.08),
-                    },
-                  }}
-                >
-                  {t("bookings:readiness.prepare")}
-                </Button>
-              </Tooltip>
-            )}
+                      color: tokens.color.gold,
+                      borderRadius: tokens.radius.full,
+                      px: 2.5,
+                      "&:hover": {
+                        borderColor: tokens.color.gold,
+                        bgcolor: alpha(tokens.color.gold, 0.08),
+                      },
+                    }}
+                  >
+                    {t("bookings:readiness.prepare")}
+                  </Button>
+                </Tooltip>
+              )}
 
             {booking.status === "pending" && isProvider && (
               <>
@@ -1392,7 +1429,11 @@ const MyBookingsPage: React.FC = () => {
             onClick={() => setStage(opt.value)}
             // A filter is on or off, and the only thing saying which was a colour.
             aria-pressed={stage === opt.value}
-            sx={{ ...resetButtonSx, width: 'auto', ...chipSx(stage === opt.value) }}
+            sx={{
+              ...resetButtonSx,
+              width: "auto",
+              ...chipSx(stage === opt.value),
+            }}
           >
             {opt.label}
             {opt.count > 0 ? ` (${opt.count})` : ""}
@@ -1549,6 +1590,7 @@ const MyBookingsPage: React.FC = () => {
         bookingId={readinessBookingId}
         open={Boolean(readinessBookingId)}
         onClose={() => setReadinessBookingId(null)}
+        onDraftReady={openConversationWithDraft}
       />
 
       {/* Dispute Dialog */}

@@ -134,6 +134,14 @@ export interface ReadinessPlan {
   providerChecklist?: ReadinessChecklistItem[];
 }
 
+export interface ReadinessMessageDraft {
+  recipientRole: 'customer' | 'provider';
+  resolvesFindingId: string;
+  body: string;
+  /** The language it was written in, inferred from the conversation. */
+  language: string;
+}
+
 export interface ReadinessChecklistItem {
   id: string;
   category: string;
@@ -2070,6 +2078,25 @@ class ApiService {
       // the UI silently keeps showing the previous plan. (BR-2 replaces this
       // with SSE progress, at which point the long POST goes away.)
       { timeout: 150000 },
+    );
+    return res.data.data!;
+  }
+
+  /**
+   * Writes one message the user may send about one finding.
+   *
+   * Returns text only: it creates no conversation, stores no message and sends
+   * nothing. Sending stays the user's act, through the messaging API.
+   */
+  async draftReadinessMessage(
+    runId: string,
+    findingId: string,
+  ): Promise<ReadinessMessageDraft> {
+    const res = await this.api.post<ApiResponse<ReadinessMessageDraft>>(
+      `/readiness-runs/${runId}/findings/${findingId}/draft`,
+      undefined,
+      // One small model call, but still a model call.
+      { timeout: 45000 },
     );
     return res.data.data!;
   }

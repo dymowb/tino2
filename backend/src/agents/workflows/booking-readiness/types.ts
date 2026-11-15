@@ -130,6 +130,14 @@ export interface ScopeAgentOutput {
 }
 
 /**
+ * The Risk agent's raw output. Findings only — it proposes no scope, no
+ * checklist, and nothing a reader acts on directly.
+ */
+export interface RiskAgentOutput {
+  findings: RawFinding[];
+}
+
+/**
  * The Logistics agent's raw output: the practical side of the appointment —
  * schedule, access, materials, parking, pets — as opposed to what was agreed.
  */
@@ -224,6 +232,7 @@ export interface ReadinessWorkflowState {
   snapshot: ReadinessSnapshot;
   scope?: ScopeAgentOutput;
   logistics?: LogisticsAgentOutput;
+  risk?: RiskAgentOutput;
   verifiedFindings?: ReadinessFinding[];
   customerChecklist?: ChecklistItem[];
   providerChecklist?: ChecklistItem[];

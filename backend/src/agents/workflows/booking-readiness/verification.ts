@@ -94,7 +94,9 @@ export function validateFindings(
     }
 
     const duplicate = accepted.find(
-      (existing) => similarity(existing.statement, raw.statement) >= DUPLICATE_THRESHOLD
+      (existing) =>
+        coversAudience(existing.visibility, visibility) &&
+        similarity(existing.statement, raw.statement) >= DUPLICATE_THRESHOLD
     );
     if (duplicate) {
       dropReasons.push(`duplicate of "${truncate(duplicate.statement)}"`);
@@ -123,12 +125,32 @@ export function validateFindings(
  * contradict the accepted terms, or is it speculation dressed as a fact?
  * Runs on the cheap profile because it only reviews text we already validated.
  */
+/**
+ * Whether everyone who sees `later` also sees `earlier` — the only case in which
+ * dropping `later` as a repeat loses nothing. A `customer_only` finding does not
+ * stand in for a `shared` one: drop the shared copy and the provider is left
+ * with no such finding at all, and a readiness headline computed without it.
+ */
+export function coversAudience(
+  earlier: ReadinessFinding['visibility'],
+  later: ReadinessFinding['visibility']
+): boolean {
+  return earlier === 'shared' || earlier === later;
+}
+
+/** `[checklist:customer]` / `[checklist:provider]`, so (c) can be scoped. */
+function checklistAudience(item: ChecklistItem, customerIds: Set<string>): string {
+  return customerIds.has(item.id) ? 'checklist:customer' : 'checklist:provider';
+}
+
 export async function semanticReview(
   findings: ReadinessFinding[],
   checklist: ChecklistItem[],
   snapshot: ReadinessSnapshot,
   signal?: AbortSignal,
-  timeoutMs?: number
+  timeoutMs?: number,
+  /** Which of `checklist` belong to the customer; the rest are the provider's. */
+  customerChecklistIds?: string[]
 ): Promise<{
   kept: ReadinessFinding[];
   keptChecklist: ChecklistItem[];
@@ -142,9 +164,22 @@ export async function semanticReview(
   // becomes preparation advice that silently contradicts a R$160 accepted quote.
   // Deterministic validation cannot catch that — the evidence resolves perfectly
   // well; it is the *contradiction* that makes it wrong.
+  const customerIds = new Set(customerChecklistIds ?? []);
   const all = [
-    ...findings.map((f) => ({ text: f.statement, severity: f.severity as string })),
-    ...checklist.map((c) => ({ text: c.label, severity: 'checklist' })),
+    // Tagged with who can see it, so a repeat is judged against its audience —
+    // see `coversAudience`.
+    ...findings.map((f) => ({
+      text: f.statement,
+      severity: `finding:${f.visibility}`,
+    })),
+    // Tagged by audience, not just as "checklist": without the role the reviewer
+    // sees the customer's and the provider's copy of one shared step as the same
+    // statement twice and rejects the later one, silently costing whichever
+    // participant happens to come second.
+    ...checklist.map((c) => ({
+      text: c.label,
+      severity: checklistAudience(c, customerIds),
+    })),
   ];
   if (all.length === 0) {
     return { kept: [], keptChecklist: [], dropReasons: [], ran: true };
@@ -183,13 +218,41 @@ export async function semanticReview(
       'fast',
       {
         systemPrompt:
-          'You review draft statements about a booked service for two failure modes only:\n' +
-          '(a) the statement contradicts the accepted quote terms;\n' +
-          '(b) the statement is speculation rather than something the data supports.\n' +
-          'Items tagged [checklist] are preparation advice shown to one participant; ' +
-          'hold them to the same two tests.\n' +
-          'Return ONLY JSON: {"reject": [{"index": <1-based>, "reason": "..."}]}\n' +
-          'Reject sparingly. If a finding is merely cautious or obvious, keep it.\n' +
+          'You check draft statements about a booked service for two specific faults.\n' +
+          '\n' +
+          'KEEP is the default. Reject a statement ONLY if:\n' +
+          '(a) it asserts something the accepted quote terms directly contradict — it ' +
+          'says the opposite of what was agreed; or\n' +
+          '(b) it asserts a fact the records do not support — it was invented; or\n' +
+          '(c) an EARLIER [finding:...] already makes the same point in different words. ' +
+          "Reject the later one, keep the earlier, and give the earlier one's number as " +
+          '"duplicateOf". Several reviewers read the same records independently, so the ' +
+          'same concern arrives more than once. The tag after "finding:" says who sees ' +
+          'it: a [finding:shared] is never a duplicate of a [finding:customer_only] or ' +
+          '[finding:provider_only], because the other person would then see neither.\n' +
+          'Criterion (c) applies to [finding:...] entries ONLY. Never reject a ' +
+          '[checklist] entry as a duplicate: the two checklists are for two ' +
+          'different people, and the same step legitimately appears on both — the ' +
+          'customer confirming a gate code and the provider confirming it are two ' +
+          'reminders, not one repeated. Each list is already deduplicated on its own.\n' +
+          '\n' +
+          'NOT grounds for rejection, and this is the common mistake: a statement that ' +
+          'simply does not contradict anything. Most statements will not. Keep a ' +
+          'statement that notes a gap, asks a question, restates an agreed term, ' +
+          'repeats a detail from the records, states the obvious, or gives ordinary ' +
+          'preparation advice — none of those are faults. "This does not contradict ' +
+          'the accepted terms" is a reason to KEEP, never to reject.\n' +
+          '\n' +
+          'Items tagged [checklist] are preparation reminders for one person. They are ' +
+          'expected to restate agreed details; reject one only if it tells someone to ' +
+          'do something the agreement rules out, or something no record supports.\n' +
+          '\n' +
+          'Two statements about different facts are not duplicates, however similar ' +
+          'they sound: if you cannot name the single fact both assert, keep both.\n' +
+          'Apart from (c), rejecting more than a couple out of a long list means you ' +
+          'have misread the task.\n' +
+          'Return ONLY JSON: {"reject": [{"index": <1-based>, "reason": "...", ' +
+          '"duplicateOf": <1-based, only for (c)>}]}\n' +
           UNTRUSTED_DATA_NOTICE,
         userMessage: `ACCEPTED TERMS: ${terms}\n\nFINDINGS:\n${numbered}`,
         maxTokens: REVIEW_MAX_TOKENS,
@@ -198,9 +261,9 @@ export async function semanticReview(
       { timeoutMs }
     );
 
-    const parsed = parseLlmJson<{ reject?: Array<{ index: number; reason: string }> }>(
-      result.value.text
-    );
+    const parsed = parseLlmJson<{
+      reject?: Array<{ index: number; reason: string; duplicateOf?: number }>;
+    }>(result.value.text);
     // Truncated output is indistinguishable from "nothing to reject" once it
     // fails to parse, so it is reported the same way: the pass did not run.
     if (!parsed) {
@@ -218,12 +281,74 @@ export async function semanticReview(
       };
     }
 
+    const isReviewable = (n: number) => Number.isInteger(n) && n >= 1 && n <= reviewable.length;
+    const entries = (parsed.reject ?? []).filter((entry) => isReviewable(Number(entry?.index)));
+    // A (c) rejection is recognised only by a well-formed `duplicateOf`: an
+    // integer naming an EARLIER statement. Anything else — absent, 0, "none",
+    // a later index — is read as (a)/(b) and honoured outright. Reading a
+    // placeholder as "duplicate" would route a contradicting checklist item
+    // down the path that keeps it, which is the fail-open BR-2 closed.
+    //
+    // The converse cannot be closed in code: a reviewer that calls something a
+    // repeat but omits `duplicateOf` is honoured as (a)/(b), without the
+    // audience check. The prompt requires the field; this is the residual risk.
+    const duplicateOf = (entry: { index: number; duplicateOf?: unknown }): number | null => {
+      const earlier = entry.duplicateOf;
+      return typeof earlier === 'number' &&
+        Number.isInteger(earlier) &&
+        earlier >= 1 &&
+        earlier < Number(entry.index)
+        ? earlier - 1
+        : null;
+    };
+
+    // A duplicate verdict is only ever acted on between two findings, or kept
+    // between two checklist entries (the two lists are for two people). A
+    // checklist entry "repeating" a finding is not a repeat of anything the
+    // reader sees in that list — "Have cash ready" beside a finding saying the
+    // cash request contradicts the quote is the contradiction itself — so that
+    // verdict is honoured as a plain rejection.
+    const isChecklist = (i: number) => i >= findings.length;
+    const asDuplicate = (entry: { index: number; duplicateOf?: unknown }): number | null => {
+      const earlier = duplicateOf(entry);
+      if (earlier === null) return null;
+      const later = Number(entry.index) - 1;
+      return isChecklist(later) && !isChecklist(earlier) ? null : earlier;
+    };
+
     const rejected = new Map<number, string>();
-    for (const entry of parsed.reject ?? []) {
-      const idx = Number(entry?.index);
-      if (Number.isInteger(idx) && idx >= 1 && idx <= reviewable.length) {
-        rejected.set(idx - 1, String(entry.reason ?? 'rejected by semantic review'));
+    // Contradiction and invention first: a "duplicate of #3" only counts if #3
+    // survives, or the point is lost from both.
+    for (const entry of entries) {
+      if (asDuplicate(entry) === null) {
+        rejected.set(
+          Number(entry.index) - 1,
+          String(entry.reason ?? 'rejected by semantic review')
+        );
       }
+    }
+    for (const entry of entries) {
+      const earlier = asDuplicate(entry);
+      if (earlier === null) continue;
+      const later = Number(entry.index) - 1;
+      // The reviewer's judgement that two statements say the same thing is
+      // trusted; its judgement of who would still see it is not. That part is
+      // a property of the plan, so code decides it.
+      if (isChecklist(later)) {
+        // Between two checklist entries a "repeat" is never grounds to drop
+        // one (the prompt's (c)). But a repeat of an entry rejected for
+        // contradicting the terms says the same wrong thing to the other
+        // person, so it inherits that verdict.
+        if (rejected.has(earlier)) rejected.set(later, rejected.get(earlier) as string);
+        continue;
+      }
+      if (
+        rejected.has(earlier) ||
+        !coversAudience(findings[earlier].visibility, findings[later].visibility)
+      ) {
+        continue;
+      }
+      rejected.set(later, String(entry.reason ?? 'duplicate'));
     }
 
     return {

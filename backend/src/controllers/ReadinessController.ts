@@ -3,7 +3,7 @@ import { AppDataSource } from '@/config/database';
 import { AppSettings } from '@/models/AppSettings';
 import logger from '@/config/logger';
 import { ApiResponse, AuthenticatedRequest } from '@/types';
-import { t } from '@/i18n';
+import { getLocale, t } from '@/i18n';
 import { AgentWorkflowRun, WorkflowRunStatus } from '@/models/AgentWorkflowRun';
 import {
   workflowRepository,
@@ -15,6 +15,8 @@ import {
   ReadinessRunResult,
   runBookingReadiness,
 } from '@/agents/workflows/booking-readiness/coordinator';
+import { draftMessage } from '@/agents/workflows/booking-readiness/agents/communication.agent';
+import { draftBudget } from '@/agents/workflows/booking-readiness/draftBudget';
 import {
   assertEligible,
   authorizeBooking,
@@ -196,6 +198,109 @@ export class ReadinessController {
       res.json({ success: true, data: await this.present(run, role) });
     } catch (error) {
       this.handleError(req, res, error, 'fetch readiness run');
+    }
+  };
+
+  /**
+   * POST /readiness-runs/:runId/findings/:findingId/draft
+   *
+   * Writes one message the user may send about one finding. It returns text and
+   * nothing else: no conversation is created, no message is stored, nothing is
+   * sent. The user takes the draft to the existing composer, edits it, and sends
+   * it through the messaging API under their own authority — an agent endpoint
+   * that could send would be a write capability nobody granted it.
+   */
+  draftMessageForFinding = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      if (!(await isEnabled())) {
+        res.status(404).json({ success: false, message: t(req, 'common.not_found') });
+        return;
+      }
+
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({ success: false, message: t(req, 'common.unauthorized') });
+        return;
+      }
+
+      const run = await workflowRepository.findById(req.params.runId);
+      if (!run || run.workflowType !== READINESS_WORKFLOW_TYPE) {
+        res.status(404).json({ success: false, message: t(req, 'common.not_found') });
+        return;
+      }
+
+      // Authorized against the booking, not the run — the same rule as reading a
+      // plan. A run id must not be a capability.
+      const { booking, role } = await authorizeBooking(run.subjectId, userId);
+      // Same gate as generating a plan. A booking that has since completed or
+      // been cancelled has messaging closed (`MESSAGING_CLOSED`), so drafting
+      // for it bills a model call to produce text the user cannot send.
+      assertEligible(booking);
+
+      // Found among the findings THIS READER may see, so a draft cannot be used
+      // to read back a finding the role filter would have hidden.
+      const stored = (run.output as ReadinessPlan | null) ?? null;
+      const visible = stored ? applyRoleFilter(stored, role).findings : [];
+      const finding = visible.find((candidate) => candidate.id === req.params.findingId);
+      if (!finding) {
+        res.status(404).json({ success: false, message: t(req, 'common.not_found') });
+        return;
+      }
+
+      // Built before the budget is charged: a database failure here must not
+      // cost the user a draft they never got.
+      const snapshot = await buildSnapshot(booking);
+
+      // A finding describes the booking as it was when the plan was built. If the
+      // booking has changed since, the draft would pair that finding with the
+      // current records — asking about a gap already closed, or a price already
+      // renegotiated — and bill a model call for it. A missing fingerprint is
+      // treated the same way: "could not check" is not "unchanged".
+      if (!run.sourceFingerprint || snapshotFingerprint(snapshot) !== run.sourceFingerprint) {
+        res.status(409).json({
+          success: false,
+          message: t(req, 'readiness.draft_stale'),
+          error: t(req, 'readiness.draft_stale'),
+        });
+        return;
+      }
+
+      // Charged here, after every check above has had its chance to refuse, so
+      // only a request that is about to spend a model call counts.
+      const refusal = draftBudget.claim(userId);
+      if (refusal) {
+        if (refusal.scope === 'platform') {
+          logger.error('Agent draft budget exhausted platform-wide', {
+            retryAfterSeconds: refusal.retryAfterSeconds,
+            alert: 'agent_budget_exhausted',
+          });
+        } else {
+          logger.warn('Agent draft budget exhausted for user', {
+            retryAfterSeconds: refusal.retryAfterSeconds,
+          });
+        }
+        res.setHeader('Retry-After', String(refusal.retryAfterSeconds));
+        const text = t(
+          req,
+          refusal.scope === 'platform'
+            ? 'readiness.draft_budget_platform'
+            : 'readiness.draft_budget_user'
+        );
+        // Both fields, like the route limiters: the drawer reads `message`, the
+        // client's response interceptor toasts `error`.
+        res.status(429).json({ success: false, message: text, error: text });
+        return;
+      }
+
+      const draft = await draftMessage(snapshot, finding, role, getLocale(req), undefined);
+      if (!draft) {
+        res.status(503).json({ success: false, message: t(req, 'readiness.draft_unavailable') });
+        return;
+      }
+
+      res.json({ success: true, data: draft });
+    } catch (error) {
+      this.handleError(req, res, error, 'draft a message for a readiness finding');
     }
   };
 

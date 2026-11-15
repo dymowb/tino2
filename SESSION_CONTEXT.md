@@ -3,6 +3,173 @@
 > Lean by design (per CLAUDE.md): current status + roadmap + resume point only.
 > Detailed completed-work notes live in `Tests/history/HISTORICAL_CONTEXT.md` and git history.
 
+## Current Status (2026-09-14) — BR-3 delivered (Risk agent + on-demand message drafts)
+
+Branch `feat/br3-risk-and-drafts`. Roadmap milestone 3, phase **BR-3**. Three decisions taken
+with the user first: drafts written **on demand per finding** (not eagerly for every run),
+draft language **inferred from the conversation**, and **no SSE** progress yet.
+
+**Exit criterion met and asserted, not assumed:** no message is sent from an agent endpoint. The
+drafter returns text; conversations and messages were counted before and after a live draft and
+were unchanged (468 → 468). Sending stays the user's act, in the real composer, through the
+messaging API.
+
+**Risk runs in parallel, against the roadmap's sketch.** The spec has it reading the other
+agents' structured output, which would make it serial and push a run from ~30s to ~55s. It does
+not need to: everything it looks for comes from the snapshot, and the coordinator already
+validates every agent's findings in one pass, which collapses a concern two of them raise.
+
+**Drafts reach the composer through the page, not the drawer.** `/messages?bookingId=` alone
+selects nothing — that parameter is only read inside the `withUserId` branch — and a booking that
+has never been messaged has no conversation at all, so the draft would have been stranded on an
+empty page. The drawer hands the body up; `MyBookingsPage` reuses the same create-or-find its
+"Message" button uses, because knowing who the other participant is belongs with the booking. The
+handoff itself goes through sessionStorage keyed by booking, read once — not the URL, because a
+draft is a sentence addressed to another person and a query string is where it would be written
+down.
+
+### The defect the walkthrough could not show: a draft wiped on the second use
+
+`ChatInterface` has two effects that both write the composer's text — one clears it when the
+conversation changes, one fills it from a claimed draft. React applies effects in declaration
+order within a flush, and a **warm-cached** conversation query delivers its data on the first
+render, so both ran together and the clear landed on top of a draft `takeMessageDraft` had
+already removed from the stash. Empty composer, no error, paid model call gone.
+
+It only reproduces from the **second** draft onwards, because the first visit is what warms the
+cache — so walking the flow once by hand, which is exactly what live verification did, showed a
+perfect result.
+
+**Reordering the effects was not enough, and the review caught that too.** `index.tsx` wraps the
+app in `<React.StrictMode>`, which runs mount effects setup → cleanup → setup: the second setup
+re-ran the reset and then skipped the one-shot claim, clearing a draft `takeMessageDraft` had
+already removed from the stash. So the feature was still broken in `npm run dev` — the very
+environment the walkthrough used. The claim now **keeps what it took** in a ref keyed by
+conversation and re-applies it idempotently, which also stops correctness resting on the order
+two effects happen to be declared in.
+
+`ChatInterface.draft.test.tsx` renders inside `<React.StrictMode>` **because the app does** — a
+test that omits the root wrapper cannot see this class of bug. Four cases: warm cache, cold
+fetch, wrong booking, and switching conversations by re-render (not remount, which is what
+`MessagingPage` actually does — my first version unmounted and therefore could not catch a
+per-mount ref).
+
+The first version of that test was **flaky** — green alone, timing out inside the full suite,
+because each case paid for a dynamic `import()` within its 5s budget. A flaky test is worse than
+none; it is a static import now and the full suite was run three times to confirm.
+
+**And the StrictMode fix created a worse bug, caught on the next round.** Keeping the taken body
+so a second pass could re-apply it meant re-applying it for the *whole mount*: after the user
+sent the draft, a routine refetch (`getConversationById` embeds the message list, so sending it
+changes the payload) wrote the sent text back into the empty composer — one keystroke from
+sending it to the other party twice. The effect now depends on the booking id rather than the
+whole conversation object. Four review rounds on one 20-line effect, each finding a real defect
+in the previous fix.
+
+**Trap worth keeping:** a per-attempt model timeout is not a request budget. The gateway walks
+the chain sequentially, so the ceiling is `perAttempt × chain length` — and the chain is an admin
+setting changeable at runtime. The draft budget is now divided by `getAiProfileChain('fast')
+.length` rather than hard-coded, so adding a third fallback cannot silently overrun the browser's
+45s and bill an attempt the user was already told had failed. The divisor counts **attempts**,
+not targets — the gateway runs `retries + 1` per model — and there is deliberately no floor: a
+floor is a promise the budget can be exceeded (five targets at a 10s minimum is 50s against a 45s
+client). The test now stubs chain lengths of 1, 2, 3 and 5, because the test environment's
+single-model chain let a hard-coded timeout pass.
+
+**Also added:** the draft endpoint now calls `assertEligible`, the same gate generating a plan
+uses. A booking that has since completed or been cancelled has messaging closed, so drafting for
+it billed a model call to produce text the user could not send.
+
+### Two live-only defects, both invisible to the test suite
+
+**The semantic reviewer started rejecting everything that was not a contradiction.** With three
+agents feeding it ~21 statements, it culled 20 — every checklist item included — with reasons
+that literally read *"identifies a genuine gap… but does not contradict the accepted quote"*. It
+had read "reject if it contradicts the terms" as "keep only contradictions". The prompt now
+states KEEP as the default and names that exact misreading as the common mistake. Drops went
+20 → 2, findings 1 → 11, checklist 0 → 3.
+
+**Then the duplicates showed.** Three agents reading the same records independently raised the
+same concerns in different words, and the 0.85 lexical threshold does not catch a reworded
+sentence. Two fixes: the reviewer, which sees every statement in one list, now rejects a later
+statement that repeats an earlier one (semantic, free, in the same call); and Risk's brief was
+narrowed to say what the other two already cover and to report only what would otherwise go
+unsaid. Findings went 11 → 8 → **7 distinct**, and the run came back down to **33.7s** because a
+narrower brief also produces less.
+
+Neither would have been caught by a unit test. Both needed a real model, real records, and
+reading the output.
+
+**The fifth round's finding, reported honestly.** Review said a stale claim survived a
+conversation with no `bookingId`, because the early return preceded the invalidation. The
+invalidation was moved first — it is strictly safer either way — but **I could not reproduce the
+resurrection**: the fixed version and a deliberately re-broken one both left the composer empty
+in the same test. The test that covers that path is therefore documentation of the flow, not a
+fence around that defect, and its comment says so. Believing a test guards something it does not
+is how the earlier rounds' fixtures passed against live bugs.
+
+Tests: backend 319/319 (21 new), frontend 57/57 (6 new), lint 142 (baseline), both builds green.
+Live: 7 distinct findings, 4 checklist items, a draft in 1.0s on the fast chain, and the full
+drawer → draft → composer flow verified with the composer prefilled and the stash consumed.
+
+**Resume point (2026-11-14):** fixed a false line in the Risk prompt (it claimed the other agents'
+findings were shown to it; it runs in parallel and sees only the snapshot). Fresh `pr-precheck`
+round 1 returned two blocking findings, both fixed with mutation-checked tests: (1) a draft or run
+finishing after the drawer switched booking landed on the *other* booking (mutations now carry
+their booking id; results for a closed or switched drawer are dropped); (2) the semantic duplicate
+rule could drop a `shared` finding as a repeat of a `customer_only` one, leaving the provider
+"ready" while the customer saw "blocked" (`coversAudience`; the reviewer returns `duplicateOf`,
+code decides audience). Also added a platform-wide draft ceiling (`AGENT_BUDGET_GLOBAL_MAX_DRAFTS`)
+and `seedReadinessScenario.ts` for manual testing. Round 2 then blocked that ceiling: a route
+limiter counts refused requests too, and one account's per-user allowance (3,840/day) exceeded
+the platform's (2,000), so one account could switch drafting off for everyone for free. Replaced by
+`draftBudget.ts`, charged in the controller after every refusing check and right before the model
+call, per user (100/day) below platform (2,000/day). Also: `duplicateOf` counts only as a
+well-formed earlier index (a placeholder no longer keeps a contradicting checklist item), run state
+is scoped by booking instead of reset, and the seed script refuses `NODE_ENV=production`. Backend
+335/335, frontend 62/62. Round 3 confirmed that closed, and blocked the **seed script**: it
+hard-deleted whatever carried `metadata.scenario = readiness-demo`, a tag any user can write on
+their own conversation, on a DB shared with production. Removal now requires the exact demo
+parties and seeded booking fingerprint, in one transaction. Also: a checklist item "repeating" a
+finding is rejected rather than kept, the snapshot is built before the budget is charged, the
+draft limits are asserted at boot, and in-flight runs are tracked per booking. Backend 343/343,
+frontend 63/63. Round 4 blocked twice more: the seed followed the booking's `quoteId`/`requestId`
+into deletes (pointers a customer can rewrite, see below), and a checklist item "repeating" a
+*rejected* checklist item was kept. Linked rows are now verified and every delete is scoped by
+party; the repeat inherits the rejection. Round 5 **passed**; its one advisory was taken: the
+snapshot now loads the booking's quote and request scoped to the booking's own parties, so a
+rewritten pointer reads as "no quote" instead of feeding another customer's terms to the model.
+Backend 348/348, frontend 63/63, lint 142, builds green. **PR #40.** Codex's first CI round
+blocked on drafting from a *stale* plan (an old finding paired with today's booking). Fixed in
+`6eeaf4c`: 409 when the plan's fingerprint no longer matches or is missing, checked before the
+budget is charged, and the drawer offers drafts only from a current plan. Backend 350/350,
+frontend 64/64.
+
+**`validate` is red on every branch, `main` included**, from new npm advisories. **Draft PR #41**
+fixes axios/follow-redirects (root, backend, frontend) and the backend's semver-safe audit fixes.
+Still failing there, needing the user's call: `zod` 3→4 (major), `decode-uri-component` via the
+Google Maps client (possible ESM breakage), `brace-expansion` via TypeORM's glob (needs an
+`overrides`). #40 cannot go green until #41 (or equivalent) lands on main.
+
+### 🚨 Found during BR-3 review, NOT fixed — needs its own PR: booking mass-assignment
+
+`PUT /bookings/:bookingId` (customer role) runs `{ ...req.body }` (`BookingController.ts:284`)
+into `Object.assign(booking, updateData)` (`BookingService.ts:206`). The validators only constrain
+the fields they name, so a customer can write **any** column on their own pending/confirmed
+booking: `totalAmount`, `status`, `paymentStatus`, `providerId`, `quoteId`, `requestId`,
+`holdPlacedAt`, `stripePaymentIntentId`… The escrow hold authorises `Number(booking.totalAmount)`
+(`BookingController.ts:693`), so **a customer can set the price to R$1 before the provider starts
+the service and have only R$1 held.** Present on `main` and in **production** (deployed commit
+`e38bdce` has the same two lines). Fix: allowlist the editable fields (and decide whether
+editing duration should recompute an accepted quote's price at all, since a quote-born booking's
+price is the accepted quote's). Agreed next steps with the user: BR-3 PR
+first, then readiness Playwright journeys (models stubbed at the gateway) as the first BR-4
+item, then a hands-on test by the user (either a guided real walkthrough or a seeded booking
+built to trigger findings, still to be chosen). Backend Jest must run `--runInBand`.
+
+**Not in BR-3**: SSE progress (deferred with the user), and drafts are not stored on the plan —
+they are transient, so a re-run cannot resurrect a stale one.
+
 ## Current Status (2026-09-08) — BR-2 delivered (Logistics + role-scoped checklists)
 
 Branch `feat/br2-logistics-checklists`. Roadmap milestone 3, phase **BR-2**
