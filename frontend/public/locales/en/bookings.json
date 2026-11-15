@@ -266,40 +266,88 @@
     "confirm_or_counter": "confirm or send your own quote"
   },
   "readiness": {
-    "title": "Booking readiness",
-    "subtitle": "An AI review of what was agreed, with the questions still worth asking. It never changes your booking.",
+    "title": "Readiness check",
+    "subtitle": "An AI comparison of what was agreed with what was said in your messages, showing what to settle before the appointment. It never changes your booking.",
     "close": "Close",
-    "run": "Check readiness",
-    "running": "Reviewing…",
+    "run": "Run the check",
+    "running": "Checking…",
+    "running_hint": "Reading the booking, the accepted quote and your messages. This usually takes under a minute.",
     "rerun": "Run again",
-    "empty": "No readiness check has been run for this booking yet.",
-    "error": "The readiness check could not be completed. Please try again.",
-    "stale": "This booking changed after the check was run.",
-    "freshness_unknown": "The booking could not be re-checked, so this plan may be out of date.",
-    "partial": "Part of this review was unavailable ({{sections}}), so it may be incomplete.",
+    "empty": "No check has been run for this booking yet.",
+    "empty_hint": "It reads the booking, the accepted quote and your messages, then lists anything the two of you seem to expect differently. It takes about a minute, and both of you see the result.",
+    "error": "The check could not be completed. Please try again.",
+    "stale": "This booking changed after the check was run, so the points below may no longer apply.",
+    "messages_changed": "There are new messages since this check, so a point below may already be settled in the chat.",
+    "freshness_unknown": "The booking could not be re-checked, so this may be out of date.",
+    "partial": "Part of this check could not be completed, so points may be missing. Run it again.",
+    "unreviewed": "This check could not be double-checked automatically, so read it with extra care.",
+    "reused": "Nothing has changed since the last check, so the same result is shown. A new check runs once the booking or the messages change.",
+    "summary": {
+      "blocking_one": "{{count}} point to settle before the appointment",
+      "blocking_other": "{{count}} points to settle before the appointment",
+      "attention_one": "Nothing in the way, {{count}} point worth confirming",
+      "attention_other": "Nothing in the way, {{count}} points worth confirming",
+      "also_attention_one": "and {{count}} more worth confirming",
+      "also_attention_other": "and {{count}} more worth confirming",
+      "ready": "Looks ready: nothing to settle",
+      "incomplete": "This check is incomplete",
+      "incomplete_hint": "Part of the review failed, so points may be missing. Run it again.",
+      "jump_one": "{{category}}: {{count}} point. Go to it",
+      "jump_other": "{{category}}: {{count}} points. Go to the first"
+    },
+    "checked_at": "Checked {{time}}",
+    "requested_by": {
+      "you": "started by you",
+      "customer": "started by the customer",
+      "provider": "started by the provider"
+    },
+    "shared_note": "both of you see this",
+    "group": {
+      "blocking": "Settle before the appointment",
+      "attention": "Worth confirming",
+      "info": "Good to know"
+    },
+    "question_label": "To settle",
+    "answer_from": {
+      "you": "Needs your answer",
+      "both": "Needs an answer from both of you",
+      "customer": "Needs the customer's answer",
+      "provider": "Needs the provider's answer"
+    },
+    "evidence": "Based on",
+    "evidence_message": {
+      "you": "Your message",
+      "customer": "Message from the customer",
+      "provider": "Message from the provider",
+      "other": "Message"
+    },
+    "field": {
+      "scheduledDate": "Date and time",
+      "preferredDate": "Preferred date",
+      "estimatedDuration": "Duration",
+      "estimatedPrice": "Price",
+      "totalAmount": "Total",
+      "terms": "Terms",
+      "notes": "Notes",
+      "description": "Description",
+      "specialInstructions": "Special instructions",
+      "status": "Status",
+      "paymentStatus": "Payment",
+      "escrowHoldPlaced": "Payment hold",
+      "fundsCaptured": "Payment captured",
+      "location": "Address",
+      "serviceType": "Service",
+      "requirements": "Requirements",
+      "services": "Services offered",
+      "businessName": "Business name",
+      "conflictingBookingCount": "Other bookings nearby"
+    },
+    "agreed_title": "What was agreed",
     "agreed_scope": "Agreed work",
     "no_scope": "No agreed work could be established from the records.",
     "exclusions": "Explicitly excluded",
-    "findings": "Worth checking ({{count}})",
-    "no_findings": "Nothing needs attention.",
-    "evidence": "Based on",
-    "verification": "{{dropped}} unsupported item(s) removed",
-    "verification_hint": "Findings and checklist items whose evidence could not be traced back to a record are dropped rather than shown.",
-    "unreviewed": "not semantically reviewed",
-    "generated_at": "Generated {{time}}",
-    "prepare": "Prepare",
-    "prepare_tooltip": "Review what was agreed before the appointment",
-    "level": {
-      "ready": "Looks ready",
-      "needs_attention": "Needs attention",
-      "blocked": "Blocked",
-      "incomplete": "Incomplete review"
-    },
-    "severity": {
-      "info": "Info",
-      "attention": "Attention",
-      "blocking": "Blocking"
-    },
+    "prepare": "Readiness check",
+    "prepare_tooltip": "Check what was agreed against your messages before the appointment",
     "category": {
       "scope": "Scope",
       "access": "Access",
@@ -310,8 +358,8 @@
       "communication": "Communication"
     },
     "visibility": {
-      "customer_only": "Only you",
-      "provider_only": "Only you"
+      "customer_only": "Only you see this",
+      "provider_only": "Only you see this"
     },
     "source": {
       "booking": "Booking",
@@ -321,9 +369,8 @@
       "availability": "Availability",
       "message": "Message"
     },
-    "reused": "This booking hasn't changed since the last check, so your existing plan is shown. Edit the booking to generate a new one.",
-    "checklist": "Before the appointment",
-    "checklist_hint": "Prepared from what is actually in your booking and messages — not general advice. Nothing here is tracked; it is a reminder, not a task list.",
+    "checklist": "Your preparation",
+    "checklist_hint": "From your booking and messages. A reminder list: nothing here is tracked.",
     "draft_message": "Draft a message",
     "drafting": "Writing…",
     "draft_failed": "A draft could not be written just now. You can still write the message yourself."

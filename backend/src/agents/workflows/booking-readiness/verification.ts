@@ -7,6 +7,7 @@ import { UNTRUSTED_DATA_NOTICE, field } from './prompt';
 import {
   ChecklistItem,
   EvidenceRef,
+  FindingAnswerFrom,
   FindingCategory,
   FindingSeverity,
   FindingVisibility,
@@ -29,6 +30,10 @@ const CATEGORIES: FindingCategory[] = [
 ];
 const SEVERITIES: FindingSeverity[] = ['info', 'attention', 'blocking'];
 const VISIBILITIES: FindingVisibility[] = ['shared', 'customer_only', 'provider_only'];
+const ANSWER_FROM: FindingAnswerFrom[] = ['customer', 'provider', 'both'];
+
+/** A headline, not a sentence: longer than this and it is the statement again. */
+const TITLE_MAX_LENGTH = 80;
 
 const DUPLICATE_THRESHOLD = 0.85;
 
@@ -108,7 +113,13 @@ export function validateFindings(
       category,
       severity,
       visibility,
+      title: cleanTitle(raw.title),
       statement: raw.statement.trim(),
+      // Unrecognised or absent reads as `both`: the one value that never tells a
+      // reader, wrongly, that the next move is the other person's.
+      answerFrom: ANSWER_FROM.includes(raw.answerFrom as FindingAnswerFrom)
+        ? (raw.answerFrom as FindingAnswerFrom)
+        : 'both',
       evidence,
       resolutionQuestion:
         typeof raw.resolutionQuestion === 'string' && raw.resolutionQuestion.trim() !== ''
@@ -498,13 +509,26 @@ function buildRecordIndex(snapshot: ReadinessSnapshot): RecordIndex {
     index.set(`${source}:${recordId}`, new Map(Object.entries(fields)));
   };
 
-  add('booking', snapshot.booking.id, { ...snapshot.booking, ...snapshot.payment });
+  // Under the names the prompt shows them by. Spreading `snapshot.payment` in
+  // used to overwrite the booking's own `status` with the payment's, and left
+  // `escrowHoldPlaced`/`fundsCaptured` — the names the prompt prints — unknown
+  // here, so evidence citing them was dropped as invented.
+  add('booking', snapshot.booking.id, {
+    ...snapshot.booking,
+    paymentStatus: snapshot.payment.status,
+    escrowHoldPlaced: snapshot.payment.holdPlaced,
+    fundsCaptured: snapshot.payment.captured,
+  });
   add('availability', snapshot.booking.id, snapshot.availability);
   if (snapshot.quote) add('quote', snapshot.quote.id, snapshot.quote);
   if (snapshot.request) add('request', snapshot.request.id, snapshot.request);
   add('provider', snapshot.provider.id, snapshot.provider);
   for (const message of snapshot.messages) {
-    add('message', message.id, { text: message.text, senderRole: message.senderRole });
+    add('message', message.id, {
+      text: message.text,
+      senderRole: message.senderRole,
+      sentAt: message.sentAt,
+    });
   }
 
   return index;
@@ -517,6 +541,25 @@ function resolveEvidence(refs: RawFinding['evidence'], index: RecordIndex): Evid
   for (const ref of refs) {
     const record = index.get(`${ref?.source}:${ref?.recordId}`);
     if (!record) continue; // invented or mismatched id
+
+    // A message has exactly one citable thing: what it says. The id resolving
+    // is the whole check — it proves the message exists in this booking's own
+    // conversation. Requiring the model to also guess the field name ("text",
+    // where it reasonably wrote "message", "content" or "body") dropped every
+    // message-based finding there has ever been: 0 of 159 evidence refs across
+    // the stored runs cited a message.
+    if (ref.source === 'message') {
+      resolved.push({
+        source: 'message',
+        recordId: ref.recordId,
+        field: 'text',
+        excerpt: excerptFor(record.get('text')),
+        from: record.get('senderRole') as EvidenceRef['from'],
+        at: record.get('sentAt') as string,
+      });
+      continue;
+    }
+
     if (!record.has(ref.field)) continue; // field the model imagined
 
     resolved.push({
@@ -547,6 +590,14 @@ function similarity(a: string, b: string): number {
   let shared = 0;
   for (const token of left) if (right.has(token)) shared += 1;
   return shared / Math.min(left.size, right.size);
+}
+
+/** Optional by design — a finding without a usable headline is shown without one. */
+function cleanTitle(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const title = value.replace(/\s+/g, ' ').trim().replace(/\.$/, '');
+  if (title === '') return undefined;
+  return title.length > TITLE_MAX_LENGTH ? `${title.slice(0, TITLE_MAX_LENGTH - 1)}…` : title;
 }
 
 function truncate(value: string): string {

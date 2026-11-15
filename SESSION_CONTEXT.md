@@ -151,6 +151,72 @@ Still failing there, needing the user's call: `zod` 3→4 (major), `decode-uri-c
 Google Maps client (possible ESM breakage), `brace-expansion` via TypeORM's glob (needs an
 `overrides`). #40 cannot go green until #41 (or equivalent) lands on main.
 
+**Codex round 2 on #40: PASS.** Its advisory was taken (`149c753`: one draft at a time, since a
+second concurrent draft was paid for and then discarded). Backend 350/350, frontend 65/65.
+⚠️ Because `validate` fails at the audit step, **CI skipped every test step on #40**. Run locally
+instead: the Playwright product suite passed 45/45 on Chromium + Mobile Chrome; Firefox, WebKit
+and Mobile Safari could not launch (host is missing system libs; needs `sudo npx playwright
+install-deps`). Not merged; that's the user's call.
+
+**#41 is green (validate + Codex pass), awaiting the user's merge.** zod → 4.6.7, brace-expansion
+pin → 5.0.12, and the Maps client's `decode-uri-component` (GHSA-qr28-fpjm-wq7f, unreachable:
+only `stringify` is used, no CJS fix) excepted through `.github/audit-allowlist.json`, enforced by
+`.github/scripts/audit-gate.mjs` (scoped by advisory/project/package/via, expires 2027-02-15,
+fails on stale entries). Dropping the SDK for direct REST was rejected with the user (own
+retries/error handling for an unreachable bug).
+
+**#41 merged (`80409be`). #40 rebased onto it: CI green for the first time (validate ran every
+test step) + Codex PASS, mergeable, awaiting the user's merge.** Codex advisory left open: if
+sessionStorage throws, `stashMessageDraft` fails silently and `MyBookingsPage.tsx:376` still
+navigates, losing the draft.
+
+**#40 merged (`49f53a6`). User hands-on test IN PROGRESS (2026-11-15):** seeded booking
+`c0758b46-8b13-48e0-bc2e-7f90dc0f2045` (demo customer/provider) and set
+`booking_readiness_enabled = true` in the shared DB (safe: production `e38bdce` has no readiness
+code). Dev servers :3002 / :3001 running from `main`. **After the test:** `seedReadinessScenario.ts
+--remove` and set the flag back to `false`. Then: readiness Playwright journeys + the
+sessionStorage advisory, then the booking mass-assignment fix.
+
+**User's hands-on feedback (2026-11-15) + CX review, awaiting decisions before building.** Asked
+for: per-finding close/ignore with permission by issue scope, less confusion over both parties
+drafting about the same point, and the bare "Blocked" banner replaced by a summary by category.
+Defects the real run exposed (runs `2c62477b`, `38261595`):
+- **Message evidence never resolves: 0 of 159 evidence refs in the last 12 runs cite a message.**
+  The prompt renders `<message recordId=…>` but never names the field; the index only accepts
+  `text`/`senderRole`, so message-only findings (the dog/safety one, doorman and parking checklist
+  items) are dropped as "no resolvable evidence". Cause is from reading code, not yet fix-verified.
+- Times reach the model as UTC ISO and come back as "16:00" in checklists (wrong local hour).
+- One plan mixes PT and EN (Scope wrote PT; Risk/Logistics EN), whatever the UI language.
+- Gate code 4471 surfaces in agreed work, both checklists and evidence excerpts (`scrubPii` does
+  not catch it); the seed's "must never surface" control fails.
+- Any new message changes the fingerprint → plan stale → all draft buttons hidden, so a second
+  draft needs a re-run (10/day, ~45–57s).
+Proposed split: PR A = these fixes + banner summary, reorder (findings first), human evidence
+labels, naming; PR B = finding owner + settle/dismiss + role-aware drafting (needs decisions:
+who may close, what closing shows, plan language, code masking, message-only staleness).
+Screenshots: scratchpad `cx/` (session-local).
+
+**PR A built on `feat/readiness-cx-clarity` (2026-11-15), user approved all five recommendations.**
+Backend: message evidence resolves on the record id alone (field normalised to `text`, carries
+`from`/`at`); prompt renders local times in `platform_timezone` (new setting, default
+America/Sao_Paulo) with weekday; one plan language (`planLanguage`: thread → record text →
+platform locale); payment fields indexed under the names the prompt prints (`status` no longer
+overwritten); findings gain `title` + `answerFrom`; `messages_changed` freshness via a stored
+`recordsFingerprint`, and drafting is allowed in that state; `viewerRole` + `requestedByRole` in
+the response; schema version 3. Frontend: summary by severity + category chips (jump to finding)
+instead of "Blocked", findings first and grouped, agreed work folded, readable evidence lines,
+"who answers", discarded-count removed, one name ("Readiness check" / "Verificação da reserva").
+Tests: backend 393, frontend 84, Playwright readiness 8/8 (Chromium + Mobile Chrome, API stubbed),
+lint 142; every fix mutation-checked.
+⚠️ **NOT live-verified: the Anthropic account is out of credits** ("credit balance is too low"),
+so no real run has exercised the new prompts. Needs a top-up, then one run on the seeded booking.
+**Gate code masking is NOT in PR A**: user asked for an explanation, decision pending
+(mask + show special instructions on the provider's booking card, or accept).
+PR B (after): settle/dismiss by `answerFrom`, role-aware Ask/Reply drafting, carry-over across runs.
+
+**Resume point (old):** user merges #41 → rebase #40 so CI runs its tests → merge #40 → readiness Playwright journeys (BR-4, models stubbed) → user's hands-on test
+with `seedReadinessScenario.ts` (dev servers :3001→:3002 still running).
+
 ### 🚨 Found during BR-3 review, NOT fixed — needs its own PR: booking mass-assignment
 
 `PUT /bookings/:bookingId` (customer role) runs `{ ...req.body }` (`BookingController.ts:284`)

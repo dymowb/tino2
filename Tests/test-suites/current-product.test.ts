@@ -325,6 +325,226 @@ test.describe("customer experience", () => {
   });
 });
 
+/**
+ * The readiness drawer, with the model stubbed out at the API.
+ *
+ * What is under test is what a participant reads: a real run costs a
+ * multi-model call and returns different words every time, so the plan is a
+ * fixture and everything around it — the page, the card, the drawer — is real.
+ * The booking list is the server's own, with its first booking presented as
+ * confirmed so the entry point exists whatever the seed happened to produce.
+ */
+test.describe("booking readiness check", () => {
+  test.beforeEach(async ({ page }) => uiLogin(page, "customer"));
+
+  const stubReadiness = async (
+    page: Page,
+    freshness: "current" | "messages_changed" | "stale" = "current",
+  ) => {
+    await page.route("**/api/v1/config", async (route) => {
+      const response = await route.fetch();
+      const body = await response.json();
+      body.data.bookingReadinessEnabled = true;
+      await route.fulfill({ response, json: body });
+    });
+
+    let bookingId = "";
+    await page.route(/\/api\/v1\/bookings(\?.*)?$/, async (route) => {
+      if (route.request().method() !== "GET") return route.continue();
+      const response = await route.fetch();
+      const body = await response.json();
+      expect(body.data.length, "seed has no bookings").toBeGreaterThan(0);
+      body.data[0].status = "confirmed";
+      bookingId = body.data[0].id;
+      await route.fulfill({ response, json: body });
+    });
+
+    const message = (from: string, excerpt: string) => ({
+      source: "message",
+      recordId: "m1",
+      field: "text",
+      from,
+      at: "2026-11-15T21:40:00.000Z",
+      excerpt,
+    });
+    await page.route("**/readiness-runs/latest", (route) =>
+      route.fulfill({
+        json: {
+          success: true,
+          data: {
+            runId: "run-fixture",
+            status: "completed",
+            freshness,
+            stale: freshness !== "current",
+            viewerRole: "customer",
+            plan: {
+              bookingId,
+              sourceFingerprint: "fp",
+              requestedByRole: "provider",
+              readiness: "blocked",
+              agreedScope: ["Standard clean of the 3-bedroom flat"],
+              exclusions: ["Outside windows"],
+              // Attention first on purpose: the drawer orders by severity.
+              findings: [
+                {
+                  id: "f-products",
+                  category: "materials",
+                  severity: "attention",
+                  visibility: "shared",
+                  answerFrom: "customer",
+                  title: "Who brings the products",
+                  statement: "The quote leaves cleaning products to the customer.",
+                  resolutionQuestion: "Will the products be on site?",
+                  evidence: [
+                    { source: "quote", recordId: "q", field: "notes", excerpt: "Products by the customer" },
+                  ],
+                },
+                {
+                  id: "f-day",
+                  category: "schedule",
+                  severity: "blocking",
+                  visibility: "shared",
+                  answerFrom: "both",
+                  title: "Day and duration do not match",
+                  statement: "The booking is for Wednesday; the messages say Saturday.",
+                  resolutionQuestion: "Which day stands?",
+                  evidence: [
+                    {
+                      source: "booking",
+                      recordId: bookingId,
+                      field: "scheduledDate",
+                      excerpt: "2026-11-18T16:00:00.000Z",
+                    },
+                    message("customer", "All day Saturday, right?"),
+                  ],
+                },
+                {
+                  id: "f-cash",
+                  category: "payment",
+                  severity: "blocking",
+                  visibility: "shared",
+                  answerFrom: "provider",
+                  title: "Cash payment requested",
+                  statement: "The provider asked for cash; the quote says platform only.",
+                  resolutionQuestion: "Will payment go through the platform?",
+                  evidence: [message("provider", "I prefer cash on the day")],
+                },
+              ],
+              customerChecklist: [
+                {
+                  id: "c1",
+                  category: "materials",
+                  label: "Set the cleaning products aside",
+                  evidence: [{ source: "quote", recordId: "q", field: "notes" }],
+                },
+              ],
+              providerChecklist: [],
+              verification: { droppedCount: 6, semanticReviewRan: true },
+              generatedAt: "2026-11-15T22:16:19.974Z",
+              unavailableSections: [],
+            },
+          },
+        },
+      }),
+    );
+  };
+
+  const openDrawer = async (page: Page) => {
+    await page.goto("/bookings");
+    await page.getByTestId("readiness-open").first().click();
+    const drawer = page.getByTestId("readiness-drawer");
+    await expect(drawer.getByTestId("readiness-status")).toBeVisible({
+      timeout: 15_000,
+    });
+    return drawer;
+  };
+
+  test("says what there is to settle and about what, before anything else", async ({
+    page,
+  }) => {
+    await stubReadiness(page);
+    const drawer = await openDrawer(page);
+
+    // A count and its categories, not a one-word verdict.
+    const status = drawer.getByTestId("readiness-status");
+    await expect(status).toContainText(/2 (points to settle|pontos para resolver)/i);
+    await expect(status).not.toContainText(/blocked|bloqueado/i);
+    await expect(drawer.getByTestId("readiness-summary-chip")).toHaveCount(3);
+
+    // The points to settle lead, worst first, above the agreed work.
+    const cards = drawer.getByTestId("readiness-finding");
+    await expect(cards).toHaveCount(3);
+    await expect(cards.nth(0)).toHaveAttribute("data-severity", "blocking");
+    await expect(cards.nth(1)).toHaveAttribute("data-severity", "blocking");
+    await expect(cards.nth(2)).toHaveAttribute("data-severity", "attention");
+    await expect(drawer.getByText("Standard clean of the 3-bedroom flat")).toHaveCount(0);
+
+    // Each card says whose move it is, from this reader's side.
+    await expect(drawer.getByTestId("readiness-answer-from")).toHaveText([
+      /both of you|vocês dois/i,
+      /provider's answer|resposta do prestador/i,
+      /your answer|sua resposta/i,
+    ]);
+
+    // Evidence reads as copy: no field identifiers, no raw instants, and a
+    // quoted message says who wrote it.
+    const evidence = (await drawer.getByTestId("readiness-evidence").allTextContents()).join("\n");
+    expect(evidence).not.toMatch(/scheduledDate|estimatedPrice|T16:00:00|\.000Z/);
+    expect(evidence).toMatch(/your message|sua mensagem/i);
+    expect(evidence).toMatch(/message from the provider|mensagem do prestador/i);
+
+    // Nothing about what the checker discarded.
+    await expect(drawer).not.toContainText(/unsupported|sem base/i);
+  });
+
+  test("a category in the summary leads to its finding, and the agreed work unfolds", async ({
+    page,
+  }) => {
+    await stubReadiness(page);
+    const drawer = await openDrawer(page);
+
+    await drawer
+      .locator('[data-testid="readiness-summary-chip"][data-category="materials"]')
+      .click();
+    await expect(drawer.locator("#readiness-finding-f-products")).toBeInViewport();
+
+    await drawer.getByTestId("readiness-agreed-toggle").click();
+    await expect(drawer.getByText("Standard clean of the 3-bedroom flat")).toBeVisible();
+    await expect(drawer.getByText("Outside windows")).toBeVisible();
+  });
+
+  test("new messages leave drafting available; a changed booking does not", async ({
+    page,
+  }) => {
+    await stubReadiness(page, "messages_changed");
+    let drawer = await openDrawer(page);
+    await expect(drawer.getByTestId("readiness-messages-changed")).toBeVisible();
+    await expect(drawer.getByTestId("readiness-draft").first()).toBeEnabled();
+
+    await page.unrouteAll({ behavior: "wait" });
+    await stubReadiness(page, "stale");
+    drawer = await openDrawer(page);
+    await expect(drawer.getByTestId("readiness-stale")).toBeVisible();
+    await expect(drawer.getByTestId("readiness-draft")).toHaveCount(0);
+  });
+
+  test("reads in Portuguese as well as English", async ({ page }) => {
+    await stubReadiness(page);
+    for (const [language, title, settle] of [
+      ["pt", "Verificação da reserva", /2 pontos para resolver antes do atendimento/],
+      ["en", "Readiness check", /2 points to settle before the appointment/],
+    ] as const) {
+      await page.evaluate((lng) => localStorage.setItem("i18nextLng", lng), language);
+      await page.reload();
+      const drawer = await openDrawer(page);
+      await expect(drawer.getByText(title, { exact: true })).toBeVisible();
+      await expect(drawer.getByTestId("readiness-status")).toContainText(settle);
+      // No key left untranslated in either language.
+      await expect(drawer).not.toContainText("readiness.");
+    }
+  });
+});
+
 test.describe("provider experience", () => {
   test.beforeEach(async ({ page }) => uiLogin(page, "provider"));
 

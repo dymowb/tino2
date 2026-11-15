@@ -9,7 +9,12 @@ import { Message } from '@/models/Message';
 import { scrubPii } from '@/services/memory/PiiScrubber';
 import { fingerprint } from '../shared/SourceFingerprint';
 import { ReadinessSnapshot, SnapshotMessage } from './types';
-import { getPlatformCurrency } from '@/services/PlatformSettingsService';
+import {
+  getPlatformCurrency,
+  getPlatformLocale,
+  getPlatformTimezone,
+} from '@/services/PlatformSettingsService';
+import { detectLanguage, languageForLocale } from './language';
 
 /** Bookings where preparation is still meaningful. `pending` is excluded — nothing
  * is actually agreed until the quote is accepted and the hold is placed. */
@@ -127,6 +132,18 @@ export async function buildSnapshot(booking: Booking): Promise<ReadinessSnapshot
 
   return {
     currency: await getPlatformCurrency(),
+    timezone: await getPlatformTimezone(),
+    outputLanguage: planLanguage(
+      messages,
+      [
+        booking.description,
+        booking.specialInstructions,
+        quote?.description,
+        quote?.notes,
+        request?.description,
+      ],
+      await getPlatformLocale()
+    ),
     booking: {
       id: booking.id,
       status: booking.status,
@@ -295,12 +312,60 @@ async function countAdjacentBookings(booking: Booking): Promise<number> {
  */
 export function snapshotFingerprint(snapshot: ReadinessSnapshot): string {
   return fingerprint({
+    ...recordFacts(snapshot),
+    // Derived from the messages below whenever they answer clearly, so it only
+    // moves the fingerprint on its own when the platform's fallback locale does.
+    outputLanguage: snapshot.outputLanguage,
+    // Content, not just the newest id: messages are editable (MessageService
+    // .updateMessage, and the entity carries isEdited/editedAt), so an edit to
+    // an earlier message changes what the agent was told while leaving any
+    // id-only fingerprint identical — a stale plan reporting itself as fresh.
+    messages: snapshot.messages.map((message) => ({ id: message.id, text: message.text })),
+  });
+}
+
+/**
+ * `snapshotFingerprint` without the conversation: the booking, quote, request,
+ * provider, availability and payment facts alone.
+ *
+ * When this still matches but the full fingerprint does not, the only thing that
+ * moved is the conversation — the plan's reading of the agreed terms still holds,
+ * and it is reported as `messages_changed` rather than `stale`.
+ */
+export function recordsFingerprint(snapshot: ReadinessSnapshot): string {
+  return fingerprint(recordFacts(snapshot));
+}
+
+/**
+ * How a stored plan relates to the booking as `snapshot` now describes it.
+ *
+ * Never `current` on a missing fingerprint: "could not compare" is not
+ * "unchanged". `messages_changed` needs the plan's own records fingerprint to
+ * match, so a plan stored before that existed is simply stale.
+ */
+export function planFreshness(
+  run: { sourceFingerprint?: string | null; output?: unknown },
+  snapshot: ReadinessSnapshot
+): 'current' | 'messages_changed' | 'stale' {
+  if (!run.sourceFingerprint) return 'stale';
+  if (snapshotFingerprint(snapshot) === run.sourceFingerprint) return 'current';
+
+  const stored = (run.output as { recordsFingerprint?: unknown } | null)?.recordsFingerprint;
+  return typeof stored === 'string' && stored !== '' && stored === recordsFingerprint(snapshot)
+    ? 'messages_changed'
+    : 'stale';
+}
+
+function recordFacts(snapshot: ReadinessSnapshot) {
+  return {
     // The amounts above are bare numbers; this is what makes them mean anything,
     // and it is a prompt input like any other. An admin switching the platform
     // currency would otherwise leave every stored plan fingerprinting identically
     // — reported `current`, and served by `findReusable` as `reused` — while its
     // agent reasoning is still anchored on the old currency.
     currency: snapshot.currency,
+    // Same argument: every time the agents quoted was rendered in this zone.
+    timezone: snapshot.timezone,
     booking: {
       status: snapshot.booking.status,
       serviceType: snapshot.booking.serviceType,
@@ -319,12 +384,32 @@ export function snapshotFingerprint(snapshot: ReadinessSnapshot): string {
     // Omitting them would let a plan report itself fresh after either changed.
     availability: snapshot.availability,
     provider: { id: snapshot.provider.id, services: snapshot.provider.services },
-    // Content, not just the newest id: messages are editable (MessageService
-    // .updateMessage, and the entity carries isEdited/editedAt), so an edit to
-    // an earlier message changes what the agent was told while leaving any
-    // id-only fingerprint identical — a stale plan reporting itself as fresh.
-    messages: snapshot.messages.map((message) => ({ id: message.id, text: message.text })),
-  });
+  };
+}
+
+/**
+ * One language for the whole plan: the one the two parties already write to each
+ * other in. The conversation is the best evidence; the booking's own free text
+ * is the next best; the platform's locale is what is left.
+ *
+ * Not the requester's browser locale, which is what a draft falls back to: a
+ * plan is read by both parties and reused for both, so it cannot depend on which
+ * of them happened to press the button.
+ */
+export function planLanguage(
+  messages: SnapshotMessage[],
+  recordTexts: Array<string | null | undefined>,
+  platformLocale: string
+): string {
+  const thread = messages
+    .slice(-12)
+    .map((message) => message.text)
+    .join(' ');
+  return (
+    detectLanguage(thread) ??
+    detectLanguage(recordTexts.filter(Boolean).join(' ')) ??
+    languageForLocale(platformLocale)
+  );
 }
 
 /** Truncated, scrubbed text safe to show in the UI as evidence. */

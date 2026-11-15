@@ -91,6 +91,9 @@ export interface ReadinessEvidence {
   recordId: string;
   field: string;
   excerpt?: string;
+  /** For a message: who wrote it and when. */
+  from?: "customer" | "provider" | "other";
+  at?: string;
 }
 
 export interface ReadinessFinding {
@@ -105,14 +108,20 @@ export interface ReadinessFinding {
     | "communication";
   severity: "info" | "attention" | "blocking";
   visibility: "shared" | "customer_only" | "provider_only";
+  /** A few words naming the issue. Absent on plans made before it existed. */
+  title?: string;
   statement: string;
   evidence: ReadinessEvidence[];
   resolutionQuestion?: string;
+  /** Whose answer settles it. Absent on older plans, which read as `both`. */
+  answerFrom?: "customer" | "provider" | "both";
 }
 
 export interface ReadinessPlan {
   bookingId: string;
   sourceFingerprint: string;
+  /** Which party asked for this check. Both see it. */
+  requestedByRole?: "customer" | "provider";
   readiness: "ready" | "needs_attention" | "blocked" | "incomplete";
   agreedScope: string[];
   exclusions: string[];
@@ -146,22 +155,28 @@ export interface ReadinessChecklistItem {
   id: string;
   category: string;
   label: string;
-  evidence: Array<{ source: string; recordId: string; field: string; excerpt?: string }>;
+  evidence: ReadinessEvidence[];
 }
 
 /**
  * `unknown` means freshness could not be evaluated — never that the plan is
  * current. Treat it as unsafe to rely on.
+ *
+ * `messages_changed` means the booking and quote are as the plan saw them and
+ * only the conversation has moved on: a point may already have been settled in
+ * chat, but the plan is still safe to draft from.
  */
-export type ReadinessFreshness = 'current' | 'stale' | 'unknown';
+export type ReadinessFreshness = 'current' | 'messages_changed' | 'stale' | 'unknown';
 
 export interface ReadinessRunResponse {
   runId: string;
   status: string;
   plan: ReadinessPlan | null;
   freshness: ReadinessFreshness;
-  /** Legacy two-state view of `freshness`: true for both stale and unknown. */
+  /** Legacy two-state view of `freshness`: true for anything but `current`. */
   stale: boolean;
+  /** The reader's own role on this booking. Absent from older servers. */
+  viewerRole?: "customer" | "provider";
   /**
    * True when the server served an existing plan instead of paying for a new
    * run, because the booking has not changed since that plan was built. Absent

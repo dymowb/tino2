@@ -2,7 +2,7 @@ import logger from '@/config/logger';
 import { aiGateway } from '@/agents/services/ai-gateway.service';
 import { parseLlmJson } from '@/agents/utils/llm-json';
 import { ReadinessSnapshot, ScopeAgentOutput } from '../types';
-import { renderSnapshotForPrompt } from '../prompt';
+import { renderOutputConventions, renderSnapshotForPrompt } from '../prompt';
 
 /** Must cover adaptive thinking *and* the JSON body — see the call site. */
 const SCOPE_MAX_TOKENS = 8000;
@@ -26,6 +26,15 @@ Hard rules:
 - "Not mentioned" is different from "problem detected". Only raise a finding when the
   absence actually blocks or risks the job.
 
+How to write a finding:
+- "title": three to six words naming the issue, like a headline. No full stop.
+- "statement": two sentences at most. What the records say, then why it matters for
+  this appointment. No preamble, no restating the title.
+- "resolutionQuestion": the one question whose answer settles it.
+- "answerFrom": whose answer or action settles it. "customer" or "provider" when one
+  of them can settle it alone by confirming, deciding or doing something. "both"
+  only when they have to agree something new between them.
+
 Return ONLY JSON:
 {
   "agreedScope": ["..."],
@@ -35,9 +44,11 @@ Return ONLY JSON:
       "category": "scope|access|materials|schedule|safety|payment|communication",
       "severity": "info|attention|blocking",
       "visibility": "shared|customer_only|provider_only",
+      "title": "...",
       "statement": "...",
       "evidence": [{"source":"booking|quote|request|provider|availability|message","recordId":"...","field":"..."}],
-      "resolutionQuestion": "..."
+      "resolutionQuestion": "...",
+      "answerFrom": "customer|provider|both"
     }
   ]
 }`;
@@ -55,7 +66,7 @@ export async function runScopeAgent(
     'reasoning',
     {
       systemPrompt: SYSTEM_PROMPT,
-      userMessage: renderSnapshotForPrompt(snapshot),
+      userMessage: `${renderOutputConventions(snapshot)}\n\n${renderSnapshotForPrompt(snapshot)}`,
       // Generous on purpose. The reasoning profile is Opus 5, where thinking is on
       // by default and max_tokens caps thinking *plus* the response — a tight
       // budget silently truncates the JSON mid-object rather than erroring.

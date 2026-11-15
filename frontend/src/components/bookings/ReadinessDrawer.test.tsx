@@ -209,6 +209,22 @@ describe("a drawer call that finishes after the user moved on", () => {
     expect(screen.queryByTestId("readiness-draft")).toBeNull();
   });
 
+  it("keeps drafts when only the conversation has moved on", async () => {
+    // Sending one message used to mark the plan stale and hide every other
+    // draft, so asking a second question cost a paid re-run.
+    api.getLatestReadinessRun.mockImplementation(async (id: string) => ({
+      ...runFor(id),
+      freshness: "messages_changed",
+      stale: true,
+    }));
+    setup(client);
+
+    await screen.findByText("Access is unclear for A");
+    expect(screen.getByTestId("readiness-messages-changed")).toBeInTheDocument();
+    expect(screen.queryByTestId("readiness-stale")).toBeNull();
+    expect(screen.getByTestId("readiness-draft")).toBeEnabled();
+  });
+
   it("allows one draft at a time", async () => {
     // The first draft to finish closes the drawer, so a second started
     // alongside it would be paid for and thrown away.
@@ -235,3 +251,140 @@ describe("a drawer call that finishes after the user moved on", () => {
   });
 });
 
+describe("what the drawer says at the top", () => {
+  let client: QueryClient;
+
+  const finding = (
+    id: string,
+    severity: "blocking" | "attention" | "info",
+    category: "payment" | "scope" | "access",
+    extra: object = {},
+  ) => ({
+    id,
+    category,
+    severity,
+    visibility: "shared" as const,
+    statement: `statement ${id}`,
+    evidence: [],
+    ...extra,
+  });
+
+  const withFindings = (
+    findings: ReturnType<typeof finding>[],
+    extra: Partial<ReadinessRunResponse> = {},
+  ) =>
+    api.getLatestReadinessRun.mockImplementation(async (id: string) => {
+      const run = runFor(id);
+      return {
+        ...run,
+        ...extra,
+        plan: { ...run.plan!, readiness: "blocked" as const, findings },
+      };
+    });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  });
+
+  it("counts what there is to settle by category, instead of one word", async () => {
+    // Listed attention-first on purpose: the summary and the list must order
+    // by severity themselves, not inherit the server's order.
+    withFindings([
+      finding("a1", "attention", "access"),
+      finding("b1", "blocking", "payment"),
+      finding("a2", "attention", "payment"),
+      finding("b2", "blocking", "scope"),
+    ]);
+    setup(client);
+
+    const status = await screen.findByTestId("readiness-status");
+    expect(status).toHaveTextContent("readiness.summary.blocking");
+    expect(status).toHaveTextContent("readiness.summary.also_attention");
+
+    const chips = screen.getAllByTestId("readiness-summary-chip");
+    expect(chips.map((chip) => [chip.dataset.category, chip.textContent])).toEqual([
+      ["payment", "readiness.category.payment · 2"],
+      ["scope", "readiness.category.scope · 1"],
+      ["access", "readiness.category.access · 1"],
+    ]);
+
+    // Blocking findings come first, whatever order they arrived in.
+    expect(
+      screen.getAllByTestId("readiness-finding").map((card) => card.dataset.severity),
+    ).toEqual(["blocking", "blocking", "attention", "attention"]);
+  });
+
+  it("takes a category chip to that category's most severe finding", async () => {
+    withFindings([
+      finding("a2", "attention", "payment"),
+      finding("b1", "blocking", "payment"),
+    ]);
+    const scrolled: string[] = [];
+    Element.prototype.scrollIntoView = function scrollIntoView(this: Element) {
+      scrolled.push(this.id);
+    };
+    setup(client);
+
+    fireEvent.click(await screen.findByTestId("readiness-summary-chip"));
+
+    expect(scrolled).toEqual(["readiness-finding-b1"]);
+  });
+
+  it("puts the points to settle above the agreed work, which starts folded", async () => {
+    withFindings([finding("b1", "blocking", "payment")]);
+    setup(client);
+
+    await screen.findByText("statement b1");
+    expect(screen.queryByText("Clean the kitchen")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("readiness-agreed-toggle"));
+    expect(await screen.findByText("Clean the kitchen")).toBeInTheDocument();
+  });
+
+  it("shows the agreed work straight away when there is nothing to settle", async () => {
+    withFindings([]);
+    setup(client);
+
+    expect(await screen.findByText("Clean the kitchen")).toBeInTheDocument();
+  });
+
+  it("tells each reader whether the next move is theirs", async () => {
+    withFindings(
+      [
+        finding("mine", "blocking", "payment", { answerFrom: "provider" }),
+        finding("theirs", "attention", "scope", { answerFrom: "customer" }),
+        finding("ours", "attention", "access", { answerFrom: "both" }),
+        finding("old", "info", "access"),
+      ],
+      { viewerRole: "provider" },
+    );
+    setup(client);
+
+    await screen.findByText("statement mine");
+    expect(
+      screen.getAllByTestId("readiness-answer-from").map((el) => el.dataset.answerFrom),
+    ).toEqual(["you", "customer", "both", "both"]);
+  });
+
+  it("does not show the count of items the checker threw away", async () => {
+    withFindings([finding("b1", "blocking", "payment")]);
+    setup(client);
+
+    await screen.findByText("statement b1");
+    expect(screen.queryByText(/readiness\.verification/)).toBeNull();
+  });
+
+  it("still says so when the plan was never double-checked", async () => {
+    api.getLatestReadinessRun.mockImplementation(async (id: string) => {
+      const run = runFor(id);
+      return {
+        ...run,
+        plan: { ...run.plan!, verification: { droppedCount: 0, semanticReviewRan: false } },
+      };
+    });
+    setup(client);
+
+    expect(await screen.findByTestId("readiness-unreviewed")).toBeInTheDocument();
+  });
+});

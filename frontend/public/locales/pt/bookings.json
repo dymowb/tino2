@@ -266,40 +266,88 @@
     "confirm_or_counter": "confirme ou envie seu próprio orçamento"
   },
   "readiness": {
-    "title": "Preparação da reserva",
-    "subtitle": "Uma revisão por IA do que foi combinado, com as perguntas que ainda valem a pena. Nunca altera a sua reserva.",
+    "title": "Verificação da reserva",
+    "subtitle": "Uma comparação por IA entre o que foi combinado e o que foi dito nas mensagens, mostrando o que resolver antes do atendimento. Nunca altera a sua reserva.",
     "close": "Fechar",
-    "run": "Verificar preparação",
-    "running": "Revisando…",
-    "rerun": "Executar novamente",
-    "empty": "Nenhuma verificação foi feita para esta reserva ainda.",
+    "run": "Verificar agora",
+    "running": "Verificando…",
+    "running_hint": "Lendo a reserva, o orçamento aceito e as mensagens. Costuma levar menos de um minuto.",
+    "rerun": "Verificar novamente",
+    "empty": "Ainda não foi feita nenhuma verificação desta reserva.",
+    "empty_hint": "Ela lê a reserva, o orçamento aceito e as mensagens, e lista o que vocês dois parecem esperar de forma diferente. Leva cerca de um minuto, e os dois veem o resultado.",
     "error": "Não foi possível concluir a verificação. Tente novamente.",
-    "stale": "Esta reserva mudou depois da verificação.",
-    "freshness_unknown": "Não foi possível reverificar a reserva, então este resumo pode estar desatualizado.",
-    "partial": "Parte desta revisão ficou indisponível ({{sections}}), então pode estar incompleta.",
+    "stale": "A reserva mudou depois da verificação, então os pontos abaixo podem não valer mais.",
+    "messages_changed": "Há mensagens novas desde esta verificação, então algum ponto abaixo pode já ter sido resolvido na conversa.",
+    "freshness_unknown": "Não foi possível conferir a reserva de novo, então isto pode estar desatualizado.",
+    "partial": "Parte desta verificação não pôde ser concluída, então podem faltar pontos. Verifique novamente.",
+    "unreviewed": "Esta verificação não pôde ser conferida automaticamente, então leia com atenção redobrada.",
+    "reused": "Nada mudou desde a última verificação, então o mesmo resultado é mostrado. Uma nova verificação roda quando a reserva ou as mensagens mudarem.",
+    "summary": {
+      "blocking_one": "{{count}} ponto para resolver antes do atendimento",
+      "blocking_other": "{{count}} pontos para resolver antes do atendimento",
+      "attention_one": "Nada impedindo, {{count}} ponto que vale confirmar",
+      "attention_other": "Nada impedindo, {{count}} pontos que vale confirmar",
+      "also_attention_one": "e mais {{count}} que vale confirmar",
+      "also_attention_other": "e mais {{count}} que vale confirmar",
+      "ready": "Parece tudo certo: nada a resolver",
+      "incomplete": "Esta verificação está incompleta",
+      "incomplete_hint": "Parte da análise falhou, então podem faltar pontos. Verifique novamente.",
+      "jump_one": "{{category}}: {{count}} ponto. Ir até ele",
+      "jump_other": "{{category}}: {{count}} pontos. Ir até o primeiro"
+    },
+    "checked_at": "Verificado em {{time}}",
+    "requested_by": {
+      "you": "iniciada por você",
+      "customer": "iniciada pelo cliente",
+      "provider": "iniciada pelo prestador"
+    },
+    "shared_note": "vocês dois veem isto",
+    "group": {
+      "blocking": "Resolver antes do atendimento",
+      "attention": "Vale confirmar",
+      "info": "Bom saber"
+    },
+    "question_label": "A resolver",
+    "answer_from": {
+      "you": "Precisa da sua resposta",
+      "both": "Precisa da resposta de vocês dois",
+      "customer": "Precisa da resposta do cliente",
+      "provider": "Precisa da resposta do prestador"
+    },
+    "evidence": "Baseado em",
+    "evidence_message": {
+      "you": "Sua mensagem",
+      "customer": "Mensagem do cliente",
+      "provider": "Mensagem do prestador",
+      "other": "Mensagem"
+    },
+    "field": {
+      "scheduledDate": "Data e horário",
+      "preferredDate": "Data preferida",
+      "estimatedDuration": "Duração",
+      "estimatedPrice": "Preço",
+      "totalAmount": "Total",
+      "terms": "Condições",
+      "notes": "Observações",
+      "description": "Descrição",
+      "specialInstructions": "Instruções especiais",
+      "status": "Situação",
+      "paymentStatus": "Pagamento",
+      "escrowHoldPlaced": "Reserva do pagamento",
+      "fundsCaptured": "Pagamento capturado",
+      "location": "Endereço",
+      "serviceType": "Serviço",
+      "requirements": "Requisitos",
+      "services": "Serviços oferecidos",
+      "businessName": "Nome do negócio",
+      "conflictingBookingCount": "Outras reservas próximas"
+    },
+    "agreed_title": "O que foi combinado",
     "agreed_scope": "Trabalho combinado",
     "no_scope": "Não foi possível estabelecer o trabalho combinado a partir dos registros.",
     "exclusions": "Explicitamente excluído",
-    "findings": "Vale conferir ({{count}})",
-    "no_findings": "Nada precisa de atenção.",
-    "evidence": "Baseado em",
-    "verification": "{{dropped}} item(ns) sem base removido(s)",
-    "verification_hint": "Constatações e itens da lista cuja evidência não pôde ser rastreada até um registro são descartados em vez de exibidos.",
-    "unreviewed": "sem revisão semântica",
-    "generated_at": "Gerado em {{time}}",
-    "prepare": "Preparar",
-    "prepare_tooltip": "Revise o que foi combinado antes do atendimento",
-    "level": {
-      "ready": "Parece pronto",
-      "needs_attention": "Precisa de atenção",
-      "blocked": "Bloqueado",
-      "incomplete": "Revisão incompleta"
-    },
-    "severity": {
-      "info": "Informação",
-      "attention": "Atenção",
-      "blocking": "Bloqueio"
-    },
+    "prepare": "Verificar reserva",
+    "prepare_tooltip": "Confira o que foi combinado com as mensagens antes do atendimento",
     "category": {
       "scope": "Escopo",
       "access": "Acesso",
@@ -310,8 +358,8 @@
       "communication": "Comunicação"
     },
     "visibility": {
-      "customer_only": "Só você",
-      "provider_only": "Só você"
+      "customer_only": "Só você vê isto",
+      "provider_only": "Só você vê isto"
     },
     "source": {
       "booking": "Reserva",
@@ -321,11 +369,10 @@
       "availability": "Disponibilidade",
       "message": "Mensagem"
     },
-    "reused": "Esta reserva não mudou desde a última verificação, então o plano existente é exibido. Edite a reserva para gerar um novo.",
-    "checklist": "Antes do atendimento",
-    "checklist_hint": "Preparado a partir do que consta na sua reserva e nas mensagens — não é conselho genérico. Nada aqui é registrado; é um lembrete, não uma lista de tarefas.",
+    "checklist": "Sua preparação",
+    "checklist_hint": "A partir da sua reserva e das mensagens. Uma lista de lembretes: nada aqui é registrado.",
     "draft_message": "Escrever mensagem",
     "drafting": "Escrevendo…",
-    "draft_failed": "Não foi possível escrever um rascunho agora. Você ainda pode escrever a mensagem você mesmo."
+    "draft_failed": "Não foi possível escrever um rascunho agora. Você ainda pode escrever a mensagem."
   }
 }

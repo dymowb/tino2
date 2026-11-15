@@ -2,7 +2,7 @@ import logger from '@/config/logger';
 import { aiGateway } from '@/agents/services/ai-gateway.service';
 import { parseLlmJson } from '@/agents/utils/llm-json';
 import { RawFinding, ReadinessSnapshot, RiskAgentOutput } from '../types';
-import { renderSnapshotForPrompt } from '../prompt';
+import { renderOutputConventions, renderSnapshotForPrompt } from '../prompt';
 
 /**
  * Reasoning profile, like Scope.
@@ -45,6 +45,15 @@ Hard rules:
   might go wrong is not a finding; something in the records has to support it.
 - The ACCEPTED QUOTE takes precedence over the original request wherever they differ.
 
+How to write a finding:
+- "title": three to six words naming the issue, like a headline. No full stop.
+- "statement": two sentences at most. What the records say, then why it matters for
+  this appointment. No preamble, no restating the title.
+- "resolutionQuestion": the one question whose answer settles it.
+- "answerFrom": whose answer or action settles it. "customer" or "provider" when one
+  of them can settle it alone by confirming, deciding or doing something. "both"
+  only when they have to agree something new between them.
+
 Return ONLY JSON:
 {
   "findings": [
@@ -52,9 +61,11 @@ Return ONLY JSON:
       "category": "scope|access|materials|schedule|safety|payment|communication",
       "severity": "info|attention|blocking",
       "visibility": "shared|customer_only|provider_only",
+      "title": "...",
       "statement": "...",
       "evidence": [{"source":"booking|quote|request|provider|availability|message","recordId":"...","field":"..."}],
-      "resolutionQuestion": "..."
+      "resolutionQuestion": "...",
+      "answerFrom": "customer|provider|both"
     }
   ]
 }`;
@@ -82,7 +93,7 @@ export async function runRiskAgent(
     'reasoning',
     {
       systemPrompt: SYSTEM_PROMPT,
-      userMessage: renderSnapshotForPrompt(snapshot),
+      userMessage: `${renderOutputConventions(snapshot)}\n\n${renderSnapshotForPrompt(snapshot)}`,
       maxTokens: RISK_MAX_TOKENS,
       signal,
     },
