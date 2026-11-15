@@ -34,7 +34,7 @@
     "test-setup": "playwright test --grep \"health, headers\" --project=chromium"
   },
   "dependencies": {
-    "axios": "^1.18.1"
+    "axios": "^1.21.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

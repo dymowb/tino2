@@ -116,5 +116,9 @@
   "provider.catalog_failed": "Failed to load service catalog",
   "readiness.budget_exhausted_user": "You have used all of your AI readiness runs for now. Existing plans are still available; you can generate a new one once your daily limit resets.",
   "readiness.budget_exhausted_platform": "AI readiness runs are temporarily unavailable while the platform limit resets. Existing plans are still available.",
-  "readiness.rate_limited": "Too many AI readiness requests in a short time. Please wait a moment and try again."
+  "readiness.draft_stale": "This plan is out of date: the booking has changed since it was made. Run it again to draft a message.",
+  "readiness.draft_budget_user": "You have used all of your AI message drafts for today. You can still write the message yourself.",
+  "readiness.draft_budget_platform": "AI message drafts are temporarily unavailable while the platform limit resets. You can still write the message yourself.",
+  "readiness.rate_limited": "Too many AI readiness requests in a short time. Please wait a moment and try again.",
+  "readiness.draft_unavailable": "A draft could not be written just now. Please try again."
 }

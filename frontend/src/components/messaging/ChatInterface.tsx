@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
   Box,
   Typography,
@@ -12,7 +12,7 @@ import {
   Tooltip,
   useTheme,
   alpha,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Send as SendIcon,
   AttachFile as AttachFileIcon,
@@ -22,30 +22,40 @@ import {
   Reply as ReplyIcon,
   Close as CloseIcon,
   ArrowBack as ArrowBackIcon,
-} from '@mui/icons-material';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'framer-motion';
-import { format, isToday, isYesterday } from 'date-fns';
-import { toast } from 'react-hot-toast';
-import { useTranslation } from 'react-i18next';
-import apiService from '../../services/api';
-import socketService from '../../services/socketService';
-import AttachmentPreview from './AttachmentPreview';
-import { tokens } from '../../theme/theme';
+} from "@mui/icons-material";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { takeMessageDraft } from "../../utils/messageDraft";
+import { motion, AnimatePresence } from "framer-motion";
+import { format, isToday, isYesterday } from "date-fns";
+import { toast } from "react-hot-toast";
+import { useTranslation } from "react-i18next";
+import apiService from "../../services/api";
+import socketService from "../../services/socketService";
+import AttachmentPreview from "./AttachmentPreview";
+import { tokens } from "../../theme/theme";
 
 interface Message {
   id: string;
   conversationId: string;
   senderId: string;
   message: string;
-  messageType: 'text' | 'image' | 'file';
+  messageType: "text" | "image" | "file";
   attachments?: string[];
   replyToMessageId?: string;
   createdAt: string;
   isRead: boolean;
   isEdited?: boolean;
-  sender: { id: string; firstName: string; lastName: string; profileImage?: string };
-  replyToMessage?: { id: string; message: string; sender: { firstName: string; lastName: string } };
+  sender: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profileImage?: string;
+  };
+  replyToMessage?: {
+    id: string;
+    message: string;
+    sender: { firstName: string; lastName: string };
+  };
 }
 
 interface Participant {
@@ -53,15 +63,19 @@ interface Participant {
   firstName: string;
   lastName: string;
   profileImage?: string;
-  userType: 'customer' | 'provider';
+  userType: "customer" | "provider";
 }
 
 interface Conversation {
   id: string;
   title?: string;
-  type: 'direct' | 'group' | 'support';
+  type: "direct" | "group" | "support";
   participants: Participant[];
-  metadata?: { bookingId?: string; quoteRequestId?: string; serviceType?: string };
+  metadata?: {
+    bookingId?: string;
+    quoteRequestId?: string;
+    serviceType?: string;
+  };
 }
 
 interface Props {
@@ -70,61 +84,90 @@ interface Props {
   onBack?: () => void;
 }
 
-
-const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate, onBack }) => {
-  const { t } = useTranslation('messages');
+const ChatInterface: React.FC<Props> = ({
+  conversationId,
+  onConversationUpdate,
+  onBack,
+}) => {
+  const { t } = useTranslation("messages");
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
-  const [messageText, setMessageText] = useState('');
+  const isDark = theme.palette.mode === "dark";
+  const [messageText, setMessageText] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
-  const [pendingAttachments, setPendingAttachments] = useState<Array<{ url: string; originalName: string; mimeType: string }>>([]);
+  const [pendingAttachments, setPendingAttachments] = useState<
+    Array<{ url: string; originalName: string; mimeType: string }>
+  >([]);
   const [isUploading, setIsUploading] = useState(false);
+  // Holds the draft that was taken, not merely the fact that it was.
+  //
+  // `takeMessageDraft` empties the stash, so a one-shot claim has exactly one
+  // chance to apply what it took. That is not enough: `index.tsx` wraps the app
+  // in `<React.StrictMode>`, which runs mount effects setup → cleanup → setup, so
+  // the second setup re-ran the composer reset and then skipped the claim —
+  // clearing a draft that no longer existed anywhere. Keeping the body here makes
+  // re-applying it idempotent. The declaration order below still matters — the
+  // reset must come first — and `ChatInterface.draft.test.tsx` is what holds it.
+  //
+  // Keyed by conversation as well, so opening another thread first cannot spend
+  // the claim without taking anything.
+  const claimedDraftRef = useRef<{
+    conversationId: string;
+    body: string;
+  } | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const lastReadMarkerRef = useRef<string>('');
+  const lastReadMarkerRef = useRef<string>("");
   const queryClient = useQueryClient();
   const currentUser = apiService.getStoredUser();
 
   const { data: conversationData } = useQuery({
-    queryKey: ['conversation', conversationId],
+    queryKey: ["conversation", conversationId],
     queryFn: () => apiService.getConversation(conversationId),
     enabled: !!conversationId,
   });
 
   const { data: messagesData, isLoading } = useQuery({
-    queryKey: ['messages', conversationId],
-    queryFn: () => apiService.getMessages(conversationId, { limit: 100, sortOrder: 'asc' }),
+    queryKey: ["messages", conversationId],
+    queryFn: () =>
+      apiService.getMessages(conversationId, { limit: 100, sortOrder: "asc" }),
     enabled: !!conversationId,
     // Always pull fresh on open. The global staleTime (5min) otherwise serves a
     // cached list, so a message that arrived while this chat was closed (its
     // socket event never reached us) wouldn't show until a manual refresh.
     staleTime: 0,
-    refetchOnMount: 'always',
+    refetchOnMount: "always",
   });
 
   const sendMessageMutation = useMutation({
-    mutationFn: (data: Parameters<typeof apiService.sendMessage>[0]) => apiService.sendMessage(data),
+    mutationFn: (data: Parameters<typeof apiService.sendMessage>[0]) =>
+      apiService.sendMessage(data),
     onSuccess: () => {
-      setMessageText('');
+      setMessageText("");
       setReplyToMessage(null);
       setPendingAttachments([]);
-      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+      queryClient.invalidateQueries({ queryKey: ["messages", conversationId] });
       onConversationUpdate?.();
     },
     onError: (error: any) => {
       // Booking finalized while the chat was open — refresh so the composer
       // switches to the closed notice, and explain why.
-      if (error?.response?.status === 403 && error?.response?.data?.message === 'MESSAGING_CLOSED') {
-        toast.error(t('conversation.messaging_closed_toast'));
-        queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
+      if (
+        error?.response?.status === 403 &&
+        error?.response?.data?.message === "MESSAGING_CLOSED"
+      ) {
+        toast.error(t("conversation.messaging_closed_toast"));
+        queryClient.invalidateQueries({
+          queryKey: ["conversation", conversationId],
+        });
         return;
       }
-      toast.error(t('errors.send_failed'));
-      console.error('Send message error:', error);
+      toast.error(t("errors.send_failed"));
+      console.error("Send message error:", error);
     },
   });
 
@@ -133,10 +176,10 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate, 
       apiService.updateMessage(messageId, updates),
     onSuccess: () => {
       setEditingMessage(null);
-      setMessageText('');
-      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+      setMessageText("");
+      queryClient.invalidateQueries({ queryKey: ["messages", conversationId] });
     },
-    onError: () => toast.error(t('errors.update_failed')),
+    onError: () => toast.error(t("errors.update_failed")),
   });
 
   const deleteMessageMutation = useMutation({
@@ -144,23 +187,70 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate, 
     onSuccess: () => {
       setMenuAnchorEl(null);
       setSelectedMessage(null);
-      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+      queryClient.invalidateQueries({ queryKey: ["messages", conversationId] });
       onConversationUpdate?.();
     },
-    onError: () => toast.error(t('errors.delete_failed')),
+    onError: () => toast.error(t("errors.delete_failed")),
   });
 
   useEffect(() => {
     if (messagesData?.data) setMessages(messagesData.data);
   }, [messagesData]);
 
-  // Reset the read-marker + composer when switching conversations
+  // Reset the read-marker + composer when switching conversations.
+  //
+  // Declared BEFORE the draft claim below, and the order is load-bearing. When
+  // the conversation query is warm-cached its data arrives on the first render,
+  // so both effects run in the same flush and React applies them in declaration
+  // order. With the claim first, this clear landed on top of a draft that
+  // `takeMessageDraft` had already removed from the stash: the composer came up
+  // empty and a paid model call was lost — on every use after the first, which
+  // is why a single cold-cache walkthrough did not show it.
   useEffect(() => {
-    lastReadMarkerRef.current = '';
+    lastReadMarkerRef.current = "";
     setReplyToMessage(null);
     setEditingMessage(null);
-    setMessageText('');
+    setMessageText("");
   }, [conversationId]);
+
+  // A draft written in the readiness drawer is claimed by the thread belonging
+  // to the same booking — never by whichever happens to be open. Taking it
+  // clears it, so returning to Messages later does not re-fill something already
+  // sent or abandoned.
+  useEffect(() => {
+    // Invalidated FIRST, before any early return. Not every conversation has a
+    // booking — quote-scoped and ad-hoc threads do not — and `MessagingPage`
+    // keeps one mounted `ChatInterface` and only swaps the prop. Returning early
+    // on one of those used to leave the previous thread's claim standing, so
+    // coming back re-applied a draft the user had already sent.
+    if (
+      claimedDraftRef.current &&
+      claimedDraftRef.current.conversationId !== conversationId
+    ) {
+      claimedDraftRef.current = null;
+    }
+
+    const bookingId = conversationData?.metadata?.bookingId;
+    // Not loaded yet — decide when it is, rather than spending the claim.
+    if (!bookingId) return;
+
+    if (claimedDraftRef.current === null) {
+      claimedDraftRef.current = {
+        conversationId,
+        body: takeMessageDraft(bookingId) ?? "",
+      };
+    }
+
+    const { body } = claimedDraftRef.current;
+    // Never overwrite something the user has already started typing.
+    if (body)
+      setMessageText((current) => (current.trim() === "" ? body : current));
+    // Depends on the booking id, not the whole conversation payload. The
+    // payload changes on every refetch — `getConversationById` embeds the
+    // message list, so sending the draft itself changes it — and re-running
+    // this effect then wrote the already-sent draft back into an empty
+    // composer, one keystroke from sending it to the other party twice.
+  }, [conversationId, conversationData?.metadata?.bookingId]);
 
   // Live append via socket
   useEffect(() => {
@@ -168,140 +258,211 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate, 
     socketService.joinConversation(conversationId);
     const unsubscribe = socketService.onMessage((messageData) => {
       if (messageData.conversationId === conversationId) {
-        setMessages(prev => {
-          const exists = prev.find(m => m.id === messageData.id);
-          if (exists) return prev.map(m => (m.id === messageData.id ? { ...m, ...messageData } : m));
+        setMessages((prev) => {
+          const exists = prev.find((m) => m.id === messageData.id);
+          if (exists)
+            return prev.map((m) =>
+              m.id === messageData.id ? { ...m, ...messageData } : m,
+            );
           return [...prev, messageData as Message];
         });
       }
     });
-    return () => { socketService.leaveConversation(conversationId); unsubscribe(); };
+    return () => {
+      socketService.leaveConversation(conversationId);
+      unsubscribe();
+    };
   }, [conversationId]);
 
-  useEffect(() => { scrollToBottom(); }, [messages]);
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   // Mark inbound messages read — only when the latest message id changes (not every render),
   // and only if there is actually something unread addressed to us. Then refresh the
   // conversation list so its unread badge clears.
   useEffect(() => {
     if (!conversationId || messages.length === 0) return;
-    const latestId = messages[messages.length - 1]?.id ?? '';
+    const latestId = messages[messages.length - 1]?.id ?? "";
     if (latestId === lastReadMarkerRef.current) return;
-    const hasUnreadInbound = messages.some(m => m.senderId !== currentUser?.id && !m.isRead);
+    const hasUnreadInbound = messages.some(
+      (m) => m.senderId !== currentUser?.id && !m.isRead,
+    );
     lastReadMarkerRef.current = latestId;
     if (hasUnreadInbound) {
-      apiService.markMessagesAsRead(conversationId)
-        .then(() => queryClient.invalidateQueries({ queryKey: ['conversations'] }))
+      apiService
+        .markMessagesAsRead(conversationId)
+        .then(() =>
+          queryClient.invalidateQueries({ queryKey: ["conversations"] }),
+        )
         .catch(console.error);
     }
   }, [messages, conversationId, currentUser?.id, queryClient]);
 
-  const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBottom = () =>
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
 
   const handleSendMessage = () => {
     if (!messageText.trim() && pendingAttachments.length === 0) return;
-    const attachmentUrls = pendingAttachments.map(a => a.url);
+    const attachmentUrls = pendingAttachments.map((a) => a.url);
     const hasAttachments = attachmentUrls.length > 0;
     if (editingMessage) {
-      updateMessageMutation.mutate({ messageId: editingMessage.id, updates: { message: messageText.trim() } });
+      updateMessageMutation.mutate({
+        messageId: editingMessage.id,
+        updates: { message: messageText.trim() },
+      });
       return;
     }
     sendMessageMutation.mutate({
       conversationId,
-      message: messageText.trim() || '',
-      messageType: hasAttachments ? (pendingAttachments[0].mimeType.startsWith('image/') ? 'image' : 'file') : 'text',
+      message: messageText.trim() || "",
+      messageType: hasAttachments
+        ? pendingAttachments[0].mimeType.startsWith("image/")
+          ? "image"
+          : "file"
+        : "text",
       attachments: hasAttachments ? attachmentUrls : undefined,
       replyToMessageId: replyToMessage?.id,
     });
   };
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
     setIsUploading(true);
     try {
-      const uploads = await Promise.all(Array.from(files).map(file => apiService.uploadMessageAttachment(file)));
-      setPendingAttachments(prev => [...prev, ...uploads]);
+      const uploads = await Promise.all(
+        Array.from(files).map((file) =>
+          apiService.uploadMessageAttachment(file),
+        ),
+      );
+      setPendingAttachments((prev) => [...prev, ...uploads]);
     } catch {
-      toast.error(t('errors.upload_failed'));
+      toast.error(t("errors.upload_failed"));
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
-  const removePendingAttachment = (index: number) => setPendingAttachments(prev => prev.filter((_, i) => i !== index));
+  const removePendingAttachment = (index: number) =>
+    setPendingAttachments((prev) => prev.filter((_, i) => i !== index));
 
   const handleKeyPress = (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
+    if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      if (messageText.trim() || pendingAttachments.length > 0) handleSendMessage();
+      if (messageText.trim() || pendingAttachments.length > 0)
+        handleSendMessage();
     }
   };
 
-  const formatBubbleTime = (timestamp: string) => format(new Date(timestamp), 'HH:mm');
+  const formatBubbleTime = (timestamp: string) =>
+    format(new Date(timestamp), "HH:mm");
 
   const dateSeparatorLabel = (timestamp: string) => {
     const date = new Date(timestamp);
-    if (isToday(date)) return t('today');
-    if (isYesterday(date)) return t('yesterday');
-    return format(date, 'dd/MM/yyyy');
+    if (isToday(date)) return t("today");
+    if (isYesterday(date)) return t("yesterday");
+    return format(date, "dd/MM/yyyy");
   };
 
   const conversationTitle = (c: Conversation) => {
     // Prefer the other person's name for direct chats (consistent with the list); the service
     // chip carries the service context. Stored titles are only for group/support chats.
-    const others = c.participants.filter(p => p.id !== currentUser?.id);
-    if (c.type === 'direct' && others.length >= 1) return `${others[0].firstName} ${others[0].lastName}`.trim();
-    return c.title || t('conversation.conversation_fallback');
+    const others = c.participants.filter((p) => p.id !== currentUser?.id);
+    if (c.type === "direct" && others.length >= 1)
+      return `${others[0].firstName} ${others[0].lastName}`.trim();
+    return c.title || t("conversation.conversation_fallback");
   };
 
-  const headerOther = conversationData?.participants?.find((p: Participant) => p.id !== currentUser?.id);
+  const headerOther = conversationData?.participants?.find(
+    (p: Participant) => p.id !== currentUser?.id,
+  );
   const canEditOrDelete = (m: Message) => m.senderId === currentUser?.id;
 
   const borderCol = isDark ? tokens.color.nightBorder : tokens.color.paperDark;
 
   // Messaging closes once the linked booking is finalized (completed/cancelled).
   const messagingClosed = conversationData?.messagingClosed === true;
-  const closedNotice = conversationData?.bookingStatus === 'completed'
-    ? t('conversation.messaging_closed_completed')
-    : t('conversation.messaging_closed_cancelled');
+  const closedNotice =
+    conversationData?.bookingStatus === "completed"
+      ? t("conversation.messaging_closed_completed")
+      : t("conversation.messaging_closed_cancelled");
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: isDark ? tokens.color.night : tokens.color.cream }}>
+    <Box
+      sx={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        bgcolor: isDark ? tokens.color.night : tokens.color.cream,
+      }}
+    >
       {/* Header */}
       {conversationData && (
-        <Box sx={{
-          px: 2.5, py: 1.75,
-          borderBottom: `1px solid ${borderCol}`,
-          bgcolor: isDark ? tokens.color.nightCard : tokens.color.paper,
-          display: 'flex', alignItems: 'center', gap: 1.5,
-        }}>
+        <Box
+          sx={{
+            px: 2.5,
+            py: 1.75,
+            borderBottom: `1px solid ${borderCol}`,
+            bgcolor: isDark ? tokens.color.nightCard : tokens.color.paper,
+            display: "flex",
+            alignItems: "center",
+            gap: 1.5,
+          }}
+        >
           {onBack && (
-            <IconButton onClick={onBack} size="small" sx={{ mr: -0.5 }}><ArrowBackIcon /></IconButton>
+            <IconButton onClick={onBack} size="small" sx={{ mr: -0.5 }}>
+              <ArrowBackIcon />
+            </IconButton>
           )}
           {headerOther?.profileImage ? (
-            <Avatar src={headerOther.profileImage} sx={{ width: 40, height: 40 }} />
+            <Avatar
+              src={headerOther.profileImage}
+              sx={{ width: 40, height: 40 }}
+            />
           ) : (
-            <Avatar sx={{
-              width: 40, height: 40,
-              bgcolor: alpha(tokens.color.earth, isDark ? 0.25 : 0.14),
-              color: isDark ? tokens.color.cream : tokens.color.earth,
-              fontFamily: tokens.font.display, fontWeight: 600,
-            }}>
-              {headerOther ? `${headerOther.firstName?.[0] ?? ''}${headerOther.lastName?.[0] ?? ''}`.toUpperCase() : '?'}
+            <Avatar
+              sx={{
+                width: 40,
+                height: 40,
+                bgcolor: alpha(tokens.color.earth, isDark ? 0.25 : 0.14),
+                color: isDark ? tokens.color.cream : tokens.color.earth,
+                fontFamily: tokens.font.display,
+                fontWeight: 600,
+              }}
+            >
+              {headerOther
+                ? `${headerOther.firstName?.[0] ?? ""}${headerOther.lastName?.[0] ?? ""}`.toUpperCase()
+                : "?"}
             </Avatar>
           )}
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography sx={{
-              fontFamily: tokens.font.display, fontWeight: 500, fontSize: '1.05rem',
-              color: 'text.primary', lineHeight: 1.2,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>
+            <Typography
+              sx={{
+                fontFamily: tokens.font.display,
+                fontWeight: 500,
+                fontSize: "1.05rem",
+                color: "text.primary",
+                lineHeight: 1.2,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
               {conversationTitle(conversationData)}
             </Typography>
             {conversationData.metadata?.serviceType && (
-              <Typography sx={{ fontFamily: tokens.font.body, fontSize: '0.72rem', color: tokens.color.terra, fontWeight: 600 }}>
+              <Typography
+                sx={{
+                  fontFamily: tokens.font.body,
+                  fontSize: "0.72rem",
+                  color: tokens.color.terra,
+                  fontWeight: 600,
+                }}
+              >
                 {conversationData.metadata.serviceType}
               </Typography>
             )}
@@ -310,32 +471,66 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate, 
       )}
 
       {/* Messages */}
-      <Box sx={{ flex: 1, overflow: 'auto', px: { xs: 1.5, md: 3 }, py: 2 }}>
+      <Box sx={{ flex: 1, overflow: "auto", px: { xs: 1.5, md: 3 }, py: 2 }}>
         {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress sx={{ color: tokens.color.terra }} /></Box>
+          <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
+            <CircularProgress sx={{ color: tokens.color.terra }} />
+          </Box>
         ) : messages.length === 0 ? (
-          <Box sx={{ textAlign: 'center', p: 6 }}>
-            <Typography sx={{ fontFamily: tokens.font.display, fontSize: '1.1rem', color: 'text.secondary', mb: 0.5 }}>
-              {t('conversation.no_messages')}
+          <Box sx={{ textAlign: "center", p: 6 }}>
+            <Typography
+              sx={{
+                fontFamily: tokens.font.display,
+                fontSize: "1.1rem",
+                color: "text.secondary",
+                mb: 0.5,
+              }}
+            >
+              {t("conversation.no_messages")}
             </Typography>
-            <Typography variant="body2" color="text.disabled">{t('conversation.start_conversation_text')}</Typography>
+            <Typography variant="body2" color="text.disabled">
+              {t("conversation.start_conversation_text")}
+            </Typography>
           </Box>
         ) : (
           messages.map((message, idx) => {
             const isOwn = message.senderId === currentUser?.id;
             const prev = messages[idx - 1];
-            const showDate = !prev || new Date(prev.createdAt).toDateString() !== new Date(message.createdAt).toDateString();
-            const accent = isOwn ? tokens.color.terra : (isDark ? tokens.color.nightCard : tokens.color.paper);
+            const showDate =
+              !prev ||
+              new Date(prev.createdAt).toDateString() !==
+                new Date(message.createdAt).toDateString();
+            const accent = isOwn
+              ? tokens.color.terra
+              : isDark
+                ? tokens.color.nightCard
+                : tokens.color.paper;
 
             return (
               <React.Fragment key={message.id}>
                 {showDate && (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
-                    <Box sx={{
-                      px: 1.5, py: 0.4, borderRadius: tokens.radius.full,
-                      bgcolor: isDark ? alpha('#fff', 0.06) : alpha(tokens.color.stone, 0.1),
-                    }}>
-                      <Typography sx={{ fontFamily: tokens.font.mono, fontSize: '0.68rem', color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <Box
+                    sx={{ display: "flex", justifyContent: "center", my: 2 }}
+                  >
+                    <Box
+                      sx={{
+                        px: 1.5,
+                        py: 0.4,
+                        borderRadius: tokens.radius.full,
+                        bgcolor: isDark
+                          ? alpha("#fff", 0.06)
+                          : alpha(tokens.color.stone, 0.1),
+                      }}
+                    >
+                      <Typography
+                        sx={{
+                          fontFamily: tokens.font.mono,
+                          fontSize: "0.68rem",
+                          color: "text.secondary",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.04em",
+                        }}
+                      >
                         {dateSeparatorLabel(message.createdAt)}
                       </Typography>
                     </Box>
@@ -346,71 +541,161 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate, 
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                  style={{ display: 'flex', justifyContent: isOwn ? 'flex-end' : 'flex-start', marginBottom: 8 }}
+                  style={{
+                    display: "flex",
+                    justifyContent: isOwn ? "flex-end" : "flex-start",
+                    marginBottom: 8,
+                  }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1, maxWidth: { xs: '85%', md: '70%' } }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "flex-end",
+                      gap: 1,
+                      maxWidth: { xs: "85%", md: "70%" },
+                    }}
+                  >
                     {!isOwn && (
-                      <Avatar src={message.sender.profileImage} sx={{
-                        width: 28, height: 28, fontSize: '0.7rem',
-                        bgcolor: alpha(tokens.color.earth, isDark ? 0.25 : 0.14),
-                        color: isDark ? tokens.color.cream : tokens.color.earth,
-                        fontFamily: tokens.font.body, fontWeight: 600,
-                      }}>
-                        {message.sender.firstName?.[0]}{message.sender.lastName?.[0]}
+                      <Avatar
+                        src={message.sender.profileImage}
+                        sx={{
+                          width: 28,
+                          height: 28,
+                          fontSize: "0.7rem",
+                          bgcolor: alpha(
+                            tokens.color.earth,
+                            isDark ? 0.25 : 0.14,
+                          ),
+                          color: isDark
+                            ? tokens.color.cream
+                            : tokens.color.earth,
+                          fontFamily: tokens.font.body,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {message.sender.firstName?.[0]}
+                        {message.sender.lastName?.[0]}
                       </Avatar>
                     )}
 
-                    <Box sx={{
-                      position: 'relative',
-                      p: 1.5,
-                      bgcolor: accent,
-                      color: isOwn ? '#fff' : 'text.primary',
-                      border: isOwn ? 'none' : `1px solid ${borderCol}`,
-                      borderRadius: tokens.radius.md,
-                      borderBottomRightRadius: isOwn ? tokens.radius.sm : tokens.radius.md,
-                      borderBottomLeftRadius: isOwn ? tokens.radius.md : tokens.radius.sm,
-                      '&:hover .msg-menu': { opacity: 1 },
-                    }}>
+                    <Box
+                      sx={{
+                        position: "relative",
+                        p: 1.5,
+                        bgcolor: accent,
+                        color: isOwn ? "#fff" : "text.primary",
+                        border: isOwn ? "none" : `1px solid ${borderCol}`,
+                        borderRadius: tokens.radius.md,
+                        borderBottomRightRadius: isOwn
+                          ? tokens.radius.sm
+                          : tokens.radius.md,
+                        borderBottomLeftRadius: isOwn
+                          ? tokens.radius.md
+                          : tokens.radius.sm,
+                        "&:hover .msg-menu": { opacity: 1 },
+                      }}
+                    >
                       {message.replyToMessage && (
-                        <Box sx={{
-                          p: 1, mb: 1, borderRadius: tokens.radius.sm,
-                          bgcolor: isOwn ? alpha('#000', 0.15) : (isDark ? alpha('#fff', 0.05) : alpha(tokens.color.stone, 0.08)),
-                          borderLeft: `3px solid ${isOwn ? alpha('#fff', 0.5) : tokens.color.terra}`,
-                        }}>
-                          <Typography sx={{ fontSize: '0.68rem', fontWeight: 600, opacity: 0.85 }}>
-                            {t('conversation.replying_to', { name: message.replyToMessage.sender.firstName })}
+                        <Box
+                          sx={{
+                            p: 1,
+                            mb: 1,
+                            borderRadius: tokens.radius.sm,
+                            bgcolor: isOwn
+                              ? alpha("#000", 0.15)
+                              : isDark
+                                ? alpha("#fff", 0.05)
+                                : alpha(tokens.color.stone, 0.08),
+                            borderLeft: `3px solid ${isOwn ? alpha("#fff", 0.5) : tokens.color.terra}`,
+                          }}
+                        >
+                          <Typography
+                            sx={{
+                              fontSize: "0.68rem",
+                              fontWeight: 600,
+                              opacity: 0.85,
+                            }}
+                          >
+                            {t("conversation.replying_to", {
+                              name: message.replyToMessage.sender.firstName,
+                            })}
                           </Typography>
-                          <Typography sx={{ fontSize: '0.78rem', opacity: 0.8 }}>
-                            {message.replyToMessage.message.length > 60 ? `${message.replyToMessage.message.slice(0, 60)}…` : message.replyToMessage.message}
+                          <Typography
+                            sx={{ fontSize: "0.78rem", opacity: 0.8 }}
+                          >
+                            {message.replyToMessage.message.length > 60
+                              ? `${message.replyToMessage.message.slice(0, 60)}…`
+                              : message.replyToMessage.message}
                           </Typography>
                         </Box>
                       )}
 
                       {message.message?.trim() && (
-                        <Typography sx={{ fontFamily: tokens.font.body, fontSize: '0.9rem', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                        <Typography
+                          sx={{
+                            fontFamily: tokens.font.body,
+                            fontSize: "0.9rem",
+                            lineHeight: 1.5,
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-word",
+                          }}
+                        >
                           {message.message}
                         </Typography>
                       )}
 
-                      {message.attachments && message.attachments.length > 0 && (
-                        <Box sx={{ mt: message.message?.trim() ? 1 : 0, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                          {/* Name and type are resolved from the response, not the
+                      {message.attachments &&
+                        message.attachments.length > 0 && (
+                          <Box
+                            sx={{
+                              mt: message.message?.trim() ? 1 : 0,
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 0.5,
+                            }}
+                          >
+                            {/* Name and type are resolved from the response, not the
                               URL — these paths are opaque ids with no extension. */}
-                          {message.attachments.map((url, i) => (
-                            <AttachmentPreview key={i} url={url} />
-                          ))}
-                        </Box>
-                      )}
+                            {message.attachments.map((url, i) => (
+                              <AttachmentPreview key={i} url={url} />
+                            ))}
+                          </Box>
+                        )}
 
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5, mt: 0.5 }}>
-                        <Typography sx={{ fontFamily: tokens.font.mono, fontSize: '0.62rem', opacity: 0.7 }}>
-                          {formatBubbleTime(message.createdAt)}{message.isEdited ? ` · ${t('conversation.edited')}` : ''}
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "flex-end",
+                          gap: 0.5,
+                          mt: 0.5,
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            fontFamily: tokens.font.mono,
+                            fontSize: "0.62rem",
+                            opacity: 0.7,
+                          }}
+                        >
+                          {formatBubbleTime(message.createdAt)}
+                          {message.isEdited
+                            ? ` · ${t("conversation.edited")}`
+                            : ""}
                         </Typography>
                         <IconButton
                           className="msg-menu"
                           size="small"
-                          onClick={(e) => { setMenuAnchorEl(e.currentTarget); setSelectedMessage(message); }}
-                          sx={{ p: 0.25, opacity: { xs: 0.6, md: 0 }, transition: 'opacity 0.15s', color: 'inherit' }}
+                          onClick={(e) => {
+                            setMenuAnchorEl(e.currentTarget);
+                            setSelectedMessage(message);
+                          }}
+                          sx={{
+                            p: 0.25,
+                            opacity: { xs: 0.6, md: 0 },
+                            transition: "opacity 0.15s",
+                            color: "inherit",
+                          }}
                         >
                           <MoreVertIcon sx={{ fontSize: 15 }} />
                         </IconButton>
@@ -428,110 +713,252 @@ const ChatInterface: React.FC<Props> = ({ conversationId, onConversationUpdate, 
       {/* Reply banner */}
       <AnimatePresence>
         {replyToMessage && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
-            <Box sx={{
-              px: 2.5, py: 1, borderTop: `1px solid ${borderCol}`,
-              bgcolor: isDark ? tokens.color.nightCard : tokens.color.paper,
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            }}>
-              <Box sx={{ borderLeft: `3px solid ${tokens.color.terra}`, pl: 1.5 }}>
-                <Typography sx={{ fontSize: '0.7rem', fontWeight: 600, color: tokens.color.terra }}>
-                  {t('conversation.replying_to', { name: replyToMessage.sender.firstName })}
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+          >
+            <Box
+              sx={{
+                px: 2.5,
+                py: 1,
+                borderTop: `1px solid ${borderCol}`,
+                bgcolor: isDark ? tokens.color.nightCard : tokens.color.paper,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Box
+                sx={{ borderLeft: `3px solid ${tokens.color.terra}`, pl: 1.5 }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: "0.7rem",
+                    fontWeight: 600,
+                    color: tokens.color.terra,
+                  }}
+                >
+                  {t("conversation.replying_to", {
+                    name: replyToMessage.sender.firstName,
+                  })}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{
+                    maxWidth: 400,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   {replyToMessage.message}
                 </Typography>
               </Box>
-              <IconButton size="small" onClick={() => setReplyToMessage(null)}><CloseIcon fontSize="small" /></IconButton>
+              <IconButton size="small" onClick={() => setReplyToMessage(null)}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
             </Box>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Composer */}
-      <Box sx={{ px: 2, py: 1.5, borderTop: `1px solid ${borderCol}`, bgcolor: isDark ? tokens.color.nightCard : tokens.color.paper }}>
+      <Box
+        sx={{
+          px: 2,
+          py: 1.5,
+          borderTop: `1px solid ${borderCol}`,
+          bgcolor: isDark ? tokens.color.nightCard : tokens.color.paper,
+        }}
+      >
         {messagingClosed ? (
-          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 1.5 }}>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ textAlign: "center", py: 1.5 }}
+          >
             {closedNotice}
           </Typography>
         ) : (
-        <>
-        {pendingAttachments.length > 0 && (
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
-            {pendingAttachments.map((att, idx) => {
-              return (
-                <Box key={idx} sx={{ position: 'relative' }}>
-                  <AttachmentPreview
-                    url={att.url}
-                    originalName={att.originalName}
-                    mimeType={att.mimeType}
-                    thumbnail
-                  />
-                  <IconButton size="small" onClick={() => removePendingAttachment(idx)}
-                    sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'background.paper', p: 0.25, border: `1px solid ${borderCol}`, '&:hover': { bgcolor: 'background.paper' } }}>
-                    <CloseIcon sx={{ fontSize: 13 }} />
-                  </IconButton>
-                </Box>
-              );
-            })}
-          </Box>
-        )}
+          <>
+            {pendingAttachments.length > 0 && (
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 1 }}>
+                {pendingAttachments.map((att, idx) => {
+                  return (
+                    <Box key={idx} sx={{ position: "relative" }}>
+                      <AttachmentPreview
+                        url={att.url}
+                        originalName={att.originalName}
+                        mimeType={att.mimeType}
+                        thumbnail
+                      />
+                      <IconButton
+                        size="small"
+                        onClick={() => removePendingAttachment(idx)}
+                        sx={{
+                          position: "absolute",
+                          top: -8,
+                          right: -8,
+                          bgcolor: "background.paper",
+                          p: 0.25,
+                          border: `1px solid ${borderCol}`,
+                          "&:hover": { bgcolor: "background.paper" },
+                        }}
+                      >
+                        <CloseIcon sx={{ fontSize: 13 }} />
+                      </IconButton>
+                    </Box>
+                  );
+                })}
+              </Box>
+            )}
 
-        <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-          <input type="file" ref={fileInputRef} style={{ display: 'none' }} multiple accept="image/*,.pdf,.doc,.docx,.txt,.zip" onChange={handleFileSelect} />
-          <Tooltip title={t('conversation.attach_file')}>
-            <IconButton onClick={() => fileInputRef.current?.click()} disabled={isUploading} sx={{ color: tokens.color.stone }}>
-              {isUploading ? <CircularProgress size={20} /> : <AttachFileIcon />}
-            </IconButton>
-          </Tooltip>
+            <Box sx={{ display: "flex", alignItems: "flex-end", gap: 1 }}>
+              <input
+                type="file"
+                ref={fileInputRef}
+                style={{ display: "none" }}
+                multiple
+                accept="image/*,.pdf,.doc,.docx,.txt,.zip"
+                onChange={handleFileSelect}
+              />
+              <Tooltip title={t("conversation.attach_file")}>
+                <IconButton
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  sx={{ color: tokens.color.stone }}
+                >
+                  {isUploading ? (
+                    <CircularProgress size={20} />
+                  ) : (
+                    <AttachFileIcon />
+                  )}
+                </IconButton>
+              </Tooltip>
 
-          <TextField
-            fullWidth multiline maxRows={4} size="small"
-            placeholder={editingMessage ? t('conversation.edit_message_placeholder') : t('conversation.type_message')}
-            value={messageText}
-            onChange={(e) => setMessageText(e.target.value)}
-            onKeyPress={handleKeyPress}
-            InputProps={{ sx: { borderRadius: tokens.radius.lg, bgcolor: isDark ? alpha('#fff', 0.04) : tokens.color.cream, fontFamily: tokens.font.body, fontSize: '0.9rem' } }}
-          />
+              <TextField
+                fullWidth
+                multiline
+                maxRows={4}
+                size="small"
+                placeholder={
+                  editingMessage
+                    ? t("conversation.edit_message_placeholder")
+                    : t("conversation.type_message")
+                }
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                onKeyPress={handleKeyPress}
+                InputProps={{
+                  sx: {
+                    borderRadius: tokens.radius.lg,
+                    bgcolor: isDark ? alpha("#fff", 0.04) : tokens.color.cream,
+                    fontFamily: tokens.font.body,
+                    fontSize: "0.9rem",
+                  },
+                }}
+              />
 
-          <IconButton
-            onClick={handleSendMessage}
-            disabled={(!messageText.trim() && pendingAttachments.length === 0) || sendMessageMutation.isPending || updateMessageMutation.isPending}
-            sx={{
-              bgcolor: tokens.color.terra, color: '#fff', width: 40, height: 40,
-              '&:hover': { bgcolor: tokens.color.terraDark },
-              '&.Mui-disabled': { bgcolor: alpha(tokens.color.terra, 0.4), color: '#fff' },
-            }}
-          >
-            {sendMessageMutation.isPending || updateMessageMutation.isPending ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : <SendIcon fontSize="small" />}
-          </IconButton>
-        </Box>
+              <IconButton
+                onClick={handleSendMessage}
+                disabled={
+                  (!messageText.trim() && pendingAttachments.length === 0) ||
+                  sendMessageMutation.isPending ||
+                  updateMessageMutation.isPending
+                }
+                sx={{
+                  bgcolor: tokens.color.terra,
+                  color: "#fff",
+                  width: 40,
+                  height: 40,
+                  "&:hover": { bgcolor: tokens.color.terraDark },
+                  "&.Mui-disabled": {
+                    bgcolor: alpha(tokens.color.terra, 0.4),
+                    color: "#fff",
+                  },
+                }}
+              >
+                {sendMessageMutation.isPending ||
+                updateMessageMutation.isPending ? (
+                  <CircularProgress size={20} sx={{ color: "#fff" }} />
+                ) : (
+                  <SendIcon fontSize="small" />
+                )}
+              </IconButton>
+            </Box>
 
-        {editingMessage && (
-          <Box sx={{ mt: 0.75, display: 'flex', gap: 1, alignItems: 'center', pl: 6 }}>
-            <Typography variant="caption" color="text.secondary">{t('conversation.editing')}</Typography>
-            <Typography variant="caption" sx={{ cursor: 'pointer', color: tokens.color.terra }} onClick={() => { setEditingMessage(null); setMessageText(''); }}>
-              {t('conversation.cancel_edit')}
-            </Typography>
-          </Box>
-        )}
-        </>
+            {editingMessage && (
+              <Box
+                sx={{
+                  mt: 0.75,
+                  display: "flex",
+                  gap: 1,
+                  alignItems: "center",
+                  pl: 6,
+                }}
+              >
+                <Typography variant="caption" color="text.secondary">
+                  {t("conversation.editing")}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{ cursor: "pointer", color: tokens.color.terra }}
+                  onClick={() => {
+                    setEditingMessage(null);
+                    setMessageText("");
+                  }}
+                >
+                  {t("conversation.cancel_edit")}
+                </Typography>
+              </Box>
+            )}
+          </>
         )}
       </Box>
 
       {/* Message menu */}
-      <Menu anchorEl={menuAnchorEl} open={Boolean(menuAnchorEl)} onClose={() => setMenuAnchorEl(null)}>
-        <MenuItem onClick={() => { if (selectedMessage) { setReplyToMessage(selectedMessage); setMenuAnchorEl(null); } }}>
-          <ReplyIcon sx={{ mr: 1 }} fontSize="small" /> {t('conversation.reply')}
+      <Menu
+        anchorEl={menuAnchorEl}
+        open={Boolean(menuAnchorEl)}
+        onClose={() => setMenuAnchorEl(null)}
+      >
+        <MenuItem
+          onClick={() => {
+            if (selectedMessage) {
+              setReplyToMessage(selectedMessage);
+              setMenuAnchorEl(null);
+            }
+          }}
+        >
+          <ReplyIcon sx={{ mr: 1 }} fontSize="small" />{" "}
+          {t("conversation.reply")}
         </MenuItem>
         {selectedMessage && canEditOrDelete(selectedMessage) && (
           <>
-            <MenuItem onClick={() => { if (selectedMessage) { setEditingMessage(selectedMessage); setMessageText(selectedMessage.message); setMenuAnchorEl(null); } }}>
-              <EditIcon sx={{ mr: 1 }} fontSize="small" /> {t('conversation.edit')}
+            <MenuItem
+              onClick={() => {
+                if (selectedMessage) {
+                  setEditingMessage(selectedMessage);
+                  setMessageText(selectedMessage.message);
+                  setMenuAnchorEl(null);
+                }
+              }}
+            >
+              <EditIcon sx={{ mr: 1 }} fontSize="small" />{" "}
+              {t("conversation.edit")}
             </MenuItem>
             <Divider />
-            <MenuItem onClick={() => { if (selectedMessage) deleteMessageMutation.mutate(selectedMessage.id); }} sx={{ color: 'error.main' }}>
-              <DeleteIcon sx={{ mr: 1 }} fontSize="small" /> {t('conversation.delete')}
+            <MenuItem
+              onClick={() => {
+                if (selectedMessage)
+                  deleteMessageMutation.mutate(selectedMessage.id);
+              }}
+              sx={{ color: "error.main" }}
+            >
+              <DeleteIcon sx={{ mr: 1 }} fontSize="small" />{" "}
+              {t("conversation.delete")}
             </MenuItem>
           </>
         )}

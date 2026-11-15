@@ -33,6 +33,23 @@ router.get(
   readinessController.getLatest
 );
 
+// Returns draft text. It creates no conversation, stores no message and sends
+// nothing — the user carries the draft to the existing composer and sends it
+// themselves. Rate-limited like a run: it is a model call.
+router.post(
+  '/readiness-runs/:runId/findings/:findingId/draft',
+  authenticate,
+  // Its own bucket: sharing the run limiter meant drafting could exhaust a
+  // user's ability to generate a plan, and vice versa.
+  rateLimiters.agentDraft,
+  [
+    param('runId').isUUID().withMessage('Valid run ID required'),
+    param('findingId').isUUID().withMessage('Valid finding ID required'),
+  ],
+  handleValidationErrors,
+  readinessController.draftMessageForFinding
+);
+
 router.get(
   '/readiness-runs/:runId',
   authenticate,

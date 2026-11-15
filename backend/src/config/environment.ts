@@ -69,6 +69,8 @@ interface Config {
     perUserWindowMs: number;
     globalMaxRuns: number;
     globalWindowMs: number;
+    globalMaxDrafts: number;
+    perUserMaxDrafts: number;
   };
   logging: {
     level: string;
@@ -163,6 +165,12 @@ const config: Config = {
     perUserWindowMs: positiveInt('AGENT_BUDGET_PER_USER_WINDOW_MS', 24 * 60 * 60 * 1000),
     globalMaxRuns: positiveInt('AGENT_BUDGET_GLOBAL_MAX_RUNS', 200),
     globalWindowMs: positiveInt('AGENT_BUDGET_GLOBAL_WINDOW_MS', 24 * 60 * 60 * 1000),
+    // Per globalWindowMs. Drafts are single short fast-chain calls, so the
+    // ceiling is an order of magnitude above the run ceiling.
+    globalMaxDrafts: positiveInt('AGENT_BUDGET_GLOBAL_MAX_DRAFTS', 2000),
+    // Per perUserWindowMs. Far below the platform ceiling, so no one account
+    // can spend everyone's allowance (see draftBudget.ts).
+    perUserMaxDrafts: positiveInt('AGENT_BUDGET_PER_USER_MAX_DRAFTS', 100),
   },
   logging: {
     level: process.env.LOG_LEVEL || 'info',
