@@ -323,6 +323,9 @@
     },
     "reused": "This booking hasn't changed since the last check, so your existing plan is shown. Edit the booking to generate a new one.",
     "checklist": "Before the appointment",
-    "checklist_hint": "Prepared from what is actually in your booking and messages — not general advice. Nothing here is tracked; it is a reminder, not a task list."
+    "checklist_hint": "Prepared from what is actually in your booking and messages — not general advice. Nothing here is tracked; it is a reminder, not a task list.",
+    "draft_message": "Draft a message",
+    "drafting": "Writing…",
+    "draft_failed": "A draft could not be written just now. You can still write the message yourself."
   }
 }

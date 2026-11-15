@@ -116,5 +116,8 @@
   "provider.catalog_failed": "Falha ao carregar o catálogo de serviços",
   "readiness.budget_exhausted_user": "Você já usou todas as suas análises de prontidão por IA por enquanto. Os planos existentes continuam disponíveis; você poderá gerar uma nova quando seu limite diário for renovado.",
   "readiness.budget_exhausted_platform": "As análises de prontidão por IA estão temporariamente indisponíveis enquanto o limite da plataforma é reiniciado. Os planos existentes continuam disponíveis.",
-  "readiness.rate_limited": "Muitas solicitações de análise de prontidão em pouco tempo. Aguarde um momento e tente novamente."
+  "readiness.draft_budget_user": "Você usou todos os seus rascunhos de mensagem com IA por hoje. Você ainda pode escrever a mensagem.",
+  "readiness.draft_budget_platform": "Os rascunhos de mensagem com IA estão temporariamente indisponíveis até o limite da plataforma ser renovado. Você ainda pode escrever a mensagem.",
+  "readiness.rate_limited": "Muitas solicitações de análise de prontidão em pouco tempo. Aguarde um momento e tente novamente.",
+  "readiness.draft_unavailable": "Não foi possível escrever um rascunho agora. Tente novamente."
 }

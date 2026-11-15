@@ -1,17 +1,26 @@
+import { randomUUID } from 'crypto';
 import { AppDataSource } from '@/config/database';
+import { AppSettings } from '@/models/AppSettings';
 import { Booking, BookingStatus, PaymentStatus } from '@/models/Booking';
 import { Provider } from '@/models/Provider';
 import { User, UserType } from '@/models/User';
 import { AgentWorkflowRun, WorkflowRunStatus } from '@/models/AgentWorkflowRun';
 import { workflowRepository } from '@/agents/workflows/shared/WorkflowRepository';
+import readinessController from '@/controllers/ReadinessController';
+import { AuthenticatedRequest } from '@/types';
+import { aiGateway } from '@/agents/services/ai-gateway.service';
 import { runBookingReadiness } from '@/agents/workflows/booking-readiness/coordinator';
 import * as scopeAgent from '@/agents/workflows/booking-readiness/agents/scope.agent';
 import * as logisticsAgent from '@/agents/workflows/booking-readiness/agents/logistics.agent';
+import * as riskAgent from '@/agents/workflows/booking-readiness/agents/risk.agent';
 import * as verification from '@/agents/workflows/booking-readiness/verification';
+import { draftBudget } from '@/agents/workflows/booking-readiness/draftBudget';
+import * as snapshotService from '@/agents/workflows/booking-readiness/snapshot.service';
 import {
   READINESS_SCHEMA_VERSION,
   READINESS_SUBJECT_TYPE,
   READINESS_WORKFLOW_TYPE,
+  ReadinessFinding,
 } from '@/agents/workflows/booking-readiness/types';
 
 /**
@@ -112,6 +121,14 @@ describe('a readiness run that lost an optional stage', () => {
     // No live model calls: scope succeeds, the semantic pass is a no-op.
     jest.spyOn(scopeAgent, 'runScopeAgent').mockResolvedValue({
       output: { agreedScope: ['Deep clean'], exclusions: [], findings: [] },
+      inputTokens: 0,
+      outputTokens: 0,
+    });
+    // Risk joined the parallel group in BR-3; without a stub it fails for want
+    // of a gateway and lands in `unavailableSections`, which is a real signal
+    // these tests are not about.
+    jest.spyOn(riskAgent, 'runRiskAgent').mockResolvedValue({
+      output: { findings: [] },
       inputTokens: 0,
       outputTokens: 0,
     });
@@ -313,5 +330,203 @@ describe('a readiness run that lost an optional stage', () => {
         READINESS_SCHEMA_VERSION
       )
     ).resolves.toBeNull();
+  });
+
+  describe('drafting a message for a finding', () => {
+    beforeEach(async () => {
+      // These go through the controller, which gates on the feature flag. Without
+      // it every case 404s — including the two that *expect* 404, which would
+      // then pass without exercising authorization at all.
+      const settings = AppDataSource.getRepository(AppSettings);
+      await settings.save(settings.create({ key: 'booking_readiness_enabled', value: 'true' }));
+    });
+
+    const call = async (runId: string, findingId: string, asUser: User) => {
+      const req = {
+        params: { runId, findingId },
+        user: { userId: asUser.id },
+        headers: {},
+      } as unknown as AuthenticatedRequest;
+
+      const json = jest.fn();
+      let status = 200;
+      const res = {
+        json,
+        setHeader: jest.fn(),
+        status: jest.fn((code: number) => {
+          status = code;
+          return { json };
+        }),
+      } as never;
+
+      await readinessController.draftMessageForFinding(req, res);
+      return { status, body: json.mock.calls[0]?.[0] };
+    };
+
+    const storeRunWith = async (findings: ReadinessFinding[]) => {
+      jest.spyOn(logisticsAgent, 'runLogisticsAgent').mockResolvedValue({
+        output: { customerChecklist: [], providerChecklist: [], findings: [] },
+        inputTokens: 0,
+        outputTokens: 0,
+      });
+      jest.spyOn(riskAgent, 'runRiskAgent').mockResolvedValue({
+        output: { findings: [] },
+        inputTokens: 0,
+        outputTokens: 0,
+      });
+      jest.spyOn(verification, 'semanticReview').mockImplementation(async (f, c) => ({
+        kept: f,
+        keptChecklist: c,
+        dropReasons: [],
+        ran: true,
+      }));
+      jest.spyOn(scopeAgent, 'runScopeAgent').mockResolvedValue({
+        output: {
+          agreedScope: [],
+          exclusions: [],
+          findings: findings.map((f) => ({
+            category: f.category,
+            severity: f.severity,
+            visibility: f.visibility,
+            statement: f.statement,
+            evidence: [{ source: 'booking' as const, recordId: booking.id, field: 'description' }],
+          })),
+        },
+        inputTokens: 0,
+        outputTokens: 0,
+      });
+
+      await runBookingReadiness(booking, customer.id, 'customer');
+      return storedRun();
+    };
+
+    const sharedFinding = {
+      id: 'ignored',
+      category: 'access' as const,
+      severity: 'attention' as const,
+      visibility: 'shared' as const,
+      statement: 'No backup access method is recorded',
+      evidence: [],
+    };
+
+    it('returns a draft without creating a conversation or sending anything', async () => {
+      const run = await storeRunWith([sharedFinding]);
+      const stored = run.output as { findings: Array<{ id: string }> };
+      jest.spyOn(aiGateway, 'generate').mockResolvedValue({
+        model: 'test',
+        value: { text: '{"body":"Alguém poderá atender o interfone?"}', finishReason: 'stop' },
+      } as never);
+
+      const conversationsBefore = await AppDataSource.query(
+        'SELECT count(*)::int c FROM conversations'
+      );
+      const messagesBefore = await AppDataSource.query('SELECT count(*)::int c FROM messages');
+
+      const { status, body } = await call(run.id, stored.findings[0].id, customer);
+
+      expect(status).toBe(200);
+      expect(body.data.body).toEqual(expect.any(String));
+      expect(body.data.recipientRole).toBe('provider');
+
+      // The exit criterion for this phase, asserted rather than assumed: the
+      // endpoint returns text and writes nothing. Sending stays the user's act,
+      // through the messaging API, under their own authority.
+      expect(await AppDataSource.query('SELECT count(*)::int c FROM conversations')).toEqual(
+        conversationsBefore
+      );
+      expect(await AppDataSource.query('SELECT count(*)::int c FROM messages')).toEqual(
+        messagesBefore
+      );
+    });
+
+    it('refuses a finding the reader is not allowed to see', async () => {
+      // Drafting must not become a way to read back a finding the role filter
+      // hid: the customer asks for the provider-only one by id.
+      const run = await storeRunWith([{ ...sharedFinding, visibility: 'provider_only' as const }]);
+      const stored = run.output as { findings: Array<{ id: string; visibility: string }> };
+      const hidden = stored.findings.find((f) => f.visibility === 'provider_only');
+      expect(hidden).toBeDefined();
+
+      const { status } = await call(run.id, hidden!.id, customer);
+
+      expect(status).toBe(404);
+    });
+
+    it('refuses a booking that is no longer eligible, before any model call', async () => {
+      // Messaging is closed once a booking completes, so a draft would bill a
+      // model call for text the user cannot send.
+      const run = await storeRunWith([sharedFinding]);
+      const stored = run.output as { findings: Array<{ id: string }> };
+      await AppDataSource.getRepository(Booking).update(booking.id, {
+        status: BookingStatus.COMPLETED,
+      });
+      const generate = jest.spyOn(aiGateway, 'generate');
+      const claim = jest.spyOn(draftBudget, 'claim');
+
+      const { status } = await call(run.id, stored.findings[0].id, customer);
+
+      expect(status).toBe(409);
+      expect(generate).not.toHaveBeenCalled();
+      expect(claim).not.toHaveBeenCalled();
+    });
+
+    it('does not charge the draft budget for a request it refuses', async () => {
+      // Charged on the route, a refusal still counted — so one account could
+      // drain the platform allowance with requests that never cost anything.
+      const run = await storeRunWith([sharedFinding]);
+      const claim = jest.spyOn(draftBudget, 'claim');
+
+      const { status } = await call(run.id, randomUUID(), customer);
+
+      expect(status).toBe(404);
+      expect(claim).not.toHaveBeenCalled();
+    });
+
+    it('does not charge the budget when the snapshot cannot be built', async () => {
+      // A database failure there is no model call; it must not cost a draft.
+      const run = await storeRunWith([sharedFinding]);
+      const stored = run.output as { findings: Array<{ id: string }> };
+      jest.spyOn(snapshotService, 'buildSnapshot').mockRejectedValue(new Error('db down'));
+      const claim = jest.spyOn(draftBudget, 'claim');
+
+      const { status } = await call(run.id, stored.findings[0].id, customer);
+
+      expect(status).toBe(500);
+      expect(claim).not.toHaveBeenCalled();
+    });
+
+    it('answers 429 without a model call once the budget refuses', async () => {
+      const run = await storeRunWith([sharedFinding]);
+      const stored = run.output as { findings: Array<{ id: string }> };
+      jest.spyOn(draftBudget, 'claim').mockReturnValue({ scope: 'user', retryAfterSeconds: 60 });
+      const generate = jest.spyOn(aiGateway, 'generate');
+
+      const { status, body } = await call(run.id, stored.findings[0].id, customer);
+
+      expect(status).toBe(429);
+      expect(body.message).toEqual(expect.any(String));
+      expect(generate).not.toHaveBeenCalled();
+    });
+
+    it('refuses an outsider holding a valid run id', async () => {
+      const run = await storeRunWith([sharedFinding]);
+      const stored = run.output as { findings: Array<{ id: string }> };
+      const outsider = await AppDataSource.getRepository(User).save(
+        AppDataSource.getRepository(User).create({
+          email: `outsider-${Date.now()}@test.local`,
+          password: 'hashed',
+          firstName: 'Out',
+          lastName: 'Sider',
+          userType: UserType.CUSTOMER,
+          isVerified: true,
+          isActive: true,
+        })
+      );
+
+      const { status } = await call(run.id, stored.findings[0].id, outsider);
+
+      // A run id is not a capability — authorization is against the booking.
+      expect(status).toBe(404);
+    });
   });
 });

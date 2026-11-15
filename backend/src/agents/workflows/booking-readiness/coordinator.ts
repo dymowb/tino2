@@ -5,6 +5,7 @@ import { WorkflowRunStatus } from '@/models/AgentWorkflowRun';
 import { WorkflowRunner, WorkflowStage } from '../shared/WorkflowRunner';
 import { WorkflowBudget, workflowRepository } from '../shared/WorkflowRepository';
 import { runLogisticsAgent } from './agents/logistics.agent';
+import { runRiskAgent } from './agents/risk.agent';
 import { runScopeAgent } from './agents/scope.agent';
 import { buildSnapshot, snapshotFingerprint } from './snapshot.service';
 import {
@@ -28,6 +29,8 @@ const SCOPE_TIMEOUT_MS = 90_000;
 /** Shorter than Scope's: a smaller prompt on the fast chain. Still generous
  * enough that a slow-but-valid call is not abandoned. */
 const LOGISTICS_TIMEOUT_MS = 60_000;
+/** Same shape of work as Scope, so the same allowance. */
+const RISK_TIMEOUT_MS = 90_000;
 const VERIFY_TIMEOUT_MS = 45_000;
 
 /**
@@ -192,6 +195,15 @@ export function buildStages(
           return { logistics: output };
         },
       },
+      {
+        name: 'risk',
+        required: false,
+        timeoutMs: RISK_TIMEOUT_MS,
+        run: async (_state, signal) => {
+          const { output } = await runRiskAgent(snapshot, signal, RISK_TIMEOUT_MS);
+          return { risk: output };
+        },
+      },
     ],
     [
       {
@@ -199,11 +211,16 @@ export function buildStages(
         required: true,
         timeoutMs: VERIFY_TIMEOUT_MS,
         run: async (state, signal) => {
-          // Both agents' findings go through one validation pass, so a claim
-          // made by each is deduplicated against the other rather than shown
-          // twice in different words.
+          // Every agent's findings go through one validation pass, so a claim
+          // two of them raise is deduplicated rather than shown twice in
+          // different words. This is also what lets Risk run in parallel
+          // instead of reading the others' output — see risk.agent.ts.
           const { findings, dropReasons } = validateFindings(
-            [...(state.scope?.findings ?? []), ...(state.logistics?.findings ?? [])],
+            [
+              ...(state.scope?.findings ?? []),
+              ...(state.logistics?.findings ?? []),
+              ...(state.risk?.findings ?? []),
+            ],
             state.snapshot
           );
           const customer = validateChecklist(
@@ -222,7 +239,8 @@ export function buildStages(
             [...customer.items, ...provider.items],
             state.snapshot,
             signal,
-            VERIFY_TIMEOUT_MS
+            VERIFY_TIMEOUT_MS,
+            customer.items.map((item) => item.id)
           );
           const keptIds = new Set(review.keptChecklist.map((item) => item.id));
 

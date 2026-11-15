@@ -99,12 +99,25 @@ export function assertEligible(booking: Booking): void {
  * decides what is true.
  */
 export async function buildSnapshot(booking: Booking): Promise<ReadinessSnapshot> {
+  // Scoped to the booking's own parties, not loaded by id alone. `quoteId` and
+  // `requestId` are pointers the customer can rewrite (`PUT /bookings/:id`
+  // assigns the request body), and whatever they point at is rendered into the
+  // prompt and can come back out in findings and drafts. A pointer to someone
+  // else's quote reads as "no quote", never as their terms.
   const [quote, request, provider] = await Promise.all([
     booking.quoteId
-      ? AppDataSource.getRepository(Quote).findOne({ where: { id: booking.quoteId } })
+      ? AppDataSource.getRepository(Quote).findOne({
+          where: {
+            id: booking.quoteId,
+            customerId: booking.customerId,
+            providerId: booking.providerId,
+          },
+        })
       : Promise.resolve(null),
     booking.requestId
-      ? AppDataSource.getRepository(QuoteRequest).findOne({ where: { id: booking.requestId } })
+      ? AppDataSource.getRepository(QuoteRequest).findOne({
+          where: { id: booking.requestId, customerId: booking.customerId },
+        })
       : Promise.resolve(null),
     AppDataSource.getRepository(Provider).findOne({ where: { id: booking.providerId } }),
   ]);

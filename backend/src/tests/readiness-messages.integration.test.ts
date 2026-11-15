@@ -4,6 +4,8 @@ import { Conversation, ConversationType } from '@/models/Conversation';
 import { Message } from '@/models/Message';
 import { Provider } from '@/models/Provider';
 import { User, UserType } from '@/models/User';
+import { Quote, QuoteStatus } from '@/models/Quote';
+import { QuoteRequest, QuoteRequestStatus } from '@/models/QuoteRequest';
 import { buildSnapshot } from '@/agents/workflows/booking-readiness/snapshot.service';
 
 /**
@@ -133,5 +135,72 @@ describe('readiness message scoping', () => {
     const snapshot = await buildSnapshot(booking);
 
     expect(snapshot.messages.map((m) => m.text)).not.toContain(`msg-from-${squatted.id}`);
+  });
+
+  describe("the booking's quote and request", () => {
+    const requestOf = (customerId: string) =>
+      AppDataSource.getRepository(QuoteRequest).save(
+        AppDataSource.getRepository(QuoteRequest).create({
+          customerId,
+          serviceType: 'Limpeza Residencial',
+          description: `request of ${customerId}`,
+          location: {
+            latitude: -27.6,
+            longitude: -48.5,
+            address: 'a',
+            city: 'Floripa',
+            state: 'SC',
+            zipCode: '1',
+          },
+          budget: { min: 100, max: 200, currency: 'BRL' },
+          status: QuoteRequestStatus.CLOSED,
+        })
+      );
+    const quoteFor = (request: QuoteRequest) =>
+      AppDataSource.getRepository(Quote).save(
+        AppDataSource.getRepository(Quote).create({
+          requestId: request.id,
+          providerId: provider.id,
+          customerId: request.customerId,
+          serviceType: 'Limpeza Residencial',
+          description: `quote for ${request.customerId}`,
+          estimatedPrice: 150,
+          estimatedDuration: 120,
+          validUntil: new Date(Date.now() + 86_400_000),
+          status: QuoteStatus.ACCEPTED,
+        })
+      );
+    const pointBookingAt = (quote: Quote, request: QuoteRequest) =>
+      AppDataSource.getRepository(Booking).update(booking.id, {
+        quoteId: quote.id,
+        requestId: request.id,
+      });
+
+    it('reads its own accepted quote and request', async () => {
+      // The control: without it, the case below passes against a snapshot that
+      // never loads a quote at all.
+      const request = await requestOf(customer.id);
+      await pointBookingAt(await quoteFor(request), request);
+
+      const snapshot = await buildSnapshot(
+        await AppDataSource.getRepository(Booking).findOneByOrFail({ id: booking.id })
+      );
+      expect(snapshot.quote?.description).toBe(`quote for ${customer.id}`);
+      expect(snapshot.request?.description).toBe(`request of ${customer.id}`);
+    });
+
+    it("never reads another customer's, though the booking points at them", async () => {
+      // A customer can rewrite these pointers on their own booking; whatever
+      // they reach is rendered into the prompt and can come back in findings
+      // and drafts.
+      const theirs = await requestOf(outsider.id);
+      await pointBookingAt(await quoteFor(theirs), theirs);
+
+      const snapshot = await buildSnapshot(
+        await AppDataSource.getRepository(Booking).findOneByOrFail({ id: booking.id })
+      );
+      expect(snapshot.quote).toBeNull();
+      expect(snapshot.request).toBeNull();
+    });
   });
 });

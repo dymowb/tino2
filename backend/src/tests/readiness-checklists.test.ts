@@ -298,29 +298,33 @@ describe('checklist role boundary', () => {
   });
 });
 
-describe('the coordinator wires scope and logistics together', () => {
+describe('the coordinator wires the specialist agents together', () => {
   // Bound to `buildStages`, not to a hand-built WorkflowRunner. Synthetic stages
   // prove the runner can run things concurrently; they say nothing about whether
   // *this workflow* asks it to. Both of the behaviours BR-2 rests on — one group,
   // logistics optional — live in the coordinator, so that is what gets asserted.
   const stages = () => buildStages(cleanSnapshot());
 
-  it('puts both agents in a single group so they run concurrently', () => {
+  it('puts every specialist in a single group so they run concurrently', () => {
     const groups = stages();
     const names = groups.map((group) => group.map((stage) => stage.name));
 
-    expect(names[0]).toEqual(['scope', 'logistics']);
+    // Risk joined in BR-3. Reading the others' output would have made it serial
+    // and pushed a run from ~30s to ~55s; it does not need to, because the one
+    // validation pass already collapses a concern two agents raise.
+    expect(names[0]).toEqual(['scope', 'logistics', 'risk']);
     // Verification is its own group: it consumes what the first two produce.
     expect(names[1]).toEqual(['verification']);
   });
 
-  it('marks logistics optional and scope required', () => {
+  it('marks the optional specialists optional and scope required', () => {
     const [first] = stages();
 
     expect(first.find((s) => s.name === 'scope')?.required).toBe(true);
-    // Losing logistics costs the reader their checklists; losing scope would
-    // leave nothing worth showing at all.
+    // Losing logistics costs the reader their checklists, losing risk costs a
+    // class of finding; losing scope would leave nothing worth showing at all.
     expect(first.find((s) => s.name === 'logistics')?.required).toBe(false);
+    expect(first.find((s) => s.name === 'risk')?.required).toBe(false);
   });
 });
 
@@ -350,5 +354,240 @@ describe('near-identical findings collapse', () => {
 
     expect(findings).toHaveLength(1);
     expect(dropReasons.some((r) => /duplicate/.test(r))).toBe(true);
+  });
+});
+
+/**
+ * A repeat is only a repeat for the people who would still see the original.
+ * Findings reach the reviewer in agent order — scope, logistics, risk — and a
+ * later `shared` finding dropped as a "duplicate" of an earlier `customer_only`
+ * one leaves the provider with no such finding at all, and a readiness headline
+ * computed without it: "ready" for one participant, "blocked" for the other.
+ */
+describe('a duplicate is judged against who can see it', () => {
+  const finding = (
+    id: string,
+    visibility: ReadinessFinding['visibility'],
+    statement = 'No access arrangement exists for the appointment'
+  ): ReadinessFinding => ({
+    id,
+    category: 'access',
+    severity: 'blocking',
+    visibility,
+    statement,
+    evidence: [{ source: 'booking', recordId: BOOKING_ID, field: 'specialInstructions' }],
+  });
+
+  const reviewerReplies = (reject: unknown[]) =>
+    jest.spyOn(aiGateway, 'generate').mockResolvedValue({
+      model: 'test',
+      value: { text: JSON.stringify({ reject }), finishReason: 'stop', usage: undefined },
+    } as never);
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it('keeps a shared finding the reviewer called a repeat of a customer-only one', async () => {
+    reviewerReplies([{ index: 2, reason: 'same point', duplicateOf: 1 }]);
+    const review = await semanticReview(
+      [finding('scope-1', 'customer_only'), finding('risk-1', 'shared')],
+      [],
+      cleanSnapshot(),
+      undefined,
+      50
+    );
+
+    expect(review.kept.map((f) => f.id)).toEqual(['scope-1', 'risk-1']);
+    const provider = applyRoleFilter(
+      {
+        bookingId: BOOKING_ID,
+        sourceFingerprint: 'fp',
+        readiness: 'blocked',
+        agreedScope: [],
+        exclusions: [],
+        findings: review.kept,
+        customerChecklist: [],
+        providerChecklist: [],
+        verification: { droppedCount: 0, semanticReviewRan: true },
+        generatedAt: new Date().toISOString(),
+        unavailableSections: [],
+      } as ReadinessPlan,
+      'provider'
+    );
+    expect(provider.findings.map((f) => f.id)).toEqual(['risk-1']);
+    expect(provider.readiness).toBe('blocked');
+  });
+
+  it('still drops a repeat whose audience the earlier finding covers', async () => {
+    // The control: without it, the case above passes against a reviewer whose
+    // duplicate rejections are never honoured at all.
+    reviewerReplies([{ index: 2, reason: 'same point', duplicateOf: 1 }]);
+    const review = await semanticReview(
+      [finding('scope-1', 'shared'), finding('risk-1', 'provider_only')],
+      [],
+      cleanSnapshot(),
+      undefined,
+      50
+    );
+
+    expect(review.kept.map((f) => f.id)).toEqual(['scope-1']);
+  });
+
+  it('keeps a repeat whose original was itself rejected', async () => {
+    // Otherwise the point is lost from both: #1 for contradicting the terms,
+    // #2 for repeating #1.
+    reviewerReplies([
+      { index: 1, reason: 'contradicts the accepted quote' },
+      { index: 2, reason: 'same point', duplicateOf: 1 },
+    ]);
+    const review = await semanticReview(
+      [finding('scope-1', 'shared'), finding('risk-1', 'shared')],
+      [],
+      cleanSnapshot(),
+      undefined,
+      50
+    );
+
+    expect(review.kept.map((f) => f.id)).toEqual(['risk-1']);
+  });
+
+  it('tells the reviewer who sees each finding', async () => {
+    const spy = reviewerReplies([]);
+    await semanticReview(
+      [finding('scope-1', 'customer_only'), finding('risk-1', 'shared')],
+      [],
+      cleanSnapshot(),
+      undefined,
+      50
+    );
+
+    const sent = (spy.mock.calls[0][1] as { userMessage: string }).userMessage;
+    expect(sent).toMatch(/1\. \[finding:customer_only\]/);
+    expect(sent).toMatch(/2\. \[finding:shared\]/);
+  });
+
+  it('does not collapse a shared finding into a near-identical role-only one', () => {
+    // The deterministic lexical pass has the same rule, for the same reason.
+    const raw = (visibility: ReadinessFinding['visibility']) => ({
+      category: 'access' as const,
+      severity: 'attention' as const,
+      visibility,
+      statement: 'No backup access method is recorded for the appointment',
+      evidence: [
+        { source: 'booking' as const, recordId: BOOKING_ID, field: 'specialInstructions' },
+      ],
+    });
+
+    const { findings } = validateFindings([raw('customer_only'), raw('shared')], cleanSnapshot());
+    expect(findings.map((f) => f.visibility)).toEqual(['customer_only', 'shared']);
+  });
+});
+
+describe('a malformed duplicateOf is not a licence to keep', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it.each([0, 'none', '', 5])(
+    'still withholds a contradicting checklist item whose duplicateOf is %p',
+    async (placeholder) => {
+      // Read as a (c) duplicate, the rejection would hit "only findings are
+      // dropped as repeats" and keep the item: platform-voiced advice that
+      // contradicts the accepted quote.
+      jest.spyOn(aiGateway, 'generate').mockResolvedValue({
+        model: 'test',
+        value: {
+          text: JSON.stringify({
+            reject: [
+              { index: 1, reason: 'contradicts platform-only payment', duplicateOf: placeholder },
+            ],
+          }),
+          finishReason: 'stop',
+          usage: undefined,
+        },
+      } as never);
+      const cash: ChecklistItem = {
+        id: 'c-1',
+        category: 'payment',
+        label: 'Have R$500 in cash ready',
+        evidence: [{ source: 'message', recordId: MESSAGE_ID, field: 'text' }],
+      } as ChecklistItem;
+
+      const review = await semanticReview([], [cash], cleanSnapshot(), undefined, 50, ['c-1']);
+
+      expect(review.keptChecklist).toEqual([]);
+    }
+  );
+});
+
+describe('a checklist item called a repeat of a finding', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  const reply = (reject: unknown[]) =>
+    jest.spyOn(aiGateway, 'generate').mockResolvedValue({
+      model: 'test',
+      value: { text: JSON.stringify({ reject }), finishReason: 'stop', usage: undefined },
+    } as never);
+
+  const cashFinding: ReadinessFinding = {
+    id: 'f-1',
+    category: 'payment',
+    severity: 'attention',
+    visibility: 'shared',
+    statement: 'The provider asked for cash, contradicting platform-only payment',
+    evidence: [{ source: 'message', recordId: MESSAGE_ID, field: 'text' }],
+  };
+  const item = (id: string, label: string): ChecklistItem => ({
+    id,
+    category: 'payment',
+    label,
+    evidence: [{ source: 'message', recordId: MESSAGE_ID, field: 'text' }],
+  });
+
+  it('is withheld: the item is the contradiction the finding describes', async () => {
+    // Exactly what the manual-test scenario plants. Kept, it would be platform-
+    // voiced advice to pay off-platform, beside a finding saying not to.
+    reply([{ index: 2, reason: 'contradicts payment terms; same point as #1', duplicateOf: 1 }]);
+    const review = await semanticReview(
+      [cashFinding],
+      [item('c-1', 'Have cash ready for the provider')],
+      cleanSnapshot(),
+      undefined,
+      50,
+      ['c-1']
+    );
+
+    expect(review.keptChecklist).toEqual([]);
+  });
+
+  it('is kept when it repeats the other participant checklist', async () => {
+    // The control, and the case the exemption exists for.
+    reply([{ index: 3, reason: 'same step', duplicateOf: 2 }]);
+    const review = await semanticReview(
+      [cashFinding],
+      [item('c-1', 'Confirm the gate code'), item('p-1', 'Confirm the gate code')],
+      cleanSnapshot(),
+      undefined,
+      50,
+      ['c-1']
+    );
+
+    expect(review.keptChecklist.map((c) => c.id)).toEqual(['c-1', 'p-1']);
+  });
+
+  it('is withheld when it repeats a checklist item rejected for contradiction', async () => {
+    // "Collect R$500 in cash" is the provider's copy of the customer's rejected
+    // "Have R$500 in cash ready": the same wrong advice, to the other person.
+    reply([
+      { index: 2, reason: 'contradicts platform-only payment' },
+      { index: 3, reason: 'same point as #2', duplicateOf: 2 },
+    ]);
+    const review = await semanticReview(
+      [cashFinding],
+      [item('c-1', 'Have R$500 in cash ready'), item('p-1', 'Collect R$500 in cash on arrival')],
+      cleanSnapshot(),
+      undefined,
+      50,
+      ['c-1']
+    );
+
+    expect(review.keptChecklist).toEqual([]);
   });
 });
