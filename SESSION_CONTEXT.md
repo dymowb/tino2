@@ -139,7 +139,17 @@ into deletes (pointers a customer can rewrite, see below), and a checklist item 
 party; the repeat inherits the rejection. Round 5 **passed**; its one advisory was taken: the
 snapshot now loads the booking's quote and request scoped to the booking's own parties, so a
 rewritten pointer reads as "no quote" instead of feeding another customer's terms to the model.
-Backend 348/348, frontend 63/63, lint 142, builds green. Committed and pushed; PR open.
+Backend 348/348, frontend 63/63, lint 142, builds green. **PR #40.** Codex's first CI round
+blocked on drafting from a *stale* plan (an old finding paired with today's booking). Fixed in
+`6eeaf4c`: 409 when the plan's fingerprint no longer matches or is missing, checked before the
+budget is charged, and the drawer offers drafts only from a current plan. Backend 350/350,
+frontend 64/64.
+
+**`validate` is red on every branch, `main` included**, from new npm advisories. **Draft PR #41**
+fixes axios/follow-redirects (root, backend, frontend) and the backend's semver-safe audit fixes.
+Still failing there, needing the user's call: `zod` 3→4 (major), `decode-uri-component` via the
+Google Maps client (possible ESM breakage), `brace-expansion` via TypeORM's glob (needs an
+`overrides`). #40 cannot go green until #41 (or equivalent) lands on main.
 
 ### 🚨 Found during BR-3 review, NOT fixed — needs its own PR: booking mass-assignment
 

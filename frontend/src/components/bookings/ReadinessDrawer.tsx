@@ -438,6 +438,9 @@ export const ReadinessDrawer: React.FC<Props> = ({
                           draftMutation.isPending &&
                           draftMutation.variables?.findingId === finding.id
                         }
+                        // One draft at a time: the first to finish closes the
+                        // drawer, so a second would be paid for and discarded.
+                        draftBusy={draftMutation.isPending}
                       />
                     ))}
                 </Stack>
@@ -517,7 +520,9 @@ const FindingCard: React.FC<{
   t: (k: string, o?: any) => string;
   onDraft?: () => void;
   drafting?: boolean;
-}> = ({ finding, isDark, t, onDraft, drafting }) => (
+  /** Another finding's draft is in flight. */
+  draftBusy?: boolean;
+}> = ({ finding, isDark, t, onDraft, drafting, draftBusy }) => (
   <Box
     data-testid="readiness-finding"
     data-severity={finding.severity}
@@ -573,7 +578,7 @@ const FindingCard: React.FC<{
       <Button
         size="small"
         onClick={onDraft}
-        disabled={drafting}
+        disabled={drafting || draftBusy}
         data-testid="readiness-draft"
         startIcon={
           drafting ? <CircularProgress size={14} color="inherit" /> : undefined

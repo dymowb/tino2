@@ -208,5 +208,30 @@ describe("a drawer call that finishes after the user moved on", () => {
     await screen.findByText("Access is unclear for A");
     expect(screen.queryByTestId("readiness-draft")).toBeNull();
   });
+
+  it("allows one draft at a time", async () => {
+    // The first draft to finish closes the drawer, so a second started
+    // alongside it would be paid for and thrown away.
+    api.getLatestReadinessRun.mockImplementation(async (id: string) => {
+      const run = runFor(id);
+      const [first] = run.plan!.findings;
+      return {
+        ...run,
+        plan: {
+          ...run.plan!,
+          findings: [first, { ...first, id: "second", statement: "Parking is unclear" }],
+        },
+      };
+    });
+    api.draftReadinessMessage.mockReturnValue(deferred<typeof draftBody>().promise);
+    setup(client);
+
+    await screen.findByText("Parking is unclear");
+    const [first, second] = screen.getAllByTestId("readiness-draft");
+    fireEvent.click(first);
+
+    await waitFor(() => expect(second).toBeDisabled());
+    expect(api.draftReadinessMessage).toHaveBeenCalledTimes(1);
+  });
 });
 
