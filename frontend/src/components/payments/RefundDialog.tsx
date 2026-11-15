@@ -81,6 +81,13 @@ const RefundDialog: React.FC<Props> = ({
       onClose();
     },
     onError: (error: any) => {
+      // An indeterminate response may mean Stripe accepted the request, so its
+      // key must be kept for a safe replay. A definitive rejection creates a
+      // FAILED operation; discard its key so the next user attempt can claim a
+      // new operation without requiring them to edit the request or reload.
+      if (error.response?.status !== 503) {
+        operationRef.current = null;
+      }
       toast.error(error.response?.data?.error || t('refund.error'));
     },
   });

@@ -1,4 +1,4 @@
-import { In, LessThan, Repository } from 'typeorm';
+import { In, LessThan, MoreThan, Repository } from 'typeorm';
 import { AppDataSource } from '@/config/database';
 import Stripe from 'stripe';
 import { Payment, PaymentStatus } from '@/models/Payment';
@@ -373,7 +373,14 @@ class PaymentService {
       );
     } catch (stripeError: unknown) {
       const stripeDetails = stripeError as { type?: string; message?: string };
-      const definitive = stripeDetails.type === 'StripeInvalidRequestError';
+      // Authentication and permission failures prove Stripe rejected the call
+      // before it could create a refund. They must release the reservation just
+      // like an invalid request; retrying them with the same key cannot help.
+      const definitive = [
+        'StripeInvalidRequestError',
+        'StripeAuthenticationError',
+        'StripePermissionError',
+      ].includes(stripeDetails.type ?? '');
       await this.recordRefundFailure(
         operation.id,
         definitive ? RefundOperationStatus.FAILED : RefundOperationStatus.INDETERMINATE,
@@ -430,10 +437,14 @@ class PaymentService {
    */
   public async reconcileRefundOperations(staleAfterMs = 2 * 60_000, limit = 20): Promise<number> {
     const cutoff = new Date(Date.now() - staleAfterMs);
+    const retryWindowStart = new Date(Date.now() - 23 * 60 * 60_000);
     const operations = await AppDataSource.getRepository(RefundOperation).find({
       where: {
         status: In([RefundOperationStatus.PENDING, RefundOperationStatus.INDETERMINATE]),
         updatedAt: LessThan(cutoff),
+        // Expired reservations are deliberately retained for manual
+        // reconciliation, but must not occupy this bounded retry queue forever.
+        createdAt: MoreThan(retryWindowStart),
       },
       // Rotate attempted rows behind untouched rows, including operations that
       // require manual reconciliation, so a full failed batch cannot starve recovery.

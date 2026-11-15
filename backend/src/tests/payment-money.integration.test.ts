@@ -322,6 +322,39 @@ describe('payment money handling', () => {
     expect(retained.attemptCount).toBe(0);
   });
 
+  it('releases a reservation after Stripe rejects the credentials', async () => {
+    const customer = await account('money-auth-error-customer@example.com', 'customer');
+    const providerAccount = await account('money-auth-error-provider@example.com', 'provider');
+    const provider = await providerProfile(providerAccount.user.id);
+    const booking = await confirmedBooking(customer.user.id, provider.id, 275);
+    const payment = await succeededPayment(booking.id, customer.user.id, provider.id, 275);
+    const failedKey = '00000000-0000-4000-8000-000000000710';
+    refundStripeMock()
+      .refunds.create.mockRejectedValueOnce(
+        Object.assign(new Error('invalid API key'), { type: 'StripeAuthenticationError' })
+      )
+      .mockResolvedValueOnce({ id: 're_after_auth_error', amount: 10000, status: 'succeeded' });
+
+    await request(server)
+      .post(`/api/v1/payments/${payment.id}/refund`)
+      .set('Idempotency-Key', failedKey)
+      .set('Authorization', `Bearer ${providerAccount.token}`)
+      .send({ amount: 100, reason: 'customer request' })
+      .expect(500);
+
+    const failed = await AppDataSource.getRepository(RefundOperation).findOneByOrFail({
+      idempotencyKey: failedKey,
+    });
+    expect(failed.status).toBe(RefundOperationStatus.FAILED);
+
+    await request(server)
+      .post(`/api/v1/payments/${payment.id}/refund`)
+      .set('Idempotency-Key', '00000000-0000-4000-8000-000000000711')
+      .set('Authorization', `Bearer ${providerAccount.token}`)
+      .send({ amount: 100, reason: 'customer request' })
+      .expect(200);
+  });
+
   it('collapses concurrent retries of one operation into one applied refund', async () => {
     const customer = await account('money-concurrent-key-customer@example.com', 'customer');
     const providerAccount = await account('money-concurrent-key-provider@example.com', 'provider');
