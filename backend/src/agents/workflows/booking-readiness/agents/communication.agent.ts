@@ -106,7 +106,13 @@ export async function draftMessage(
   finding: ReadinessFinding,
   senderRole: 'customer' | 'provider',
   requesterLocale: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  /**
+   * True when messages have arrived since the finding was written, so the
+   * thread may already hold the answer. Not said otherwise: on an unchanged
+   * plan it only invites the model to soften a question that is still open.
+   */
+  conversationMovedOn = false
 ): Promise<MessageDraft | null> {
   const language = inferDraftLanguage(snapshot, requesterLocale);
   const recipientRole = senderRole === 'customer' ? 'provider' : 'customer';
@@ -124,11 +130,10 @@ export async function draftMessage(
         (finding.resolutionQuestion
           ? `The question to get answered: ${field(finding.resolutionQuestion)}\n`
           : '') +
-        // The concern can be older than the conversation: a plan stays usable
-        // for drafting after new messages arrive, so the thread above may
-        // already hold the answer.
-        'The concern was written before the latest messages above. If they already ' +
-        'answer it, ask only about what is still open.\n',
+        (conversationMovedOn
+          ? 'The concern was written before the latest messages above. If they already ' +
+            'answer it, ask only about what is still open.\n'
+          : ''),
       maxTokens: DRAFT_MAX_TOKENS,
       signal,
     },

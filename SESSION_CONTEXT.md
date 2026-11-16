@@ -206,8 +206,12 @@ overwritten); findings gain `title` + `answerFrom`; `messages_changed` freshness
 the response; schema version 3. Frontend: summary by severity + category chips (jump to finding)
 instead of "Blocked", findings first and grouped, agreed work folded, readable evidence lines,
 "who answers", discarded-count removed, one name ("Readiness check" / "Verificação da reserva").
-Tests: backend 393, frontend 84, Playwright readiness 8/8 (Chromium + Mobile Chrome, API stubbed),
-lint 142; every fix mutation-checked.
+Tests: backend 397, frontend 85, Playwright readiness 8/8 (Chromium + Mobile Chrome, API stubbed),
+lint 142; every fix mutation-checked. Local `pr-precheck`: PASS, four advisories all taken —
+message times were read 8h off (zoneless `createdAt` re-read in the node zone; now cast to
+`timestamptz` in SQL), a finding's `title` now goes through the semantic gate with its statement,
+"both of you see this" is hidden when a role-only finding is shown, and the drafter is told the
+thread moved on only when it did.
 ⚠️ **NOT live-verified: the Anthropic account is out of credits** ("credit balance is too low"),
 so no real run has exercised the new prompts. Needs a top-up, then one run on the seeded booking.
 **Gate code masking is NOT in PR A**: user asked for an explanation, decision pending

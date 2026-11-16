@@ -263,7 +263,8 @@ export class ReadinessController {
       // against are unchanged, the drafter reads the conversation as it stands
       // now, and refusing here meant that sending one message — including a
       // draft this endpoint wrote — hid every other draft until a paid re-run.
-      if (planFreshness(run, snapshot) === 'stale') {
+      const freshness = planFreshness(run, snapshot);
+      if (freshness === 'stale') {
         res.status(409).json({
           success: false,
           message: t(req, 'readiness.draft_stale'),
@@ -299,7 +300,14 @@ export class ReadinessController {
         return;
       }
 
-      const draft = await draftMessage(snapshot, finding, role, getLocale(req), undefined);
+      const draft = await draftMessage(
+        snapshot,
+        finding,
+        role,
+        getLocale(req),
+        undefined,
+        freshness === 'messages_changed'
+      );
       if (!draft) {
         res.status(503).json({ success: false, message: t(req, 'readiness.draft_unavailable') });
         return;

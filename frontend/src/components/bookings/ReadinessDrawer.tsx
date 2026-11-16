@@ -656,7 +656,11 @@ const ReadinessSummary: React.FC<{
           time: formatWhen(plan.generatedAt, locale),
         })}
         {requestedBy ? ` · ${requestedBy}` : ""}
-        {` · ${t("readiness.shared_note")}`}
+        {/* Only when it is true of everything shown: a reader holding a
+            finding marked "only you see this" must not be told otherwise. */}
+        {findings.every((finding) => finding.visibility === "shared")
+          ? ` · ${t("readiness.shared_note")}`
+          : ""}
       </Typography>
     </Box>
   );

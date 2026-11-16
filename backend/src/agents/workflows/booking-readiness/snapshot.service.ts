@@ -262,6 +262,7 @@ async function loadBookingMessages(booking: Booking): Promise<[SnapshotMessage[]
   });
 
   const truncated = rows.length > MESSAGE_WINDOW;
+  const sentAt = await messageInstants(rows.map((row) => row.id));
 
   const messages = rows
     .slice(0, MESSAGE_WINDOW)
@@ -274,11 +275,33 @@ async function loadBookingMessages(booking: Booking): Promise<[SnapshotMessage[]
           : row.senderId === providerUserId
             ? 'provider'
             : 'other',
-      sentAt: new Date(row.createdAt).toISOString(),
+      sentAt: sentAt.get(row.id) ?? new Date(row.createdAt).toISOString(),
       text: scrubPii(row.message ?? '').text,
     }));
 
   return [messages, truncated];
+}
+
+/**
+ * When each message was actually sent.
+ *
+ * `messages."createdAt"` is a zoneless timestamp written by the database's own
+ * `now()`, in the database session's zone. node-postgres reads a zoneless value
+ * in the *node* process's zone, so `row.createdAt` is off by the gap between the
+ * two — eight hours on a host that is not on UTC. That was invisible while the
+ * time was only an attribute in a prompt; it now carries a weekday ("sent
+ * Sunday evening" read as Monday) and is shown beside every quoted message.
+ *
+ * Casting to `timestamptz` in SQL interprets the value in the session zone, the
+ * one that wrote it, and the driver then returns a true instant.
+ */
+async function messageInstants(ids: string[]): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map();
+  const rows: Array<{ id: string; sent_at: Date }> = await AppDataSource.query(
+    'SELECT id, "createdAt"::timestamptz AS sent_at FROM messages WHERE id = ANY($1)',
+    [ids]
+  );
+  return new Map(rows.map((row) => [row.id, new Date(row.sent_at).toISOString()]));
 }
 
 async function resolveProviderUserId(providerId: string): Promise<string | null> {

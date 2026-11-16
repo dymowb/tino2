@@ -367,6 +367,26 @@ describe("what the drawer says at the top", () => {
     ).toEqual(["you", "customer", "both", "both"]);
   });
 
+  it("says both parties see it only when that is true of everything shown", async () => {
+    withFindings([finding("b1", "blocking", "payment")]);
+    const first = setup(client);
+    expect(await screen.findByTestId("readiness-status")).toHaveTextContent(
+      "readiness.shared_note",
+    );
+    first.unmount();
+
+    client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    withFindings([
+      finding("b1", "blocking", "payment"),
+      finding("mine", "attention", "scope", { visibility: "customer_only" }),
+    ]);
+    setup(client);
+    await screen.findByText("statement mine");
+    expect(screen.getByTestId("readiness-status")).not.toHaveTextContent(
+      "readiness.shared_note",
+    );
+  });
+
   it("does not show the count of items the checker threw away", async () => {
     withFindings([finding("b1", "blocking", "payment")]);
     setup(client);

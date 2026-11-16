@@ -180,7 +180,10 @@ export async function semanticReview(
     // Tagged with who can see it, so a repeat is judged against its audience —
     // see `coversAudience`.
     ...findings.map((f) => ({
-      text: f.statement,
+      // With its headline: the title is rendered as the card's heading, in the
+      // platform's voice, so it is reviewed as part of the same claim. Left
+      // out, a harmless statement could carry "Bring R$500 in cash" above it.
+      text: f.title ? `${f.title}. ${f.statement}` : f.statement,
       severity: `finding:${f.visibility}`,
     })),
     // Tagged by audience, not just as "checklist": without the role the reviewer

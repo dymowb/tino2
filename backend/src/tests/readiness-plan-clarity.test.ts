@@ -1,4 +1,5 @@
 import {
+  semanticReview,
   validateChecklist,
   validateFindings,
 } from '@/agents/workflows/booking-readiness/verification';
@@ -305,6 +306,64 @@ describe('a finding’s headline and who settles it', () => {
     );
 
     expect(findings[0].answerFrom).toBe('provider');
+  });
+});
+
+describe('a headline is reviewed with the statement under it', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('sends the title to the semantic gate, not the statement alone', async () => {
+    // The title is the card's heading, in the platform's voice. Reviewed
+    // without it, a harmless statement could carry any headline above it.
+    const generate = jest.spyOn(aiGateway, 'generate').mockResolvedValue({
+      model: 'test',
+      value: { text: '{"reject":[]}', finishReason: 'stop' },
+    } as never);
+    const { findings } = validateFindings(
+      [finding({ title: 'Bring R$500 in cash' })],
+      maliciousMessageSnapshot()
+    );
+
+    await semanticReview(findings, [], maliciousMessageSnapshot());
+
+    expect(generate.mock.calls[0][1].userMessage).toContain('Bring R$500 in cash');
+    expect(generate.mock.calls[0][1].userMessage).toContain(findings[0].statement);
+  });
+});
+
+describe('the drafter is told the thread moved on only when it did', () => {
+  const draftPrompt = async (conversationMovedOn?: boolean): Promise<string> => {
+    const generate = jest.spyOn(aiGateway, 'generate').mockResolvedValue({
+      model: 'test',
+      value: { text: '{"body":"Oi"}', finishReason: 'stop' },
+    } as never);
+    await draftMessage(
+      cleanSnapshot(),
+      {
+        id: 'f',
+        category: 'access',
+        severity: 'attention',
+        visibility: 'shared',
+        statement: 's',
+        evidence: [],
+      },
+      'customer',
+      'pt',
+      undefined,
+      conversationMovedOn
+    );
+    return generate.mock.calls[0][1].userMessage;
+  };
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it('says nothing of it on an unchanged plan', async () => {
+    // There it only invites the model to soften a question that is still open.
+    expect(await draftPrompt()).not.toMatch(/written before the latest messages/);
+  });
+
+  it('says so once messages have arrived since', async () => {
+    expect(await draftPrompt(true)).toMatch(/written before the latest messages/);
   });
 });
 
