@@ -196,7 +196,7 @@ labels, naming; PR B = finding owner + settle/dismiss + role-aware drafting (nee
 who may close, what closing shows, plan language, code masking, message-only staleness).
 Screenshots: scratchpad `cx/` (session-local).
 
-**PR A built on `feat/readiness-cx-clarity` (2026-11-15), user approved all five recommendations.**
+**PR A = #43 (`feat/readiness-cx-clarity`, 2026-11-15), open, CI running; user approved all five recommendations.**
 Backend: message evidence resolves on the record id alone (field normalised to `text`, carries
 `from`/`at`); prompt renders local times in `platform_timezone` (new setting, default
 America/Sao_Paulo) with weekday; one plan language (`planLanguage`: thread → record text →
