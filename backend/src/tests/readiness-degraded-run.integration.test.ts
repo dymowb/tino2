@@ -5,6 +5,8 @@ import { Booking, BookingStatus, PaymentStatus } from '@/models/Booking';
 import { Provider } from '@/models/Provider';
 import { User, UserType } from '@/models/User';
 import { AgentWorkflowRun, WorkflowRunStatus } from '@/models/AgentWorkflowRun';
+import { Conversation, ConversationType } from '@/models/Conversation';
+import { Message } from '@/models/Message';
 import { workflowRepository } from '@/agents/workflows/shared/WorkflowRepository';
 import readinessController from '@/controllers/ReadinessController';
 import { AuthenticatedRequest } from '@/types';
@@ -39,6 +41,7 @@ import {
 describe('a readiness run that lost an optional stage', () => {
   let customer: User;
   let provider: Provider;
+  let providerUser: User;
   let booking: Booking;
 
   beforeEach(async () => {
@@ -57,7 +60,7 @@ describe('a readiness run that lost an optional stage', () => {
         isActive: true,
       })
     );
-    const providerUser = await users.save(
+    providerUser = await users.save(
       users.create({
         email: `degraded-provider-${suffix}@test.local`,
         password: 'hashed',
@@ -498,6 +501,72 @@ describe('a readiness run that lost an optional stage', () => {
       expect(status).toBe(409);
       expect(generate).not.toHaveBeenCalled();
       expect(claim).not.toHaveBeenCalled();
+    });
+
+    it('still drafts after a new message, because the agreed terms have not moved', async () => {
+      // Sending any message — including a draft this endpoint wrote — changes the
+      // full fingerprint. Refusing on that hid every other draft until a paid
+      // re-run, so the second question a user wanted to ask cost them a run.
+      const run = await storeRunWith([sharedFinding]);
+      const stored = run.output as { findings: Array<{ id: string }> };
+      const conversation = await AppDataSource.getRepository(Conversation).save(
+        AppDataSource.getRepository(Conversation).create({
+          type: ConversationType.DIRECT,
+          participants: [customer, providerUser],
+          isActive: true,
+          metadata: { bookingId: booking.id },
+        })
+      );
+      await AppDataSource.getRepository(Message).save(
+        AppDataSource.getRepository(Message).create({
+          conversationId: conversation.id,
+          senderId: customer.id,
+          message: 'Alguém poderá atender o interfone?',
+        })
+      );
+      // The premise: the message really did change what the plan was built from.
+      expect(
+        snapshotService.snapshotFingerprint(await snapshotService.buildSnapshot(booking))
+      ).not.toBe(run.sourceFingerprint);
+      const generate = jest.spyOn(aiGateway, 'generate').mockResolvedValue({
+        model: 'test',
+        value: { text: '{"body":"E o portão, como abre?"}', finishReason: 'stop' },
+      } as never);
+
+      const { status, body } = await call(run.id, stored.findings[0].id, customer);
+
+      expect(status).toBe(200);
+      expect(body.data.body).toEqual(expect.any(String));
+      // And the drafter is told the thread may already hold the answer.
+      expect(generate.mock.calls[0][1].userMessage).toContain('Alguém poderá atender o interfone?');
+      expect(generate.mock.calls[0][1].userMessage).toMatch(/written before the latest messages/);
+    });
+
+    it('still refuses when the booking changed as well as the conversation', async () => {
+      const run = await storeRunWith([sharedFinding]);
+      const stored = run.output as { findings: Array<{ id: string }> };
+      const conversation = await AppDataSource.getRepository(Conversation).save(
+        AppDataSource.getRepository(Conversation).create({
+          type: ConversationType.DIRECT,
+          participants: [customer, providerUser],
+          isActive: true,
+          metadata: { bookingId: booking.id },
+        })
+      );
+      await AppDataSource.getRepository(Message).save(
+        AppDataSource.getRepository(Message).create({
+          conversationId: conversation.id,
+          senderId: customer.id,
+          message: 'Mudei o horário, tudo bem?',
+        })
+      );
+      await AppDataSource.getRepository(Booking).update(booking.id, { estimatedDuration: 300 });
+      const generate = jest.spyOn(aiGateway, 'generate');
+
+      const { status } = await call(run.id, stored.findings[0].id, customer);
+
+      expect(status).toBe(409);
+      expect(generate).not.toHaveBeenCalled();
     });
 
     it('refuses to draft from a plan whose freshness cannot be checked', async () => {

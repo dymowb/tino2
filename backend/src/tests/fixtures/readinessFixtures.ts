@@ -10,6 +10,8 @@ export const MESSAGE_ID = '55555555-5555-4555-8555-555555555555';
 export function cleanSnapshot(): ReadinessSnapshot {
   return {
     currency: 'BRL',
+    timezone: 'America/Sao_Paulo',
+    outputLanguage: 'Portuguese',
     booking: {
       id: BOOKING_ID,
       status: 'confirmed',

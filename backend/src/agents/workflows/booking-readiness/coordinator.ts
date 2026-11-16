@@ -7,7 +7,7 @@ import { WorkflowBudget, workflowRepository } from '../shared/WorkflowRepository
 import { runLogisticsAgent } from './agents/logistics.agent';
 import { runRiskAgent } from './agents/risk.agent';
 import { runScopeAgent } from './agents/scope.agent';
-import { buildSnapshot, snapshotFingerprint } from './snapshot.service';
+import { buildSnapshot, recordsFingerprint, snapshotFingerprint } from './snapshot.service';
 import {
   buildVerification,
   computeReadiness,
@@ -97,6 +97,8 @@ export async function runBookingReadiness(
     const plan: ReadinessPlan = {
       bookingId: booking.id,
       sourceFingerprint,
+      recordsFingerprint: recordsFingerprint(snapshot),
+      requestedByRole: role,
       readiness: computeReadiness(findings, result.degraded),
       agreedScope: result.state.scope?.agreedScope ?? [],
       exclusions: result.state.scope?.exclusions ?? [],

@@ -122,6 +122,22 @@ describe('readiness message scoping', () => {
     expect(snapshot.messages).toHaveLength(1);
   });
 
+  it('reports when a message was really sent, whatever zone the server runs in', async () => {
+    // `messages."createdAt"` is zoneless and written by the database's `now()`;
+    // read back through the driver it is re-interpreted in the node process's
+    // zone, so on a host that is not on UTC every message was hours off — and
+    // the prompt now prints a weekday from it and the drawer shows it.
+    await addConversation([customer, providerUser], true);
+    const [{ now }] = await AppDataSource.query('SELECT now() AS now');
+
+    const snapshot = await buildSnapshot(booking);
+
+    const skewMs = Math.abs(
+      new Date(snapshot.messages[0].sentAt).getTime() - new Date(now).getTime()
+    );
+    expect(skewMs).toBeLessThan(60_000);
+  });
+
   it('ignores a deactivated conversation carrying the same bookingId', async () => {
     const poisoned = await addConversation([customer, providerUser], false);
     const snapshot = await buildSnapshot(booking);

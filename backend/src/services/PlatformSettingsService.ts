@@ -19,6 +19,14 @@ import {
 
 const CURRENCY_KEY = 'platform_currency';
 const LOCALE_KEY = 'platform_locale';
+const TIMEZONE_KEY = 'platform_timezone';
+
+/**
+ * Where the platform's appointments happen. One zone per deployment for the same
+ * reason there is one currency: bookings carry an instant and an address, not a
+ * zone, and every customer and provider today is in this one.
+ */
+export const DEFAULT_PLATFORM_TIMEZONE = 'America/Sao_Paulo';
 
 /**
  * Cached because the escrow path reads it per request and it changes about never.
@@ -27,7 +35,19 @@ const LOCALE_KEY = 'platform_locale';
  */
 const CACHE_TTL_MS = 60_000;
 
-let cache: { currency: string; locale: string; loadedAt: number } | null = null;
+type PlatformSettings = { currency: string; locale: string; timezone: string };
+
+let cache: (PlatformSettings & { loadedAt: number }) | null = null;
+
+/** True when Intl accepts this IANA zone; an unknown one makes every formatter throw. */
+function isUsableTimezone(timezone: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: timezone }).format(0);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * True when Intl can actually use this tag. Both the canonicalisation and the
@@ -44,7 +64,7 @@ function isUsableLocale(locale: string): boolean {
   }
 }
 
-async function load(): Promise<{ currency: string; locale: string }> {
+async function load(): Promise<PlatformSettings> {
   const envCurrency = process.env.PLATFORM_CURRENCY?.trim().toUpperCase();
   const envLocale = process.env.PLATFORM_LOCALE?.trim();
 
@@ -53,6 +73,9 @@ async function load(): Promise<{ currency: string; locale: string }> {
   let currency =
     envCurrency && isSupportedCurrency(envCurrency) ? envCurrency : DEFAULT_PLATFORM_CURRENCY;
   let locale = envLocale && isUsableLocale(envLocale) ? envLocale : DEFAULT_PLATFORM_LOCALE;
+  const envTimezone = process.env.PLATFORM_TIMEZONE?.trim();
+  let timezone =
+    envTimezone && isUsableTimezone(envTimezone) ? envTimezone : DEFAULT_PLATFORM_TIMEZONE;
 
   try {
     const rows = await AppDataSource.getRepository(AppSettings).find();
@@ -85,16 +108,27 @@ async function load(): Promise<{ currency: string; locale: string }> {
         );
       }
     }
+
+    const storedTimezone = byKey.get(TIMEZONE_KEY)?.trim();
+    if (storedTimezone) {
+      if (isUsableTimezone(storedTimezone)) {
+        timezone = storedTimezone;
+      } else {
+        logger.error(
+          `Ignoring unusable ${TIMEZONE_KEY}='${storedTimezone}'; falling back to ${timezone}`
+        );
+      }
+    }
   } catch (error) {
     // Settings are a refinement, not a dependency — a database hiccup must not take
     // the payment path down with it.
     logger.error('Failed to load platform settings; using defaults', error);
   }
 
-  return { currency, locale };
+  return { currency, locale, timezone };
 }
 
-async function resolve(): Promise<{ currency: string; locale: string }> {
+async function resolve(): Promise<PlatformSettings> {
   if (cache && Date.now() - cache.loadedAt < CACHE_TTL_MS) {
     return cache;
   }
@@ -111,6 +145,11 @@ export async function getPlatformCurrency(): Promise<string> {
 /** Locale used when rendering money server-side (notification and email text). */
 export async function getPlatformLocale(): Promise<string> {
   return (await resolve()).locale;
+}
+
+/** The zone appointment times are shown in when the server writes them out. */
+export async function getPlatformTimezone(): Promise<string> {
+  return (await resolve()).timezone;
 }
 
 /** Drop the cache — used by tests and after an admin edit. */

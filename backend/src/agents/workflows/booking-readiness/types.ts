@@ -9,7 +9,10 @@ export const READINESS_SUBJECT_TYPE = 'booking';
  * has no checklists, and serving it would silently show a reader an empty
  * section rather than the one the feature promises.
  */
-export const READINESS_SCHEMA_VERSION = 2;
+export const READINESS_SCHEMA_VERSION = 3;
+// 3: findings gained `title` and `answerFrom`, message evidence carries who
+// wrote it, and every plan is written in one language with local times. A v2
+// plan mixes languages and quotes UTC hours, so it is retired, not reused.
 
 export type EvidenceSource =
   'booking' | 'quote' | 'request' | 'provider' | 'availability' | 'message';
@@ -20,6 +23,13 @@ export interface EvidenceRef {
   field: string;
   /** Short, scrubbed, safe to display. Populated by app code, never the model. */
   excerpt?: string;
+  /**
+   * For `message` evidence: who wrote it and when. Populated by app code. A
+   * quoted message is one participant's words, not a platform fact, and the
+   * reader can only tell which if the quote is attributed.
+   */
+  from?: SnapshotMessage['senderRole'];
+  at?: string;
 }
 
 export type FindingCategory =
@@ -27,6 +37,12 @@ export type FindingCategory =
 
 export type FindingSeverity = 'info' | 'attention' | 'blocking';
 export type FindingVisibility = 'shared' | 'customer_only' | 'provider_only';
+/**
+ * Whose answer settles a finding. Shown to the reader so each of them knows
+ * whether the next move is theirs; `both` is the default when the model does
+ * not say, because it never wrongly tells one side to wait for the other.
+ */
+export type FindingAnswerFrom = 'customer' | 'provider' | 'both';
 
 export interface ReadinessFinding {
   /** Assigned by app code. The model never emits an id. */
@@ -34,9 +50,13 @@ export interface ReadinessFinding {
   category: FindingCategory;
   severity: FindingSeverity;
   visibility: FindingVisibility;
+  /** A few words naming the issue, so a list of findings can be scanned. */
+  title?: string;
   statement: string;
   evidence: EvidenceRef[];
   resolutionQuestion?: string;
+  /** Absent on plans stored before schema 3. */
+  answerFrom?: FindingAnswerFrom;
 }
 
 export type ReadinessLevel = 'ready' | 'needs_attention' | 'blocked' | 'incomplete';
@@ -78,7 +98,15 @@ export interface RawChecklistItem {
  * the plan may describe scope, schedule or payment terms that have since changed,
  * and the reader has to be told that rather than reassured.
  */
-export type ReadinessFreshness = 'current' | 'stale' | 'unknown';
+/**
+ * `messages_changed`: the booking, quote and request are exactly as the plan
+ * saw them, but the conversation has moved on. The findings still describe the
+ * agreed terms correctly; what they cannot know is whether a later message has
+ * already settled one of them. That is worth a note, not a refusal — refusing
+ * made every sent message (including a draft this feature wrote) hide all the
+ * other drafts until a paid re-run.
+ */
+export type ReadinessFreshness = 'current' | 'messages_changed' | 'stale' | 'unknown';
 
 export interface ReadinessVerification {
   /** How many findings the model produced that validation removed. */
@@ -97,6 +125,14 @@ export interface ReadinessVerification {
 export interface ReadinessPlan {
   bookingId: string;
   sourceFingerprint: string;
+  /**
+   * `sourceFingerprint` without the messages, so "only the conversation moved"
+   * can be told apart from "the terms changed". Absent on plans stored before
+   * it existed, which are then simply stale.
+   */
+  recordsFingerprint?: string;
+  /** Which party asked for this run. Both see the plan; only one started it. */
+  requestedByRole?: 'customer' | 'provider';
   readiness: ReadinessLevel;
   agreedScope: string[];
   exclusions: string[];
@@ -118,9 +154,11 @@ export interface RawFinding {
   category: FindingCategory;
   severity: FindingSeverity;
   visibility: FindingVisibility;
+  title?: string;
   statement: string;
   evidence: Array<{ source: EvidenceSource; recordId: string; field: string }>;
   resolutionQuestion?: string;
+  answerFrom?: FindingAnswerFrom;
 }
 
 export interface ScopeAgentOutput {
@@ -165,6 +203,20 @@ export interface ReadinessSnapshot {
    * would notice immediately and which quietly discredits the rest of the plan.
    */
   currency: string;
+  /**
+   * IANA zone every date in the prompt is rendered in, e.g. 'America/Sao_Paulo'.
+   *
+   * Same reason as `currency`: the stored values are instants, and a model
+   * handed "2026-11-18T16:00:00.000Z" wrote "arrive at 16:00" into a provider's
+   * checklist for a 13:00 appointment.
+   */
+  timezone: string;
+  /**
+   * The one language the whole plan is written in, e.g. 'Portuguese'. A plan is
+   * shared by two readers and written by three agents; left to themselves the
+   * agents each chose, and one plan came back half Portuguese, half English.
+   */
+  outputLanguage: string;
   booking: {
     id: string;
     status: string;

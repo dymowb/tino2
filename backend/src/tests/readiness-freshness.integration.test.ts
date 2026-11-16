@@ -4,7 +4,10 @@ import { Booking, BookingStatus, PaymentStatus } from '@/models/Booking';
 import { Provider } from '@/models/Provider';
 import { User, UserType } from '@/models/User';
 import { AgentWorkflowRun, WorkflowRunStatus } from '@/models/AgentWorkflowRun';
+import { Conversation, ConversationType } from '@/models/Conversation';
+import { Message } from '@/models/Message';
 import { workflowRepository } from '@/agents/workflows/shared/WorkflowRepository';
+import { clearPlatformSettingsCache } from '@/services/PlatformSettingsService';
 import * as snapshotService from '@/agents/workflows/booking-readiness/snapshot.service';
 import * as coordinator from '@/agents/workflows/booking-readiness/coordinator';
 import {
@@ -58,9 +61,8 @@ describe('readiness freshness', () => {
 
   /** Stores a completed run whose fingerprint matches the booking as it is now. */
   const storeCurrentRun = async (): Promise<{ run: AgentWorkflowRun; plan: ReadinessPlan }> => {
-    const fingerprint = snapshotService.snapshotFingerprint(
-      await snapshotService.buildSnapshot(booking)
-    );
+    const snapshot = await snapshotService.buildSnapshot(booking);
+    const fingerprint = snapshotService.snapshotFingerprint(snapshot);
     const run = await workflowRepository.createRunning({
       workflowType: READINESS_WORKFLOW_TYPE,
       subjectType: READINESS_SUBJECT_TYPE,
@@ -68,7 +70,10 @@ describe('readiness freshness', () => {
       initiatedBy: customer.id,
       schemaVersion: READINESS_SCHEMA_VERSION,
     });
-    const stored = plan(fingerprint);
+    const stored = {
+      ...plan(fingerprint),
+      recordsFingerprint: snapshotService.recordsFingerprint(snapshot),
+    };
     await workflowRepository.complete(run.id, {
       status: WorkflowRunStatus.COMPLETED,
       sourceFingerprint: fingerprint,
@@ -81,6 +86,7 @@ describe('readiness freshness', () => {
   const getLatest = async (): Promise<{
     freshness: string;
     stale: boolean;
+    viewerRole?: string;
     plan: ReadinessPlan | null;
   }> => {
     const req = {
@@ -229,6 +235,77 @@ describe('readiness freshness', () => {
     const data = await getLatest();
     expect(data.freshness).toBe('stale');
     expect(data.stale).toBe(true);
+  });
+
+  const sendMessage = async (text: string): Promise<void> => {
+    const conversation = await AppDataSource.getRepository(Conversation).save(
+      AppDataSource.getRepository(Conversation).create({
+        type: ConversationType.DIRECT,
+        participants: [customer, providerUser],
+        isActive: true,
+        metadata: { bookingId: booking.id },
+      })
+    );
+    await AppDataSource.getRepository(Message).save(
+      AppDataSource.getRepository(Message).create({
+        conversationId: conversation.id,
+        senderId: customer.id,
+        message: text,
+      })
+    );
+  };
+
+  it('reports messages_changed when only the conversation has moved on', async () => {
+    await storeCurrentRun();
+    await sendMessage('Pode confirmar o horário?');
+
+    const data = await getLatest();
+    expect(data.freshness).toBe('messages_changed');
+    // Still not `current` for a client that only knows the two-state field.
+    expect(data.stale).toBe(true);
+  });
+
+  it('reports stale, not messages_changed, when the booking moved too', async () => {
+    await storeCurrentRun();
+    await sendMessage('Mudei a duração.');
+    await AppDataSource.getRepository(Booking).update(booking.id, { estimatedDuration: 300 });
+
+    expect((await getLatest()).freshness).toBe('stale');
+  });
+
+  it('reports stale for a plan stored before it recorded which records it read', async () => {
+    // Without the records fingerprint there is nothing to show that only the
+    // conversation moved, and "cannot tell" must not read as the milder answer.
+    const { run, plan: stored } = await storeCurrentRun();
+    const legacy: Partial<typeof stored> = { ...stored };
+    delete legacy.recordsFingerprint;
+    await AppDataSource.getRepository(AgentWorkflowRun).update(run.id, {
+      output: legacy as never,
+    });
+    await sendMessage('Pode confirmar o horário?');
+
+    expect((await getLatest()).freshness).toBe('stale');
+  });
+
+  it('reports stale when the platform language changes, though no message arrived', async () => {
+    // Nothing in this booking decides a language, so the plan's falls back to
+    // the platform locale. Changing that must not read as "new messages".
+    await storeCurrentRun();
+    const settings = AppDataSource.getRepository(AppSettings);
+    await settings.save(settings.create({ key: 'platform_locale', value: 'en-US' }));
+    clearPlatformSettingsCache();
+
+    try {
+      expect((await getLatest()).freshness).toBe('stale');
+    } finally {
+      clearPlatformSettingsCache();
+    }
+  });
+
+  it('tells the reader which party they are on this booking', async () => {
+    await storeCurrentRun();
+
+    expect((await getLatest()).viewerRole).toBe('customer');
   });
 
   it('reports unknown when the snapshot cannot be rebuilt', async () => {

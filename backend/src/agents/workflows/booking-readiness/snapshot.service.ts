@@ -9,7 +9,12 @@ import { Message } from '@/models/Message';
 import { scrubPii } from '@/services/memory/PiiScrubber';
 import { fingerprint } from '../shared/SourceFingerprint';
 import { ReadinessSnapshot, SnapshotMessage } from './types';
-import { getPlatformCurrency } from '@/services/PlatformSettingsService';
+import {
+  getPlatformCurrency,
+  getPlatformLocale,
+  getPlatformTimezone,
+} from '@/services/PlatformSettingsService';
+import { detectLanguage, languageForLocale } from './language';
 
 /** Bookings where preparation is still meaningful. `pending` is excluded — nothing
  * is actually agreed until the quote is accepted and the hold is placed. */
@@ -127,6 +132,18 @@ export async function buildSnapshot(booking: Booking): Promise<ReadinessSnapshot
 
   return {
     currency: await getPlatformCurrency(),
+    timezone: await getPlatformTimezone(),
+    outputLanguage: planLanguage(
+      messages,
+      [
+        booking.description,
+        booking.specialInstructions,
+        quote?.description,
+        quote?.notes,
+        request?.description,
+      ],
+      await getPlatformLocale()
+    ),
     booking: {
       id: booking.id,
       status: booking.status,
@@ -245,6 +262,7 @@ async function loadBookingMessages(booking: Booking): Promise<[SnapshotMessage[]
   });
 
   const truncated = rows.length > MESSAGE_WINDOW;
+  const sentAt = await messageInstants(rows.map((row) => row.id));
 
   const messages = rows
     .slice(0, MESSAGE_WINDOW)
@@ -257,11 +275,33 @@ async function loadBookingMessages(booking: Booking): Promise<[SnapshotMessage[]
           : row.senderId === providerUserId
             ? 'provider'
             : 'other',
-      sentAt: new Date(row.createdAt).toISOString(),
+      sentAt: sentAt.get(row.id) ?? new Date(row.createdAt).toISOString(),
       text: scrubPii(row.message ?? '').text,
     }));
 
   return [messages, truncated];
+}
+
+/**
+ * When each message was actually sent.
+ *
+ * `messages."createdAt"` is a zoneless timestamp written by the database's own
+ * `now()`, in the database session's zone. node-postgres reads a zoneless value
+ * in the *node* process's zone, so `row.createdAt` is off by the gap between the
+ * two — eight hours on a host that is not on UTC. That was invisible while the
+ * time was only an attribute in a prompt; it now carries a weekday ("sent
+ * Sunday evening" read as Monday) and is shown beside every quoted message.
+ *
+ * Casting to `timestamptz` in SQL interprets the value in the session zone, the
+ * one that wrote it, and the driver then returns a true instant.
+ */
+async function messageInstants(ids: string[]): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map();
+  const rows: Array<{ id: string; sent_at: Date }> = await AppDataSource.query(
+    'SELECT id, "createdAt"::timestamptz AS sent_at FROM messages WHERE id = ANY($1)',
+    [ids]
+  );
+  return new Map(rows.map((row) => [row.id, new Date(row.sent_at).toISOString()]));
 }
 
 async function resolveProviderUserId(providerId: string): Promise<string | null> {
@@ -295,12 +335,71 @@ async function countAdjacentBookings(booking: Booking): Promise<number> {
  */
 export function snapshotFingerprint(snapshot: ReadinessSnapshot): string {
   return fingerprint({
+    // Everything but the conversation lives in `recordFacts`, and nothing is
+    // added here beside the messages: `planFreshness` reads "the records match
+    // but the whole does not" as "only messages changed", which is only true
+    // while the messages are the one thing outside that set.
+    ...recordFacts(snapshot),
+    // Content, not just the newest id: messages are editable (MessageService
+    // .updateMessage, and the entity carries isEdited/editedAt), so an edit to
+    // an earlier message changes what the agent was told while leaving any
+    // id-only fingerprint identical — a stale plan reporting itself as fresh.
+    messages: snapshot.messages.map((message) => ({ id: message.id, text: message.text })),
+  });
+}
+
+/**
+ * `snapshotFingerprint` without the conversation: the booking, quote, request,
+ * provider, availability and payment facts, and the platform settings the plan
+ * was written under (currency, timezone, language).
+ *
+ * When this still matches but the full fingerprint does not, the only thing that
+ * moved is the conversation — the plan's reading of the agreed terms still holds,
+ * and it is reported as `messages_changed` rather than `stale`.
+ */
+export function recordsFingerprint(snapshot: ReadinessSnapshot): string {
+  return fingerprint(recordFacts(snapshot));
+}
+
+/**
+ * How a stored plan relates to the booking as `snapshot` now describes it.
+ *
+ * Never `current` on a missing fingerprint: "could not compare" is not
+ * "unchanged". `messages_changed` needs the plan's own records fingerprint to
+ * match, so a plan stored before that existed is simply stale.
+ */
+export function planFreshness(
+  run: { sourceFingerprint?: string | null; output?: unknown },
+  snapshot: ReadinessSnapshot
+): 'current' | 'messages_changed' | 'stale' {
+  if (!run.sourceFingerprint) return 'stale';
+  if (snapshotFingerprint(snapshot) === run.sourceFingerprint) return 'current';
+
+  const stored = (run.output as { recordsFingerprint?: unknown } | null)?.recordsFingerprint;
+  return typeof stored === 'string' && stored !== '' && stored === recordsFingerprint(snapshot)
+    ? 'messages_changed'
+    : 'stale';
+}
+
+function recordFacts(snapshot: ReadinessSnapshot) {
+  return {
     // The amounts above are bare numbers; this is what makes them mean anything,
     // and it is a prompt input like any other. An admin switching the platform
     // currency would otherwise leave every stored plan fingerprinting identically
     // — reported `current`, and served by `findReusable` as `reused` — while its
     // agent reasoning is still anchored on the old currency.
     currency: snapshot.currency,
+    // Same argument: every time the agents quoted was rendered in this zone.
+    timezone: snapshot.timezone,
+    // The language the plan would be written in now. Here, not beside the
+    // messages, although the conversation usually decides it: it also falls
+    // back to the platform locale, and an admin changing that left the old
+    // plan reporting `messages_changed` — draftable, in a language the platform
+    // no longer uses — when no message had arrived at all. The cost is that a
+    // message which flips the conversation's language makes the plan stale
+    // rather than merely noted, which is the right reading of a plan now
+    // written in the wrong language for the two people reading it.
+    outputLanguage: snapshot.outputLanguage,
     booking: {
       status: snapshot.booking.status,
       serviceType: snapshot.booking.serviceType,
@@ -319,12 +418,32 @@ export function snapshotFingerprint(snapshot: ReadinessSnapshot): string {
     // Omitting them would let a plan report itself fresh after either changed.
     availability: snapshot.availability,
     provider: { id: snapshot.provider.id, services: snapshot.provider.services },
-    // Content, not just the newest id: messages are editable (MessageService
-    // .updateMessage, and the entity carries isEdited/editedAt), so an edit to
-    // an earlier message changes what the agent was told while leaving any
-    // id-only fingerprint identical — a stale plan reporting itself as fresh.
-    messages: snapshot.messages.map((message) => ({ id: message.id, text: message.text })),
-  });
+  };
+}
+
+/**
+ * One language for the whole plan: the one the two parties already write to each
+ * other in. The conversation is the best evidence; the booking's own free text
+ * is the next best; the platform's locale is what is left.
+ *
+ * Not the requester's browser locale, which is what a draft falls back to: a
+ * plan is read by both parties and reused for both, so it cannot depend on which
+ * of them happened to press the button.
+ */
+export function planLanguage(
+  messages: SnapshotMessage[],
+  recordTexts: Array<string | null | undefined>,
+  platformLocale: string
+): string {
+  const thread = messages
+    .slice(-12)
+    .map((message) => message.text)
+    .join(' ');
+  return (
+    detectLanguage(thread) ??
+    detectLanguage(recordTexts.filter(Boolean).join(' ')) ??
+    languageForLocale(platformLocale)
+  );
 }
 
 /** Truncated, scrubbed text safe to show in the UI as evidence. */

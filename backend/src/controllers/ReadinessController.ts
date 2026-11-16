@@ -21,6 +21,7 @@ import {
   assertEligible,
   authorizeBooking,
   buildSnapshot,
+  planFreshness,
   ReadinessAccessError,
   ReadinessRole,
   snapshotFingerprint,
@@ -137,6 +138,7 @@ export class ReadinessController {
       plan: result.plan,
       freshness: 'unknown' as ReadinessFreshness,
       stale: true,
+      viewerRole: role,
     };
   }
 
@@ -256,7 +258,13 @@ export class ReadinessController {
       // current records — asking about a gap already closed, or a price already
       // renegotiated — and bill a model call for it. A missing fingerprint is
       // treated the same way: "could not check" is not "unchanged".
-      if (!run.sourceFingerprint || snapshotFingerprint(snapshot) !== run.sourceFingerprint) {
+      //
+      // New messages alone do not refuse it. The terms the finding was written
+      // against are unchanged, the drafter reads the conversation as it stands
+      // now, and refusing here meant that sending one message — including a
+      // draft this endpoint wrote — hid every other draft until a paid re-run.
+      const freshness = planFreshness(run, snapshot);
+      if (freshness === 'stale') {
         res.status(409).json({
           success: false,
           message: t(req, 'readiness.draft_stale'),
@@ -292,7 +300,14 @@ export class ReadinessController {
         return;
       }
 
-      const draft = await draftMessage(snapshot, finding, role, getLocale(req), undefined);
+      const draft = await draftMessage(
+        snapshot,
+        finding,
+        role,
+        getLocale(req),
+        undefined,
+        freshness === 'messages_changed'
+      );
       if (!draft) {
         res.status(503).json({ success: false, message: t(req, 'readiness.draft_unavailable') });
         return;
@@ -322,6 +337,7 @@ export class ReadinessController {
     plan: ReadinessPlan | null;
     freshness: ReadinessFreshness;
     stale: boolean;
+    viewerRole: ReadinessRole;
   }> {
     const plan = (run.output as ReadinessPlan | null) ?? null;
     const freshness = plan ? await this.evaluateFreshness(run) : 'current';
@@ -335,6 +351,10 @@ export class ReadinessController {
       // positively verified as current stays truthy here, so an older client
       // degrades to the warning rather than to false confidence.
       stale: freshness !== 'current',
+      // The reader's own role on this booking. Not a secret from them — it is
+      // what lets the drawer say "needs your answer" instead of naming a role
+      // the reader then has to map back to themselves.
+      viewerRole: role,
     };
   }
 
@@ -347,8 +367,7 @@ export class ReadinessController {
       // The booking behind the plan is gone, so the plan describes nothing current.
       if (!booking) return 'stale';
 
-      const fingerprint = snapshotFingerprint(await buildSnapshot(booking));
-      return fingerprint === run.sourceFingerprint ? 'current' : 'stale';
+      return planFreshness(run, await buildSnapshot(booking));
     } catch (error) {
       logger.warn('Could not evaluate readiness freshness', { runId: run.id, error });
       return 'unknown';
