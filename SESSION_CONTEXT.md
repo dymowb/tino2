@@ -226,6 +226,13 @@ followed by a navigation), but it exposed a real, pre-existing bug, NOT fixed he
 timeout (axios default is 10s) or a 5xx all end the session; only a 401/403 should. Reproduces
 reliably on WebKit, so Safari users on a poor connection are the likely victims. Own PR.
 
+**#43 CI round 2:** `validate` green on all five browsers. Codex BLOCKED once more, correctly:
+`outputLanguage` sat beside the messages in the full fingerprint only, so an admin changing
+`platform_locale` (the language fallback) made an old plan read `messages_changed` and stay
+draftable. It now lives in `recordFacts`, and a test asserts every non-message input moves the
+records fingerprint. Trade-off taken: a message that flips the conversation's language makes the
+plan stale, not merely noted. Backend 401/401.
+
 **Resume point (old):** user merges #41 → rebase #40 so CI runs its tests → merge #40 → readiness Playwright journeys (BR-4, models stubbed) → user's hands-on test
 with `seedReadinessScenario.ts` (dev servers :3001→:3002 still running).
 

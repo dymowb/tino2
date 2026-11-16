@@ -335,10 +335,11 @@ async function countAdjacentBookings(booking: Booking): Promise<number> {
  */
 export function snapshotFingerprint(snapshot: ReadinessSnapshot): string {
   return fingerprint({
+    // Everything but the conversation lives in `recordFacts`, and nothing is
+    // added here beside the messages: `planFreshness` reads "the records match
+    // but the whole does not" as "only messages changed", which is only true
+    // while the messages are the one thing outside that set.
     ...recordFacts(snapshot),
-    // Derived from the messages below whenever they answer clearly, so it only
-    // moves the fingerprint on its own when the platform's fallback locale does.
-    outputLanguage: snapshot.outputLanguage,
     // Content, not just the newest id: messages are editable (MessageService
     // .updateMessage, and the entity carries isEdited/editedAt), so an edit to
     // an earlier message changes what the agent was told while leaving any
@@ -349,7 +350,8 @@ export function snapshotFingerprint(snapshot: ReadinessSnapshot): string {
 
 /**
  * `snapshotFingerprint` without the conversation: the booking, quote, request,
- * provider, availability and payment facts alone.
+ * provider, availability and payment facts, and the platform settings the plan
+ * was written under (currency, timezone, language).
  *
  * When this still matches but the full fingerprint does not, the only thing that
  * moved is the conversation — the plan's reading of the agreed terms still holds,
@@ -389,6 +391,15 @@ function recordFacts(snapshot: ReadinessSnapshot) {
     currency: snapshot.currency,
     // Same argument: every time the agents quoted was rendered in this zone.
     timezone: snapshot.timezone,
+    // The language the plan would be written in now. Here, not beside the
+    // messages, although the conversation usually decides it: it also falls
+    // back to the platform locale, and an admin changing that left the old
+    // plan reporting `messages_changed` — draftable, in a language the platform
+    // no longer uses — when no message had arrived at all. The cost is that a
+    // message which flips the conversation's language makes the plan stale
+    // rather than merely noted, which is the right reading of a plan now
+    // written in the wrong language for the two people reading it.
+    outputLanguage: snapshot.outputLanguage,
     booking: {
       status: snapshot.booking.status,
       serviceType: snapshot.booking.serviceType,

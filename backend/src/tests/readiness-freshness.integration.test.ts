@@ -7,6 +7,7 @@ import { AgentWorkflowRun, WorkflowRunStatus } from '@/models/AgentWorkflowRun';
 import { Conversation, ConversationType } from '@/models/Conversation';
 import { Message } from '@/models/Message';
 import { workflowRepository } from '@/agents/workflows/shared/WorkflowRepository';
+import { clearPlatformSettingsCache } from '@/services/PlatformSettingsService';
 import * as snapshotService from '@/agents/workflows/booking-readiness/snapshot.service';
 import * as coordinator from '@/agents/workflows/booking-readiness/coordinator';
 import {
@@ -284,6 +285,21 @@ describe('readiness freshness', () => {
     await sendMessage('Pode confirmar o horário?');
 
     expect((await getLatest()).freshness).toBe('stale');
+  });
+
+  it('reports stale when the platform language changes, though no message arrived', async () => {
+    // Nothing in this booking decides a language, so the plan's falls back to
+    // the platform locale. Changing that must not read as "new messages".
+    await storeCurrentRun();
+    const settings = AppDataSource.getRepository(AppSettings);
+    await settings.save(settings.create({ key: 'platform_locale', value: 'en-US' }));
+    clearPlatformSettingsCache();
+
+    try {
+      expect((await getLatest()).freshness).toBe('stale');
+    } finally {
+      clearPlatformSettingsCache();
+    }
   });
 
   it('tells the reader which party they are on this booking', async () => {

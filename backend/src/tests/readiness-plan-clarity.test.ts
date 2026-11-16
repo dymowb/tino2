@@ -395,6 +395,46 @@ describe('telling a moved conversation from changed terms', () => {
     expect(planFreshness(stored(), changed)).toBe('stale');
   });
 
+  it('is stale, not messages_changed, when the plan’s language changed with no new message', () => {
+    // The language falls back to the platform locale. An admin changing that
+    // is not a message arriving, and must not leave the old plan draftable.
+    const english = cleanSnapshot();
+    english.outputLanguage = 'English';
+
+    expect(planFreshness(stored(), english)).toBe('stale');
+  });
+
+  it('is stale when a message flips the language the plan would be written in', () => {
+    const flipped = withMessage();
+    flipped.outputLanguage = 'English';
+
+    expect(planFreshness(stored(), flipped)).toBe('stale');
+  });
+
+  it('keeps nothing but the messages outside the records fingerprint', () => {
+    // `planFreshness` infers "only messages changed" from the records matching
+    // while the whole does not. That inference holds only while every other
+    // input is in both — so each one, changed alone, must move both.
+    const base = cleanSnapshot();
+    const changes: Array<(s: ReturnType<typeof cleanSnapshot>) => void> = [
+      (s) => (s.currency = 'USD'),
+      (s) => (s.timezone = 'America/Manaus'),
+      (s) => (s.outputLanguage = 'English'),
+      (s) => (s.booking.totalAmount += 1),
+      (s) => (s.booking.specialInstructions = 'changed'),
+      (s) => (s.payment.holdPlaced = !s.payment.holdPlaced),
+      (s) => (s.availability.conflictingBookingCount += 1),
+      (s) => (s.provider.services = [...s.provider.services, 'Jardinagem']),
+    ];
+
+    for (const change of changes) {
+      const changed = cleanSnapshot();
+      change(changed);
+      expect(recordsFingerprint(changed)).not.toBe(recordsFingerprint(base));
+      expect(planFreshness(stored(base), changed)).toBe('stale');
+    }
+  });
+
   it.each([
     ['no fingerprint at all', { sourceFingerprint: null, output: {} }],
     ['no records fingerprint', { sourceFingerprint: 'x', output: {} }],
