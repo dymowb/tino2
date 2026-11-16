@@ -534,8 +534,12 @@ test.describe("booking readiness check", () => {
       ["pt", "Verificação da reserva", /2 pontos para resolver antes do atendimento/],
       ["en", "Readiness check", /2 points to settle before the appointment/],
     ] as const) {
+      // No reload here: `openDrawer` navigates, which loads the app in the new
+      // language anyway. A reload followed at once by that navigation aborts
+      // the app's boot-time profile request, and the app answers any failure
+      // of that request by clearing the session (see SESSION_CONTEXT.md) —
+      // which WebKit did, every time, leaving this test on the login page.
       await page.evaluate((lng) => localStorage.setItem("i18nextLng", lng), language);
-      await page.reload();
       const drawer = await openDrawer(page);
       await expect(drawer.getByText(title, { exact: true })).toBeVisible();
       await expect(drawer.getByTestId("readiness-status")).toContainText(settle);

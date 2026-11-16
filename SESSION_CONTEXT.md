@@ -218,6 +218,14 @@ so no real run has exercised the new prompts. Needs a top-up, then one run on th
 (mask + show special instructions on the provider's booking card, or accept).
 PR B (after): settle/dismiss by `answerFrom`, role-aware Ask/Reply drafting, carry-over across runs.
 
+**#43 CI round 1:** Codex PASS (no findings); `validate` failed on one of the new Playwright
+tests, WebKit + Mobile Safari only (Firefox flaky). Cause was the test (a `reload()` immediately
+followed by a navigation), but it exposed a real, pre-existing bug, NOT fixed here:
+🚨 **`AuthContext.initializeAuth` logs the user out on ANY failure of the boot-time `getProfile`**
+(`catch → clearStoredUser()` removes both tokens). An aborted request (navigating during boot), a
+timeout (axios default is 10s) or a 5xx all end the session; only a 401/403 should. Reproduces
+reliably on WebKit, so Safari users on a poor connection are the likely victims. Own PR.
+
 **Resume point (old):** user merges #41 → rebase #40 so CI runs its tests → merge #40 → readiness Playwright journeys (BR-4, models stubbed) → user's hands-on test
 with `seedReadinessScenario.ts` (dev servers :3001→:3002 still running).
 
